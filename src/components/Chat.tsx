@@ -25,20 +25,20 @@ interface Message {
 
 // Model configuration from puter.ai.listModels()
 interface ModelCost {
-  currency: string;
-  tokens: number;
-  input: number;
-  output: number;
+  currency?: string;
+  tokens?: number;
+  input?: number;
+  output?: number;
 }
 
 interface Model {
   id: string;
-  provider: string;
-  name: string;
-  aliases: string[];
-  context: number;
-  max_tokens: number;
-  cost: ModelCost;
+  provider?: string;
+  name?: string;
+  aliases?: string[];
+  context?: number;
+  max_tokens?: number;
+  cost?: ModelCost;
 }
 
 // Default model (will be updated when models are fetched)
@@ -1339,39 +1339,60 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
                   <>
                     <select
                       value={tempSettings.modelId || DEFAULT_MODEL_ID}
-                      onChange={(e) => setTempSettings({ ...tempSettings, modelId: e.target.value })}
+                      onChange={(e) => {
+                        const newModelId = e.target.value;
+                        const selectedModel = models.find(m => m.id === newModelId);
+                        // Adjust maxTokens if it exceeds the new model's max_tokens
+                        const maxOutput = selectedModel?.max_tokens || 4000;
+                        const newMaxTokens = Math.min(tempSettings.maxTokens, maxOutput);
+                        setTempSettings({ ...tempSettings, modelId: newModelId, maxTokens: newMaxTokens });
+                      }}
                       className="w-full bg-zinc-800 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700"
                     >
-                      {models.map((model) => (
-                        <option key={model.id} value={model.id}>
-                          {model.name} - {model.context.toLocaleString()} ctx | ${((model.cost.input / 100) * (1000000 / model.cost.tokens)).toFixed(2)}/M in | ${((model.cost.output / 100) * (1000000 / model.cost.tokens)).toFixed(2)}/M out
-                        </option>
-                      ))}
+                      {models.map((model) => {
+                        const ctx = model.context ? model.context.toLocaleString() : "Unknown";
+                        const costInfo = model.cost && model.cost.tokens 
+                          ? `$${((model.cost.input || 0) / 100 * (1000000 / model.cost.tokens)).toFixed(2)}/M in | $${((model.cost.output || 0) / 100 * (1000000 / model.cost.tokens)).toFixed(2)}/M out`
+                          : "Pricing N/A";
+                        return (
+                          <option key={model.id} value={model.id}>
+                            {model.name || model.id} - {ctx} ctx | {costInfo}
+                          </option>
+                        );
+                      })}
                     </select>
                     {(() => {
                       const selectedModel = models.find(m => m.id === (tempSettings.modelId || DEFAULT_MODEL_ID));
                       if (selectedModel) {
+                        const ctx = selectedModel.context ? selectedModel.context.toLocaleString() : "Unknown";
+                        const maxOut = selectedModel.max_tokens ? selectedModel.max_tokens.toLocaleString() : "Unknown";
+                        const inputCost = selectedModel.cost && selectedModel.cost.tokens
+                          ? `$${((selectedModel.cost.input || 0) / 100 * (1000000 / selectedModel.cost.tokens)).toFixed(2)} per 1M tokens`
+                          : "N/A";
+                        const outputCost = selectedModel.cost && selectedModel.cost.tokens
+                          ? `$${((selectedModel.cost.output || 0) / 100 * (1000000 / selectedModel.cost.tokens)).toFixed(2)} per 1M tokens`
+                          : "N/A";
                         return (
                           <div className="mt-2 p-3 bg-zinc-800/50 rounded-lg text-xs text-zinc-400 space-y-1">
                             <div className="flex justify-between">
                               <span>Provider:</span>
-                              <span className="text-zinc-300">{selectedModel.provider}</span>
+                              <span className="text-zinc-300">{selectedModel.provider || "Unknown"}</span>
                             </div>
                             <div className="flex justify-between">
                               <span>Context Window:</span>
-                              <span className="text-zinc-300">{selectedModel.context.toLocaleString()} tokens</span>
+                              <span className="text-zinc-300">{ctx} tokens</span>
                             </div>
                             <div className="flex justify-between">
                               <span>Max Output:</span>
-                              <span className="text-zinc-300">{selectedModel.max_tokens.toLocaleString()} tokens</span>
+                              <span className="text-zinc-300">{maxOut} tokens</span>
                             </div>
                             <div className="flex justify-between">
                               <span>Input Cost:</span>
-                              <span className="text-zinc-300">${((selectedModel.cost.input / 100) * (1000000 / selectedModel.cost.tokens)).toFixed(2)} per 1M tokens</span>
+                              <span className="text-zinc-300">{inputCost}</span>
                             </div>
                             <div className="flex justify-between">
                               <span>Output Cost:</span>
-                              <span className="text-zinc-300">${((selectedModel.cost.output / 100) * (1000000 / selectedModel.cost.tokens)).toFixed(2)} per 1M tokens</span>
+                              <span className="text-zinc-300">{outputCost}</span>
                             </div>
                           </div>
                         );
@@ -1404,18 +1425,26 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
                 <label className="block text-sm font-medium text-zinc-400 mb-2">
                   Max Tokens: {tempSettings.maxTokens}
                 </label>
-                <input
-                  type="range"
-                  min="100"
-                  max="4000"
-                  step="100"
-                  value={tempSettings.maxTokens}
-                  onChange={(e) => setTempSettings({ ...tempSettings, maxTokens: parseInt(e.target.value) })}
-                  className="w-full"
-                />
-                <p className="text-xs text-zinc-500 mt-1">
-                  Maximum length of AI responses
-                </p>
+                {(() => {
+                  const selectedModel = models.find(m => m.id === (tempSettings.modelId || DEFAULT_MODEL_ID));
+                  const maxOutput = selectedModel?.max_tokens || 4000;
+                  return (
+                    <>
+                      <input
+                        type="range"
+                        min="100"
+                        max={maxOutput}
+                        step="100"
+                        value={tempSettings.maxTokens}
+                        onChange={(e) => setTempSettings({ ...tempSettings, maxTokens: parseInt(e.target.value) })}
+                        className="w-full"
+                      />
+                      <p className="text-xs text-zinc-500 mt-1">
+                        Maximum length of AI responses (model max: {maxOutput.toLocaleString()})
+                      </p>
+                    </>
+                  );
+                })()}
               </div>
 
               <div>
