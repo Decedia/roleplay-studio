@@ -23,7 +23,7 @@ interface Message {
   content: string;
 }
 
-// Model configuration
+// Model configuration from puter.ai.listModels()
 interface ModelCost {
   currency: string;
   tokens: number;
@@ -41,26 +41,8 @@ interface Model {
   cost: ModelCost;
 }
 
-// Available models
-const MODELS: Model[] = [
-  {
-    id: "claude-opus-4-5",
-    provider: "claude",
-    name: "Claude Opus 4.5",
-    aliases: ["claude-opus-4-5-latest"],
-    context: 200000,
-    max_tokens: 64000,
-    cost: {
-      currency: "usd-cents",
-      tokens: 1000000,
-      input: 500,
-      output: 2500,
-    },
-  },
-];
-
-// Default model
-const DEFAULT_MODEL_ID = "claude-opus-4-5";
+// Default model (will be updated when models are fetched)
+const DEFAULT_MODEL_ID = "gpt-4o-mini";
 
 interface ConversationSettings {
   temperature: number;
@@ -93,6 +75,7 @@ declare global {
             top_p?: number;
           }
         ) => Promise<{ message: { content: string } }>;
+        listModels: (provider?: string) => Promise<Model[]>;
       };
       auth: {
         getUser: () => Promise<PuterUser | null>;
@@ -175,6 +158,11 @@ export default function Chat() {
   const [appUsage, setAppUsage] = useState<PuterAppUsage | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [usageError, setUsageError] = useState<string | null>(null);
+  
+  // Models state
+  const [models, setModels] = useState<Model[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(true);
+  const [modelsError, setModelsError] = useState<string | null>(null);
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -273,6 +261,57 @@ export default function Chat() {
       clearInterval(checkPuter);
       if (typeof window.puter === "undefined") {
         setUsageError("Puter.js failed to load");
+      }
+    }, 10000);
+    
+    return () => {
+      clearInterval(checkPuter);
+      clearTimeout(timeout);
+    };
+  }, []);
+
+  // Fetch available models from puter.ai.listModels()
+  useEffect(() => {
+    const fetchModels = async () => {
+      try {
+        setModelsLoading(true);
+        if (typeof window.puter !== "undefined") {
+          console.log("Fetching available models...");
+          const modelsData = await window.puter.ai.listModels();
+          console.log("Models data:", modelsData);
+          setModels(modelsData);
+          
+          // Set default model if not already set
+          if (modelsData.length > 0) {
+            const defaultModel = modelsData.find(m => m.id === DEFAULT_MODEL_ID) || modelsData[0];
+            setTempSettings(prev => ({
+              ...prev,
+              modelId: prev.modelId || defaultModel.id
+            }));
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch models:", err);
+        setModelsError(err instanceof Error ? err.message : "Failed to load models");
+      } finally {
+        setModelsLoading(false);
+      }
+    };
+
+    // Wait for puter.js to load
+    const checkPuter = setInterval(() => {
+      if (typeof window.puter !== "undefined") {
+        clearInterval(checkPuter);
+        fetchModels();
+      }
+    }, 100);
+
+    // Cleanup interval after 10 seconds if puter doesn't load
+    const timeout = setTimeout(() => {
+      clearInterval(checkPuter);
+      if (typeof window.puter === "undefined") {
+        setModelsError("Puter.js failed to load");
+        setModelsLoading(false);
       }
     }, 10000);
     
@@ -1288,43 +1327,59 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
                 <label className="block text-sm font-medium text-zinc-400 mb-2">
                   Model
                 </label>
-                <select
-                  value={tempSettings.modelId || DEFAULT_MODEL_ID}
-                  onChange={(e) => setTempSettings({ ...tempSettings, modelId: e.target.value })}
-                  className="w-full bg-zinc-800 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700"
-                >
-                  {MODELS.map((model) => (
-                    <option key={model.id} value={model.id}>
-                      {model.name} - {model.context.toLocaleString()} ctx | ${((model.cost.input / 100) * (1000000 / model.cost.tokens)).toFixed(2)}/M in | ${((model.cost.output / 100) * (1000000 / model.cost.tokens)).toFixed(2)}/M out
-                    </option>
-                  ))}
-                </select>
-                {(() => {
-                  const selectedModel = MODELS.find(m => m.id === (tempSettings.modelId || DEFAULT_MODEL_ID));
-                  if (selectedModel) {
-                    return (
-                      <div className="mt-2 p-3 bg-zinc-800/50 rounded-lg text-xs text-zinc-400 space-y-1">
-                        <div className="flex justify-between">
-                          <span>Context Window:</span>
-                          <span className="text-zinc-300">{selectedModel.context.toLocaleString()} tokens</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Max Output:</span>
-                          <span className="text-zinc-300">{selectedModel.max_tokens.toLocaleString()} tokens</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Input Cost:</span>
-                          <span className="text-zinc-300">${((selectedModel.cost.input / 100) * (1000000 / selectedModel.cost.tokens)).toFixed(2)} per 1M tokens</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Output Cost:</span>
-                          <span className="text-zinc-300">${((selectedModel.cost.output / 100) * (1000000 / selectedModel.cost.tokens)).toFixed(2)} per 1M tokens</span>
-                        </div>
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
+                {modelsLoading ? (
+                  <div className="w-full bg-zinc-800 text-zinc-400 rounded-lg px-4 py-2 border border-zinc-700">
+                    Loading models...
+                  </div>
+                ) : modelsError ? (
+                  <div className="w-full bg-red-900/30 text-red-400 rounded-lg px-4 py-2 border border-red-800">
+                    {modelsError}
+                  </div>
+                ) : (
+                  <>
+                    <select
+                      value={tempSettings.modelId || DEFAULT_MODEL_ID}
+                      onChange={(e) => setTempSettings({ ...tempSettings, modelId: e.target.value })}
+                      className="w-full bg-zinc-800 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700"
+                    >
+                      {models.map((model) => (
+                        <option key={model.id} value={model.id}>
+                          {model.name} - {model.context.toLocaleString()} ctx | ${((model.cost.input / 100) * (1000000 / model.cost.tokens)).toFixed(2)}/M in | ${((model.cost.output / 100) * (1000000 / model.cost.tokens)).toFixed(2)}/M out
+                        </option>
+                      ))}
+                    </select>
+                    {(() => {
+                      const selectedModel = models.find(m => m.id === (tempSettings.modelId || DEFAULT_MODEL_ID));
+                      if (selectedModel) {
+                        return (
+                          <div className="mt-2 p-3 bg-zinc-800/50 rounded-lg text-xs text-zinc-400 space-y-1">
+                            <div className="flex justify-between">
+                              <span>Provider:</span>
+                              <span className="text-zinc-300">{selectedModel.provider}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Context Window:</span>
+                              <span className="text-zinc-300">{selectedModel.context.toLocaleString()} tokens</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Max Output:</span>
+                              <span className="text-zinc-300">{selectedModel.max_tokens.toLocaleString()} tokens</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Input Cost:</span>
+                              <span className="text-zinc-300">${((selectedModel.cost.input / 100) * (1000000 / selectedModel.cost.tokens)).toFixed(2)} per 1M tokens</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Output Cost:</span>
+                              <span className="text-zinc-300">${((selectedModel.cost.output / 100) * (1000000 / selectedModel.cost.tokens)).toFixed(2)} per 1M tokens</span>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </>
+                )}
               </div>
 
               <div>
