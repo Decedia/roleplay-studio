@@ -208,8 +208,8 @@ export default function Chat() {
         throw new Error("Puter.js is still loading. Please wait a moment and try again.");
       }
 
-      // Build system prompt with persona
-      const systemPrompt = `You are roleplaying as ${selectedPersona.name}. ${selectedPersona.description} Stay in character throughout the conversation.`;
+      // Build system prompt with persona - user is roleplaying as this character
+      const systemPrompt = `The user is roleplaying as ${selectedPersona.name}. ${selectedPersona.description} Treat the user as this character and respond accordingly. Stay engaged with their character throughout the conversation.`;
 
       // Prepare messages for API
       const chatMessages = [
