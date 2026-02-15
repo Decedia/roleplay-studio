@@ -49,7 +49,6 @@ interface ConversationSettings {
   maxTokens: number;
   topP: number;
   modelId: string;
-  instructions: string;
 }
 
 interface Conversation {
@@ -112,6 +111,7 @@ interface PuterAppUsage {
 const PERSONAS_KEY = "chat_personas";
 const CHARACTERS_KEY = "chat_characters";
 const CONVERSATIONS_KEY = "chat_conversations";
+const GLOBAL_INSTRUCTIONS_KEY = "chat_global_instructions";
 
 // Default settings
 const DEFAULT_SETTINGS: ConversationSettings = {
@@ -119,7 +119,6 @@ const DEFAULT_SETTINGS: ConversationSettings = {
   maxTokens: 2000,
   topP: 0.9,
   modelId: "", // Will be set when models are loaded
-  instructions: "", // Custom instructions for the AI
 };
 
 export default function Chat() {
@@ -165,12 +164,16 @@ export default function Chat() {
   const [models, setModels] = useState<Model[]>([]);
   const [modelsLoading, setModelsLoading] = useState(true);
   const [modelsError, setModelsError] = useState<string | null>(null);
+  
+  // Global instructions state
+  const [globalInstructions, setGlobalInstructions] = useState<string>("");
 
   // Load data from localStorage on mount
   useEffect(() => {
     const storedPersonas = localStorage.getItem(PERSONAS_KEY);
     const storedCharacters = localStorage.getItem(CHARACTERS_KEY);
     const storedConversations = localStorage.getItem(CONVERSATIONS_KEY);
+    const storedInstructions = localStorage.getItem(GLOBAL_INSTRUCTIONS_KEY);
     
     if (storedPersonas) {
       setPersonas(JSON.parse(storedPersonas));
@@ -180,6 +183,9 @@ export default function Chat() {
     }
     if (storedConversations) {
       setConversations(JSON.parse(storedConversations));
+    }
+    if (storedInstructions) {
+      setGlobalInstructions(storedInstructions);
     }
   }, []);
 
@@ -203,6 +209,11 @@ export default function Chat() {
       localStorage.setItem(CONVERSATIONS_KEY, JSON.stringify(conversations));
     }
   }, [conversations]);
+
+  // Save global instructions to localStorage
+  useEffect(() => {
+    localStorage.setItem(GLOBAL_INSTRUCTIONS_KEY, globalInstructions);
+  }, [globalInstructions]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -547,7 +558,7 @@ export default function Chat() {
       }
 
       // Build system prompt - user is roleplaying as persona, AI is the character
-      const customInstructions = currentConversation.settings.instructions?.trim();
+      const customInstructions = globalInstructions?.trim();
       const systemPrompt = `You are ${selectedCharacter.name}. ${selectedCharacter.description}
 
 The user is roleplaying as ${selectedPersona.name}. ${selectedPersona.description}
@@ -629,7 +640,7 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
       }
 
       // Build system prompt - user is roleplaying as persona, AI is the character
-      const customInstructions = currentConversation.settings.instructions?.trim();
+      const customInstructions = globalInstructions?.trim();
       const systemPrompt = `You are ${selectedCharacter.name}. ${selectedCharacter.description}
 
 The user is roleplaying as ${selectedPersona.name}. ${selectedPersona.description}
@@ -1400,7 +1411,7 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
       {/* Settings Modal */}
       {showSettingsModal && currentConversation && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-md">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-semibold text-white mb-4">
               Conversation Settings
             </h2>
@@ -1433,26 +1444,40 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
                       }}
                       className="w-full bg-zinc-800 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700"
                     >
-                      {models.map((model) => {
-                        const ctx = model.context ? model.context.toLocaleString() : "Unknown";
-                        let costInfo: string;
-                        if (model.cost && model.cost.tokens) {
-                          const inputCost = (model.cost.input || 0) / 100 * (1000000 / model.cost.tokens);
-                          const outputCost = (model.cost.output || 0) / 100 * (1000000 / model.cost.tokens);
-                          if (inputCost === 0 && outputCost === 0) {
-                            costInfo = "Free";
-                          } else {
-                            costInfo = `$${inputCost.toFixed(2)}/M in | $${outputCost.toFixed(2)}/M out`;
-                          }
-                        } else {
-                          costInfo = "Pricing N/A";
-                        }
-                        return (
-                          <option key={model.id} value={model.id}>
-                            {model.name || model.id} - {ctx} ctx | {costInfo}
-                          </option>
-                        );
-                      })}
+                      {/* Group models by provider */}
+                      {(() => {
+                        const providerGroups = models.reduce((acc, model) => {
+                          const provider = model.provider || "Other";
+                          if (!acc[provider]) acc[provider] = [];
+                          acc[provider].push(model);
+                          return acc;
+                        }, {} as Record<string, Model[]>);
+                        
+                        return Object.entries(providerGroups).map(([provider, providerModels]) => (
+                          <optgroup key={provider} label={provider}>
+                            {providerModels.map((model) => {
+                              const ctx = model.context ? model.context.toLocaleString() : "Unknown";
+                              let costInfo: string;
+                              if (model.cost && model.cost.tokens) {
+                                const inputCost = (model.cost.input || 0) / 100 * (1000000 / model.cost.tokens);
+                                const outputCost = (model.cost.output || 0) / 100 * (1000000 / model.cost.tokens);
+                                if (inputCost === 0 && outputCost === 0) {
+                                  costInfo = "Free";
+                                } else {
+                                  costInfo = `$${inputCost.toFixed(2)}/M in | $${outputCost.toFixed(2)}/M out`;
+                                }
+                              } else {
+                                costInfo = "Pricing N/A";
+                              }
+                              return (
+                                <option key={model.id} value={model.id}>
+                                  {model.name || model.id} - {ctx} ctx | {costInfo}
+                                </option>
+                              );
+                            })}
+                          </optgroup>
+                        ));
+                      })()}
                     </select>
                     {(() => {
                       const selectedModel = models.find(m => m.id === (tempSettings.modelId || models[0]?.id));
@@ -1565,17 +1590,17 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
 
               <div>
                 <label className="block text-sm font-medium text-zinc-400 mb-2">
-                  Custom Instructions
+                  Global Instructions
                 </label>
                 <textarea
-                  value={tempSettings.instructions || ""}
-                  onChange={(e) => setTempSettings({ ...tempSettings, instructions: e.target.value })}
+                  value={globalInstructions}
+                  onChange={(e) => setGlobalInstructions(e.target.value)}
                   placeholder="Add specific instructions for how the AI should behave (e.g., 'Speak in a formal tone', 'Keep responses under 100 words')..."
                   rows={3}
                   className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
                 />
                 <p className="text-xs text-zinc-500 mt-1">
-                  Additional guidance for the AI character&apos;s behavior
+                  Applied to all conversations globally
                 </p>
               </div>
             </div>

@@ -30,7 +30,8 @@ A chat application that enables users to converse with GLM 5 AI using puter.js. 
 - [x] **GLM 5 preferred as default model**
 - [x] **Fixed send button position - centered with flexbox layout**
 - [x] **Retry button for error recovery - resends last message**
-- [x] **Custom instructions field in conversation settings**
+- [x] **Global instructions - applied to all conversations**
+- [x] **Models grouped by provider in dropdown**
 
 ## Current Structure
 
@@ -72,8 +73,12 @@ A chat application that enables users to converse with GLM 5 AI using puter.js. 
 - **Temperature** (0-2): Controls creativity vs focus
 - **Max Tokens** (100-4000): Maximum response length
 - **Top P** (0-1): Controls word selection diversity
-- **Custom Instructions**: Additional guidance for AI behavior
 - Settings are saved per conversation
+- Accessible via gear icon in chat view
+
+### Global Instructions
+- Custom instructions applied to ALL conversations
+- Stored in localStorage separately from conversation settings
 - Accessible via gear icon in chat view
 
 ### Chat Interface
@@ -127,7 +132,6 @@ interface ConversationSettings {
   maxTokens: number;
   topP: number;
   modelId: string;
-  instructions: string;
 }
 
 interface Conversation {
@@ -145,6 +149,7 @@ interface Conversation {
 - `chat_personas` - Stores all user personas
 - `chat_characters` - Stores all AI characters
 - `chat_conversations` - Stores all conversations
+- `chat_global_instructions` - Stores global instructions for all conversations
 
 ### puter.js Integration
 - Loaded via script tag in layout.tsx: `https://js.puter.com/v2/`
@@ -166,6 +171,7 @@ interface Conversation {
 
 | Date | Changes |
 |------|---------|
+| 2026-02-15 | Made instructions global (not per-conversation), grouped models by provider in dropdown |
 | 2026-02-15 | Fixed send button position (flexbox layout), added retry button for errors, added custom instructions field |
 | 2026-02-15 | Added dynamic model selection, "Free" pricing display for zero-cost models, GLM 5 as preferred default |
 | 2026-02-15 | Major refactor: separated persona/character systems, added conversation settings, visible usage stats |
