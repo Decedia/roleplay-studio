@@ -49,6 +49,7 @@ interface ConversationSettings {
   maxTokens: number;
   topP: number;
   modelId: string;
+  instructions: string;
 }
 
 interface Conversation {
@@ -118,6 +119,7 @@ const DEFAULT_SETTINGS: ConversationSettings = {
   maxTokens: 2000,
   topP: 0.9,
   modelId: "", // Will be set when models are loaded
+  instructions: "", // Custom instructions for the AI
 };
 
 export default function Chat() {
@@ -545,10 +547,11 @@ export default function Chat() {
       }
 
       // Build system prompt - user is roleplaying as persona, AI is the character
+      const customInstructions = currentConversation.settings.instructions?.trim();
       const systemPrompt = `You are ${selectedCharacter.name}. ${selectedCharacter.description}
 
 The user is roleplaying as ${selectedPersona.name}. ${selectedPersona.description}
-
+${customInstructions ? `\nAdditional Instructions: ${customInstructions}` : ""}
 Stay in character as ${selectedCharacter.name} throughout the conversation. Respond naturally and consistently with your character's personality.`;
 
       // Prepare messages for API
@@ -598,6 +601,66 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
+    }
+  };
+
+  // Retry the last message (resend to AI)
+  const handleRetry = async () => {
+    if (isLoading || !currentConversation || !selectedPersona || !selectedCharacter) return;
+    
+    // Find the last user message
+    const lastUserMessageIndex = currentConversation.messages.findLastIndex(m => m.role === "user");
+    if (lastUserMessageIndex === -1) return;
+    
+    const lastUserMessage = currentConversation.messages[lastUserMessageIndex];
+    
+    // Remove all messages after the last user message (including any failed AI response)
+    const messagesBeforeRetry = currentConversation.messages.slice(0, lastUserMessageIndex + 1);
+    
+    setError(null);
+    setIsLoading(true);
+    
+    // Update conversation to show only messages up to last user message
+    updateConversationMessages(messagesBeforeRetry);
+
+    try {
+      if (typeof window.puter === "undefined") {
+        throw new Error("Puter.js is still loading. Please wait a moment and try again.");
+      }
+
+      // Build system prompt - user is roleplaying as persona, AI is the character
+      const customInstructions = currentConversation.settings.instructions?.trim();
+      const systemPrompt = `You are ${selectedCharacter.name}. ${selectedCharacter.description}
+
+The user is roleplaying as ${selectedPersona.name}. ${selectedPersona.description}
+${customInstructions ? `\nAdditional Instructions: ${customInstructions}` : ""}
+Stay in character as ${selectedCharacter.name} throughout the conversation. Respond naturally and consistently with your character's personality.`;
+
+      // Prepare messages for API
+      const chatMessages = [
+        { role: "system", content: systemPrompt },
+        ...messagesBeforeRetry.map((m) => ({ role: m.role, content: m.content })),
+      ];
+
+      const response = await window.puter.ai.chat(chatMessages, {
+        model: currentConversation.settings.modelId || models[0]?.id || "gpt-4o-mini",
+        temperature: currentConversation.settings.temperature,
+        max_tokens: currentConversation.settings.maxTokens,
+        top_p: currentConversation.settings.topP,
+      });
+
+      const finalMessages: Message[] = [
+        ...messagesBeforeRetry,
+        { role: "assistant", content: response.message.content },
+      ];
+
+      updateConversationMessages(finalMessages);
+    } catch (err) {
+      console.error("Retry error:", err);
+      setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
+      inputRef.current?.focus();
     }
   };
 
@@ -1138,8 +1201,18 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
       {error && (
         <div className="flex-shrink-0 px-4 py-2">
           <div className="max-w-4xl mx-auto">
-            <div className="bg-red-900/50 border border-red-800 rounded-lg px-4 py-2 text-red-200 text-sm">
-              {error}
+            <div className="bg-red-900/50 border border-red-800 rounded-lg px-4 py-3 text-red-200 text-sm flex items-center justify-between gap-3">
+              <span>{error}</span>
+              <button
+                onClick={handleRetry}
+                disabled={isLoading}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Retry
+              </button>
             </div>
           </div>
         </div>
@@ -1149,22 +1222,24 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
       {view === "chat" && currentConversation && (
         <div className="flex-shrink-0 border-t border-zinc-800 bg-black">
           <div className="max-w-4xl mx-auto px-4 py-4">
-            <form onSubmit={handleSubmit} className="relative">
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={`Message as ${selectedPersona?.name}...`}
-                rows={1}
-                className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded-xl px-4 py-3 pr-14 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent border border-zinc-800"
-                style={{ minHeight: "48px", maxHeight: "200px" }}
-                disabled={isLoading}
-              />
+            <form onSubmit={handleSubmit} className="flex items-end gap-2">
+              <div className="flex-1 relative">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={`Message as ${selectedPersona?.name}...`}
+                  rows={1}
+                  className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded-xl px-4 py-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent border border-zinc-800"
+                  style={{ minHeight: "48px", maxHeight: "200px" }}
+                  disabled={isLoading}
+                />
+              </div>
               <button
                 type="submit"
                 disabled={!input.trim() || isLoading}
-                className="absolute right-2 bottom-2 p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex-shrink-0 p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <svg
                   className="w-5 h-5"
@@ -1485,6 +1560,22 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
                 />
                 <p className="text-xs text-zinc-500 mt-1">
                   Controls diversity of word selection
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-2">
+                  Custom Instructions
+                </label>
+                <textarea
+                  value={tempSettings.instructions || ""}
+                  onChange={(e) => setTempSettings({ ...tempSettings, instructions: e.target.value })}
+                  placeholder="Add specific instructions for how the AI should behave (e.g., 'Speak in a formal tone', 'Keep responses under 100 words')..."
+                  rows={3}
+                  className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
+                />
+                <p className="text-xs text-zinc-500 mt-1">
+                  Additional guidance for the AI character&apos;s behavior
                 </p>
               </div>
             </div>
