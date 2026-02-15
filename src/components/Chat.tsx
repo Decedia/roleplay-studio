@@ -41,8 +41,8 @@ interface Model {
   cost?: ModelCost;
 }
 
-// Default model (will be updated when models are fetched)
-const DEFAULT_MODEL_ID = "gpt-4o-mini";
+// Default model preference - try to find GLM 5 first, then fall back
+const DEFAULT_MODEL_PREFERENCES = ["glm-5", "gpt-4o-mini", "gpt-4o"];
 
 interface ConversationSettings {
   temperature: number;
@@ -117,7 +117,7 @@ const DEFAULT_SETTINGS: ConversationSettings = {
   temperature: 0.7,
   maxTokens: 2000,
   topP: 0.9,
-  modelId: DEFAULT_MODEL_ID,
+  modelId: "", // Will be set when models are loaded
 };
 
 export default function Chat() {
@@ -281,12 +281,21 @@ export default function Chat() {
           console.log("Models data:", modelsData);
           setModels(modelsData);
           
-          // Set default model if not already set
+          // Set default model if not already set - prefer GLM 5
           if (modelsData.length > 0) {
-            const defaultModel = modelsData.find(m => m.id === DEFAULT_MODEL_ID) || modelsData[0];
+            let defaultModel: Model | undefined;
+            // Try each preferred model ID in order
+            for (const pref of DEFAULT_MODEL_PREFERENCES) {
+              defaultModel = modelsData.find(m => m.id === pref || m.id.includes(pref));
+              if (defaultModel) break;
+            }
+            // Fall back to first model if no preference found
+            if (!defaultModel) {
+              defaultModel = modelsData[0];
+            }
             setTempSettings(prev => ({
               ...prev,
-              modelId: prev.modelId || defaultModel.id
+              modelId: prev.modelId || defaultModel!.id
             }));
           }
         }
@@ -549,7 +558,7 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
       ];
 
       const response = await window.puter.ai.chat(chatMessages, {
-        model: currentConversation.settings.modelId || DEFAULT_MODEL_ID,
+        model: currentConversation.settings.modelId || models[0]?.id || "gpt-4o-mini",
         temperature: currentConversation.settings.temperature,
         max_tokens: currentConversation.settings.maxTokens,
         top_p: currentConversation.settings.topP,
@@ -1338,7 +1347,7 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
                 ) : (
                   <>
                     <select
-                      value={tempSettings.modelId || DEFAULT_MODEL_ID}
+                      value={tempSettings.modelId || models[0]?.id || ""}
                       onChange={(e) => {
                         const newModelId = e.target.value;
                         const selectedModel = models.find(m => m.id === newModelId);
@@ -1371,7 +1380,7 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
                       })}
                     </select>
                     {(() => {
-                      const selectedModel = models.find(m => m.id === (tempSettings.modelId || DEFAULT_MODEL_ID));
+                      const selectedModel = models.find(m => m.id === (tempSettings.modelId || models[0]?.id));
                       if (selectedModel) {
                         const ctx = selectedModel.context ? selectedModel.context.toLocaleString() : "Unknown";
                         const maxOut = selectedModel.max_tokens ? selectedModel.max_tokens.toLocaleString() : "Unknown";
@@ -1440,7 +1449,7 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
                   Max Tokens: {tempSettings.maxTokens}
                 </label>
                 {(() => {
-                  const selectedModel = models.find(m => m.id === (tempSettings.modelId || DEFAULT_MODEL_ID));
+                  const selectedModel = models.find(m => m.id === (tempSettings.modelId || models[0]?.id));
                   const maxOutput = selectedModel?.max_tokens || 4000;
                   return (
                     <>
