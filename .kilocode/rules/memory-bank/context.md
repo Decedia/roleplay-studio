@@ -21,6 +21,8 @@ A chat application that enables users to converse with GLM 5 AI using puter.js. 
 - [x] Persona-based AI roleplay
 - [x] LocalStorage persistence for personas and conversations
 - [x] Loading states and error handling
+- [x] User info display with puter.js getUser
+- [x] Monthly usage stats with getMonthlyUsage
 
 ## Current Structure
 
@@ -92,6 +94,8 @@ interface Conversation {
 - Uses `window.puter.ai.chat()` method
 - Model specified as "glm-5"
 - System prompt: `The user is roleplaying as ${name}. ${description} Treat the user as this character and respond accordingly.`
+- User info: `window.puter.auth.getUser()` - returns username, email, uuid
+- Usage stats: `window.puter.usage.getMonthlyUsage()` - returns ai_chat_tokens, ai_image_generations, storage_bytes
 
 ### Component Architecture
 - Client component with `"use client"` directive
@@ -103,6 +107,7 @@ interface Conversation {
 
 | Date | Changes |
 |------|---------|
+| 2026-02-15 | Added getUser and getMonthlyUsage integration with user menu in header |
 | 2026-02-15 | Fixed persona system: persona now represents the user (not AI) in conversations |
 | 2026-02-15 | Added persona system with create/edit/delete, conversation management, and black theme |
 | 2026-02-15 | Enhanced dark theme with custom scrollbar and global dark mode styles |
