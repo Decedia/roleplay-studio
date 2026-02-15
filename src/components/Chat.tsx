@@ -23,10 +23,50 @@ interface Message {
   content: string;
 }
 
+// Model configuration
+interface ModelCost {
+  currency: string;
+  tokens: number;
+  input: number;
+  output: number;
+}
+
+interface Model {
+  id: string;
+  provider: string;
+  name: string;
+  aliases: string[];
+  context: number;
+  max_tokens: number;
+  cost: ModelCost;
+}
+
+// Available models
+const MODELS: Model[] = [
+  {
+    id: "claude-opus-4-5",
+    provider: "claude",
+    name: "Claude Opus 4.5",
+    aliases: ["claude-opus-4-5-latest"],
+    context: 200000,
+    max_tokens: 64000,
+    cost: {
+      currency: "usd-cents",
+      tokens: 1000000,
+      input: 500,
+      output: 2500,
+    },
+  },
+];
+
+// Default model
+const DEFAULT_MODEL_ID = "claude-opus-4-5";
+
 interface ConversationSettings {
   temperature: number;
   maxTokens: number;
   topP: number;
+  modelId: string;
 }
 
 interface Conversation {
@@ -94,6 +134,7 @@ const DEFAULT_SETTINGS: ConversationSettings = {
   temperature: 0.7,
   maxTokens: 2000,
   topP: 0.9,
+  modelId: DEFAULT_MODEL_ID,
 };
 
 export default function Chat() {
@@ -469,7 +510,7 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
       ];
 
       const response = await window.puter.ai.chat(chatMessages, {
-        model: "glm-5",
+        model: currentConversation.settings.modelId || DEFAULT_MODEL_ID,
         temperature: currentConversation.settings.temperature,
         max_tokens: currentConversation.settings.maxTokens,
         top_p: currentConversation.settings.topP,
@@ -1242,6 +1283,50 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
             </h2>
             
             <div className="space-y-6">
+              {/* Model Selection */}
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-2">
+                  Model
+                </label>
+                <select
+                  value={tempSettings.modelId || DEFAULT_MODEL_ID}
+                  onChange={(e) => setTempSettings({ ...tempSettings, modelId: e.target.value })}
+                  className="w-full bg-zinc-800 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700"
+                >
+                  {MODELS.map((model) => (
+                    <option key={model.id} value={model.id}>
+                      {model.name} - {model.context.toLocaleString()} ctx | ${((model.cost.input / 100) * (1000000 / model.cost.tokens)).toFixed(2)}/M in | ${((model.cost.output / 100) * (1000000 / model.cost.tokens)).toFixed(2)}/M out
+                    </option>
+                  ))}
+                </select>
+                {(() => {
+                  const selectedModel = MODELS.find(m => m.id === (tempSettings.modelId || DEFAULT_MODEL_ID));
+                  if (selectedModel) {
+                    return (
+                      <div className="mt-2 p-3 bg-zinc-800/50 rounded-lg text-xs text-zinc-400 space-y-1">
+                        <div className="flex justify-between">
+                          <span>Context Window:</span>
+                          <span className="text-zinc-300">{selectedModel.context.toLocaleString()} tokens</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Max Output:</span>
+                          <span className="text-zinc-300">{selectedModel.max_tokens.toLocaleString()} tokens</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Input Cost:</span>
+                          <span className="text-zinc-300">${((selectedModel.cost.input / 100) * (1000000 / selectedModel.cost.tokens)).toFixed(2)} per 1M tokens</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Output Cost:</span>
+                          <span className="text-zinc-300">${((selectedModel.cost.output / 100) * (1000000 / selectedModel.cost.tokens)).toFixed(2)} per 1M tokens</span>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-zinc-400 mb-2">
                   Temperature: {tempSettings.temperature.toFixed(2)}
