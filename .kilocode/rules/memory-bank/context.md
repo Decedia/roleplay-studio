@@ -62,5 +62,6 @@ A chat application that enables users to converse with GLM 5 AI using puter.js. 
 
 | Date | Changes |
 |------|---------|
+| 2026-02-15 | Enhanced dark theme with custom scrollbar and global dark mode styles |
 | 2026-02-15 | Created GLM 5 chat application with puter.js integration |
 | Initial | Template created with base setup |
