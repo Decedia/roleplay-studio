@@ -1351,9 +1351,18 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
                     >
                       {models.map((model) => {
                         const ctx = model.context ? model.context.toLocaleString() : "Unknown";
-                        const costInfo = model.cost && model.cost.tokens 
-                          ? `$${((model.cost.input || 0) / 100 * (1000000 / model.cost.tokens)).toFixed(2)}/M in | $${((model.cost.output || 0) / 100 * (1000000 / model.cost.tokens)).toFixed(2)}/M out`
-                          : "Pricing N/A";
+                        let costInfo: string;
+                        if (model.cost && model.cost.tokens) {
+                          const inputCost = (model.cost.input || 0) / 100 * (1000000 / model.cost.tokens);
+                          const outputCost = (model.cost.output || 0) / 100 * (1000000 / model.cost.tokens);
+                          if (inputCost === 0 && outputCost === 0) {
+                            costInfo = "Free";
+                          } else {
+                            costInfo = `$${inputCost.toFixed(2)}/M in | $${outputCost.toFixed(2)}/M out`;
+                          }
+                        } else {
+                          costInfo = "Pricing N/A";
+                        }
                         return (
                           <option key={model.id} value={model.id}>
                             {model.name || model.id} - {ctx} ctx | {costInfo}
@@ -1366,12 +1375,17 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
                       if (selectedModel) {
                         const ctx = selectedModel.context ? selectedModel.context.toLocaleString() : "Unknown";
                         const maxOut = selectedModel.max_tokens ? selectedModel.max_tokens.toLocaleString() : "Unknown";
-                        const inputCost = selectedModel.cost && selectedModel.cost.tokens
-                          ? `$${((selectedModel.cost.input || 0) / 100 * (1000000 / selectedModel.cost.tokens)).toFixed(2)} per 1M tokens`
-                          : "N/A";
-                        const outputCost = selectedModel.cost && selectedModel.cost.tokens
-                          ? `$${((selectedModel.cost.output || 0) / 100 * (1000000 / selectedModel.cost.tokens)).toFixed(2)} per 1M tokens`
-                          : "N/A";
+                        let inputCostDisplay: string;
+                        let outputCostDisplay: string;
+                        if (selectedModel.cost && selectedModel.cost.tokens) {
+                          const inputCost = (selectedModel.cost.input || 0) / 100 * (1000000 / selectedModel.cost.tokens);
+                          const outputCost = (selectedModel.cost.output || 0) / 100 * (1000000 / selectedModel.cost.tokens);
+                          inputCostDisplay = inputCost === 0 ? "Free" : `$${inputCost.toFixed(2)} per 1M tokens`;
+                          outputCostDisplay = outputCost === 0 ? "Free" : `$${outputCost.toFixed(2)} per 1M tokens`;
+                        } else {
+                          inputCostDisplay = "N/A";
+                          outputCostDisplay = "N/A";
+                        }
                         return (
                           <div className="mt-2 p-3 bg-zinc-800/50 rounded-lg text-xs text-zinc-400 space-y-1">
                             <div className="flex justify-between">
@@ -1388,11 +1402,11 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
                             </div>
                             <div className="flex justify-between">
                               <span>Input Cost:</span>
-                              <span className="text-zinc-300">{inputCost}</span>
+                              <span className="text-zinc-300">{inputCostDisplay}</span>
                             </div>
                             <div className="flex justify-between">
                               <span>Output Cost:</span>
-                              <span className="text-zinc-300">{outputCost}</span>
+                              <span className="text-zinc-300">{outputCostDisplay}</span>
                             </div>
                           </div>
                         );
