@@ -57,6 +57,7 @@ declare global {
       auth: {
         getUser: () => Promise<PuterUser | null>;
         getMonthlyUsage: () => Promise<PuterUsage>;
+        getDetailedAppUsage: (appId: string) => Promise<PuterAppUsage>;
       };
     };
   }
@@ -73,6 +74,14 @@ interface PuterUsage {
   ai_image_generations?: number;
   storage_bytes?: number;
   [key: string]: number | undefined;
+}
+
+interface PuterAppUsage {
+  app_id?: string;
+  ai_chat_tokens?: number;
+  ai_image_generations?: number;
+  storage_bytes?: number;
+  [key: string]: string | number | undefined;
 }
 
 // Local storage keys
@@ -122,6 +131,7 @@ export default function Chat() {
   // User state
   const [user, setUser] = useState<PuterUser | null>(null);
   const [usage, setUsage] = useState<PuterUsage | null>(null);
+  const [appUsage, setAppUsage] = useState<PuterAppUsage | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [usageError, setUsageError] = useState<string | null>(null);
 
@@ -189,6 +199,19 @@ export default function Chat() {
           const usageData = await window.puter.auth.getMonthlyUsage();
           console.log("Usage data:", usageData);
           setUsage(usageData);
+
+          // Get detailed app usage if we have an app ID
+          const puterWithApp = window.puter as typeof window.puter & { appID?: string };
+          if (puterWithApp.appID) {
+            console.log("Fetching detailed app usage for app:", puterWithApp.appID);
+            try {
+              const appUsageData = await window.puter.auth.getDetailedAppUsage(puterWithApp.appID);
+              console.log("App usage data:", appUsageData);
+              setAppUsage(appUsageData);
+            } catch (appErr) {
+              console.warn("Could not fetch detailed app usage:", appErr);
+            }
+          }
         }
       } catch (err) {
         console.error("Failed to fetch user data:", err);
@@ -653,6 +676,33 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
                         </div>
                       ) : (
                         <p className="text-sm text-zinc-500">Loading usage data...</p>
+                      )}
+                      
+                      {/* App-specific usage */}
+                      {appUsage && (
+                        <div className="mt-4 pt-4 border-t border-zinc-800">
+                          <p className="text-sm text-zinc-400 mb-3 font-medium">This App&apos;s Usage</p>
+                          <div className="space-y-2">
+                            {appUsage.ai_chat_tokens !== undefined && (
+                              <div className="flex justify-between text-sm">
+                                <span className="text-zinc-500">Chat Tokens</span>
+                                <span className="text-zinc-300 font-mono">{appUsage.ai_chat_tokens.toLocaleString()}</span>
+                              </div>
+                            )}
+                            {appUsage.ai_image_generations !== undefined && (
+                              <div className="flex justify-between text-sm">
+                                <span className="text-zinc-500">Image Generations</span>
+                                <span className="text-zinc-300 font-mono">{appUsage.ai_image_generations}</span>
+                              </div>
+                            )}
+                            {appUsage.storage_bytes !== undefined && (
+                              <div className="flex justify-between text-sm">
+                                <span className="text-zinc-500">Storage</span>
+                                <span className="text-zinc-300 font-mono">{(appUsage.storage_bytes / 1024 / 1024).toFixed(2)} MB</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       )}
                     </div>
                   </div>
