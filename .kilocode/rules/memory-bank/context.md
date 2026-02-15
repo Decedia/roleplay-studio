@@ -25,6 +25,9 @@ A chat application that enables users to converse with GLM 5 AI using puter.js. 
 - [x] Loading states and error handling
 - [x] User info display with puter.js getUser
 - [x] Monthly usage stats with getMonthlyUsage
+- [x] **Dynamic model selection with puter.ai.listModels()**
+- [x] **Model pricing display - shows "Free" for zero-cost models**
+- [x] **GLM 5 preferred as default model**
 
 ## Current Structure
 
@@ -155,6 +158,7 @@ interface Conversation {
 
 | Date | Changes |
 |------|---------|
+| 2026-02-15 | Added dynamic model selection, "Free" pricing display for zero-cost models, GLM 5 as preferred default |
 | 2026-02-15 | Major refactor: separated persona/character systems, added conversation settings, visible usage stats |
 | 2026-02-15 | Added getUser and getMonthlyUsage integration with user menu in header |
 | 2026-02-15 | Fixed persona system: persona now represents the user (not AI) in conversations |
