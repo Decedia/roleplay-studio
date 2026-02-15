@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 
 // Types
 interface Persona {
@@ -44,11 +44,13 @@ interface Model {
 // Default model preference - try to find GLM 5 first, then fall back
 const DEFAULT_MODEL_PREFERENCES = ["glm-5", "gpt-4o-mini", "gpt-4o"];
 
-interface ConversationSettings {
+// Global settings (applied to all conversations)
+interface GlobalSettings {
   temperature: number;
   maxTokens: number;
   topP: number;
   modelId: string;
+  enableThinking: boolean;
 }
 
 interface Conversation {
@@ -56,7 +58,6 @@ interface Conversation {
   personaId: string;
   characterId: string;
   messages: Message[];
-  settings: ConversationSettings;
   createdAt: number;
   updatedAt: number;
 }
@@ -112,14 +113,393 @@ const PERSONAS_KEY = "chat_personas";
 const CHARACTERS_KEY = "chat_characters";
 const CONVERSATIONS_KEY = "chat_conversations";
 const GLOBAL_INSTRUCTIONS_KEY = "chat_global_instructions";
+const GLOBAL_SETTINGS_KEY = "chat_global_settings";
 
 // Default settings
-const DEFAULT_SETTINGS: ConversationSettings = {
+const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   temperature: 0.7,
   maxTokens: 2000,
   topP: 0.9,
   modelId: "", // Will be set when models are loaded
+  enableThinking: false,
 };
+
+// Helper functions for think tags
+function extractThinkContent(content: string): string | null {
+  const thinkMatch = content.match(/<think\s*>([\s\S]*?)<\/think>/i);
+  return thinkMatch ? thinkMatch[1].trim() : null;
+}
+
+function removeThinkTags(content: string): string {
+  return content.replace(/<think\s*>[\s\S]*?<\/think>/gi, "").trim();
+}
+
+// Thinking Section Component
+function ThinkingSection({ content }: { content: string }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div className="mb-3">
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-300 transition-colors"
+      >
+        <span className="text-base">💭</span>
+        <span>Thinking...</span>
+        <svg 
+          className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`} 
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {isExpanded && (
+        <div className="mt-2 p-3 bg-zinc-900/50 rounded-lg border border-zinc-700 text-sm text-zinc-400 italic whitespace-pre-wrap">
+          {content}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Settings Modal Component with collapsible model dropdown
+function SettingsModal({
+  show,
+  onClose,
+  globalSettings,
+  setGlobalSettings,
+  globalInstructions,
+  setGlobalInstructions,
+  models,
+  modelsLoading,
+  modelsError,
+}: {
+  show: boolean;
+  onClose: () => void;
+  globalSettings: GlobalSettings;
+  setGlobalSettings: React.Dispatch<React.SetStateAction<GlobalSettings>>;
+  globalInstructions: string;
+  setGlobalInstructions: React.Dispatch<React.SetStateAction<string>>;
+  models: Model[];
+  modelsLoading: boolean;
+  modelsError: string | null;
+}) {
+  const [expandedProviders, setExpandedProviders] = useState<Record<string, boolean>>({});
+  const [showModelDropdown, setShowModelDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Group models by provider
+  const providerGroups = models.reduce((acc, model) => {
+    const provider = model.provider || "Other";
+    if (!acc[provider]) acc[provider] = [];
+    acc[provider].push(model);
+    return acc;
+  }, {} as Record<string, Model[]>);
+
+  // Initialize all providers as expanded (using useMemo to avoid setState in effect)
+  const initialExpandedProviders = useMemo(() => {
+    const initial: Record<string, boolean> = {};
+    Object.keys(providerGroups).forEach(provider => {
+      initial[provider] = true;
+    });
+    return initial;
+  }, [providerGroups]);
+
+  // Use the memoized initial value
+  const effectiveExpandedProviders = Object.keys(expandedProviders).length === 0 
+    ? initialExpandedProviders 
+    : expandedProviders;
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowModelDropdown(false);
+      }
+    };
+    if (showModelDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showModelDropdown]);
+
+  const toggleProvider = (provider: string) => {
+    setExpandedProviders(prev => ({ ...prev, [provider]: !prev[provider] }));
+  };
+
+  const selectModel = (modelId: string) => {
+    const selectedModel = models.find(m => m.id === modelId);
+    const maxOutput = selectedModel?.max_tokens || 4000;
+    const newMaxTokens = Math.min(globalSettings.maxTokens, maxOutput);
+    setGlobalSettings({ ...globalSettings, modelId, maxTokens: newMaxTokens });
+    setShowModelDropdown(false);
+  };
+
+  const selectedModel = models.find(m => m.id === globalSettings.modelId);
+
+  const getModelCostInfo = (model: Model) => {
+    if (model.cost && model.cost.tokens) {
+      const inputCost = (model.cost.input || 0) / 100 * (1000000 / model.cost.tokens);
+      const outputCost = (model.cost.output || 0) / 100 * (1000000 / model.cost.tokens);
+      if (inputCost === 0 && outputCost === 0) {
+        return "Free";
+      }
+      return `$${inputCost.toFixed(2)}/M in | $${outputCost.toFixed(2)}/M out`;
+    }
+    return "Pricing N/A";
+  };
+
+  if (!show) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <h2 className="text-xl font-semibold text-white mb-4">
+          Global Settings
+        </h2>
+        
+        <div className="space-y-6">
+          {/* Model Selection */}
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">
+              Model
+            </label>
+            {modelsLoading ? (
+              <div className="w-full bg-zinc-800 text-zinc-400 rounded-lg px-4 py-2 border border-zinc-700">
+                Loading models...
+              </div>
+            ) : modelsError ? (
+              <div className="w-full bg-red-900/30 text-red-400 rounded-lg px-4 py-2 border border-red-800">
+                {modelsError}
+              </div>
+            ) : (
+              <>
+                {/* Custom Dropdown */}
+                <div className="relative" ref={dropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setShowModelDropdown(!showModelDropdown)}
+                    className="w-full bg-zinc-800 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 text-left flex items-center justify-between"
+                  >
+                    <span className="truncate">
+                      {selectedModel ? (
+                        <>
+                          {selectedModel.name || selectedModel.id}
+                          <span className="text-zinc-400 ml-2">
+                            ({selectedModel.context?.toLocaleString() || "?"} ctx)
+                          </span>
+                        </>
+                      ) : (
+                        "Select a model"
+                      )}
+                    </span>
+                    <svg className={`w-5 h-5 text-zinc-400 transition-transform ${showModelDropdown ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {showModelDropdown && (
+                    <div className="absolute z-50 w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-lg max-h-80 overflow-y-auto shadow-xl">
+                      {Object.entries(providerGroups).map(([provider, providerModels]) => (
+                        <div key={provider}>
+                          <button
+                            type="button"
+                            onClick={() => toggleProvider(provider)}
+                            className="w-full px-4 py-2 text-left text-sm font-medium text-zinc-300 bg-zinc-900 hover:bg-zinc-800 flex items-center justify-between sticky top-0 z-10"
+                          >
+                            <span>{provider}</span>
+                            <svg className={`w-4 h-4 text-zinc-500 transition-transform ${effectiveExpandedProviders[provider] ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
+                          {effectiveExpandedProviders[provider] && (
+                            <div className="border-t border-zinc-700">
+                              {providerModels.map((model) => {
+                                const isSelected = model.id === globalSettings.modelId;
+                                return (
+                                  <button
+                                    key={model.id}
+                                    type="button"
+                                    onClick={() => selectModel(model.id)}
+                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-zinc-700 transition-colors ${
+                                      isSelected ? "bg-blue-900/30 text-blue-300" : "text-zinc-300"
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-medium">{model.name || model.id}</span>
+                                      {isSelected && (
+                                        <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                        </svg>
+                                      )}
+                                    </div>
+                                    <div className="text-xs text-zinc-500 mt-0.5">
+                                      {model.context?.toLocaleString() || "?"} ctx | {getModelCostInfo(model)}
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Selected Model Info */}
+                {selectedModel && (
+                  <div className="mt-2 p-3 bg-zinc-800/50 rounded-lg text-xs text-zinc-400 space-y-1">
+                    <div className="flex justify-between">
+                      <span>Provider:</span>
+                      <span className="text-zinc-300">{selectedModel.provider || "Unknown"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Context Window:</span>
+                      <span className="text-zinc-300">{selectedModel.context?.toLocaleString() || "Unknown"} tokens</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Max Output:</span>
+                      <span className="text-zinc-300">{selectedModel.max_tokens?.toLocaleString() || "Unknown"} tokens</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Input Cost:</span>
+                      <span className="text-zinc-300">
+                        {selectedModel.cost && selectedModel.cost.tokens
+                          ? ((selectedModel.cost.input || 0) / 100 * (1000000 / selectedModel.cost.tokens)) === 0
+                            ? "Free"
+                            : `$${((selectedModel.cost.input || 0) / 100 * (1000000 / selectedModel.cost.tokens)).toFixed(2)} per 1M tokens`
+                          : "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Output Cost:</span>
+                      <span className="text-zinc-300">
+                        {selectedModel.cost && selectedModel.cost.tokens
+                          ? ((selectedModel.cost.output || 0) / 100 * (1000000 / selectedModel.cost.tokens)) === 0
+                            ? "Free"
+                            : `$${((selectedModel.cost.output || 0) / 100 * (1000000 / selectedModel.cost.tokens)).toFixed(2)} per 1M tokens`
+                          : "N/A"}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Temperature */}
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">
+              Temperature: {globalSettings.temperature.toFixed(2)}
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="2"
+              step="0.1"
+              value={globalSettings.temperature}
+              onChange={(e) => setGlobalSettings({ ...globalSettings, temperature: parseFloat(e.target.value) })}
+              className="w-full"
+            />
+            <p className="text-xs text-zinc-500 mt-1">
+              Lower = more focused, Higher = more creative
+            </p>
+          </div>
+
+          {/* Max Tokens */}
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">
+              Max Tokens: {globalSettings.maxTokens}
+            </label>
+            <input
+              type="range"
+              min="100"
+              max={selectedModel?.max_tokens || 4000}
+              step="100"
+              value={globalSettings.maxTokens}
+              onChange={(e) => setGlobalSettings({ ...globalSettings, maxTokens: parseInt(e.target.value) })}
+              className="w-full"
+            />
+            <p className="text-xs text-zinc-500 mt-1">
+              Maximum length of AI responses (model max: {(selectedModel?.max_tokens || 4000).toLocaleString()})
+            </p>
+          </div>
+
+          {/* Top P */}
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">
+              Top P: {globalSettings.topP.toFixed(2)}
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={globalSettings.topP}
+              onChange={(e) => setGlobalSettings({ ...globalSettings, topP: parseFloat(e.target.value) })}
+              className="w-full"
+            />
+            <p className="text-xs text-zinc-500 mt-1">
+              Controls diversity of word selection
+            </p>
+          </div>
+
+          {/* Enable Thinking */}
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">
+              Enable Thinking
+            </label>
+            <button
+              type="button"
+              onClick={() => setGlobalSettings({ ...globalSettings, enableThinking: !globalSettings.enableThinking })}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                globalSettings.enableThinking ? "bg-blue-600" : "bg-zinc-700"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  globalSettings.enableThinking ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+            <p className="text-xs text-zinc-500 mt-1">
+              Allow AI to show its reasoning process
+            </p>
+          </div>
+
+          {/* Global Instructions */}
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">
+              Global Instructions
+            </label>
+            <textarea
+              value={globalInstructions}
+              onChange={(e) => setGlobalInstructions(e.target.value)}
+              placeholder="Add specific instructions for how the AI should behave (e.g., 'Speak in a formal tone', 'Keep responses under 100 words')..."
+              rows={3}
+              className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
+            />
+            <p className="text-xs text-zinc-500 mt-1">
+              Applied to all conversations globally
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Chat() {
   // State
@@ -143,8 +523,8 @@ export default function Chat() {
   const [characterDescription, setCharacterDescription] = useState("");
   const [characterFirstMessage, setCharacterFirstMessage] = useState("");
   
-  // Settings state
-  const [tempSettings, setTempSettings] = useState<ConversationSettings>(DEFAULT_SETTINGS);
+  // Global settings state
+  const [globalSettings, setGlobalSettings] = useState<GlobalSettings>(DEFAULT_GLOBAL_SETTINGS);
   
   // Chat state
   const [input, setInput] = useState("");
@@ -174,6 +554,7 @@ export default function Chat() {
     const storedCharacters = localStorage.getItem(CHARACTERS_KEY);
     const storedConversations = localStorage.getItem(CONVERSATIONS_KEY);
     const storedInstructions = localStorage.getItem(GLOBAL_INSTRUCTIONS_KEY);
+    const storedSettings = localStorage.getItem(GLOBAL_SETTINGS_KEY);
     
     if (storedPersonas) {
       setPersonas(JSON.parse(storedPersonas));
@@ -186,6 +567,9 @@ export default function Chat() {
     }
     if (storedInstructions) {
       setGlobalInstructions(storedInstructions);
+    }
+    if (storedSettings) {
+      setGlobalSettings(JSON.parse(storedSettings));
     }
   }, []);
 
@@ -214,6 +598,11 @@ export default function Chat() {
   useEffect(() => {
     localStorage.setItem(GLOBAL_INSTRUCTIONS_KEY, globalInstructions);
   }, [globalInstructions]);
+
+  // Save global settings to localStorage
+  useEffect(() => {
+    localStorage.setItem(GLOBAL_SETTINGS_KEY, JSON.stringify(globalSettings));
+  }, [globalSettings]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -306,7 +695,7 @@ export default function Chat() {
             if (!defaultModel) {
               defaultModel = modelsData[0];
             }
-            setTempSettings(prev => ({
+            setGlobalSettings(prev => ({
               ...prev,
               modelId: prev.modelId || defaultModel!.id
             }));
@@ -489,7 +878,6 @@ export default function Chat() {
       messages: [
         { role: "assistant", content: selectedCharacter.firstMessage }
       ],
-      settings: { ...DEFAULT_SETTINGS },
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
@@ -512,32 +900,29 @@ export default function Chat() {
   };
 
   const openSettings = () => {
-    if (currentConversation) {
-      setTempSettings({ ...currentConversation.settings });
-      setShowSettingsModal(true);
-    }
+    setShowSettingsModal(true);
   };
 
   const saveSettings = () => {
-    if (!currentConversation) return;
-    
-    const updated = {
-      ...currentConversation,
-      settings: { ...tempSettings },
-      updatedAt: Date.now(),
-    };
-    
-    setCurrentConversation(updated);
-    setConversations((prev) =>
-      prev.map((c) => (c.id === currentConversation.id ? updated : c))
-    );
+    // Settings are saved automatically via useEffect
     setShowSettingsModal(false);
   };
 
   // Chat functions
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading || !currentConversation || !selectedPersona || !selectedCharacter) return;
+    if (isLoading || !currentConversation || !selectedPersona || !selectedCharacter) return;
+
+    // If input is empty, resend the last user message
+    if (!input.trim()) {
+      // Find the last user message
+      const lastUserMessageIndex = currentConversation.messages.findLastIndex(m => m.role === "user");
+      if (lastUserMessageIndex === -1) return; // No user message to resend
+      
+      // Use handleRetry logic to resend
+      await handleRetry();
+      return;
+    }
 
     const userMessage = input.trim();
     setInput("");
@@ -572,10 +957,10 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
       ];
 
       const response = await window.puter.ai.chat(chatMessages, {
-        model: currentConversation.settings.modelId || models[0]?.id || "gpt-4o-mini",
-        temperature: currentConversation.settings.temperature,
-        max_tokens: currentConversation.settings.maxTokens,
-        top_p: currentConversation.settings.topP,
+        model: globalSettings.modelId || models[0]?.id || "gpt-4o-mini",
+        temperature: globalSettings.temperature,
+        max_tokens: globalSettings.maxTokens,
+        top_p: globalSettings.topP,
       });
 
       const finalMessages: Message[] = [
@@ -654,10 +1039,10 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
       ];
 
       const response = await window.puter.ai.chat(chatMessages, {
-        model: currentConversation.settings.modelId || models[0]?.id || "gpt-4o-mini",
-        temperature: currentConversation.settings.temperature,
-        max_tokens: currentConversation.settings.maxTokens,
-        top_p: currentConversation.settings.topP,
+        model: globalSettings.modelId || models[0]?.id || "gpt-4o-mini",
+        temperature: globalSettings.temperature,
+        max_tokens: globalSettings.maxTokens,
+        top_p: globalSettings.topP,
       });
 
       const finalMessages: Message[] = [
@@ -757,19 +1142,17 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
               </div>
             </div>
             
-            {/* Settings button in chat view */}
-            {view === "chat" && (
-              <button
-                onClick={openSettings}
-                className="p-2 hover:bg-zinc-800 rounded-lg transition-colors mr-2"
-                title="Conversation Settings"
-              >
-                <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </button>
-            )}
+            {/* Settings button - always visible */}
+            <button
+              onClick={openSettings}
+              className="p-2 hover:bg-zinc-800 rounded-lg transition-colors mr-2"
+              title="Global Settings"
+            >
+              <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
             
             {/* Usage Stats - Always Visible */}
             {usage && (
@@ -1150,40 +1533,54 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {currentConversation.messages.map((message, index) => (
-                    <div
-                      key={index}
-                      className={`flex gap-4 ${
-                        message.role === "user" ? "justify-end" : "justify-start"
-                      }`}
-                    >
-                      {message.role === "assistant" && (
-                        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                          <span className="text-sm text-white font-semibold">
-                            {selectedCharacter?.name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                      )}
+                  {currentConversation.messages.map((message, index) => {
+                    // Parse think tags for assistant messages
+                    const thinkContent = message.role === "assistant" 
+                      ? extractThinkContent(message.content) 
+                      : null;
+                    const displayContent = message.role === "assistant"
+                      ? removeThinkTags(message.content)
+                      : message.content;
+
+                    return (
                       <div
-                        className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                          message.role === "user"
-                            ? "bg-blue-600 text-white"
-                            : "bg-zinc-800 text-zinc-100"
+                        key={index}
+                        className={`flex gap-4 ${
+                          message.role === "user" ? "justify-end" : "justify-start"
                         }`}
                       >
-                        <p className="whitespace-pre-wrap break-words">
-                          {message.content}
-                        </p>
-                      </div>
-                      {message.role === "user" && (
-                        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-                          <span className="text-sm text-white font-semibold">
-                            {selectedPersona?.name.charAt(0).toUpperCase()}
-                          </span>
+                        {message.role === "assistant" && (
+                          <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                            <span className="text-sm text-white font-semibold">
+                              {selectedCharacter?.name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        )}
+                        <div
+                          className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                            message.role === "user"
+                              ? "bg-blue-600 text-white"
+                              : "bg-zinc-800 text-zinc-100"
+                          }`}
+                        >
+                          {/* Thinking section - collapsible */}
+                          {thinkContent && (
+                            <ThinkingSection content={thinkContent} />
+                          )}
+                          <p className="whitespace-pre-wrap break-words">
+                            {displayContent}
+                          </p>
                         </div>
-                      )}
-                    </div>
-                  ))}
+                        {message.role === "user" && (
+                          <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                            <span className="text-sm text-white font-semibold">
+                              {selectedPersona?.name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                   {isLoading && (
                     <div className="flex gap-4 justify-start">
                       <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
@@ -1249,7 +1646,7 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
               </div>
               <button
                 type="submit"
-                disabled={!input.trim() || isLoading}
+                disabled={isLoading}
                 className="flex-shrink-0 p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <svg
@@ -1268,7 +1665,7 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
               </button>
             </form>
             <p className="text-xs text-zinc-600 mt-2 text-center">
-              Press Enter to send, Shift+Enter for new line
+              Press Enter to send, Shift+Enter for new line. Empty message resends last.
             </p>
           </div>
         </div>
@@ -1409,218 +1806,18 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
       )}
 
       {/* Settings Modal */}
-      {showSettingsModal && currentConversation && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-semibold text-white mb-4">
-              Conversation Settings
-            </h2>
-            
-            <div className="space-y-6">
-              {/* Model Selection */}
-              <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-2">
-                  Model
-                </label>
-                {modelsLoading ? (
-                  <div className="w-full bg-zinc-800 text-zinc-400 rounded-lg px-4 py-2 border border-zinc-700">
-                    Loading models...
-                  </div>
-                ) : modelsError ? (
-                  <div className="w-full bg-red-900/30 text-red-400 rounded-lg px-4 py-2 border border-red-800">
-                    {modelsError}
-                  </div>
-                ) : (
-                  <>
-                    <select
-                      value={tempSettings.modelId || models[0]?.id || ""}
-                      onChange={(e) => {
-                        const newModelId = e.target.value;
-                        const selectedModel = models.find(m => m.id === newModelId);
-                        // Adjust maxTokens if it exceeds the new model's max_tokens
-                        const maxOutput = selectedModel?.max_tokens || 4000;
-                        const newMaxTokens = Math.min(tempSettings.maxTokens, maxOutput);
-                        setTempSettings({ ...tempSettings, modelId: newModelId, maxTokens: newMaxTokens });
-                      }}
-                      className="w-full bg-zinc-800 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700"
-                    >
-                      {/* Group models by provider */}
-                      {(() => {
-                        const providerGroups = models.reduce((acc, model) => {
-                          const provider = model.provider || "Other";
-                          if (!acc[provider]) acc[provider] = [];
-                          acc[provider].push(model);
-                          return acc;
-                        }, {} as Record<string, Model[]>);
-                        
-                        return Object.entries(providerGroups).map(([provider, providerModels]) => (
-                          <optgroup key={provider} label={provider}>
-                            {providerModels.map((model) => {
-                              const ctx = model.context ? model.context.toLocaleString() : "Unknown";
-                              let costInfo: string;
-                              if (model.cost && model.cost.tokens) {
-                                const inputCost = (model.cost.input || 0) / 100 * (1000000 / model.cost.tokens);
-                                const outputCost = (model.cost.output || 0) / 100 * (1000000 / model.cost.tokens);
-                                if (inputCost === 0 && outputCost === 0) {
-                                  costInfo = "Free";
-                                } else {
-                                  costInfo = `$${inputCost.toFixed(2)}/M in | $${outputCost.toFixed(2)}/M out`;
-                                }
-                              } else {
-                                costInfo = "Pricing N/A";
-                              }
-                              return (
-                                <option key={model.id} value={model.id}>
-                                  {model.name || model.id} - {ctx} ctx | {costInfo}
-                                </option>
-                              );
-                            })}
-                          </optgroup>
-                        ));
-                      })()}
-                    </select>
-                    {(() => {
-                      const selectedModel = models.find(m => m.id === (tempSettings.modelId || models[0]?.id));
-                      if (selectedModel) {
-                        const ctx = selectedModel.context ? selectedModel.context.toLocaleString() : "Unknown";
-                        const maxOut = selectedModel.max_tokens ? selectedModel.max_tokens.toLocaleString() : "Unknown";
-                        let inputCostDisplay: string;
-                        let outputCostDisplay: string;
-                        if (selectedModel.cost && selectedModel.cost.tokens) {
-                          const inputCost = (selectedModel.cost.input || 0) / 100 * (1000000 / selectedModel.cost.tokens);
-                          const outputCost = (selectedModel.cost.output || 0) / 100 * (1000000 / selectedModel.cost.tokens);
-                          inputCostDisplay = inputCost === 0 ? "Free" : `$${inputCost.toFixed(2)} per 1M tokens`;
-                          outputCostDisplay = outputCost === 0 ? "Free" : `$${outputCost.toFixed(2)} per 1M tokens`;
-                        } else {
-                          inputCostDisplay = "N/A";
-                          outputCostDisplay = "N/A";
-                        }
-                        return (
-                          <div className="mt-2 p-3 bg-zinc-800/50 rounded-lg text-xs text-zinc-400 space-y-1">
-                            <div className="flex justify-between">
-                              <span>Provider:</span>
-                              <span className="text-zinc-300">{selectedModel.provider || "Unknown"}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Context Window:</span>
-                              <span className="text-zinc-300">{ctx} tokens</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Max Output:</span>
-                              <span className="text-zinc-300">{maxOut} tokens</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Input Cost:</span>
-                              <span className="text-zinc-300">{inputCostDisplay}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Output Cost:</span>
-                              <span className="text-zinc-300">{outputCostDisplay}</span>
-                            </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
-                  </>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-2">
-                  Temperature: {tempSettings.temperature.toFixed(2)}
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="2"
-                  step="0.1"
-                  value={tempSettings.temperature}
-                  onChange={(e) => setTempSettings({ ...tempSettings, temperature: parseFloat(e.target.value) })}
-                  className="w-full"
-                />
-                <p className="text-xs text-zinc-500 mt-1">
-                  Lower = more focused, Higher = more creative
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-2">
-                  Max Tokens: {tempSettings.maxTokens}
-                </label>
-                {(() => {
-                  const selectedModel = models.find(m => m.id === (tempSettings.modelId || models[0]?.id));
-                  const maxOutput = selectedModel?.max_tokens || 4000;
-                  return (
-                    <>
-                      <input
-                        type="range"
-                        min="100"
-                        max={maxOutput}
-                        step="100"
-                        value={tempSettings.maxTokens}
-                        onChange={(e) => setTempSettings({ ...tempSettings, maxTokens: parseInt(e.target.value) })}
-                        className="w-full"
-                      />
-                      <p className="text-xs text-zinc-500 mt-1">
-                        Maximum length of AI responses (model max: {maxOutput.toLocaleString()})
-                      </p>
-                    </>
-                  );
-                })()}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-2">
-                  Top P: {tempSettings.topP.toFixed(2)}
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.05"
-                  value={tempSettings.topP}
-                  onChange={(e) => setTempSettings({ ...tempSettings, topP: parseFloat(e.target.value) })}
-                  className="w-full"
-                />
-                <p className="text-xs text-zinc-500 mt-1">
-                  Controls diversity of word selection
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-2">
-                  Global Instructions
-                </label>
-                <textarea
-                  value={globalInstructions}
-                  onChange={(e) => setGlobalInstructions(e.target.value)}
-                  placeholder="Add specific instructions for how the AI should behave (e.g., 'Speak in a formal tone', 'Keep responses under 100 words')..."
-                  rows={3}
-                  className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
-                />
-                <p className="text-xs text-zinc-500 mt-1">
-                  Applied to all conversations globally
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowSettingsModal(false)}
-                className="flex-1 py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={saveSettings}
-                className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Save Settings
-              </button>
-            </div>
-          </div>
-        </div>
+      {showSettingsModal && (
+        <SettingsModal
+          show={showSettingsModal}
+          onClose={() => setShowSettingsModal(false)}
+          globalSettings={globalSettings}
+          setGlobalSettings={setGlobalSettings}
+          globalInstructions={globalInstructions}
+          setGlobalInstructions={setGlobalInstructions}
+          models={models}
+          modelsLoading={modelsLoading}
+          modelsError={modelsError}
+        />
       )}
     </div>
   );

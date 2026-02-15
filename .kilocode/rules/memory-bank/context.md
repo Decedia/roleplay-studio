@@ -18,7 +18,7 @@ A chat application that enables users to converse with GLM 5 AI using puter.js. 
 - [x] Modern black theme UI with gradient accents
 - [x] **Separated persona and character systems**
 - [x] **Character creation with name, description, and first message**
-- [x] **Conversation settings (temperature, max tokens, top_p)**
+- [x] **Global settings (temperature, max tokens, top_p, model, enableThinking)**
 - [x] **Visible usage stats in header**
 - [x] Conversation management (create, delete, continue)
 - [x] LocalStorage persistence for personas, characters, and conversations
@@ -31,7 +31,10 @@ A chat application that enables users to converse with GLM 5 AI using puter.js. 
 - [x] **Fixed send button position - centered with flexbox layout**
 - [x] **Retry button for error recovery - resends last message**
 - [x] **Global instructions - applied to all conversations**
-- [x] **Models grouped by provider in dropdown**
+- [x] **Collapsible model dropdown grouped by provider**
+- [x] **Settings modal always accessible from header**
+- [x] **Collapsible think tag display for AI reasoning**
+- [x] **Empty message resends last user message**
 
 ## Current Structure
 
@@ -69,17 +72,20 @@ A chat application that enables users to converse with GLM 5 AI using puter.js. 
 - Conversations sorted by last updated time
 - Persistent storage using localStorage
 
-### Conversation Settings
+### Global Settings
 - **Temperature** (0-2): Controls creativity vs focus
 - **Max Tokens** (100-4000): Maximum response length
 - **Top P** (0-1): Controls word selection diversity
-- Settings are saved per conversation
-- Accessible via gear icon in chat view
+- **Enable Thinking**: Toggle for AI reasoning display
+- **Model Selection**: Choose from available AI models
+- Settings apply to ALL conversations globally
+- Accessible via gear icon in header (always visible)
+- Custom collapsible dropdown grouped by provider
 
 ### Global Instructions
 - Custom instructions applied to ALL conversations
-- Stored in localStorage separately from conversation settings
-- Accessible via gear icon in chat view
+- Stored in localStorage separately from settings
+- Accessible via gear icon in header
 
 ### Chat Interface
 - Full-screen chat UI with black theme
@@ -89,9 +95,11 @@ A chat application that enables users to converse with GLM 5 AI using puter.js. 
 - Loading animation while waiting for AI response
 - Error handling with user-friendly messages
 - **Retry button for error recovery - resends last message**
+- **Empty message sends last user message again**
+- **Collapsible think tag display (💭 Thinking...)**
 - Auto-scroll to latest message
 - Keyboard shortcuts (Enter to send, Shift+Enter for new line)
-- **Send button centered with flexbox layout**
+- **Send button always enabled (empty = resend)**
 
 ### Usage Stats Display
 - Token count visible in header (always visible on desktop)
@@ -107,6 +115,7 @@ A chat application that enables users to converse with GLM 5 AI using puter.js. 
   - User is described as their persona
 - Conversation context sent with each message
 - Settings (temperature, max_tokens, top_p) passed to API
+- Think tags extracted and displayed separately
 
 ## Technical Details
 
@@ -127,11 +136,12 @@ interface Character {
   createdAt: number;
 }
 
-interface ConversationSettings {
+interface GlobalSettings {
   temperature: number;
   maxTokens: number;
   topP: number;
   modelId: string;
+  enableThinking: boolean;
 }
 
 interface Conversation {
@@ -139,7 +149,6 @@ interface Conversation {
   personaId: string;
   characterId: string;
   messages: Message[];
-  settings: ConversationSettings;
   createdAt: number;
   updatedAt: number;
 }
@@ -150,11 +159,12 @@ interface Conversation {
 - `chat_characters` - Stores all AI characters
 - `chat_conversations` - Stores all conversations
 - `chat_global_instructions` - Stores global instructions for all conversations
+- `chat_global_settings` - Stores global settings (temperature, maxTokens, topP, modelId, enableThinking)
 
 ### puter.js Integration
 - Loaded via script tag in layout.tsx: `https://js.puter.com/v2/`
 - Uses `window.puter.ai.chat()` method
-- Model specified as "glm-5"
+- Model specified dynamically from global settings
 - API options: temperature, max_tokens, top_p
 - System prompt: `You are ${character.name}. ${character.description} The user is roleplaying as ${persona.name}. ${persona.description} Stay in character...`
 - User info: `window.puter.auth.getUser()` - returns username, email, uuid
@@ -162,15 +172,18 @@ interface Conversation {
 
 ### Component Architecture
 - Client component with `"use client"` directive
-- React hooks: useState, useRef, useEffect
+- React hooks: useState, useRef, useEffect, useMemo
 - TypeScript interfaces for type safety
 - Four views: personas, characters, conversations, chat
 - Modal popups for persona, character, and settings editing
+- SettingsModal component with collapsible model dropdown
+- ThinkingSection component for collapsible think tags
 
 ## Session History
 
 | Date | Changes |
 |------|---------|
+| 2026-02-15 | Global settings refactor: removed per-conversation settings, added enableThinking toggle, collapsible model dropdown, think tag display, empty message resends last |
 | 2026-02-15 | Made instructions global (not per-conversation), grouped models by provider in dropdown |
 | 2026-02-15 | Fixed send button position (flexbox layout), added retry button for errors, added custom instructions field |
 | 2026-02-15 | Added dynamic model selection, "Free" pricing display for zero-cost models, GLM 5 as preferred default |
