@@ -33,8 +33,27 @@ declare global {
           options?: { model?: string }
         ) => Promise<{ message: { content: string } }>;
       };
+      auth: {
+        getUser: () => Promise<PuterUser | null>;
+      };
+      usage: {
+        getMonthlyUsage: () => Promise<PuterUsage>;
+      };
     };
   }
+}
+
+interface PuterUser {
+  username: string;
+  email?: string;
+  uuid: string;
+}
+
+interface PuterUsage {
+  ai_chat_tokens?: number;
+  ai_image_generations?: number;
+  storage_bytes?: number;
+  [key: string]: number | undefined;
 }
 
 // Local storage keys
@@ -61,6 +80,11 @@ export default function Chat() {
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  
+  // User state
+  const [user, setUser] = useState<PuterUser | null>(null);
+  const [usage, setUsage] = useState<PuterUsage | null>(null);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -100,6 +124,54 @@ export default function Chat() {
       inputRef.current?.focus();
     }
   }, [view]);
+
+  // Fetch user and usage data from puter.js
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        if (typeof window.puter !== "undefined") {
+          const userData = await window.puter.auth.getUser();
+          setUser(userData);
+          
+          const usageData = await window.puter.usage.getMonthlyUsage();
+          setUsage(usageData);
+        }
+      } catch (err) {
+        console.error("Failed to fetch user data:", err);
+      }
+    };
+
+    // Wait for puter.js to load
+    const checkPuter = setInterval(() => {
+      if (typeof window.puter !== "undefined") {
+        clearInterval(checkPuter);
+        fetchUserData();
+      }
+    }, 100);
+
+    // Cleanup interval after 5 seconds if puter doesn't load
+    const timeout = setTimeout(() => clearInterval(checkPuter), 5000);
+    
+    return () => {
+      clearInterval(checkPuter);
+      clearTimeout(timeout);
+    };
+  }, []);
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (showUserMenu) {
+        const target = e.target as HTMLElement;
+        if (!target.closest(".user-menu-container")) {
+          setShowUserMenu(false);
+        }
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [showUserMenu]);
 
   // Persona functions
   const createPersona = () => {
@@ -278,14 +350,31 @@ export default function Chat() {
       {/* Header */}
       <header className="flex-shrink-0 border-b border-zinc-800 bg-black">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
-            {view !== "personas" && (
-              <button
-                onClick={goBack}
-                className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
-              >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {view !== "personas" && (
+                <button
+                  onClick={goBack}
+                  className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                >
+                  <svg
+                    className="w-5 h-5 text-zinc-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 19l-7-7 7-7"
+                    />
+                  </svg>
+                </button>
+              )}
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
                 <svg
-                  className="w-5 h-5 text-zinc-400"
+                  className="w-6 h-6 text-white"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -294,42 +383,84 @@ export default function Chat() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
+                    d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
                   />
                 </svg>
-              </button>
+              </div>
+              <div>
+                <h1 className="text-xl font-semibold text-white">
+                  {view === "chat" && selectedPersona
+                    ? `Chat with ${selectedPersona.name}`
+                    : view === "conversations" && selectedPersona
+                    ? selectedPersona.name
+                    : "GLM 5 Chat"}
+                </h1>
+                <p className="text-sm text-zinc-500">
+                  {view === "personas"
+                    ? "Select or create a persona"
+                    : view === "conversations"
+                    ? "Select or start a conversation"
+                    : "Powered by puter.js"}
+                </p>
+              </div>
+            </div>
+            
+            {/* User Menu */}
+            {user && (
+              <div className="relative user-menu-container">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center gap-2 px-3 py-2 bg-zinc-900 hover:bg-zinc-800 rounded-lg transition-colors border border-zinc-800"
+                >
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center">
+                    <span className="text-sm text-white font-semibold">
+                      {user.username.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <span className="text-sm text-zinc-300 hidden sm:block">{user.username}</span>
+                  <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-64 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50">
+                    <div className="p-4 border-b border-zinc-800">
+                      <p className="text-sm text-zinc-400">Signed in as</p>
+                      <p className="text-white font-medium">{user.username}</p>
+                    </div>
+                    {usage && (
+                      <div className="p-4">
+                        <p className="text-sm text-zinc-400 mb-2">Monthly Usage</p>
+                        <div className="space-y-2">
+                          {usage.ai_chat_tokens !== undefined && (
+                            <div className="flex justify-between text-sm">
+                              <span className="text-zinc-500">Chat Tokens</span>
+                              <span className="text-zinc-300">{usage.ai_chat_tokens.toLocaleString()}</span>
+                            </div>
+                          )}
+                          {usage.ai_image_generations !== undefined && (
+                            <div className="flex justify-between text-sm">
+                              <span className="text-zinc-500">Image Generations</span>
+                              <span className="text-zinc-300">{usage.ai_image_generations}</span>
+                            </div>
+                          )}
+                          {usage.storage_bytes !== undefined && (
+                            <div className="flex justify-between text-sm">
+                              <span className="text-zinc-500">Storage</span>
+                              <span className="text-zinc-300">{(usage.storage_bytes / 1024 / 1024).toFixed(2)} MB</span>
+                            </div>
+                          )}
+                          {Object.keys(usage).length === 0 && (
+                            <p className="text-sm text-zinc-500">No usage data available</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-              <svg
-                className="w-6 h-6 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-                />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold text-white">
-                {view === "chat" && selectedPersona
-                  ? `Chat with ${selectedPersona.name}`
-                  : view === "conversations" && selectedPersona
-                  ? selectedPersona.name
-                  : "GLM 5 Chat"}
-              </h1>
-              <p className="text-sm text-zinc-500">
-                {view === "personas"
-                  ? "Select or create a persona"
-                  : view === "conversations"
-                  ? "Select or start a conversation"
-                  : "Powered by puter.js"}
-              </p>
-            </div>
           </div>
         </div>
       </header>
