@@ -1,10 +1,10 @@
-# Active Context: Next.js Starter Template
+# Active Context: GLM 5 Chat Application
 
 ## Current State
 
-**Template Status**: ✅ Ready for development
+**Application Status**: ✅ Ready for use
 
-The template is a clean Next.js 16 starter with TypeScript and Tailwind CSS 4. It's ready for AI-assisted expansion to build any type of application.
+A chat application that enables users to converse with GLM 5 AI using puter.js. The app features a modern dark theme with a clean, responsive interface.
 
 ## Recently Completed
 
@@ -14,74 +14,53 @@ The template is a clean Next.js 16 starter with TypeScript and Tailwind CSS 4. I
 - [x] ESLint configuration
 - [x] Memory bank documentation
 - [x] Recipe system for common features
+- [x] GLM 5 Chat component with puter.js integration
+- [x] Modern dark theme UI with gradient accents
+- [x] Conversation history support
+- [x] Loading states and error handling
 
 ## Current Structure
 
 | File/Directory | Purpose | Status |
 |----------------|---------|--------|
-| `src/app/page.tsx` | Home page | ✅ Ready |
-| `src/app/layout.tsx` | Root layout | ✅ Ready |
+| `src/app/page.tsx` | Home page with Chat component | ✅ Ready |
+| `src/app/layout.tsx` | Root layout with puter.js script | ✅ Ready |
 | `src/app/globals.css` | Global styles | ✅ Ready |
+| `src/components/Chat.tsx` | Main chat interface | ✅ Ready |
 | `.kilocode/` | AI context & recipes | ✅ Ready |
 
-## Current Focus
+## Features
 
-The template is ready. Next steps depend on user requirements:
+### Chat Interface
+- Full-screen chat UI with dark theme
+- Message bubbles for user and AI responses
+- Conversation history maintained during session
+- Loading animation while waiting for AI response
+- Error handling with user-friendly messages
+- Auto-scroll to latest message
+- Keyboard shortcuts (Enter to send, Shift+Enter for new line)
 
-1. What type of application to build
-2. What features are needed
-3. Design/branding preferences
+### AI Integration
+- Uses puter.js SDK for GLM 5 access
+- No API key required - puter.js handles authentication
+- Conversation context sent with each message for coherent responses
 
-## Quick Start Guide
+## Technical Details
 
-### To add a new page:
+### puter.js Integration
+- Loaded via script tag in layout.tsx: `https://js.puter.com/v2/`
+- Uses `window.puter.ai.chat()` method
+- Model specified as "glm-5"
+- Returns `{ message: { content: string } }` structure
 
-Create a file at `src/app/[route]/page.tsx`:
-```tsx
-export default function NewPage() {
-  return <div>New page content</div>;
-}
-```
-
-### To add components:
-
-Create `src/components/` directory and add components:
-```tsx
-// src/components/ui/Button.tsx
-export function Button({ children }: { children: React.ReactNode }) {
-  return <button className="px-4 py-2 bg-blue-600 text-white rounded">{children}</button>;
-}
-```
-
-### To add a database:
-
-Follow `.kilocode/recipes/add-database.md`
-
-### To add API routes:
-
-Create `src/app/api/[route]/route.ts`:
-```tsx
-import { NextResponse } from "next/server";
-
-export async function GET() {
-  return NextResponse.json({ message: "Hello" });
-}
-```
-
-## Available Recipes
-
-| Recipe | File | Use Case |
-|--------|------|----------|
-| Add Database | `.kilocode/recipes/add-database.md` | Data persistence with Drizzle + SQLite |
-
-## Pending Improvements
-
-- [ ] Add more recipes (auth, email, etc.)
-- [ ] Add example components
-- [ ] Add testing setup recipe
+### Component Architecture
+- Client component with `"use client"` directive
+- React hooks: useState, useRef, useEffect
+- TypeScript interfaces for type safety
 
 ## Session History
 
 | Date | Changes |
 |------|---------|
+| 2026-02-15 | Created GLM 5 chat application with puter.js integration |
 | Initial | Template created with base setup |
