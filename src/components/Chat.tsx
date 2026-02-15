@@ -10,15 +10,31 @@ interface Persona {
   createdAt: number;
 }
 
+interface Character {
+  id: string;
+  name: string;
+  description: string;
+  firstMessage: string;
+  createdAt: number;
+}
+
 interface Message {
   role: "user" | "assistant";
   content: string;
 }
 
+interface ConversationSettings {
+  temperature: number;
+  maxTokens: number;
+  topP: number;
+}
+
 interface Conversation {
   id: string;
   personaId: string;
+  characterId: string;
   messages: Message[];
+  settings: ConversationSettings;
   createdAt: number;
   updatedAt: number;
 }
@@ -30,7 +46,12 @@ declare global {
       ai: {
         chat: (
           messages: Array<{ role: string; content: string }>,
-          options?: { model?: string }
+          options?: { 
+            model?: string;
+            temperature?: number;
+            max_tokens?: number;
+            top_p?: number;
+          }
         ) => Promise<{ message: { content: string } }>;
       };
       auth: {
@@ -58,21 +79,40 @@ interface PuterUsage {
 
 // Local storage keys
 const PERSONAS_KEY = "chat_personas";
+const CHARACTERS_KEY = "chat_characters";
 const CONVERSATIONS_KEY = "chat_conversations";
+
+// Default settings
+const DEFAULT_SETTINGS: ConversationSettings = {
+  temperature: 0.7,
+  maxTokens: 2000,
+  topP: 0.9,
+};
 
 export default function Chat() {
   // State
   const [personas, setPersonas] = useState<Persona[]>([]);
+  const [characters, setCharacters] = useState<Character[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
+  const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
-  const [view, setView] = useState<"personas" | "conversations" | "chat">("personas");
+  const [view, setView] = useState<"personas" | "characters" | "conversations" | "chat">("personas");
   const [showPersonaModal, setShowPersonaModal] = useState(false);
+  const [showCharacterModal, setShowCharacterModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
+  const [editingCharacter, setEditingCharacter] = useState<Character | null>(null);
   
   // Form state
   const [personaName, setPersonaName] = useState("");
   const [personaDescription, setPersonaDescription] = useState("");
+  const [characterName, setCharacterName] = useState("");
+  const [characterDescription, setCharacterDescription] = useState("");
+  const [characterFirstMessage, setCharacterFirstMessage] = useState("");
+  
+  // Settings state
+  const [tempSettings, setTempSettings] = useState<ConversationSettings>(DEFAULT_SETTINGS);
   
   // Chat state
   const [input, setInput] = useState("");
@@ -85,14 +125,19 @@ export default function Chat() {
   const [user, setUser] = useState<PuterUser | null>(null);
   const [usage, setUsage] = useState<PuterUsage | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [usageError, setUsageError] = useState<string | null>(null);
 
   // Load data from localStorage on mount
   useEffect(() => {
     const storedPersonas = localStorage.getItem(PERSONAS_KEY);
+    const storedCharacters = localStorage.getItem(CHARACTERS_KEY);
     const storedConversations = localStorage.getItem(CONVERSATIONS_KEY);
     
     if (storedPersonas) {
       setPersonas(JSON.parse(storedPersonas));
+    }
+    if (storedCharacters) {
+      setCharacters(JSON.parse(storedCharacters));
     }
     if (storedConversations) {
       setConversations(JSON.parse(storedConversations));
@@ -105,6 +150,13 @@ export default function Chat() {
       localStorage.setItem(PERSONAS_KEY, JSON.stringify(personas));
     }
   }, [personas]);
+
+  // Save characters to localStorage
+  useEffect(() => {
+    if (characters.length > 0 || localStorage.getItem(CHARACTERS_KEY)) {
+      localStorage.setItem(CHARACTERS_KEY, JSON.stringify(characters));
+    }
+  }, [characters]);
 
   // Save conversations to localStorage
   useEffect(() => {
@@ -130,14 +182,19 @@ export default function Chat() {
     const fetchUserData = async () => {
       try {
         if (typeof window.puter !== "undefined") {
+          console.log("Fetching user data...");
           const userData = await window.puter.auth.getUser();
+          console.log("User data:", userData);
           setUser(userData);
           
+          console.log("Fetching usage data...");
           const usageData = await window.puter.usage.getMonthlyUsage();
+          console.log("Usage data:", usageData);
           setUsage(usageData);
         }
       } catch (err) {
         console.error("Failed to fetch user data:", err);
+        setUsageError(err instanceof Error ? err.message : "Failed to load usage data");
       }
     };
 
@@ -149,8 +206,13 @@ export default function Chat() {
       }
     }, 100);
 
-    // Cleanup interval after 5 seconds if puter doesn't load
-    const timeout = setTimeout(() => clearInterval(checkPuter), 5000);
+    // Cleanup interval after 10 seconds if puter doesn't load
+    const timeout = setTimeout(() => {
+      clearInterval(checkPuter);
+      if (typeof window.puter === "undefined") {
+        setUsageError("Puter.js failed to load");
+      }
+    }, 10000);
     
     return () => {
       clearInterval(checkPuter);
@@ -223,19 +285,88 @@ export default function Chat() {
     setShowPersonaModal(true);
   };
 
-  // Conversation functions
+  // Character functions
+  const createCharacter = () => {
+    if (!characterName.trim() || !characterDescription.trim() || !characterFirstMessage.trim()) return;
+    
+    const newCharacter: Character = {
+      id: crypto.randomUUID(),
+      name: characterName.trim(),
+      description: characterDescription.trim(),
+      firstMessage: characterFirstMessage.trim(),
+      createdAt: Date.now(),
+    };
+    
+    setCharacters((prev) => [...prev, newCharacter]);
+    setCharacterName("");
+    setCharacterDescription("");
+    setCharacterFirstMessage("");
+    setShowCharacterModal(false);
+  };
+
+  const updateCharacter = () => {
+    if (!editingCharacter || !characterName.trim() || !characterDescription.trim() || !characterFirstMessage.trim()) return;
+    
+    setCharacters((prev) =>
+      prev.map((c) =>
+        c.id === editingCharacter.id
+          ? { 
+              ...c, 
+              name: characterName.trim(), 
+              description: characterDescription.trim(),
+              firstMessage: characterFirstMessage.trim()
+            }
+          : c
+      )
+    );
+    setEditingCharacter(null);
+    setCharacterName("");
+    setCharacterDescription("");
+    setCharacterFirstMessage("");
+    setShowCharacterModal(false);
+  };
+
+  const deleteCharacter = (id: string) => {
+    setCharacters((prev) => prev.filter((c) => c.id !== id));
+    // Also delete related conversations
+    setConversations((prev) => prev.filter((c) => c.characterId !== id));
+    if (selectedCharacter?.id === id) {
+      setSelectedCharacter(null);
+      setView("characters");
+    }
+  };
+
+  const openEditCharacter = (character: Character) => {
+    setEditingCharacter(character);
+    setCharacterName(character.name);
+    setCharacterDescription(character.description);
+    setCharacterFirstMessage(character.firstMessage);
+    setShowCharacterModal(true);
+  };
+
+  // Navigation functions
   const selectPersona = (persona: Persona) => {
     setSelectedPersona(persona);
+    setView("characters");
+  };
+
+  const selectCharacter = (character: Character) => {
+    setSelectedCharacter(character);
     setView("conversations");
   };
 
+  // Conversation functions
   const createConversation = () => {
-    if (!selectedPersona) return;
+    if (!selectedPersona || !selectedCharacter) return;
     
     const newConversation: Conversation = {
       id: crypto.randomUUID(),
       personaId: selectedPersona.id,
-      messages: [],
+      characterId: selectedCharacter.id,
+      messages: [
+        { role: "assistant", content: selectedCharacter.firstMessage }
+      ],
+      settings: { ...DEFAULT_SETTINGS },
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
@@ -257,10 +388,33 @@ export default function Chat() {
     }
   };
 
+  const openSettings = () => {
+    if (currentConversation) {
+      setTempSettings({ ...currentConversation.settings });
+      setShowSettingsModal(true);
+    }
+  };
+
+  const saveSettings = () => {
+    if (!currentConversation) return;
+    
+    const updated = {
+      ...currentConversation,
+      settings: { ...tempSettings },
+      updatedAt: Date.now(),
+    };
+    
+    setCurrentConversation(updated);
+    setConversations((prev) =>
+      prev.map((c) => (c.id === currentConversation.id ? updated : c))
+    );
+    setShowSettingsModal(false);
+  };
+
   // Chat functions
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading || !currentConversation || !selectedPersona) return;
+    if (!input.trim() || isLoading || !currentConversation || !selectedPersona || !selectedCharacter) return;
 
     const userMessage = input.trim();
     setInput("");
@@ -280,8 +434,12 @@ export default function Chat() {
         throw new Error("Puter.js is still loading. Please wait a moment and try again.");
       }
 
-      // Build system prompt with persona - user is roleplaying as this character
-      const systemPrompt = `The user is roleplaying as ${selectedPersona.name}. ${selectedPersona.description} Treat the user as this character and respond accordingly. Stay engaged with their character throughout the conversation.`;
+      // Build system prompt - user is roleplaying as persona, AI is the character
+      const systemPrompt = `You are ${selectedCharacter.name}. ${selectedCharacter.description}
+
+The user is roleplaying as ${selectedPersona.name}. ${selectedPersona.description}
+
+Stay in character as ${selectedCharacter.name} throughout the conversation. Respond naturally and consistently with your character's personality.`;
 
       // Prepare messages for API
       const chatMessages = [
@@ -291,6 +449,9 @@ export default function Chat() {
 
       const response = await window.puter.ai.chat(chatMessages, {
         model: "glm-5",
+        temperature: currentConversation.settings.temperature,
+        max_tokens: currentConversation.settings.maxTokens,
+        top_p: currentConversation.settings.topP,
       });
 
       const finalMessages: Message[] = [
@@ -335,14 +496,17 @@ export default function Chat() {
       setView("conversations");
       setCurrentConversation(null);
     } else if (view === "conversations") {
+      setView("characters");
+      setSelectedCharacter(null);
+    } else if (view === "characters") {
       setView("personas");
       setSelectedPersona(null);
     }
   };
 
-  // Get conversations for selected persona
-  const personaConversations = conversations.filter(
-    (c) => c.personaId === selectedPersona?.id
+  // Get conversations for selected persona and character
+  const filteredConversations = conversations.filter(
+    (c) => c.personaId === selectedPersona?.id && c.characterId === selectedCharacter?.id
   );
 
   return (
@@ -389,21 +553,52 @@ export default function Chat() {
               </div>
               <div>
                 <h1 className="text-xl font-semibold text-white">
-                  {view === "chat" && selectedPersona
-                    ? `Chat with ${selectedPersona.name}`
-                    : view === "conversations" && selectedPersona
-                    ? selectedPersona.name
+                  {view === "chat" && selectedPersona && selectedCharacter
+                    ? `${selectedPersona.name} × ${selectedCharacter.name}`
+                    : view === "conversations" && selectedPersona && selectedCharacter
+                    ? `${selectedPersona.name} × ${selectedCharacter.name}`
+                    : view === "characters" && selectedPersona
+                    ? `${selectedPersona.name} - Select Character`
                     : "GLM 5 Chat"}
                 </h1>
                 <p className="text-sm text-zinc-500">
                   {view === "personas"
-                    ? "Select or create a persona"
+                    ? "Select your persona"
+                    : view === "characters"
+                    ? "Select AI character"
                     : view === "conversations"
                     ? "Select or start a conversation"
                     : "Powered by puter.js"}
                 </p>
               </div>
             </div>
+            
+            {/* Settings button in chat view */}
+            {view === "chat" && (
+              <button
+                onClick={openSettings}
+                className="p-2 hover:bg-zinc-800 rounded-lg transition-colors mr-2"
+                title="Conversation Settings"
+              >
+                <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
+            )}
+            
+            {/* Usage Stats - Always Visible */}
+            {usage && (
+              <div className="hidden sm:flex items-center gap-3 px-3 py-1.5 bg-zinc-900/50 rounded-lg border border-zinc-800 mr-2">
+                <div className="flex items-center gap-1.5">
+                  <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                  </svg>
+                  <span className="text-xs text-zinc-400">Tokens:</span>
+                  <span className="text-xs text-white font-mono font-medium">{usage.ai_chat_tokens?.toLocaleString() ?? 0}</span>
+                </div>
+              </div>
+            )}
             
             {/* User Menu */}
             {user && (
@@ -424,39 +619,44 @@ export default function Chat() {
                 </button>
                 
                 {showUserMenu && (
-                  <div className="absolute right-0 mt-2 w-64 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50">
+                  <div className="absolute right-0 mt-2 w-72 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50">
                     <div className="p-4 border-b border-zinc-800">
                       <p className="text-sm text-zinc-400">Signed in as</p>
                       <p className="text-white font-medium">{user.username}</p>
+                      {user.email && <p className="text-xs text-zinc-500 mt-1">{user.email}</p>}
                     </div>
-                    {usage && (
-                      <div className="p-4">
-                        <p className="text-sm text-zinc-400 mb-2">Monthly Usage</p>
+                    <div className="p-4">
+                      <p className="text-sm text-zinc-400 mb-3 font-medium">Monthly Usage</p>
+                      {usageError ? (
+                        <p className="text-sm text-red-400">{usageError}</p>
+                      ) : usage ? (
                         <div className="space-y-2">
                           {usage.ai_chat_tokens !== undefined && (
                             <div className="flex justify-between text-sm">
                               <span className="text-zinc-500">Chat Tokens</span>
-                              <span className="text-zinc-300">{usage.ai_chat_tokens.toLocaleString()}</span>
+                              <span className="text-zinc-300 font-mono">{usage.ai_chat_tokens.toLocaleString()}</span>
                             </div>
                           )}
                           {usage.ai_image_generations !== undefined && (
                             <div className="flex justify-between text-sm">
                               <span className="text-zinc-500">Image Generations</span>
-                              <span className="text-zinc-300">{usage.ai_image_generations}</span>
+                              <span className="text-zinc-300 font-mono">{usage.ai_image_generations}</span>
                             </div>
                           )}
                           {usage.storage_bytes !== undefined && (
                             <div className="flex justify-between text-sm">
                               <span className="text-zinc-500">Storage</span>
-                              <span className="text-zinc-300">{(usage.storage_bytes / 1024 / 1024).toFixed(2)} MB</span>
+                              <span className="text-zinc-300 font-mono">{(usage.storage_bytes / 1024 / 1024).toFixed(2)} MB</span>
                             </div>
                           )}
                           {Object.keys(usage).length === 0 && (
                             <p className="text-sm text-zinc-500">No usage data available</p>
                           )}
                         </div>
-                      </div>
-                    )}
+                      ) : (
+                        <p className="text-sm text-zinc-500">Loading usage data...</p>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -493,12 +693,12 @@ export default function Chat() {
                 <div className="text-center py-16">
                   <div className="w-16 h-16 rounded-2xl bg-zinc-800 flex items-center justify-center mx-auto mb-4">
                     <svg className="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                   </div>
                   <h3 className="text-xl font-medium text-white mb-2">No personas yet</h3>
                   <p className="text-zinc-500 mb-6 max-w-md mx-auto">
-                    Create a persona to define the character you want to chat with. Each persona has its own personality and conversation history.
+                    Create a persona to represent yourself in conversations. This is who YOU are in the roleplay.
                   </p>
                   <button
                     onClick={() => setShowPersonaModal(true)}
@@ -515,7 +715,7 @@ export default function Chat() {
                       className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition-colors"
                     >
                       <div className="flex justify-between items-start mb-3">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
                           <span className="text-xl text-white font-semibold">
                             {persona.name.charAt(0).toUpperCase()}
                           </span>
@@ -554,8 +754,96 @@ export default function Chat() {
             </div>
           )}
 
+          {/* Characters View */}
+          {view === "characters" && selectedPersona && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg font-medium text-white">AI Characters</h2>
+                <button
+                  onClick={() => {
+                    setEditingCharacter(null);
+                    setCharacterName("");
+                    setCharacterDescription("");
+                    setCharacterFirstMessage("");
+                    setShowCharacterModal(true);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Create Character
+                </button>
+              </div>
+
+              {characters.length === 0 ? (
+                <div className="text-center py-16">
+                  <div className="w-16 h-16 rounded-2xl bg-zinc-800 flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-medium text-white mb-2">No characters yet</h3>
+                  <p className="text-zinc-500 mb-6 max-w-md mx-auto">
+                    Create an AI character to chat with. This is who the AI will roleplay as.
+                  </p>
+                  <button
+                    onClick={() => setShowCharacterModal(true)}
+                    className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    Create Your First Character
+                  </button>
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {characters.map((character) => (
+                    <div
+                      key={character.id}
+                      className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition-colors"
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                          <span className="text-xl text-white font-semibold">
+                            {character.name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => openEditCharacter(character)}
+                            className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                          >
+                            <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => deleteCharacter(character.id)}
+                            className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                          >
+                            <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <h3 className="text-lg font-medium text-white mb-1">{character.name}</h3>
+                      <p className="text-sm text-zinc-400 line-clamp-2 mb-2">{character.description}</p>
+                      <p className="text-xs text-zinc-500 italic line-clamp-2 mb-4">&ldquo;{character.firstMessage}&rdquo;</p>
+                      <button
+                        onClick={() => selectCharacter(character)}
+                        className="w-full py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
+                      >
+                        Select Character
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Conversations View */}
-          {view === "conversations" && selectedPersona && (
+          {view === "conversations" && selectedPersona && selectedCharacter && (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-medium text-white">Conversations</h2>
@@ -570,7 +858,7 @@ export default function Chat() {
                 </button>
               </div>
 
-              {personaConversations.length === 0 ? (
+              {filteredConversations.length === 0 ? (
                 <div className="text-center py-16">
                   <div className="w-16 h-16 rounded-2xl bg-zinc-800 flex items-center justify-center mx-auto mb-4">
                     <svg className="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -579,7 +867,7 @@ export default function Chat() {
                   </div>
                   <h3 className="text-xl font-medium text-white mb-2">No conversations yet</h3>
                   <p className="text-zinc-500 mb-6 max-w-md mx-auto">
-                    Start a new conversation with {selectedPersona.name} to begin chatting.
+                    Start a new conversation between {selectedPersona.name} and {selectedCharacter.name}.
                   </p>
                   <button
                     onClick={createConversation}
@@ -590,7 +878,7 @@ export default function Chat() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {personaConversations
+                  {filteredConversations
                     .sort((a, b) => b.updatedAt - a.updatedAt)
                     .map((conversation) => (
                       <div
@@ -600,8 +888,8 @@ export default function Chat() {
                         <div className="flex justify-between items-center">
                           <div className="flex-1 cursor-pointer" onClick={() => continueConversation(conversation)}>
                             <p className="text-white font-medium">
-                              {conversation.messages.length > 0
-                                ? conversation.messages[0].content.slice(0, 50) + (conversation.messages[0].content.length > 50 ? "..." : "")
+                              {conversation.messages.length > 1
+                                ? conversation.messages[1].content.slice(0, 50) + (conversation.messages[1].content.length > 50 ? "..." : "")
                                 : "New conversation"}
                             </p>
                             <p className="text-sm text-zinc-500">
@@ -639,14 +927,14 @@ export default function Chat() {
                 <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center">
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mb-6">
                     <span className="text-2xl text-white font-semibold">
-                      {selectedPersona?.name.charAt(0).toUpperCase()}
+                      {selectedCharacter?.name.charAt(0).toUpperCase()}
                     </span>
                   </div>
                   <h2 className="text-2xl font-semibold text-white mb-2">
-                    Chat with {selectedPersona?.name}
+                    Chat with {selectedCharacter?.name}
                   </h2>
                   <p className="text-zinc-500 max-w-md">
-                    {selectedPersona?.description}
+                    {selectedCharacter?.description}
                   </p>
                 </div>
               ) : (
@@ -661,7 +949,7 @@ export default function Chat() {
                       {message.role === "assistant" && (
                         <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
                           <span className="text-sm text-white font-semibold">
-                            {selectedPersona?.name.charAt(0).toUpperCase()}
+                            {selectedCharacter?.name.charAt(0).toUpperCase()}
                           </span>
                         </div>
                       )}
@@ -677,20 +965,10 @@ export default function Chat() {
                         </p>
                       </div>
                       {message.role === "user" && (
-                        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-zinc-700 flex items-center justify-center">
-                          <svg
-                            className="w-5 h-5 text-white"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                            />
-                          </svg>
+                        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                          <span className="text-sm text-white font-semibold">
+                            {selectedPersona?.name.charAt(0).toUpperCase()}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -699,7 +977,7 @@ export default function Chat() {
                     <div className="flex gap-4 justify-start">
                       <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
                         <span className="text-sm text-white font-semibold">
-                          {selectedPersona?.name.charAt(0).toUpperCase()}
+                          {selectedCharacter?.name.charAt(0).toUpperCase()}
                         </span>
                       </div>
                       <div className="bg-zinc-800 rounded-2xl px-4 py-3">
@@ -740,7 +1018,7 @@ export default function Chat() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={`Message ${selectedPersona?.name}...`}
+                placeholder={`Message as ${selectedPersona?.name}...`}
                 rows={1}
                 className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded-xl px-4 py-3 pr-14 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent border border-zinc-800"
                 style={{ minHeight: "48px", maxHeight: "200px" }}
@@ -784,13 +1062,13 @@ export default function Chat() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-zinc-400 mb-1">
-                  Character Name
+                  Your Name
                 </label>
                 <input
                   type="text"
                   value={personaName}
                   onChange={(e) => setPersonaName(e.target.value)}
-                  placeholder="e.g., Sherlock Holmes"
+                  placeholder="e.g., Alex the Adventurer"
                   className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700"
                 />
               </div>
@@ -802,7 +1080,7 @@ export default function Chat() {
                 <textarea
                   value={personaDescription}
                   onChange={(e) => setPersonaDescription(e.target.value)}
-                  placeholder="Describe the character's personality, background, and how they should behave..."
+                  placeholder="Describe who you are, your personality, background, etc..."
                   rows={4}
                   className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
                 />
@@ -827,6 +1105,162 @@ export default function Chat() {
                 className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {editingPersona ? "Save Changes" : "Create Persona"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Character Modal */}
+      {showCharacterModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-md">
+            <h2 className="text-xl font-semibold text-white mb-4">
+              {editingCharacter ? "Edit Character" : "Create New Character"}
+            </h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-1">
+                  Character Name
+                </label>
+                <input
+                  type="text"
+                  value={characterName}
+                  onChange={(e) => setCharacterName(e.target.value)}
+                  placeholder="e.g., Sherlock Holmes"
+                  className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-1">
+                  Description / Personality
+                </label>
+                <textarea
+                  value={characterDescription}
+                  onChange={(e) => setCharacterDescription(e.target.value)}
+                  placeholder="Describe the character's personality, background, and how they should behave..."
+                  rows={3}
+                  className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-1">
+                  First Message
+                </label>
+                <textarea
+                  value={characterFirstMessage}
+                  onChange={(e) => setCharacterFirstMessage(e.target.value)}
+                  placeholder="What does the character say when you first meet them?"
+                  rows={3}
+                  className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowCharacterModal(false);
+                  setEditingCharacter(null);
+                  setCharacterName("");
+                  setCharacterDescription("");
+                  setCharacterFirstMessage("");
+                }}
+                className="flex-1 py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={editingCharacter ? updateCharacter : createCharacter}
+                disabled={!characterName.trim() || !characterDescription.trim() || !characterFirstMessage.trim()}
+                className="flex-1 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {editingCharacter ? "Save Changes" : "Create Character"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Modal */}
+      {showSettingsModal && currentConversation && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-md">
+            <h2 className="text-xl font-semibold text-white mb-4">
+              Conversation Settings
+            </h2>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-2">
+                  Temperature: {tempSettings.temperature.toFixed(2)}
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="2"
+                  step="0.1"
+                  value={tempSettings.temperature}
+                  onChange={(e) => setTempSettings({ ...tempSettings, temperature: parseFloat(e.target.value) })}
+                  className="w-full"
+                />
+                <p className="text-xs text-zinc-500 mt-1">
+                  Lower = more focused, Higher = more creative
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-2">
+                  Max Tokens: {tempSettings.maxTokens}
+                </label>
+                <input
+                  type="range"
+                  min="100"
+                  max="4000"
+                  step="100"
+                  value={tempSettings.maxTokens}
+                  onChange={(e) => setTempSettings({ ...tempSettings, maxTokens: parseInt(e.target.value) })}
+                  className="w-full"
+                />
+                <p className="text-xs text-zinc-500 mt-1">
+                  Maximum length of AI responses
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-2">
+                  Top P: {tempSettings.topP.toFixed(2)}
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={tempSettings.topP}
+                  onChange={(e) => setTempSettings({ ...tempSettings, topP: parseFloat(e.target.value) })}
+                  className="w-full"
+                />
+                <p className="text-xs text-zinc-500 mt-1">
+                  Controls diversity of word selection
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowSettingsModal(false)}
+                className="flex-1 py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveSettings}
+                className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Save Settings
               </button>
             </div>
           </div>

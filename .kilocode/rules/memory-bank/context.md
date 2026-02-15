@@ -4,7 +4,7 @@
 
 **Application Status**: ✅ Ready for use
 
-A chat application that enables users to converse with GLM 5 AI using puter.js. The app features a modern black theme with persona-based conversations and conversation management.
+A chat application that enables users to converse with GLM 5 AI using puter.js. The app features a modern black theme with a dual persona/character system for roleplay conversations.
 
 ## Recently Completed
 
@@ -16,10 +16,12 @@ A chat application that enables users to converse with GLM 5 AI using puter.js. 
 - [x] Recipe system for common features
 - [x] GLM 5 Chat component with puter.js integration
 - [x] Modern black theme UI with gradient accents
-- [x] Persona system (create, edit, delete)
+- [x] **Separated persona and character systems**
+- [x] **Character creation with name, description, and first message**
+- [x] **Conversation settings (temperature, max tokens, top_p)**
+- [x] **Visible usage stats in header**
 - [x] Conversation management (create, delete, continue)
-- [x] Persona-based AI roleplay
-- [x] LocalStorage persistence for personas and conversations
+- [x] LocalStorage persistence for personas, characters, and conversations
 - [x] Loading states and error handling
 - [x] User info display with puter.js getUser
 - [x] Monthly usage stats with getMonthlyUsage
@@ -31,39 +33,66 @@ A chat application that enables users to converse with GLM 5 AI using puter.js. 
 | `src/app/page.tsx` | Home page with Chat component | ✅ Ready |
 | `src/app/layout.tsx` | Root layout with puter.js script | ✅ Ready |
 | `src/app/globals.css` | Global styles (black theme) | ✅ Ready |
-| `src/components/Chat.tsx` | Main chat interface with persona system | ✅ Ready |
+| `src/components/Chat.tsx` | Main chat interface with persona/character system | ✅ Ready |
 | `.kilocode/` | AI context & recipes | ✅ Ready |
 
 ## Features
 
-### Persona System
+### Persona System (User Identity)
 - Create custom personas with name and description
 - Edit existing personas
 - Delete personas (also deletes related conversations)
-- Persona selection screen as the starting view
+- Persona represents WHO THE USER IS in the roleplay
+- Blue/cyan gradient styling for user avatars
 - Modal popup for persona creation/editing
 
+### Character System (AI Identity)
+- Create AI characters with name, description, and first message
+- Edit existing characters
+- Delete characters (also deletes related conversations)
+- Character represents WHO THE AI PLAYS
+- Purple/pink gradient styling for character avatars
+- First message automatically sent when starting a new conversation
+
 ### Conversation Management
-- Create new conversations for each persona
+- Conversations are between a user persona and an AI character
+- Create new conversations for each persona-character pair
 - Continue existing conversations
 - Delete conversations
 - Conversations sorted by last updated time
 - Persistent storage using localStorage
 
+### Conversation Settings
+- **Temperature** (0-2): Controls creativity vs focus
+- **Max Tokens** (100-4000): Maximum response length
+- **Top P** (0-1): Controls word selection diversity
+- Settings are saved per conversation
+- Accessible via gear icon in chat view
+
 ### Chat Interface
 - Full-screen chat UI with black theme
 - Message bubbles for user and AI responses
-- Persona avatar with initial letter
+- User avatar shows persona initial (blue/cyan)
+- AI avatar shows character initial (purple/pink)
 - Loading animation while waiting for AI response
 - Error handling with user-friendly messages
 - Auto-scroll to latest message
 - Keyboard shortcuts (Enter to send, Shift+Enter for new line)
 
+### Usage Stats Display
+- Token count visible in header (always visible on desktop)
+- Detailed usage breakdown in user menu dropdown
+- Shows: chat tokens, image generations, storage used
+- Loading states and error handling for usage data
+
 ### AI Integration
 - Uses puter.js SDK for GLM 5 access
 - No API key required - puter.js handles authentication
-- System prompt tells AI that the user is roleplaying as the persona character
-- Conversation context sent with each message for coherent responses
+- System prompt sets up dual roleplay:
+  - AI is instructed to be the character
+  - User is described as their persona
+- Conversation context sent with each message
+- Settings (temperature, max_tokens, top_p) passed to API
 
 ## Technical Details
 
@@ -76,24 +105,42 @@ interface Persona {
   createdAt: number;
 }
 
+interface Character {
+  id: string;
+  name: string;
+  description: string;
+  firstMessage: string;
+  createdAt: number;
+}
+
+interface ConversationSettings {
+  temperature: number;
+  maxTokens: number;
+  topP: number;
+}
+
 interface Conversation {
   id: string;
   personaId: string;
+  characterId: string;
   messages: Message[];
+  settings: ConversationSettings;
   createdAt: number;
   updatedAt: number;
 }
 ```
 
 ### LocalStorage Keys
-- `chat_personas` - Stores all personas
+- `chat_personas` - Stores all user personas
+- `chat_characters` - Stores all AI characters
 - `chat_conversations` - Stores all conversations
 
 ### puter.js Integration
 - Loaded via script tag in layout.tsx: `https://js.puter.com/v2/`
 - Uses `window.puter.ai.chat()` method
 - Model specified as "glm-5"
-- System prompt: `The user is roleplaying as ${name}. ${description} Treat the user as this character and respond accordingly.`
+- API options: temperature, max_tokens, top_p
+- System prompt: `You are ${character.name}. ${character.description} The user is roleplaying as ${persona.name}. ${persona.description} Stay in character...`
 - User info: `window.puter.auth.getUser()` - returns username, email, uuid
 - Usage stats: `window.puter.usage.getMonthlyUsage()` - returns ai_chat_tokens, ai_image_generations, storage_bytes
 
@@ -101,12 +148,14 @@ interface Conversation {
 - Client component with `"use client"` directive
 - React hooks: useState, useRef, useEffect
 - TypeScript interfaces for type safety
-- Three views: personas, conversations, chat
+- Four views: personas, characters, conversations, chat
+- Modal popups for persona, character, and settings editing
 
 ## Session History
 
 | Date | Changes |
 |------|---------|
+| 2026-02-15 | Major refactor: separated persona/character systems, added conversation settings, visible usage stats |
 | 2026-02-15 | Added getUser and getMonthlyUsage integration with user menu in header |
 | 2026-02-15 | Fixed persona system: persona now represents the user (not AI) in conversations |
 | 2026-02-15 | Added persona system with create/edit/delete, conversation management, and black theme |
