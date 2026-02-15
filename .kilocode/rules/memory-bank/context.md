@@ -28,6 +28,9 @@ A chat application that enables users to converse with GLM 5 AI using puter.js. 
 - [x] **Dynamic model selection with puter.ai.listModels()**
 - [x] **Model pricing display - shows "Free" for zero-cost models**
 - [x] **GLM 5 preferred as default model**
+- [x] **Fixed send button position - centered with flexbox layout**
+- [x] **Retry button for error recovery - resends last message**
+- [x] **Custom instructions field in conversation settings**
 
 ## Current Structure
 
@@ -69,6 +72,7 @@ A chat application that enables users to converse with GLM 5 AI using puter.js. 
 - **Temperature** (0-2): Controls creativity vs focus
 - **Max Tokens** (100-4000): Maximum response length
 - **Top P** (0-1): Controls word selection diversity
+- **Custom Instructions**: Additional guidance for AI behavior
 - Settings are saved per conversation
 - Accessible via gear icon in chat view
 
@@ -79,8 +83,10 @@ A chat application that enables users to converse with GLM 5 AI using puter.js. 
 - AI avatar shows character initial (purple/pink)
 - Loading animation while waiting for AI response
 - Error handling with user-friendly messages
+- **Retry button for error recovery - resends last message**
 - Auto-scroll to latest message
 - Keyboard shortcuts (Enter to send, Shift+Enter for new line)
+- **Send button centered with flexbox layout**
 
 ### Usage Stats Display
 - Token count visible in header (always visible on desktop)
@@ -120,6 +126,8 @@ interface ConversationSettings {
   temperature: number;
   maxTokens: number;
   topP: number;
+  modelId: string;
+  instructions: string;
 }
 
 interface Conversation {
@@ -158,6 +166,7 @@ interface Conversation {
 
 | Date | Changes |
 |------|---------|
+| 2026-02-15 | Fixed send button position (flexbox layout), added retry button for errors, added custom instructions field |
 | 2026-02-15 | Added dynamic model selection, "Free" pricing display for zero-cost models, GLM 5 as preferred default |
 | 2026-02-15 | Major refactor: separated persona/character systems, added conversation settings, visible usage stats |
 | 2026-02-15 | Added getUser and getMonthlyUsage integration with user menu in header |
