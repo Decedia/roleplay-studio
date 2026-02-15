@@ -56,8 +56,6 @@ declare global {
       };
       auth: {
         getUser: () => Promise<PuterUser | null>;
-      };
-      usage: {
         getMonthlyUsage: () => Promise<PuterUsage>;
       };
     };
@@ -188,7 +186,7 @@ export default function Chat() {
           setUser(userData);
           
           console.log("Fetching usage data...");
-          const usageData = await window.puter.usage.getMonthlyUsage();
+          const usageData = await window.puter.auth.getMonthlyUsage();
           console.log("Usage data:", usageData);
           setUsage(usageData);
         }
