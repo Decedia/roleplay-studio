@@ -60,7 +60,7 @@ A chat application that enables users to converse with GLM 5 AI using puter.js. 
 ### AI Integration
 - Uses puter.js SDK for GLM 5 access
 - No API key required - puter.js handles authentication
-- System prompt includes persona name and description for roleplay
+- System prompt tells AI that the user is roleplaying as the persona character
 - Conversation context sent with each message for coherent responses
 
 ## Technical Details
@@ -91,7 +91,7 @@ interface Conversation {
 - Loaded via script tag in layout.tsx: `https://js.puter.com/v2/`
 - Uses `window.puter.ai.chat()` method
 - Model specified as "glm-5"
-- System prompt: `You are roleplaying as ${name}. ${description} Stay in character throughout the conversation.`
+- System prompt: `The user is roleplaying as ${name}. ${description} Treat the user as this character and respond accordingly.`
 
 ### Component Architecture
 - Client component with `"use client"` directive
@@ -103,6 +103,7 @@ interface Conversation {
 
 | Date | Changes |
 |------|---------|
+| 2026-02-15 | Fixed persona system: persona now represents the user (not AI) in conversations |
 | 2026-02-15 | Added persona system with create/edit/delete, conversation management, and black theme |
 | 2026-02-15 | Enhanced dark theme with custom scrollbar and global dark mode styles |
 | 2026-02-15 | Created GLM 5 chat application with puter.js integration |
