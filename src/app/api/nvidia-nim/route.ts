@@ -26,10 +26,7 @@ export async function POST(request: NextRequest) {
 
     // Handle streaming response
     if (stream && response.ok && response.body) {
-      const encoder = new TextEncoder();
-      const decoder = new TextDecoder();
-      
-      const stream = new ReadableStream({
+      const streamResponse = new ReadableStream({
         async start(controller) {
           const reader = response.body!.getReader();
           
@@ -48,7 +45,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      return new Response(stream, {
+      return new Response(streamResponse, {
         headers: {
           "Content-Type": "text/event-stream",
           "Cache-Control": "no-cache",
@@ -57,7 +54,53 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const data = await response.json();
+    // Handle non-OK streaming responses
+    if (stream && !response.ok) {
+      const contentType = response.headers.get("content-type");
+      let errorMessage: string;
+      
+      if (contentType?.includes("application/json")) {
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error?.message || `HTTP ${response.status}`;
+        } catch {
+          errorMessage = `HTTP ${response.status}: Failed to parse error response`;
+        }
+      } else {
+        errorMessage = await response.text() || `HTTP ${response.status}`;
+      }
+      
+      // Return as SSE error event
+      return new Response(`event: error\ndata: ${JSON.stringify({ error: errorMessage })}\n\n`, {
+        status: 200, // Return 200 so client can parse the error
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+        },
+      });
+    }
+
+    // Try to parse JSON, but handle non-JSON responses (like Cloudflare errors)
+    let data;
+    const contentType = response.headers.get("content-type");
+    
+    if (contentType?.includes("application/json")) {
+      try {
+        data = await response.json();
+      } catch {
+        return NextResponse.json(
+          { error: `HTTP ${response.status}: Invalid JSON response from NVIDIA API` },
+          { status: response.status }
+        );
+      }
+    } else {
+      // Handle non-JSON responses (e.g., Cloudflare timeout errors)
+      const textResponse = await response.text();
+      return NextResponse.json(
+        { error: `HTTP ${response.status}: ${textResponse || "Unknown error from NVIDIA API"}` },
+        { status: response.status }
+      );
+    }
 
     if (!response.ok) {
       return NextResponse.json(
@@ -97,7 +140,26 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const data = await response.json();
+    // Try to parse JSON, but handle non-JSON responses
+    let data;
+    const contentType = response.headers.get("content-type");
+    
+    if (contentType?.includes("application/json")) {
+      try {
+        data = await response.json();
+      } catch {
+        return NextResponse.json(
+          { error: `HTTP ${response.status}: Invalid JSON response from NVIDIA API` },
+          { status: response.status }
+        );
+      }
+    } else {
+      const textResponse = await response.text();
+      return NextResponse.json(
+        { error: `HTTP ${response.status}: ${textResponse || "Unknown error from NVIDIA API"}` },
+        { status: response.status }
+      );
+    }
 
     if (!response.ok) {
       return NextResponse.json(

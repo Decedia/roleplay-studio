@@ -696,12 +696,25 @@ export const streamWithNvidiaNIM = async (
       buffer = lines.pop() || "";
 
       for (const line of lines) {
+        // Handle error events
+        if (line.startsWith("event: error")) {
+          // Next line will contain the error data
+          continue;
+        }
+        
         if (line.startsWith("data: ")) {
           const jsonStr = line.slice(6).trim();
           if (!jsonStr || jsonStr === "[DONE]") continue;
 
           try {
             const data = JSON.parse(jsonStr);
+            
+            // Check for error in stream
+            if (data.error) {
+              onChunk({ error: data.error });
+              return;
+            }
+            
             const delta = data.choices?.[0]?.delta;
             
             if (delta?.content) {
