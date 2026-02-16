@@ -72,6 +72,9 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **NVIDIA NIM thinking/reasoning support - DeepSeek R1 model with reasoning_content parsing**
 - [x] **AI-powered character generator tab - create characters from text descriptions**
 - [x] **{{user}} macro replacement - automatically replaces {{user}} with current persona name in conversations**
+- [x] **Brainstorm tab - AI-assisted roleplay instruction brainstorming with apply-to-global-instructions buttons**
+- [x] **Moved Clear/Import buttons above description in character generator preview**
+- [x] **Changed user message bubble color from blue to greyish (bg-zinc-700)**
 
 ## Current Structure
 
@@ -348,6 +351,9 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date | Changes |
 |------|---------|
+| 2026-02-16 | Changed user message bubble color from blue to greyish (bg-zinc-700) |
+| 2026-02-16 | Moved Clear/Import buttons above description in character generator preview |
+| 2026-02-16 | Added Brainstorm tab - AI-assisted roleplay instruction brainstorming with apply-to-global-instructions buttons |
 | 2026-02-16 | Added {{user}} macro replacement - automatically replaces {{user}} with current persona name in conversations |
 | 2026-02-16 | Added AI-powered character generator tab - create characters from text descriptions with one-click import |
 | 2026-02-16 | Added NVIDIA NIM thinking/reasoning support - DeepSeek R1 model with reasoning_content parsing for both streaming and non-streaming responses |
