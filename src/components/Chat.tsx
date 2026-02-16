@@ -406,7 +406,8 @@ function SettingsModal({
   const selectModel = (modelId: string) => {
     const model = activeProviderModels.find(m => m.id === modelId);
     const maxOutput = model?.max_tokens || 4000;
-    const newMaxTokens = Math.min(globalSettings.maxTokens, maxOutput);
+    // Auto-set max tokens to model's maximum when selecting a new model
+    const newMaxTokens = maxOutput;
     
     // Update global settings
     setGlobalSettings({ ...globalSettings, modelId, maxTokens: newMaxTokens });
@@ -558,10 +559,10 @@ function SettingsModal({
             </p>
           </div>
 
-          {/* Max Tokens */}
+          {/* Max Output Tokens */}
           <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
-              Max Tokens
+              Max Output Tokens
             </label>
             <div className="flex items-center gap-3">
               <input
@@ -576,18 +577,27 @@ function SettingsModal({
               <input
                 type="number"
                 min="100"
+                max={selectedModel?.max_tokens || 4000}
                 value={globalSettings.maxTokens}
                 onChange={(e) => {
                   const value = parseInt(e.target.value);
-                  if (!isNaN(value) && value >= 100) {
+                  const max = selectedModel?.max_tokens || 4000;
+                  if (!isNaN(value) && value >= 100 && value <= max) {
                     setGlobalSettings({ ...globalSettings, maxTokens: value });
                   }
                 }}
                 className="w-24 px-2 py-1 bg-zinc-800 border border-zinc-700 rounded text-white text-center text-sm focus:outline-none focus:border-purple-500"
               />
+              <button
+                onClick={() => setGlobalSettings({ ...globalSettings, maxTokens: selectedModel?.max_tokens || 4000 })}
+                className="px-2 py-1 bg-purple-600 hover:bg-purple-700 rounded text-xs text-white transition-colors"
+                title="Set to model maximum"
+              >
+                Max
+              </button>
             </div>
             <p className="text-xs text-zinc-500 mt-1">
-              Maximum length of AI responses (model max: {(selectedModel?.max_tokens || 4000).toLocaleString()})
+              Maximum length of AI responses • Model max: <span className="text-purple-400">{(selectedModel?.max_tokens || 4000).toLocaleString()}</span> tokens
             </p>
           </div>
 
