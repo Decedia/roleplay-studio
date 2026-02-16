@@ -318,6 +318,8 @@ function SettingsModal({
   providerModels,
   modelsFetching,
   onImportInstructions,
+  onExportData,
+  onImportData,
 }: {
   show: boolean;
   onClose: () => void;
@@ -338,6 +340,8 @@ function SettingsModal({
   providerModels: Record<LLMProviderType, FetchedModel[]>;
   modelsFetching: Record<LLMProviderType, boolean>;
   onImportInstructions: (file: File) => void;
+  onExportData: () => void;
+  onImportData: (file: File) => void;
 }) {
   const [expandedProviders, setExpandedProviders] = useState<Record<string, boolean>>({});
   const [showModelDropdown, setShowModelDropdown] = useState(false);
@@ -345,6 +349,7 @@ function SettingsModal({
   const [showAdvancedInstructions, setShowAdvancedInstructions] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const instructionsFileInputRef = useRef<HTMLInputElement>(null);
+  const dataImportInputRef = useRef<HTMLInputElement>(null);
 
   // Get models for the active provider (from fetched models or puter.js models)
   const activeProviderModels = activeProvider === "puter" 
@@ -1035,6 +1040,44 @@ function SettingsModal({
               </div>
             </div>
           </div>
+
+          {/* Data Export/Import */}
+          <div className="border-t border-zinc-700 pt-6">
+            <h3 className="text-sm font-medium text-white mb-4">Data Backup</h3>
+            <p className="text-xs text-zinc-400 mb-4">
+              Export your personas, characters, conversations, and settings to a JSON file. 
+              Import to restore your data on any device.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={onExportData}
+                className="flex-1 py-2 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+              >
+                📥 Export Data
+              </button>
+              <input
+                type="file"
+                ref={dataImportInputRef}
+                accept=".json"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    onImportData(file);
+                    e.target.value = "";
+                  }
+                }}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => dataImportInputRef.current?.click()}
+                className="flex-1 py-2 px-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+              >
+                📤 Import Data
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="flex gap-3 mt-6">
@@ -1486,6 +1529,96 @@ export default function Chat() {
     } catch (error) {
       setImportError("Failed to import instructions: Invalid JSON file");
       setTimeout(() => setImportError(null), 3000);
+    }
+  };
+
+  // Export all data to JSON file
+  const handleExportData = () => {
+    const exportData = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      personas,
+      characters,
+      conversations,
+      globalSettings,
+      globalInstructions,
+      providerConfigs,
+      activeProvider,
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `roleplay-studio-backup-${new Date().toISOString().split("T")[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // Import all data from JSON file
+  const handleImportData = async (file: File) => {
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+
+      // Validate version
+      if (typeof json.version !== "number") {
+        throw new Error("Invalid backup file: missing version");
+      }
+
+      // Import personas
+      if (Array.isArray(json.personas)) {
+        setPersonas(json.personas);
+      }
+
+      // Import characters
+      if (Array.isArray(json.characters)) {
+        setCharacters(json.characters);
+      }
+
+      // Import conversations
+      if (Array.isArray(json.conversations)) {
+        setConversations(json.conversations);
+      }
+
+      // Import global settings
+      if (json.globalSettings) {
+        setGlobalSettings(prev => ({ ...prev, ...json.globalSettings }));
+      }
+
+      // Import global instructions
+      if (json.globalInstructions) {
+        setGlobalInstructions(prev => ({ ...prev, ...json.globalInstructions }));
+      }
+
+      // Import provider configs (but don't overwrite API keys for security)
+      if (json.providerConfigs) {
+        setProviderConfigs(prev => {
+          const merged = { ...prev };
+          for (const key of Object.keys(json.providerConfigs) as LLMProviderType[]) {
+            // Preserve existing API keys
+            const existingApiKey = prev[key]?.apiKey;
+            merged[key] = {
+              ...json.providerConfigs[key],
+              apiKey: existingApiKey || json.providerConfigs[key].apiKey,
+            };
+          }
+          return merged;
+        });
+      }
+
+      // Import active provider
+      if (json.activeProvider && ["puter", "google-ai-studio", "google-vertex", "nvidia-nim"].includes(json.activeProvider)) {
+        setActiveProvider(json.activeProvider);
+      }
+
+      setImportSuccess("Data imported successfully! All your personas, characters, and conversations have been restored.");
+      setTimeout(() => setImportSuccess(null), 5000);
+    } catch (error) {
+      setImportError(`Failed to import data: ${error instanceof Error ? error.message : "Invalid JSON file"}`);
+      setTimeout(() => setImportError(null), 5000);
     }
   };
 
@@ -2895,6 +3028,8 @@ export default function Chat() {
           providerModels={providerModels}
           modelsFetching={modelsFetching}
           onImportInstructions={handleImportInstructions}
+          onExportData={handleExportData}
+          onImportData={handleImportData}
         />
       )}
     </div>
