@@ -9,7 +9,8 @@ export type TextSegmentType =
   | "bold"          // **bold** or __bold__
   | "ooc"           // ((OOC)) - out of character
   | "code"          // `code` - inline code
-  | "emphasis";     // *emphasis* (single asterisk when not action)
+  | "emphasis"      // *emphasis* (single asterisk when not action)
+  | "html";         // HTML tags like <b>, <i>, <u>, etc.
 
 export interface TextSegment {
   type: TextSegmentType;
@@ -34,6 +35,9 @@ export function parseRoleplayText(text: string): TextSegment[] {
   // Combined regex pattern for all formats
   // Order matters: more specific patterns first
   const patterns = [
+    // HTML tags (must come first to preserve them)
+    // Matches opening tags, closing tags, and self-closing tags
+    { regex: /^<\/?[a-zA-Z][a-zA-Z0-9]*(?:\s+[^>]*?)?\/?>/, type: "html" as TextSegmentType },
     // OOC (must come before thought)
     { regex: /^\(\(([^\)]+)\)\)/, type: "ooc" as TextSegmentType },
     // Bold with ** or __
@@ -69,8 +73,8 @@ export function parseRoleplayText(text: string): TextSegment[] {
     
     // If no pattern matched, consume text until next special character or end
     if (!matched) {
-      // Find the next special character
-      const nextSpecial = remaining.search(/[\*_\""\(\(`]/);
+      // Find the next special character (including < for HTML tags)
+      const nextSpecial = remaining.search(/[\*_\""\(\(`<>]/);
       
       if (nextSpecial === -1) {
         // No more special characters, rest is narration
@@ -154,6 +158,9 @@ export function getSegmentClasses(type: TextSegmentType): string {
     default:
       // Grey-ish for normal text without punctuation
       return `${baseClasses} text-gray-400`;
+    case "html":
+      // HTML tags - render as-is, will use dangerouslySetInnerHTML
+      return baseClasses;
   }
 }
 

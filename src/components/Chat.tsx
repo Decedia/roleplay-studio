@@ -337,6 +337,16 @@ function FormattedText({ content }: { content: string }) {
                 {segment.content}
               </code>
             );
+          case "html":
+            // Render HTML tags using dangerouslySetInnerHTML
+            // This allows AI responses to include basic HTML formatting
+            return (
+              <span 
+                key={key} 
+                className={classes}
+                dangerouslySetInnerHTML={{ __html: segment.content }}
+              />
+            );
           default:
             return (
               <span key={key} className={classes}>
