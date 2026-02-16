@@ -18,7 +18,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] Modern black theme UI with gradient accents
 - [x] **Separated persona and character systems**
 - [x] **Character creation with name, description, and first message**
-- [x] **Global settings (temperature, max tokens, top_p, model, enableThinking)**
+- [x] **Global settings (temperature, max tokens, top_p, top_k, model, enableThinking)**
 - [x] **Visible usage stats in header**
 - [x] Conversation management (create, delete, continue)
 - [x] LocalStorage persistence for personas, characters, and conversations
@@ -65,6 +65,8 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **Auto-export feature with configurable interval (1-60 minutes)**
 - [x] **Context token counter in chat header - shows estimated tokens for current conversation**
 - [x] **Fixed send button alignment with text input (items-end flexbox)**
+- [x] **Top K parameter added to output settings (range 1-100, default 40)**
+- [x] **Fixed thinking feature - added thinkingBudget parameter for Gemini 2.0 models**
 
 ## Current Structure
 
@@ -131,7 +133,8 @@ A chat application for roleplay conversations with multiple LLM provider support
 - **Temperature** (0-2): Controls creativity vs focus
 - **Max Tokens** (100-4000): Maximum response length
 - **Top P** (0-1): Controls word selection diversity
-- **Enable Thinking**: Toggle for AI reasoning display
+- **Top K** (1-100): Limits token selection to top K choices
+- **Enable Thinking**: Toggle for AI reasoning display (Gemini 2.0 only)
 - **Model Selection**: Choose from available AI models
 - Settings apply to ALL conversations globally
 - Accessible via gear icon in header (always visible)
@@ -267,6 +270,7 @@ interface GlobalSettings {
   temperature: number;
   maxTokens: number;
   topP: number;
+  topK: number;
   modelId: string;
   enableThinking: boolean;
   activeProvider: LLMProviderType;
@@ -324,6 +328,8 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date | Changes |
 |------|---------|
+| 2026-02-16 | Fixed thinking feature - added thinkingBudget parameter (8192 tokens) for Gemini 2.0 models when enableThinking is enabled |
+| 2026-02-16 | Added Top K parameter to output settings (range 1-100, default 40) |
 | 2026-02-16 | Added context token counter in chat header showing estimated tokens for current conversation |
 | 2026-02-16 | Fixed send button alignment with text input using items-end flexbox |
 | 2026-02-16 | Added auto-export feature with configurable interval (1-60 minutes) for automatic data backup |
