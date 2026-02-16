@@ -1277,8 +1277,13 @@ export default function Chat() {
   const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
-  const [view, setView] = useState<"personas" | "characters" | "conversations" | "chat" | "generator">("personas");
+  const [view, setView] = useState<"personas" | "characters" | "conversations" | "chat" | "generator" | "brainstorm">("personas");
   const [showPersonaModal, setShowPersonaModal] = useState(false);
+  
+  // Brainstorm state
+  const [brainstormMessages, setBrainstormMessages] = useState<Array<{role: "user" | "assistant", content: string}>>([]);
+  const [brainstormInput, setBrainstormInput] = useState("");
+  const [isBrainstorming, setIsBrainstorming] = useState(false);
   const [showCharacterModal, setShowCharacterModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
@@ -2138,6 +2143,101 @@ Make the character interesting, well-rounded, and suitable for roleplay. Include
     setGeneratorPrompt("");
     setView("characters");
   };
+  
+  // Brainstorm function - AI helps user create roleplay instructions
+  const sendBrainstormMessage = async () => {
+    if (!brainstormInput.trim() || isBrainstorming) return;
+    
+    const userMessage = brainstormInput.trim();
+    setBrainstormInput("");
+    setBrainstormMessages(prev => [...prev, { role: "user", content: userMessage }]);
+    setIsBrainstorming(true);
+    
+    const systemPrompt = `You are a creative roleplay assistant helping users brainstorm and create roleplay scenarios and instructions. 
+
+Your job is to:
+1. Ask what kind of roleplay the user wants to play
+2. Help them develop characters, settings, and scenarios
+3. When appropriate, provide ready-to-use instructions in code blocks
+
+When you provide instructions, format them like this:
+\`\`\`instructions
+[The instructions content - can be system prompts, character descriptions, scenario details, etc.]
+\`\`\`
+
+Be creative, engaging, and helpful. Ask follow-up questions to understand what the user wants. Provide detailed, immersive roleplay setups.
+
+If the user seems ready to start, provide complete instructions they can apply directly.`;
+
+    try {
+      const config = providerConfigs[activeProvider];
+      const messages: Message[] = [
+        { role: "user", content: `${systemPrompt}\n\nUser message: ${userMessage}` }
+      ];
+      
+      let responseText: string;
+      
+      if (activeProvider === "puter") {
+        const response = await window.puter.ai.chat(messages, {
+          model: globalSettings.modelId,
+          temperature: 0.8,
+          max_tokens: 2000,
+        });
+        responseText = response.message.content;
+      } else {
+        const configWithModel = {
+          ...config,
+          selectedModel: globalSettings.modelId || config.selectedModel,
+        };
+        const response = await sendChatMessage(
+          messages,
+          configWithModel,
+          {
+            temperature: 0.8,
+            maxTokens: 2000,
+            topP: 0.9,
+            topK: 40,
+            enableThinking: false,
+          }
+        );
+        if (response.error) {
+          throw new Error(response.error);
+        }
+        responseText = response.content || "";
+      }
+      
+      setBrainstormMessages(prev => [...prev, { role: "assistant", content: responseText }]);
+    } catch (error) {
+      console.error("Brainstorm error:", error);
+      setBrainstormMessages(prev => [...prev, { 
+        role: "assistant", 
+        content: "I encountered an error. Please try again." 
+      }]);
+    } finally {
+      setIsBrainstorming(false);
+    }
+  };
+  
+  // Extract instructions from code blocks
+  const extractInstructions = (content: string): string[] => {
+    const regex = /```instructions\n([\s\S]*?)```/g;
+    const matches: string[] = [];
+    let match;
+    while ((match = regex.exec(content)) !== null) {
+      matches.push(match[1].trim());
+    }
+    return matches;
+  };
+  
+  // Apply instructions to global instructions
+  const applyInstructions = (instructions: string) => {
+    setGlobalInstructions(prev => ({
+      ...prev,
+      customInstructions: prev.customInstructions 
+        ? `${prev.customInstructions}\n\n${instructions}`
+        : instructions,
+    }));
+  };
 
   // Navigation functions
   const selectPersona = (persona: Persona) => {
@@ -2411,6 +2511,8 @@ Make the character interesting, well-rounded, and suitable for roleplay. Include
       setSelectedPersona(null);
     } else if (view === "generator") {
       setView("personas");
+    } else if (view === "brainstorm") {
+      setView("personas");
     }
   };
 
@@ -2499,6 +2601,8 @@ Make the character interesting, well-rounded, and suitable for roleplay. Include
                     ? `${selectedPersona.name} - Select Character`
                     : view === "generator"
                     ? "Character Generator"
+                    : view === "brainstorm"
+                    ? "Roleplay Brainstorm"
                     : "Roleplay Studio"}
                 </h1>
                 <p className="text-sm text-zinc-500">
@@ -2510,6 +2614,8 @@ Make the character interesting, well-rounded, and suitable for roleplay. Include
                     ? "Select or start a conversation"
                     : view === "generator"
                     ? "Create characters with AI"
+                    : view === "brainstorm"
+                    ? "Brainstorm roleplay ideas with AI"
                     : `~${contextTokens.toLocaleString()} context tokens • ${AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || 'AI'}`}
                 </p>
               </div>
@@ -2745,6 +2851,13 @@ Make the character interesting, well-rounded, and suitable for roleplay. Include
                 <h2 className="text-lg font-medium text-white">Your Personas</h2>
                 <div className="flex gap-2">
                   <button
+                    onClick={() => setView("brainstorm")}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-colors"
+                  >
+                    <span className="text-lg">🎭</span>
+                    Brainstorm
+                  </button>
+                  <button
                     onClick={() => setView("generator")}
                     className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors"
                   >
@@ -2897,39 +3010,40 @@ Make the character interesting, well-rounded, and suitable for roleplay. Include
               {/* Generated Character Preview */}
               {generatedCharacter && (
                 <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                        <span className="text-2xl text-white font-semibold">
-                          {generatedCharacter.name.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-semibold text-white">{generatedCharacter.name}</h3>
-                        {generatedCharacter.scenario && (
-                          <p className="text-sm text-zinc-500">{generatedCharacter.scenario}</p>
-                        )}
-                      </div>
+                  {/* Buttons at top */}
+                  <div className="flex gap-2 mb-4">
+                    <button
+                      onClick={() => {
+                        setGeneratedCharacter(null);
+                        setGeneratorPrompt("");
+                      }}
+                      className="px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      onClick={importGeneratedCharacter}
+                      className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Import Character
+                    </button>
+                  </div>
+                  
+                  {/* Character header */}
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                      <span className="text-2xl text-white font-semibold">
+                        {generatedCharacter.name.charAt(0).toUpperCase()}
+                      </span>
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => {
-                          setGeneratedCharacter(null);
-                          setGeneratorPrompt("");
-                        }}
-                        className="px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
-                      >
-                        Clear
-                      </button>
-                      <button
-                        onClick={importGeneratedCharacter}
-                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                        Import Character
-                      </button>
+                    <div>
+                      <h3 className="text-xl font-semibold text-white">{generatedCharacter.name}</h3>
+                      {generatedCharacter.scenario && (
+                        <p className="text-sm text-zinc-500">{generatedCharacter.scenario}</p>
+                      )}
                     </div>
                   </div>
                   
@@ -2971,6 +3085,123 @@ Make the character interesting, well-rounded, and suitable for roleplay. Include
                   <li>• Add details about how they speak or act</li>
                   <li>• Specify the setting or scenario you want</li>
                 </ul>
+              </div>
+            </div>
+          )}
+
+          {/* Brainstorm View */}
+          {view === "brainstorm" && (
+            <div className="space-y-6 h-full flex flex-col">
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg font-medium text-white">🎭 Roleplay Brainstorm</h2>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setBrainstormMessages([]);
+                      setBrainstormInput("");
+                    }}
+                    className="px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+                  >
+                    Clear Chat
+                  </button>
+                </div>
+              </div>
+              
+              <div className="text-sm text-zinc-500 mb-2">
+                Chat with AI to brainstorm roleplay ideas. When ready, apply the generated instructions to your global settings.
+              </div>
+              
+              {/* Chat messages */}
+              <div className="flex-1 overflow-y-auto space-y-4 bg-zinc-900/50 rounded-xl p-4 min-h-[400px] max-h-[500px]">
+                {brainstormMessages.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center mx-auto mb-4">
+                      <span className="text-2xl">🎭</span>
+                    </div>
+                    <h3 className="text-lg font-medium text-white mb-2">Start Brainstorming</h3>
+                    <p className="text-zinc-500 max-w-md mx-auto">
+                      Tell me what kind of roleplay you want to play. I&apos;ll help you create characters, settings, and instructions.
+                    </p>
+                  </div>
+                ) : (
+                  brainstormMessages.map((msg, idx) => {
+                    const instructions = msg.role === "assistant" ? extractInstructions(msg.content) : [];
+                    const contentWithoutInstructions = msg.role === "assistant" 
+                      ? msg.content.replace(/```instructions\n[\s\S]*?```/g, "").trim()
+                      : msg.content;
+                    
+                    return (
+                      <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                        <div className={`max-w-[80%] ${msg.role === "user" ? "order-2" : "order-1"}`}>
+                          <div className={`rounded-2xl px-4 py-3 ${
+                            msg.role === "user" 
+                              ? "bg-zinc-700 text-white" 
+                              : "bg-zinc-800 text-zinc-200"
+                          }`}>
+                            <p className="whitespace-pre-wrap">{contentWithoutInstructions}</p>
+                          </div>
+                          
+                          {/* Instruction blocks with apply buttons */}
+                          {instructions.length > 0 && (
+                            <div className="mt-2 space-y-2">
+                              {instructions.map((instr, i) => (
+                                <div key={i} className="bg-zinc-800 border border-zinc-700 rounded-lg overflow-hidden">
+                                  <div className="bg-zinc-700/50 px-3 py-1.5 flex justify-between items-center">
+                                    <span className="text-xs text-zinc-400">Instructions</span>
+                                    <button
+                                      onClick={() => applyInstructions(instr)}
+                                      className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                                    >
+                                      Apply to Global Instructions
+                                    </button>
+                                  </div>
+                                  <pre className="p-3 text-xs text-zinc-300 overflow-x-auto whitespace-pre-wrap max-h-40 overflow-y-auto">{instr}</pre>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+                
+                {isBrainstorming && (
+                  <div className="flex justify-start">
+                    <div className="bg-zinc-800 rounded-2xl px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
+                        <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
+                        <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Input area */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={brainstormInput}
+                  onChange={(e) => setBrainstormInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      sendBrainstormMessage();
+                    }
+                  }}
+                  placeholder="Describe the roleplay you want to play..."
+                  className="flex-1 bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500 border border-zinc-700"
+                  disabled={isBrainstorming}
+                />
+                <button
+                  onClick={sendBrainstormMessage}
+                  disabled={!brainstormInput.trim() || isBrainstorming}
+                  className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Send
+                </button>
               </div>
             </div>
           )}
@@ -3222,7 +3453,7 @@ Make the character interesting, well-rounded, and suitable for roleplay. Include
                         <div
                           className={`max-w-[80%] rounded-2xl px-4 py-3 ${
                             message.role === "user"
-                              ? "bg-blue-600 text-white"
+                              ? "bg-zinc-700 text-white"
                               : "bg-zinc-800 text-zinc-100"
                           }`}
                         >
