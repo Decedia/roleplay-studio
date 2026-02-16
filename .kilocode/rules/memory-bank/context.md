@@ -71,6 +71,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **Max Context Tokens slider - controls conversation history limit sent to AI**
 - [x] **NVIDIA NIM thinking/reasoning support - DeepSeek R1 model with reasoning_content parsing**
 - [x] **AI-powered character generator tab - create characters from text descriptions**
+- [x] **{{user}} macro replacement - automatically replaces {{user}} with current persona name in conversations**
 
 ## Current Structure
 
@@ -347,6 +348,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date | Changes |
 |------|---------|
+| 2026-02-16 | Added {{user}} macro replacement - automatically replaces {{user}} with current persona name in conversations |
 | 2026-02-16 | Added AI-powered character generator tab - create characters from text descriptions with one-click import |
 | 2026-02-16 | Added NVIDIA NIM thinking/reasoning support - DeepSeek R1 model with reasoning_content parsing for both streaming and non-streaming responses |
 | 2026-02-16 | Added Max Context Tokens slider - controls conversation history limit sent to AI, auto-sets to model's context window on selection |
