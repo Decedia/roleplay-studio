@@ -70,6 +70,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **Max Output Tokens: auto-set to model max on selection, added Max button for quick reset**
 - [x] **Max Context Tokens slider - controls conversation history limit sent to AI**
 - [x] **NVIDIA NIM thinking/reasoning support - DeepSeek R1 model with reasoning_content parsing**
+- [x] **AI-powered character generator tab - create characters from text descriptions**
 
 ## Current Structure
 
@@ -107,6 +108,20 @@ A chat application for roleplay conversations with multiple LLM provider support
   - System Prompt Override: Custom system prompt
   - Post-History Instructions: Instructions after chat history
   - Example Messages: Dialogue examples with {{char}}/{{user}} placeholders
+
+### AI Character Generator
+- Create characters using AI from text descriptions
+- Accessible from personas view via "AI Generator" button
+- Uses current provider and model for generation
+- Higher temperature (0.8) for creative character creation
+- Generates full character profile:
+  - Name
+  - Description (personality, appearance, background)
+  - First message (greeting)
+  - Scenario (setting)
+  - Example dialogue
+- Preview generated character before importing
+- One-click import to character list
 
 ### SillyTavern Import
 - Import character cards from JSON files
@@ -323,7 +338,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 - Client component with `"use client"` directive
 - React hooks: useState, useRef, useEffect, useMemo
 - TypeScript interfaces for type safety
-- Four views: personas, characters, conversations, chat
+- Five views: personas, characters, conversations, chat, generator
 - Modal popups for persona, character, and settings editing
 - SettingsModal component with collapsible model dropdown
 - ThinkingSection component for collapsible think tags
@@ -332,6 +347,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date | Changes |
 |------|---------|
+| 2026-02-16 | Added AI-powered character generator tab - create characters from text descriptions with one-click import |
 | 2026-02-16 | Added NVIDIA NIM thinking/reasoning support - DeepSeek R1 model with reasoning_content parsing for both streaming and non-streaming responses |
 | 2026-02-16 | Added Max Context Tokens slider - controls conversation history limit sent to AI, auto-sets to model's context window on selection |
 | 2026-02-16 | Max Output Tokens: auto-set to model max on selection, added Max button for quick reset |
