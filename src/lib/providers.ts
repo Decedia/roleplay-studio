@@ -101,6 +101,14 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
     requiresApiKey: true,
     models: [
       {
+        id: "z-ai/glm4.7",
+        name: "GLM 4.7",
+        provider: "nvidia-nim",
+        contextWindow: 131072,
+        maxTokens: 16384,
+        supportsThinking: false,
+      },
+      {
         id: "meta/llama-3.3-70b-instruct",
         name: "Llama 3.3 70B Instruct",
         provider: "nvidia-nim",
@@ -356,8 +364,9 @@ export const chatWithNvidiaNIM: ChatFunction = async (
       {
         method: "POST",
         headers: {
+          "Accept": "application/json",
           "Content-Type": "application/json",
-          Authorization: `Bearer ${config.apiKey}`,
+          "Authorization": `Bearer ${config.apiKey}`,
         },
         body: JSON.stringify({
           model: config.selectedModel,
@@ -498,7 +507,8 @@ export const testProviderConnection = async (
         const response = await fetch("https://integrate.api.nvidia.com/v1/models", {
           method: "GET",
           headers: {
-            Authorization: `Bearer ${config.apiKey}`,
+            "Accept": "application/json",
+            "Authorization": `Bearer ${config.apiKey}`,
           },
         });
         if (response.ok) {
