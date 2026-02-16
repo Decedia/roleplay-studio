@@ -249,8 +249,8 @@ export const streamWithPuter = async (
       ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
       : formattedMessages;
 
-    // Use streaming mode - cast to any to bypass TypeScript limitations
-    const stream = await (window.puter.ai.chat as (messages: unknown, options: unknown) => Promise<AsyncIterable<unknown>>)(messagesWithSystem, {
+    // Use streaming mode - cast to unknown first, then to target type
+    const stream = await (window.puter.ai.chat as unknown as (messages: unknown, options: unknown) => Promise<AsyncIterable<unknown>>)(messagesWithSystem, {
       model: config.selectedModel,
       temperature: options.temperature,
       max_tokens: options.maxTokens,
@@ -264,8 +264,9 @@ export const streamWithPuter = async (
     // Handle async iterator
     const asyncIterator = stream;
     for await (const chunk of asyncIterator) {
-      // Handle different chunk formats
-      const delta = chunk?.choices?.[0]?.delta || chunk?.delta || chunk;
+      // Handle different chunk formats - cast to allow property access
+      const c = chunk as { choices?: { delta?: { content?: string; thinking?: string } }[]; delta?: { content?: string; thinking?: string }; content?: string; thinking?: string };
+      const delta = c?.choices?.[0]?.delta || c?.delta || c;
       
       if (delta?.content) {
         fullContent += delta.content;
