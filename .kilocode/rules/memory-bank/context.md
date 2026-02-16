@@ -50,6 +50,12 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **Connect button to switch active provider**
 - [x] **Auto-select default model when connecting to provider**
 - [x] **Visual connection status indicators (green=connected, yellow=testing, red=error)**
+- [x] **Roleplay text formatting with visual styling**
+- [x] **Action text (*action*) with italic styling**
+- [x] **Dialogue text ("speech") with quote styling**
+- [x] **Thought text ((thought)) with dimmed italic styling**
+- [x] **OOC text ((OOC)) with amber highlight**
+- [x] **Bold and code formatting support**
 
 ## Current Structure
 
@@ -62,6 +68,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 | `src/lib/types.ts` | TypeScript type definitions | ✅ Ready |
 | `src/lib/providers.ts` | LLM provider implementations | ✅ Ready |
 | `src/lib/character-import.ts` | SillyTavern import & instruction handling | ✅ Ready |
+| `src/lib/text-formatter.ts` | Roleplay text formatting parser | ✅ Ready |
 | `.kilocode/` | AI context & recipes | ✅ Ready |
 
 ## Features
@@ -139,6 +146,15 @@ A chat application for roleplay conversations with multiple LLM provider support
 - Auto-scroll to latest message
 - Keyboard shortcuts (Enter to send, Shift+Enter for new line)
 - **Send button always enabled (empty = resend)**
+
+### Roleplay Text Formatting
+- **Action text** (`*action*` or `_action_`) → italic styling with gray text
+- **Dialogue text** (`"speech"`) → quoted text with special quote marks
+- **Thought text** (`(thought)` or `((thought))`) → dimmed italic styling
+- **OOC text** (`((OOC))`) → amber highlight for out-of-character messages
+- **Bold text** (`**bold**` or `__bold__`) → bold styling
+- **Inline code** (`` `code` ``) → monospace with background
+- All formatting preserves whitespace and line breaks
 
 ### Usage Stats Display
 - Token count visible in header (always visible on desktop)
@@ -268,6 +284,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date | Changes |
 |------|---------|
+| 2026-02-16 | Added roleplay text formatting: action (*text*), dialogue ("text"), thought ((text)), OOC, bold, code styling |
 | 2026-02-16 | Added SillyTavern-style instruction handling: scenario, system prompt override, post-history instructions, example messages |
 | 2026-02-16 | Implemented Character Book (Lorebook) with keyword scanning and dynamic content injection |
 | 2026-02-16 | Enhanced character editor with advanced instruction fields |
