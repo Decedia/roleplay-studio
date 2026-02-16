@@ -2032,6 +2032,7 @@ export default function Chat() {
           topP: globalSettings.topP,
           topK: globalSettings.topK,
           systemPrompt,
+          enableThinking: globalSettings.enableThinking,
         },
         (chunk) => {
           if (chunk.error) {
@@ -2133,6 +2134,7 @@ export default function Chat() {
           topP: globalSettings.topP,
           topK: globalSettings.topK,
           systemPrompt,
+          enableThinking: globalSettings.enableThinking,
         },
         (chunk) => {
           if (chunk.error) {

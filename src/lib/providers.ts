@@ -181,6 +181,7 @@ type ChatFunction = (
     topP: number;
     topK: number;
     systemPrompt?: string;
+    enableThinking?: boolean;
   }
 ) => Promise<ChatResponse>;
 
@@ -233,6 +234,7 @@ export const streamWithPuter = async (
     topP: number;
     topK: number;
     systemPrompt?: string;
+    enableThinking?: boolean;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -356,6 +358,7 @@ export const streamWithGoogleAIStudio = async (
     topP: number;
     topK: number;
     systemPrompt?: string;
+    enableThinking?: boolean;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -374,6 +377,19 @@ export const streamWithGoogleAIStudio = async (
       ? { parts: [{ text: options.systemPrompt }] }
       : undefined;
 
+    // Build generation config with optional thinking
+    const generationConfig: Record<string, unknown> = {
+      temperature: options.temperature,
+      maxOutputTokens: options.maxTokens,
+      topP: options.topP,
+      topK: options.topK,
+    };
+
+    // Add thinking config if enabled (for Gemini 2.0 models)
+    if (options.enableThinking) {
+      generationConfig.thinkingBudget = 8192; // Allocate tokens for thinking
+    }
+
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${config.selectedModel}:streamGenerateContent?key=${config.apiKey}&alt=sse`,
       {
@@ -384,12 +400,7 @@ export const streamWithGoogleAIStudio = async (
         body: JSON.stringify({
           contents: formattedMessages,
           systemInstruction,
-          generationConfig: {
-            temperature: options.temperature,
-            maxOutputTokens: options.maxTokens,
-            topP: options.topP,
-            topK: options.topK,
-          },
+          generationConfig,
         }),
       }
     );
@@ -640,6 +651,7 @@ export const streamWithNvidiaNIM = async (
     topP: number;
     topK: number;
     systemPrompt?: string;
+    enableThinking?: boolean;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -753,6 +765,7 @@ export const streamWithVertexAI = async (
     topP: number;
     topK: number;
     systemPrompt?: string;
+    enableThinking?: boolean;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -770,6 +783,7 @@ export const sendChatMessage = async (
     topP: number;
     topK: number;
     systemPrompt?: string;
+    enableThinking?: boolean;
   }
 ): Promise<ChatResponse> => {
   switch (config.type) {
@@ -796,6 +810,7 @@ export const streamChatMessage = async (
     topP: number;
     topK: number;
     systemPrompt?: string;
+    enableThinking?: boolean;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
