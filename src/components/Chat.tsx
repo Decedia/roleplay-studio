@@ -500,17 +500,33 @@ function SettingsModal({
           {/* Max Tokens */}
           <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
-              Max Tokens: {globalSettings.maxTokens}
+              Max Tokens
             </label>
-            <input
-              type="range"
-              min="100"
-              max={selectedModel?.max_tokens || 4000}
-              step="100"
-              value={globalSettings.maxTokens}
-              onChange={(e) => setGlobalSettings({ ...globalSettings, maxTokens: parseInt(e.target.value) })}
-              className="w-full"
-            />
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min="100"
+                max={selectedModel?.max_tokens || 4000}
+                step="100"
+                value={globalSettings.maxTokens}
+                onChange={(e) => setGlobalSettings({ ...globalSettings, maxTokens: parseInt(e.target.value) })}
+                className="flex-1"
+              />
+              <input
+                type="number"
+                min="100"
+                max={selectedModel?.max_tokens || 4000}
+                value={globalSettings.maxTokens}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value);
+                  if (!isNaN(value)) {
+                    const clampedValue = Math.max(100, Math.min(value, selectedModel?.max_tokens || 4000));
+                    setGlobalSettings({ ...globalSettings, maxTokens: clampedValue });
+                  }
+                }}
+                className="w-24 px-2 py-1 bg-zinc-800 border border-zinc-700 rounded text-white text-center text-sm focus:outline-none focus:border-purple-500"
+              />
+            </div>
             <p className="text-xs text-zinc-500 mt-1">
               Maximum length of AI responses (model max: {(selectedModel?.max_tokens || 4000).toLocaleString()})
             </p>
