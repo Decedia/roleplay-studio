@@ -69,6 +69,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **Fixed thinking feature - added thinkingBudget parameter for Gemini 2.0 models**
 - [x] **Max Output Tokens: auto-set to model max on selection, added Max button for quick reset**
 - [x] **Max Context Tokens slider - controls conversation history limit sent to AI**
+- [x] **NVIDIA NIM thinking/reasoning support - DeepSeek R1 model with reasoning_content parsing**
 
 ## Current Structure
 
@@ -203,7 +204,7 @@ A chat application for roleplay conversations with multiple LLM provider support
   - **Puter.js** (default, free, no API key required)
   - **Google AI Studio** (Gemini models)
   - **Google Vertex AI** (enterprise Gemini)
-  - **NVIDIA NIM** (Llama, Mistral, Codestral)
+  - **NVIDIA NIM** (DeepSeek R1, Llama, Mistral, Codestral)
 - System prompt follows SillyTavern hierarchy:
   1. Main system prompt (custom or default)
   2. Character description
@@ -331,6 +332,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date | Changes |
 |------|---------|
+| 2026-02-16 | Added NVIDIA NIM thinking/reasoning support - DeepSeek R1 model with reasoning_content parsing for both streaming and non-streaming responses |
 | 2026-02-16 | Added Max Context Tokens slider - controls conversation history limit sent to AI, auto-sets to model's context window on selection |
 | 2026-02-16 | Max Output Tokens: auto-set to model max on selection, added Max button for quick reset |
 | 2026-02-16 | Fixed thinking feature - added thinkingBudget parameter (8192 tokens) for Gemini 2.0 models when enableThinking is enabled |
