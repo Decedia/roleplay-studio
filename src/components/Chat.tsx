@@ -252,6 +252,11 @@ function removeThinkTags(content: string): string {
   return content.replace(/<think\s*>[\s\S]*?<\/think>/gi, "").trim();
 }
 
+// Macro replacement function - replaces {{user}} with persona name
+function replaceMacros(content: string, personaName: string): string {
+  return content.replace(/\{\{user\}\}/gi, personaName);
+}
+
 // Thinking Section Component
 function ThinkingSection({ content }: { content: string }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -3192,9 +3197,13 @@ Make the character interesting, well-rounded, and suitable for roleplay. Include
                     const thinkContent = message.role === "assistant" 
                       ? extractThinkContent(message.content) 
                       : null;
-                    const displayContent = message.role === "assistant"
+                    // Apply macro replacement for {{user}} -> persona name
+                    const rawContent = message.role === "assistant"
                       ? removeThinkTags(message.content)
                       : message.content;
+                    const displayContent = selectedPersona 
+                      ? replaceMacros(rawContent, selectedPersona.name)
+                      : rawContent;
 
                     return (
                       <div
@@ -3218,8 +3227,8 @@ Make the character interesting, well-rounded, and suitable for roleplay. Include
                           }`}
                         >
                           {/* Thinking section - collapsible */}
-                          {thinkContent && (
-                            <ThinkingSection content={thinkContent} />
+                          {thinkContent && selectedPersona && (
+                            <ThinkingSection content={replaceMacros(thinkContent, selectedPersona.name)} />
                           )}
                           <FormattedText content={displayContent} />
                         </div>
@@ -3258,10 +3267,10 @@ Make the character interesting, well-rounded, and suitable for roleplay. Include
                         </span>
                       </div>
                       <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-zinc-800 text-zinc-100">
-                        {streamingThinking && (
-                          <ThinkingSection content={streamingThinking} />
+                        {streamingThinking && selectedPersona && (
+                          <ThinkingSection content={replaceMacros(streamingThinking, selectedPersona.name)} />
                         )}
-                        <FormattedText content={streamingContent} />
+                        <FormattedText content={selectedPersona ? replaceMacros(streamingContent, selectedPersona.name) : streamingContent} />
                         <span className="inline-block w-2 h-4 ml-1 bg-zinc-400 animate-pulse" />
                       </div>
                     </div>
