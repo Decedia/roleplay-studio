@@ -2159,8 +2159,12 @@ export default function Chat() {
 
   return (
     <div className="flex flex-col h-screen bg-black">
-      {/* Header */}
-      <header className="flex-shrink-0 border-b border-zinc-800 bg-black">
+      {/* Header - Fixed floating bar in chat view */}
+      <header className={`flex-shrink-0 z-50 ${
+        view === "chat" 
+          ? "fixed top-0 left-0 right-0 bg-black/80 backdrop-blur-xl border-b border-zinc-800/50" 
+          : "border-b border-zinc-800 bg-black"
+      }`}>
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -2441,8 +2445,8 @@ export default function Chat() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-y-auto">
+      {/* Main Content - Add top padding when in chat view for fixed header */}
+      <div className={`flex-1 overflow-y-auto ${view === "chat" ? "pt-20" : ""}`}>
         <div className="max-w-4xl mx-auto px-4 py-6">
           {/* Personas View */}
           {view === "personas" && (
@@ -2859,7 +2863,7 @@ export default function Chat() {
       {view === "chat" && currentConversation && (
         <div className="flex-shrink-0 border-t border-zinc-800 bg-black">
           <div className="max-w-4xl mx-auto px-4 py-4">
-            <form onSubmit={handleSubmit} className="flex items-end gap-2">
+            <form onSubmit={handleSubmit} className="flex items-center gap-2">
               <div className="flex-1 relative">
                 <textarea
                   ref={inputRef}
@@ -2876,7 +2880,7 @@ export default function Chat() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="flex-shrink-0 p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <svg
                   className="w-5 h-5"
