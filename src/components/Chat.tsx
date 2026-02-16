@@ -11,7 +11,8 @@ import {
   AVAILABLE_PROVIDERS,
   getModelsForProvider,
 } from "@/lib/providers";
-import { readCharacterFile, buildCharacterSystemPrompt } from "@/lib/character-import";
+import { readCharacterFile, buildFullSystemPrompt } from "@/lib/character-import";
+import { Character as CharacterType, CharacterBook, CharacterBookEntry } from "@/lib/types";
 
 // Types - using imported Message interface
 export interface Persona {
@@ -21,7 +22,7 @@ export interface Persona {
   createdAt: number;
 }
 
-// AI character (who the AI roleplays as)
+// AI character (who the AI roleplays as) - extended from types
 export interface Character {
   id: string;
   name: string;
@@ -33,7 +34,11 @@ export interface Character {
   creatorNotes?: string;
   tags?: string[];
   avatar?: string;
+  // Instruction fields (SillyTavern style)
   systemPrompt?: string;
+  postHistoryInstructions?: string;
+  characterBook?: CharacterBook;
+  alternateGreetings?: string[];
   createdAt: number;
 }
 
@@ -679,6 +684,11 @@ export default function Chat() {
   const [characterName, setCharacterName] = useState("");
   const [characterDescription, setCharacterDescription] = useState("");
   const [characterFirstMessage, setCharacterFirstMessage] = useState("");
+  // Instruction fields (SillyTavern style)
+  const [characterScenario, setCharacterScenario] = useState("");
+  const [characterSystemPrompt, setCharacterSystemPrompt] = useState("");
+  const [characterPostHistoryInstructions, setCharacterPostHistoryInstructions] = useState("");
+  const [characterMesExample, setCharacterMesExample] = useState("");
   
   // Global settings state
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings>(DEFAULT_GLOBAL_SETTINGS);
@@ -1002,13 +1012,23 @@ export default function Chat() {
       name: characterName.trim(),
       description: characterDescription.trim(),
       firstMessage: characterFirstMessage.trim(),
+      // Instruction fields
+      scenario: characterScenario.trim() || undefined,
+      systemPrompt: characterSystemPrompt.trim() || undefined,
+      postHistoryInstructions: characterPostHistoryInstructions.trim() || undefined,
+      mesExample: characterMesExample.trim() || undefined,
       createdAt: Date.now(),
     };
     
     setCharacters((prev) => [...prev, newCharacter]);
+    // Reset all form fields
     setCharacterName("");
     setCharacterDescription("");
     setCharacterFirstMessage("");
+    setCharacterScenario("");
+    setCharacterSystemPrompt("");
+    setCharacterPostHistoryInstructions("");
+    setCharacterMesExample("");
     setShowCharacterModal(false);
   };
 
@@ -1022,15 +1042,25 @@ export default function Chat() {
               ...c, 
               name: characterName.trim(), 
               description: characterDescription.trim(),
-              firstMessage: characterFirstMessage.trim()
+              firstMessage: characterFirstMessage.trim(),
+              // Instruction fields
+              scenario: characterScenario.trim() || undefined,
+              systemPrompt: characterSystemPrompt.trim() || undefined,
+              postHistoryInstructions: characterPostHistoryInstructions.trim() || undefined,
+              mesExample: characterMesExample.trim() || undefined,
             }
           : c
       )
     );
     setEditingCharacter(null);
+    // Reset all form fields
     setCharacterName("");
     setCharacterDescription("");
     setCharacterFirstMessage("");
+    setCharacterScenario("");
+    setCharacterSystemPrompt("");
+    setCharacterPostHistoryInstructions("");
+    setCharacterMesExample("");
     setShowCharacterModal(false);
   };
 
@@ -1049,6 +1079,11 @@ export default function Chat() {
     setCharacterName(character.name);
     setCharacterDescription(character.description);
     setCharacterFirstMessage(character.firstMessage);
+    // Load instruction fields
+    setCharacterScenario(character.scenario || "");
+    setCharacterSystemPrompt(character.systemPrompt || "");
+    setCharacterPostHistoryInstructions(character.postHistoryInstructions || "");
+    setCharacterMesExample(character.mesExample || "");
     setShowCharacterModal(true);
   };
   
@@ -1161,11 +1196,12 @@ export default function Chat() {
       // Get current provider config
       const currentConfig = providerConfigs[activeProvider];
       
-      // Build system prompt
-      const systemPrompt = buildCharacterSystemPrompt(
+      // Build system prompt with lorebook support
+      const systemPrompt = buildFullSystemPrompt(
         selectedCharacter,
         selectedPersona.name,
         selectedPersona.description,
+        updatedMessages,
         globalInstructions
       );
 
@@ -1245,11 +1281,12 @@ export default function Chat() {
       // Get current provider config
       const currentConfig = providerConfigs[activeProvider];
       
-      // Build system prompt
-      const systemPrompt = buildCharacterSystemPrompt(
+      // Build system prompt with lorebook support
+      const systemPrompt = buildFullSystemPrompt(
         selectedCharacter,
         selectedPersona.name,
         selectedPersona.description,
+        messagesBeforeRetry,
         globalInstructions
       );
 
@@ -2075,7 +2112,7 @@ export default function Chat() {
       {/* Character Modal */}
       {showCharacterModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-md">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-semibold text-white mb-4">
               {editingCharacter ? "Edit Character" : "Create New Character"}
             </h2>
@@ -2083,7 +2120,7 @@ export default function Chat() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-zinc-400 mb-1">
-                  Character Name
+                  Character Name <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="text"
@@ -2096,7 +2133,7 @@ export default function Chat() {
               
               <div>
                 <label className="block text-sm font-medium text-zinc-400 mb-1">
-                  Description / Personality
+                  Description / Personality <span className="text-red-400">*</span>
                 </label>
                 <textarea
                   value={characterDescription}
@@ -2109,7 +2146,7 @@ export default function Chat() {
 
               <div>
                 <label className="block text-sm font-medium text-zinc-400 mb-1">
-                  First Message
+                  First Message <span className="text-red-400">*</span>
                 </label>
                 <textarea
                   value={characterFirstMessage}
@@ -2118,6 +2155,69 @@ export default function Chat() {
                   rows={3}
                   className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none"
                 />
+              </div>
+
+              {/* Advanced Instructions Section */}
+              <div className="border-t border-zinc-700 pt-4 mt-4">
+                <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
+                  <span>⚙️</span> Advanced Instructions (Optional)
+                </h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-400 mb-1">
+                      Scenario
+                    </label>
+                    <textarea
+                      value={characterScenario}
+                      onChange={(e) => setCharacterScenario(e.target.value)}
+                      placeholder="The setting or situation where the roleplay takes place..."
+                      rows={2}
+                      className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-400 mb-1">
+                      System Prompt Override
+                    </label>
+                    <textarea
+                      value={characterSystemPrompt}
+                      onChange={(e) => setCharacterSystemPrompt(e.target.value)}
+                      placeholder="Custom system prompt that replaces the default. Use {{char}} for character name..."
+                      rows={2}
+                      className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none text-sm font-mono"
+                    />
+                    <p className="text-xs text-zinc-500 mt-1">Replaces the default &quot;You are [name]...&quot; prompt</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-400 mb-1">
+                      Post-History Instructions
+                    </label>
+                    <textarea
+                      value={characterPostHistoryInstructions}
+                      onChange={(e) => setCharacterPostHistoryInstructions(e.target.value)}
+                      placeholder="Additional instructions applied after the chat history..."
+                      rows={2}
+                      className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-400 mb-1">
+                      Example Messages
+                    </label>
+                    <textarea
+                      value={characterMesExample}
+                      onChange={(e) => setCharacterMesExample(e.target.value)}
+                      placeholder="{{char}}: Example dialogue showing how the character speaks...&#10;{{user}}: Example response...&#10;{{char}}: Another example..."
+                      rows={3}
+                      className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none text-sm font-mono"
+                    />
+                    <p className="text-xs text-zinc-500 mt-1">Use {`{{char}}`} and {`{{user}}`} placeholders</p>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -2129,6 +2229,10 @@ export default function Chat() {
                   setCharacterName("");
                   setCharacterDescription("");
                   setCharacterFirstMessage("");
+                  setCharacterScenario("");
+                  setCharacterSystemPrompt("");
+                  setCharacterPostHistoryInstructions("");
+                  setCharacterMesExample("");
                 }}
                 className="flex-1 py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
               >

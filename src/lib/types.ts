@@ -20,9 +20,47 @@ export interface Character {
   creatorNotes?: string;
   tags?: string[];
   avatar?: string; // URL or base64
-  // System prompt for advanced users
-  systemPrompt?: string;
+  // Instruction fields (SillyTavern style)
+  systemPrompt?: string; // Main system prompt override
+  postHistoryInstructions?: string; // Instructions after chat history
+  characterBook?: CharacterBook; // Lorebook for dynamic context
+  // Alternate greetings
+  alternateGreetings?: string[];
   createdAt: number;
+}
+
+// Character Book (Lorebook) - dynamic context based on keywords
+export interface CharacterBook {
+  entries: CharacterBookEntry[];
+  scanDepth?: number; // How many messages to scan for keywords
+  tokenBudget?: number; // Max tokens for lorebook content
+  recursiveScanning?: boolean; // Scan triggered entries for more keywords
+}
+
+export interface CharacterBookEntry {
+  id: number;
+  keys: string[]; // Keywords that trigger this entry
+  secondaryKeys?: string[]; // Additional keywords (optional)
+  content: string; // The content to insert
+  extensions?: Record<string, unknown>;
+  enabled: boolean;
+  insertionOrder: number; // Order of insertion (lower = earlier)
+  caseSensitive?: boolean;
+  name?: string; // Entry name for organization
+  priority?: number; // Higher priority = more important
+  position?: "before_char" | "after_char" | "before_example" | "after_example";
+  // Exclusion/inclusion
+  excludeRecursion?: boolean;
+  preventRecursion?: boolean;
+  // Selective logic
+  selectiveLogic?: number; // 0 = AND, 1 = NOT, 2 = NOT OR
+  group?: string;
+  groupOverride?: boolean;
+  // Metadata
+  comment?: string;
+  constant?: boolean; // Always include
+  depth?: number; // How far back to insert
+  selectivity?: number;
 }
 
 // SillyTavern Character Card V2 format
@@ -36,6 +74,11 @@ export interface SillyTavernCharacterCard {
   creator_notes?: string;
   tags?: string[];
   avatar?: string;
+  // V2 instruction fields
+  system_prompt?: string;
+  post_history_instructions?: string;
+  character_book?: CharacterBook;
+  alternate_greetings?: string[];
   // V2 fields
   spec?: string;
   spec_version?: string;
@@ -48,6 +91,10 @@ export interface SillyTavernCharacterCard {
     creator_notes?: string;
     tags?: string[];
     avatar?: string;
+    system_prompt?: string;
+    post_history_instructions?: string;
+    character_book?: CharacterBook;
+    alternate_greetings?: string[];
     extensions?: Record<string, unknown>;
   };
 }

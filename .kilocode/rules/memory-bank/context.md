@@ -4,7 +4,7 @@
 
 **Application Status**: ✅ Ready for use
 
-A chat application for roleplay conversations with multiple LLM provider support. Features a modern black theme with dual persona/character system and SillyTavern character import.
+A chat application for roleplay conversations with multiple LLM provider support. Features a modern black theme with dual persona/character system, SillyTavern character import, and advanced instruction handling.
 
 ## Recently Completed
 
@@ -40,6 +40,9 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **API key configuration in settings modal**
 - [x] **SillyTavern character JSON import**
 - [x] **Renamed app to "Roleplay Studio"**
+- [x] **SillyTavern-style instruction handling**
+- [x] **Character Book (Lorebook) support**
+- [x] **Advanced instruction fields in character editor**
 
 ## Current Structure
 
@@ -49,6 +52,9 @@ A chat application for roleplay conversations with multiple LLM provider support
 | `src/app/layout.tsx` | Root layout with puter.js script | ✅ Ready |
 | `src/app/globals.css` | Global styles (black theme) | ✅ Ready |
 | `src/components/Chat.tsx` | Main chat interface with persona/character system | ✅ Ready |
+| `src/lib/types.ts` | TypeScript type definitions | ✅ Ready |
+| `src/lib/providers.ts` | LLM provider implementations | ✅ Ready |
+| `src/lib/character-import.ts` | SillyTavern import & instruction handling | ✅ Ready |
 | `.kilocode/` | AI context & recipes | ✅ Ready |
 
 ## Features
@@ -68,6 +74,27 @@ A chat application for roleplay conversations with multiple LLM provider support
 - Character represents WHO THE AI PLAYS
 - Purple/pink gradient styling for character avatars
 - First message automatically sent when starting a new conversation
+- **Advanced instruction fields (SillyTavern-style)**:
+  - Scenario: The setting/situation for the roleplay
+  - System Prompt Override: Custom system prompt
+  - Post-History Instructions: Instructions after chat history
+  - Example Messages: Dialogue examples with {{char}}/{{user}} placeholders
+
+### SillyTavern Import
+- Import character cards from JSON files
+- Supports V1 and V2 character card formats
+- Parses all instruction fields automatically
+- Character Book (Lorebook) imported with entries
+- Alternate greetings supported
+
+### Character Book (Lorebook)
+- Dynamic context based on keywords in conversation
+- Keyword-triggered entries with content injection
+- Configurable scan depth (how many messages to scan)
+- Support for primary and secondary keys
+- Constant entries (always included)
+- Case-sensitive matching option
+- Priority and insertion order control
 
 ### Conversation Management
 - Conversations are between a user persona and an AI character
@@ -113,11 +140,19 @@ A chat application for roleplay conversations with multiple LLM provider support
 - Loading states and error handling for usage data
 
 ### AI Integration
-- Uses puter.js SDK for GLM 5 access
-- No API key required - puter.js handles authentication
-- System prompt sets up dual roleplay:
-  - AI is instructed to be the character
-  - User is described as their persona
+- Multiple LLM providers supported:
+  - **Puter.js** (default, free, no API key required)
+  - **Google AI Studio** (Gemini models)
+  - **Google Vertex AI** (enterprise Gemini)
+  - **NVIDIA NIM** (Llama, Mistral, Codestral)
+- System prompt follows SillyTavern hierarchy:
+  1. Main system prompt (custom or default)
+  2. Character description
+  3. Scenario
+  4. Example messages
+  5. Post-history instructions
+  6. Global instructions
+  7. Lorebook content (keyword-triggered)
 - Conversation context sent with each message
 - Settings (temperature, max_tokens, top_p) passed to API
 - Think tags extracted and displayed separately
@@ -138,7 +173,40 @@ interface Character {
   name: string;
   description: string;
   firstMessage: string;
+  // SillyTavern extended fields
+  mesExample?: string;
+  scenario?: string;
+  creatorNotes?: string;
+  tags?: string[];
+  avatar?: string;
+  // Instruction fields
+  systemPrompt?: string;
+  postHistoryInstructions?: string;
+  characterBook?: CharacterBook;
+  alternateGreetings?: string[];
   createdAt: number;
+}
+
+interface CharacterBook {
+  entries: CharacterBookEntry[];
+  scanDepth?: number;
+  tokenBudget?: number;
+  recursiveScanning?: boolean;
+}
+
+interface CharacterBookEntry {
+  id: number;
+  keys: string[];
+  secondaryKeys?: string[];
+  content: string;
+  enabled: boolean;
+  insertionOrder: number;
+  caseSensitive?: boolean;
+  name?: string;
+  priority?: number;
+  position?: "before_char" | "after_char" | "before_example" | "after_example";
+  constant?: boolean;
+  // ... more fields
 }
 
 interface GlobalSettings {
@@ -147,6 +215,7 @@ interface GlobalSettings {
   topP: number;
   modelId: string;
   enableThinking: boolean;
+  activeProvider: LLMProviderType;
 }
 
 interface Conversation {
@@ -165,15 +234,19 @@ interface Conversation {
 - `chat_conversations` - Stores all conversations
 - `chat_global_instructions` - Stores global instructions for all conversations
 - `chat_global_settings` - Stores global settings (temperature, maxTokens, topP, modelId, enableThinking)
+- `chat_provider_<type>` - Stores provider-specific configuration
 
-### puter.js Integration
-- Loaded via script tag in layout.tsx: `https://js.puter.com/v2/`
-- Uses `window.puter.ai.chat()` method
-- Model specified dynamically from global settings
-- API options: temperature, max_tokens, top_p
-- System prompt: `You are ${character.name}. ${character.description} The user is roleplaying as ${persona.name}. ${persona.description} Stay in character...`
-- User info: `window.puter.auth.getUser()` - returns username, email, uuid
-- Usage stats: `window.puter.usage.getMonthlyUsage()` - returns ai_chat_tokens, ai_image_generations, storage_bytes
+### System Prompt Building
+The `buildFullSystemPrompt` function creates prompts following SillyTavern's hierarchy:
+1. System prompt override OR default "You are [name]..."
+2. Character description
+3. Scenario (if present)
+4. User persona info
+5. Example messages (if present)
+6. Post-history instructions (if present)
+7. Global instructions (if present)
+8. Lorebook content (keyword-triggered from recent messages)
+9. Final "Stay in character" instruction
 
 ### Component Architecture
 - Client component with `"use client"` directive
@@ -188,6 +261,10 @@ interface Conversation {
 
 | Date | Changes |
 |------|---------|
+| 2026-02-16 | Added SillyTavern-style instruction handling: scenario, system prompt override, post-history instructions, example messages |
+| 2026-02-16 | Implemented Character Book (Lorebook) with keyword scanning and dynamic content injection |
+| 2026-02-16 | Enhanced character editor with advanced instruction fields |
+| 2026-02-15 | Added multiple LLM providers (Google AI Studio, Vertex AI, NVIDIA NIM), SillyTavern import, renamed to "Roleplay Studio" |
 | 2026-02-15 | Global settings refactor: removed per-conversation settings, added enableThinking toggle, collapsible model dropdown, think tag display, empty message resends last |
 | 2026-02-15 | Made instructions global (not per-conversation), grouped models by provider in dropdown |
 | 2026-02-15 | Fixed send button position (flexbox layout), added retry button for errors, added custom instructions field |
