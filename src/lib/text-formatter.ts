@@ -133,8 +133,8 @@ export function getSegmentClasses(type: TextSegmentType): string {
   
   switch (type) {
     case "action":
-      // Sky blue for actions - clear and readable
-      return `${baseClasses} italic text-sky-300`;
+      // Slightly yellow for actions - warm and distinct
+      return `${baseClasses} italic text-amber-200`;
     case "dialogue":
       // Soft white for spoken dialogue - easy to read
       return `${baseClasses} text-gray-100`;
@@ -152,8 +152,8 @@ export function getSegmentClasses(type: TextSegmentType): string {
       return `${baseClasses} font-mono text-sm bg-zinc-700 px-1.5 py-0.5 rounded text-green-400`;
     case "narration":
     default:
-      // Light gray for descriptive narration text
-      return `${baseClasses} text-gray-300`;
+      // Grey-ish for normal text without punctuation
+      return `${baseClasses} text-gray-400`;
   }
 }
 
