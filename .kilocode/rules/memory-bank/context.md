@@ -68,6 +68,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **Top K parameter added to output settings (range 1-100, default 40)**
 - [x] **Fixed thinking feature - added thinkingBudget parameter for Gemini 2.0 models**
 - [x] **Max Output Tokens: auto-set to model max on selection, added Max button for quick reset**
+- [x] **Max Context Tokens slider - controls conversation history limit sent to AI**
 
 ## Current Structure
 
@@ -270,6 +271,7 @@ interface CharacterBookEntry {
 interface GlobalSettings {
   temperature: number;
   maxTokens: number;
+  maxContextTokens: number;
   topP: number;
   topK: number;
   modelId: string;
@@ -329,6 +331,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date | Changes |
 |------|---------|
+| 2026-02-16 | Added Max Context Tokens slider - controls conversation history limit sent to AI, auto-sets to model's context window on selection |
 | 2026-02-16 | Max Output Tokens: auto-set to model max on selection, added Max button for quick reset |
 | 2026-02-16 | Fixed thinking feature - added thinkingBudget parameter (8192 tokens) for Gemini 2.0 models when enableThinking is enabled |
 | 2026-02-16 | Added Top K parameter to output settings (range 1-100, default 40) |

@@ -75,6 +75,7 @@ const DEFAULT_MODEL_PREFERENCES = ["glm-5", "gpt-4o-mini", "gpt-4o"];
 interface GlobalSettings {
   temperature: number;
   maxTokens: number;
+  maxContextTokens: number;
   topP: number;
   topK: number;
   modelId: string;
@@ -193,6 +194,7 @@ const getProviderConfigKey = (providerType: LLMProviderType) => `chat_provider_$
 const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   temperature: 0.7,
   maxTokens: 2000,
+  maxContextTokens: 32000, // Default context limit
   topP: 0.9,
   topK: 40,
   modelId: "", // Empty initially - user must connect to a provider first
@@ -203,6 +205,35 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
 const estimateTokens = (text: string): number => {
   if (!text) return 0;
   return Math.ceil(text.length / 4);
+};
+
+// Truncate messages to fit within max context tokens
+const truncateMessagesToContext = (messages: Message[], maxContextTokens: number, systemPromptTokens: number): Message[] => {
+  // Reserve tokens for system prompt and a buffer for the new message
+  const reservedTokens = systemPromptTokens + 1000;
+  const availableTokens = maxContextTokens - reservedTokens;
+  
+  if (availableTokens <= 0) {
+    return []; // Not enough space for any messages
+  }
+  
+  // Start from the most recent messages and work backwards
+  const result: Message[] = [];
+  let totalTokens = 0;
+  
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    const msgTokens = estimateTokens(msg.content) + (msg.thinking ? estimateTokens(msg.thinking) : 0);
+    
+    if (totalTokens + msgTokens <= availableTokens) {
+      result.unshift(msg);
+      totalTokens += msgTokens;
+    } else {
+      break; // Stop adding messages
+    }
+  }
+  
+  return result;
 };
 
 // Default auto-export settings
@@ -406,11 +437,13 @@ function SettingsModal({
   const selectModel = (modelId: string) => {
     const model = activeProviderModels.find(m => m.id === modelId);
     const maxOutput = model?.max_tokens || 4000;
+    const maxContext = model?.context || 128000;
     // Auto-set max tokens to model's maximum when selecting a new model
     const newMaxTokens = maxOutput;
+    const newMaxContext = maxContext;
     
     // Update global settings
-    setGlobalSettings({ ...globalSettings, modelId, maxTokens: newMaxTokens });
+    setGlobalSettings({ ...globalSettings, modelId, maxTokens: newMaxTokens, maxContextTokens: newMaxContext });
     
     // Also update the provider config
     setProviderConfigs(prev => ({
@@ -598,6 +631,48 @@ function SettingsModal({
             </div>
             <p className="text-xs text-zinc-500 mt-1">
               Maximum length of AI responses • Model max: <span className="text-purple-400">{(selectedModel?.max_tokens || 4000).toLocaleString()}</span> tokens
+            </p>
+          </div>
+
+          {/* Max Context Tokens */}
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">
+              Max Context Tokens
+            </label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min="1000"
+                max={selectedModel?.context || 128000}
+                step="1000"
+                value={globalSettings.maxContextTokens}
+                onChange={(e) => setGlobalSettings({ ...globalSettings, maxContextTokens: parseInt(e.target.value) })}
+                className="flex-1"
+              />
+              <input
+                type="number"
+                min="1000"
+                max={selectedModel?.context || 128000}
+                value={globalSettings.maxContextTokens}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value);
+                  const max = selectedModel?.context || 128000;
+                  if (!isNaN(value) && value >= 1000 && value <= max) {
+                    setGlobalSettings({ ...globalSettings, maxContextTokens: value });
+                  }
+                }}
+                className="w-24 px-2 py-1 bg-zinc-800 border border-zinc-700 rounded text-white text-center text-sm focus:outline-none focus:border-purple-500"
+              />
+              <button
+                onClick={() => setGlobalSettings({ ...globalSettings, maxContextTokens: selectedModel?.context || 128000 })}
+                className="px-2 py-1 bg-purple-600 hover:bg-purple-700 rounded text-xs text-white transition-colors"
+                title="Set to model maximum"
+              >
+                Max
+              </button>
+            </div>
+            <p className="text-xs text-zinc-500 mt-1">
+              Maximum conversation history sent to AI • Model max: <span className="text-purple-400">{((selectedModel?.context || 128000)).toLocaleString()}</span> tokens
             </p>
           </div>
 
@@ -2031,10 +2106,18 @@ export default function Chat() {
         updatedMessages,
         globalInstructions
       );
+      
+      // Estimate system prompt tokens and truncate messages if needed
+      const systemPromptTokens = estimateTokens(systemPrompt);
+      const truncatedMessages = truncateMessagesToContext(
+        updatedMessages,
+        globalSettings.maxContextTokens,
+        systemPromptTokens
+      );
 
       // Use streaming for better UX
       await streamChatMessage(
-        updatedMessages,
+        truncatedMessages,
         { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
         {
           temperature: globalSettings.temperature,
@@ -2133,10 +2216,18 @@ export default function Chat() {
         messagesBeforeRetry,
         globalInstructions
       );
+      
+      // Estimate system prompt tokens and truncate messages if needed
+      const systemPromptTokens = estimateTokens(systemPrompt);
+      const truncatedMessages = truncateMessagesToContext(
+        messagesBeforeRetry,
+        globalSettings.maxContextTokens,
+        systemPromptTokens
+      );
 
       // Use streaming for better UX
       await streamChatMessage(
-        messagesBeforeRetry,
+        truncatedMessages,
         { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
         {
           temperature: globalSettings.temperature,
