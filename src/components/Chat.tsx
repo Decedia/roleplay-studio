@@ -1272,7 +1272,7 @@ export default function Chat() {
   const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
-  const [view, setView] = useState<"personas" | "characters" | "conversations" | "chat">("personas");
+  const [view, setView] = useState<"personas" | "characters" | "conversations" | "chat" | "generator">("personas");
   const [showPersonaModal, setShowPersonaModal] = useState(false);
   const [showCharacterModal, setShowCharacterModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -1362,6 +1362,12 @@ export default function Chat() {
   // Auto-export state
   const [autoExport, setAutoExport] = useState<AutoExportSettings>(DEFAULT_AUTO_EXPORT);
   const autoExportTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Character generator state
+  const [generatorPrompt, setGeneratorPrompt] = useState("");
+  const [generatedCharacter, setGeneratedCharacter] = useState<Character | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatorError, setGeneratorError] = useState<string | null>(null);
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -2020,6 +2026,113 @@ export default function Chat() {
       fileInputRef.current.value = "";
     }
   };
+  
+  // Character Generator function
+  const generateCharacter = async () => {
+    if (!generatorPrompt.trim()) return;
+    
+    setIsGenerating(true);
+    setGeneratorError(null);
+    setGeneratedCharacter(null);
+    
+    const systemPrompt = `You are a character creator for roleplay. Generate a detailed character based on the user's description. 
+
+Respond with ONLY a JSON object in this exact format (no markdown, no code blocks):
+{
+  "name": "Character Name",
+  "description": "Detailed character description including personality, appearance, background, and traits. Be creative and detailed.",
+  "firstMessage": "A greeting or opening message the character would say when first meeting someone. Should be in character and engaging.",
+  "scenario": "The setting or scenario where this character exists",
+  "mesExample": "Example dialogue showing how the character speaks and behaves. Use {{char}} for character name and {{user}} for user."
+}
+
+Make the character interesting, well-rounded, and suitable for roleplay. Include flaws and quirks to make them feel real.`;
+
+    const userPrompt = `Create a character based on this description: ${generatorPrompt.trim()}`;
+    
+    try {
+      const config = providerConfigs[activeProvider];
+      const messages: Message[] = [
+        { role: "user", content: `${systemPrompt}\n\n${userPrompt}` }
+      ];
+      
+      let responseText: string;
+      
+      if (activeProvider === "puter") {
+        // Use puter.js
+        const response = await window.puter.ai.chat(messages, {
+          model: globalSettings.modelId,
+          temperature: 0.8, // Higher temperature for creativity
+          max_tokens: 2000,
+        });
+        responseText = response.message.content;
+      } else {
+        // Use other providers - ensure selectedModel is set
+        const configWithModel = {
+          ...config,
+          selectedModel: globalSettings.modelId || config.selectedModel,
+        };
+        const response = await sendChatMessage(
+          messages,
+          configWithModel,
+          {
+            temperature: 0.8,
+            maxTokens: 2000,
+            topP: 0.9,
+            topK: 40,
+            enableThinking: false,
+          }
+        );
+        if (response.error) {
+          throw new Error(response.error);
+        }
+        responseText = response.content || "";
+      }
+      
+      // Parse the JSON response
+      // Remove any markdown code blocks if present
+      let jsonStr = responseText.trim();
+      if (jsonStr.startsWith("```json")) {
+        jsonStr = jsonStr.slice(7);
+      } else if (jsonStr.startsWith("```")) {
+        jsonStr = jsonStr.slice(3);
+      }
+      if (jsonStr.endsWith("```")) {
+        jsonStr = jsonStr.slice(0, -3);
+      }
+      jsonStr = jsonStr.trim();
+      
+      const parsed = JSON.parse(jsonStr);
+      
+      // Create the character object
+      const newCharacter: Character = {
+        id: crypto.randomUUID(),
+        name: parsed.name || "Unnamed Character",
+        description: parsed.description || "",
+        firstMessage: parsed.firstMessage || "*nods in greeting*",
+        scenario: parsed.scenario || undefined,
+        mesExample: parsed.mesExample || undefined,
+        createdAt: Date.now(),
+      };
+      
+      setGeneratedCharacter(newCharacter);
+    } catch (error) {
+      console.error("Error generating character:", error);
+      setGeneratorError(error instanceof Error ? error.message : "Failed to generate character. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+  
+  // Import generated character to the character list
+  const importGeneratedCharacter = () => {
+    if (!generatedCharacter) return;
+    
+    setCharacters((prev) => [...prev, generatedCharacter]);
+    setGeneratedCharacter(null);
+    setGeneratorPrompt("");
+    setView("characters");
+  };
 
   // Navigation functions
   const selectPersona = (persona: Persona) => {
@@ -2291,6 +2404,8 @@ export default function Chat() {
     } else if (view === "characters") {
       setView("personas");
       setSelectedPersona(null);
+    } else if (view === "generator") {
+      setView("personas");
     }
   };
 
@@ -2377,6 +2492,8 @@ export default function Chat() {
                     ? `${selectedPersona.name} × ${selectedCharacter.name}`
                     : view === "characters" && selectedPersona
                     ? `${selectedPersona.name} - Select Character`
+                    : view === "generator"
+                    ? "Character Generator"
                     : "Roleplay Studio"}
                 </h1>
                 <p className="text-sm text-zinc-500">
@@ -2386,6 +2503,8 @@ export default function Chat() {
                     ? "Select AI character"
                     : view === "conversations"
                     ? "Select or start a conversation"
+                    : view === "generator"
+                    ? "Create characters with AI"
                     : `~${contextTokens.toLocaleString()} context tokens • ${AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || 'AI'}`}
                 </p>
               </div>
@@ -2619,20 +2738,31 @@ export default function Chat() {
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-medium text-white">Your Personas</h2>
-                <button
-                  onClick={() => {
-                    setEditingPersona(null);
-                    setPersonaName("");
-                    setPersonaDescription("");
-                    setShowPersonaModal(true);
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  Create Persona
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setView("generator")}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    AI Generator
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingPersona(null);
+                      setPersonaName("");
+                      setPersonaDescription("");
+                      setShowPersonaModal(true);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Create Persona
+                  </button>
+                </div>
               </div>
 
               {personas.length === 0 ? (
@@ -2697,6 +2827,146 @@ export default function Chat() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Character Generator View */}
+          {view === "generator" && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg font-medium text-white">AI Character Generator</h2>
+                <div className="text-sm text-zinc-500">
+                  Powered by {AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || "AI"}
+                </div>
+              </div>
+              
+              {/* Generator Input */}
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+                <label className="block text-sm font-medium text-zinc-400 mb-2">
+                  Describe your character
+                </label>
+                <textarea
+                  value={generatorPrompt}
+                  onChange={(e) => setGeneratorPrompt(e.target.value)}
+                  placeholder="E.g., A mysterious vampire who runs a bookstore in modern Tokyo. They're elegant, sarcastic, and secretly lonely..."
+                  rows={4}
+                  className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none"
+                  disabled={isGenerating}
+                />
+                <div className="flex justify-between items-center mt-4">
+                  <p className="text-xs text-zinc-500">
+                    Be as detailed as you like. The AI will create a full character profile.
+                  </p>
+                  <button
+                    onClick={generateCharacter}
+                    disabled={!generatorPrompt.trim() || isGenerating}
+                    className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        Generate Character
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+              
+              {/* Error Message */}
+              {generatorError && (
+                <div className="bg-red-900/50 border border-red-800 rounded-lg px-4 py-3 text-red-200 text-sm">
+                  {generatorError}
+                </div>
+              )}
+              
+              {/* Generated Character Preview */}
+              {generatedCharacter && (
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                        <span className="text-2xl text-white font-semibold">
+                          {generatedCharacter.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-semibold text-white">{generatedCharacter.name}</h3>
+                        {generatedCharacter.scenario && (
+                          <p className="text-sm text-zinc-500">{generatedCharacter.scenario}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setGeneratedCharacter(null);
+                          setGeneratorPrompt("");
+                        }}
+                        className="px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+                      >
+                        Clear
+                      </button>
+                      <button
+                        onClick={importGeneratedCharacter}
+                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Import Character
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {/* Description */}
+                    <div>
+                      <h4 className="text-sm font-medium text-zinc-400 mb-1">Description</h4>
+                      <p className="text-zinc-300 whitespace-pre-wrap">{generatedCharacter.description}</p>
+                    </div>
+                    
+                    {/* First Message */}
+                    <div>
+                      <h4 className="text-sm font-medium text-zinc-400 mb-1">First Message</h4>
+                      <div className="bg-zinc-800/50 rounded-lg p-3 border border-zinc-700">
+                        <p className="text-zinc-300 italic whitespace-pre-wrap">&ldquo;{generatedCharacter.firstMessage}&rdquo;</p>
+                      </div>
+                    </div>
+                    
+                    {/* Example Messages */}
+                    {generatedCharacter.mesExample && (
+                      <div>
+                        <h4 className="text-sm font-medium text-zinc-400 mb-1">Example Dialogue</h4>
+                        <div className="bg-zinc-800/50 rounded-lg p-3 border border-zinc-700">
+                          <p className="text-zinc-400 text-sm whitespace-pre-wrap">{generatedCharacter.mesExample}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* Tips */}
+              <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+                <h3 className="text-sm font-medium text-white mb-2">💡 Tips for better characters</h3>
+                <ul className="text-sm text-zinc-400 space-y-1">
+                  <li>• Include personality traits, flaws, and quirks</li>
+                  <li>• Describe their appearance and mannerisms</li>
+                  <li>• Mention their background or occupation</li>
+                  <li>• Add details about how they speak or act</li>
+                  <li>• Specify the setting or scenario you want</li>
+                </ul>
+              </div>
             </div>
           )}
 
