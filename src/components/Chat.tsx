@@ -197,6 +197,12 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   enableThinking: false,
 };
 
+// Estimate token count for text (rough approximation: ~4 chars per token)
+const estimateTokens = (text: string): number => {
+  if (!text) return 0;
+  return Math.ceil(text.length / 4);
+};
+
 // Default auto-export settings
 const DEFAULT_AUTO_EXPORT: AutoExportSettings = {
   enabled: false,
@@ -2156,6 +2162,30 @@ export default function Chat() {
   const filteredConversations = conversations.filter(
     (c) => c.personaId === selectedPersona?.id && c.characterId === selectedCharacter?.id
   );
+  
+  // Calculate total context tokens for current conversation
+  const contextTokens = useMemo(() => {
+    if (view !== "chat" || !currentConversation || !selectedCharacter || !selectedPersona) {
+      return 0;
+    }
+    
+    // Calculate system prompt tokens
+    const systemPrompt = buildFullSystemPrompt(
+      selectedCharacter,
+      selectedPersona.name,
+      selectedPersona.description,
+      currentConversation.messages,
+      globalInstructions
+    );
+    const systemTokens = estimateTokens(systemPrompt);
+    
+    // Calculate message tokens
+    const messageTokens = currentConversation.messages.reduce((total, msg) => {
+      return total + estimateTokens(msg.content) + (msg.thinking ? estimateTokens(msg.thinking) : 0);
+    }, 0);
+    
+    return systemTokens + messageTokens;
+  }, [view, currentConversation, selectedCharacter, selectedPersona, globalInstructions]);
 
   return (
     <div className="flex flex-col h-screen bg-black">
@@ -2220,7 +2250,7 @@ export default function Chat() {
                     ? "Select AI character"
                     : view === "conversations"
                     ? "Select or start a conversation"
-                    : `Powered by ${AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || 'AI'}`}
+                    : `~${contextTokens.toLocaleString()} context tokens • ${AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || 'AI'}`}
                 </p>
               </div>
             </div>
@@ -2863,7 +2893,7 @@ export default function Chat() {
       {view === "chat" && currentConversation && (
         <div className="flex-shrink-0 border-t border-zinc-800 bg-black">
           <div className="max-w-4xl mx-auto px-4 py-4">
-            <form onSubmit={handleSubmit} className="flex items-center gap-2">
+            <form onSubmit={handleSubmit} className="flex items-end gap-2">
               <div className="flex-1 relative">
                 <textarea
                   ref={inputRef}
