@@ -8,6 +8,7 @@ import {
   ProviderConfig,
   Message,
   sendChatMessage,
+  streamChatMessage,
   AVAILABLE_PROVIDERS,
   getModelsForProvider,
   testProviderConnection,
@@ -1110,6 +1111,8 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [streamingContent, setStreamingContent] = useState<string>("");
+  const [streamingThinking, setStreamingThinking] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   
@@ -1748,6 +1751,8 @@ export default function Chat() {
 
     updateConversationMessages(updatedMessages);
     setIsLoading(true);
+    setStreamingContent("");
+    setStreamingThinking("");
 
     try {
       // Get current provider config
@@ -1762,8 +1767,8 @@ export default function Chat() {
         globalInstructions
       );
 
-      // Use the sendChatMessage function from our providers library
-      const response = await sendChatMessage(
+      // Use streaming for better UX
+      await streamChatMessage(
         updatedMessages,
         { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
         {
@@ -1771,19 +1776,32 @@ export default function Chat() {
           maxTokens: globalSettings.maxTokens,
           topP: globalSettings.topP,
           systemPrompt,
+        },
+        (chunk) => {
+          if (chunk.error) {
+            setError(chunk.error);
+            return;
+          }
+          
+          if (chunk.content !== undefined) {
+            setStreamingContent(chunk.content);
+          }
+          
+          if (chunk.thinking !== undefined) {
+            setStreamingThinking(chunk.thinking);
+          }
+          
+          if (chunk.done) {
+            const finalMessages: Message[] = [
+              ...updatedMessages,
+              { role: "assistant", content: chunk.content || "", thinking: chunk.thinking },
+            ];
+            updateConversationMessages(finalMessages);
+            setStreamingContent("");
+            setStreamingThinking("");
+          }
         }
       );
-
-      if (response.error) {
-        throw new Error(response.error);
-      }
-
-      const finalMessages: Message[] = [
-        ...updatedMessages,
-        { role: "assistant", content: response.content || "", thinking: response.thinking },
-      ];
-
-      updateConversationMessages(finalMessages);
     } catch (err) {
       console.error("Chat error:", err);
       setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
@@ -1830,6 +1848,8 @@ export default function Chat() {
     
     setError(null);
     setIsLoading(true);
+    setStreamingContent("");
+    setStreamingThinking("");
     
     // Update conversation to show only messages up to last user message
     updateConversationMessages(messagesBeforeRetry);
@@ -1847,8 +1867,8 @@ export default function Chat() {
         globalInstructions
       );
 
-      // Use the sendChatMessage function from our providers library
-      const response = await sendChatMessage(
+      // Use streaming for better UX
+      await streamChatMessage(
         messagesBeforeRetry,
         { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
         {
@@ -1856,19 +1876,32 @@ export default function Chat() {
           maxTokens: globalSettings.maxTokens,
           topP: globalSettings.topP,
           systemPrompt,
+        },
+        (chunk) => {
+          if (chunk.error) {
+            setError(chunk.error);
+            return;
+          }
+          
+          if (chunk.content !== undefined) {
+            setStreamingContent(chunk.content);
+          }
+          
+          if (chunk.thinking !== undefined) {
+            setStreamingThinking(chunk.thinking);
+          }
+          
+          if (chunk.done) {
+            const finalMessages: Message[] = [
+              ...messagesBeforeRetry,
+              { role: "assistant", content: chunk.content || "", thinking: chunk.thinking },
+            ];
+            updateConversationMessages(finalMessages);
+            setStreamingContent("");
+            setStreamingThinking("");
+          }
         }
       );
-
-      if (response.error) {
-        throw new Error(response.error);
-      }
-
-      const finalMessages: Message[] = [
-        ...messagesBeforeRetry,
-        { role: "assistant", content: response.content || "", thinking: response.thinking },
-      ];
-
-      updateConversationMessages(finalMessages);
     } catch (err) {
       console.error("Retry error:", err);
       setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
@@ -2532,7 +2565,7 @@ export default function Chat() {
                       </div>
                     );
                   })}
-                  {isLoading && (
+                  {isLoading && !streamingContent && (
                     <div className="flex gap-4 justify-start">
                       <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
                         <span className="text-sm text-white font-semibold">
@@ -2545,6 +2578,23 @@ export default function Chat() {
                           <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
                           <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                         </div>
+                      </div>
+                    </div>
+                  )}
+                  {/* Streaming message */}
+                  {isLoading && streamingContent && (
+                    <div className="flex gap-4 justify-start">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                        <span className="text-sm text-white font-semibold">
+                          {selectedCharacter?.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-zinc-800 text-zinc-100">
+                        {streamingThinking && (
+                          <ThinkingSection content={streamingThinking} />
+                        )}
+                        <FormattedText content={streamingContent} />
+                        <span className="inline-block w-2 h-4 ml-1 bg-zinc-400 animate-pulse" />
                       </div>
                     </div>
                   )}

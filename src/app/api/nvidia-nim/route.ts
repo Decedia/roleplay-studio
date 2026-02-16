@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { endpoint, apiKey, payload } = body;
+    const { endpoint, apiKey, payload, stream } = body;
 
     if (!apiKey) {
       return NextResponse.json(
@@ -17,12 +17,45 @@ export async function POST(request: NextRequest) {
     const response = await fetch(`https://integrate.api.nvidia.com/v1/${endpoint}`, {
       method: "POST",
       headers: {
-        "Accept": "application/json",
+        "Accept": stream ? "text/event-stream" : "application/json",
         "Content-Type": "application/json",
         "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify(payload),
     });
+
+    // Handle streaming response
+    if (stream && response.ok && response.body) {
+      const encoder = new TextEncoder();
+      const decoder = new TextDecoder();
+      
+      const stream = new ReadableStream({
+        async start(controller) {
+          const reader = response.body!.getReader();
+          
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              
+              // Forward the chunk directly
+              controller.enqueue(value);
+            }
+            controller.close();
+          } catch (error) {
+            controller.error(error);
+          }
+        },
+      });
+
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+        },
+      });
+    }
 
     const data = await response.json();
 

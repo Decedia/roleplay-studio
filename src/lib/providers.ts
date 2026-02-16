@@ -168,6 +168,9 @@ export interface ChatResponse {
   error?: string;
 }
 
+// Streaming callback type
+export type StreamCallback = (chunk: { content?: string; thinking?: string; done?: boolean; error?: string }) => void;
+
 // Base chat function type
 type ChatFunction = (
   messages: Message[],
@@ -216,6 +219,68 @@ export const chatWithPuter: ChatFunction = async (
     return {
       error: error instanceof Error ? error.message : "Unknown error occurred",
     };
+  }
+};
+
+// Puter.js streaming chat implementation
+export const streamWithPuter = async (
+  messages: Message[],
+  config: ProviderConfig,
+  options: {
+    temperature: number;
+    maxTokens: number;
+    topP: number;
+    systemPrompt?: string;
+  },
+  onChunk: StreamCallback
+): Promise<void> => {
+  try {
+    if (typeof window === "undefined" || !window.puter) {
+      onChunk({ error: "Puter.js is not available" });
+      return;
+    }
+
+    const formattedMessages = messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    const messagesWithSystem = options.systemPrompt
+      ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
+      : formattedMessages;
+
+    // Use streaming mode - cast to any to bypass TypeScript limitations
+    const stream = await (window.puter.ai.chat as (messages: unknown, options: unknown) => Promise<AsyncIterable<unknown>>)(messagesWithSystem, {
+      model: config.selectedModel,
+      temperature: options.temperature,
+      max_tokens: options.maxTokens,
+      top_p: options.topP,
+      stream: true,
+    });
+
+    let fullContent = "";
+    let fullThinking = "";
+
+    // Handle async iterator
+    const asyncIterator = stream;
+    for await (const chunk of asyncIterator) {
+      // Handle different chunk formats
+      const delta = chunk?.choices?.[0]?.delta || chunk?.delta || chunk;
+      
+      if (delta?.content) {
+        fullContent += delta.content;
+        onChunk({ content: fullContent });
+      }
+      
+      if (delta?.thinking) {
+        fullThinking += delta.thinking;
+        onChunk({ thinking: fullThinking });
+      }
+    }
+
+    onChunk({ content: fullContent, thinking: fullThinking, done: true });
+  } catch (error) {
+    onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
   }
 };
 
@@ -274,6 +339,109 @@ export const chatWithGoogleAIStudio: ChatFunction = async (
     return {
       error: error instanceof Error ? error.message : "Unknown error occurred",
     };
+  }
+};
+
+// Google AI Studio streaming implementation
+export const streamWithGoogleAIStudio = async (
+  messages: Message[],
+  config: ProviderConfig,
+  options: {
+    temperature: number;
+    maxTokens: number;
+    topP: number;
+    systemPrompt?: string;
+  },
+  onChunk: StreamCallback
+): Promise<void> => {
+  if (!config.apiKey) {
+    onChunk({ error: "Google AI Studio API key is required" });
+    return;
+  }
+
+  try {
+    const formattedMessages = messages.map((m) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }],
+    }));
+
+    const systemInstruction = options.systemPrompt
+      ? { parts: [{ text: options.systemPrompt }] }
+      : undefined;
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${config.selectedModel}:streamGenerateContent?key=${config.apiKey}&alt=sse`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: formattedMessages,
+          systemInstruction,
+          generationConfig: {
+            temperature: options.temperature,
+            maxOutputTokens: options.maxTokens,
+            topP: options.topP,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      onChunk({ error: errorData.error?.message || `HTTP ${response.status}` });
+      return;
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      onChunk({ error: "Failed to get response stream" });
+      return;
+    }
+
+    const decoder = new TextDecoder();
+    let fullContent = "";
+    let fullThinking = "";
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr || jsonStr === "[DONE]") continue;
+
+          try {
+            const data = JSON.parse(jsonStr);
+            const parts = data.candidates?.[0]?.content?.parts || [];
+            
+            for (const part of parts) {
+              if (part.text) {
+                fullContent += part.text;
+                onChunk({ content: fullContent });
+              }
+              if (part.thought) {
+                fullThinking += part.thought;
+                onChunk({ thinking: fullThinking });
+              }
+            }
+          } catch {
+            // Skip invalid JSON
+          }
+        }
+      }
+    }
+
+    onChunk({ content: fullContent, thinking: fullThinking, done: true });
+  } catch (error) {
+    onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
   }
 };
 
@@ -454,6 +622,120 @@ export const chatWithNvidiaNIM: ChatFunction = async (
   }
 };
 
+// NVIDIA NIM streaming implementation
+export const streamWithNvidiaNIM = async (
+  messages: Message[],
+  config: ProviderConfig,
+  options: {
+    temperature: number;
+    maxTokens: number;
+    topP: number;
+    systemPrompt?: string;
+  },
+  onChunk: StreamCallback
+): Promise<void> => {
+  if (!config.apiKey) {
+    onChunk({ error: "NVIDIA NIM API key is required" });
+    return;
+  }
+
+  try {
+    const formattedMessages = messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    const messagesWithSystem = options.systemPrompt
+      ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
+      : formattedMessages;
+
+    // Use server-side proxy with streaming
+    const response = await fetch("/api/nvidia-nim", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        endpoint: "chat/completions",
+        apiKey: config.apiKey,
+        payload: {
+          model: config.selectedModel,
+          messages: messagesWithSystem,
+          temperature: options.temperature,
+          max_tokens: options.maxTokens,
+          top_p: options.topP,
+          stream: true,
+        },
+        stream: true,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      onChunk({ error: errorData.error || `HTTP ${response.status}` });
+      return;
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      onChunk({ error: "Failed to get response stream" });
+      return;
+    }
+
+    const decoder = new TextDecoder();
+    let fullContent = "";
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr || jsonStr === "[DONE]") continue;
+
+          try {
+            const data = JSON.parse(jsonStr);
+            const delta = data.choices?.[0]?.delta;
+            
+            if (delta?.content) {
+              fullContent += delta.content;
+              onChunk({ content: fullContent });
+            }
+          } catch {
+            // Skip invalid JSON
+          }
+        }
+      }
+    }
+
+    onChunk({ content: fullContent, done: true });
+  } catch (error) {
+    onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
+  }
+};
+
+// Vertex AI streaming implementation (uses same endpoint as AI Studio)
+export const streamWithVertexAI = async (
+  messages: Message[],
+  config: ProviderConfig,
+  options: {
+    temperature: number;
+    maxTokens: number;
+    topP: number;
+    systemPrompt?: string;
+  },
+  onChunk: StreamCallback
+): Promise<void> => {
+  // Vertex AI streaming uses the same approach as AI Studio for express mode
+  await streamWithGoogleAIStudio(messages, config, options, onChunk);
+};
+
 // Main chat function that routes to the correct provider
 export const sendChatMessage = async (
   messages: Message[],
@@ -476,6 +758,32 @@ export const sendChatMessage = async (
       return chatWithNvidiaNIM(messages, config, options);
     default:
       return { error: `Unknown provider: ${config.type}` };
+  }
+};
+
+// Main streaming function that routes to the correct provider
+export const streamChatMessage = async (
+  messages: Message[],
+  config: ProviderConfig,
+  options: {
+    temperature: number;
+    maxTokens: number;
+    topP: number;
+    systemPrompt?: string;
+  },
+  onChunk: StreamCallback
+): Promise<void> => {
+  switch (config.type) {
+    case "puter":
+      return streamWithPuter(messages, config, options, onChunk);
+    case "google-ai-studio":
+      return streamWithGoogleAIStudio(messages, config, options, onChunk);
+    case "google-vertex":
+      return streamWithVertexAI(messages, config, options, onChunk);
+    case "nvidia-nim":
+      return streamWithNvidiaNIM(messages, config, options, onChunk);
+    default:
+      onChunk({ error: `Unknown provider: ${config.type}` });
   }
 };
 
