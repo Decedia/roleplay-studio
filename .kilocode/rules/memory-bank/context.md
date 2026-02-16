@@ -62,6 +62,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **Global post-history instructions**
 - [x] **Streaming system for real-time AI responses**
 - [x] **Data export/import for backup and restore**
+- [x] **Auto-export feature with configurable interval (1-60 minutes)**
 
 ## Current Structure
 
@@ -183,6 +184,10 @@ A chat application for roleplay conversations with multiple LLM provider support
   - Validates file version
   - Merges with existing data
   - Preserves existing API keys for security
+- **Auto-Export**: Automatically backup data at regular intervals
+  - Configurable interval (1-60 minutes)
+  - Toggle on/off in Settings modal
+  - Persists setting in localStorage
 - Accessible via Settings modal → Data Backup section
 - File naming: `roleplay-studio-backup-YYYY-MM-DD.json`
 
@@ -317,6 +322,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date | Changes |
 |------|---------|
+| 2026-02-16 | Added auto-export feature with configurable interval (1-60 minutes) for automatic data backup |
 | 2026-02-16 | Added data export/import for backup and restore - users can save all data to JSON file and restore on any device |
 | 2026-02-16 | Fixed NVIDIA NIM error handling for non-JSON responses (Cloudflare 524 timeout) |
 | 2026-02-16 | Added streaming system for real-time AI responses with animated cursor |
