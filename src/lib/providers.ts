@@ -396,7 +396,7 @@ export const chatWithVertexAI: ChatFunction = async (
   }
 };
 
-// NVIDIA NIM chat implementation
+// NVIDIA NIM chat implementation - uses server-side proxy to avoid CORS
 export const chatWithNvidiaNIM: ChatFunction = async (
   messages,
   config,
@@ -417,33 +417,33 @@ export const chatWithNvidiaNIM: ChatFunction = async (
       ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
       : formattedMessages;
 
-    const response = await fetch(
-      "https://integrate.api.nvidia.com/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Accept": "application/json",
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${config.apiKey}`,
-        },
-        body: JSON.stringify({
+    // Use server-side proxy to avoid CORS issues
+    const response = await fetch("/api/nvidia-nim", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        endpoint: "chat/completions",
+        apiKey: config.apiKey,
+        payload: {
           model: config.selectedModel,
           messages: messagesWithSystem,
           temperature: options.temperature,
           max_tokens: options.maxTokens,
           top_p: options.topP,
-        }),
-      }
-    );
+        },
+      }),
+    });
+
+    const data = await response.json();
 
     if (!response.ok) {
-      const errorData = await response.json();
       return {
-        error: errorData.error?.message || `HTTP ${response.status}`,
+        error: data.error || `HTTP ${response.status}`,
       };
     }
 
-    const data = await response.json();
     const content = data.choices?.[0]?.message?.content || "";
 
     return { content };
@@ -583,18 +583,20 @@ export const testProviderConnection = async (
         return { success: false, message: "API key is required." };
       }
       try {
-        // Test with a minimal chat request using GLM 4.7 model
-        const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+        // Test with a minimal chat request using server-side proxy to avoid CORS
+        const response = await fetch("/api/nvidia-nim", {
           method: "POST",
           headers: {
-            "Accept": "application/json",
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${config.apiKey}`,
           },
           body: JSON.stringify({
-            model: "z-ai/glm4.7",
-            messages: [{ role: "user", content: "Hi" }],
-            max_tokens: 5,
+            endpoint: "chat/completions",
+            apiKey: config.apiKey,
+            payload: {
+              model: "z-ai/glm4.7",
+              messages: [{ role: "user", content: "Hi" }],
+              max_tokens: 5,
+            },
           }),
         });
         
@@ -603,19 +605,18 @@ export const testProviderConnection = async (
           return { success: true, message: "NVIDIA NIM connection successful!" };
         }
         
-        // 422 and 500 are failure codes
+        // Parse error response
+        const errorData = await response.json();
+        
         if (response.status === 422) {
-          const errorData = await response.json();
-          return { success: false, message: errorData.error?.message || "Validation error (422)" };
+          return { success: false, message: errorData.error || "Validation error (422)" };
         }
         
         if (response.status === 500) {
           return { success: false, message: "Server error (500) - please try again later" };
         }
         
-        // Other status codes
-        const errorData = await response.json();
-        return { success: false, message: errorData.error?.message || `HTTP ${response.status}` };
+        return { success: false, message: errorData.error || `HTTP ${response.status}` };
       } catch (error) {
         return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
       }
@@ -633,4 +634,80 @@ export const getDefaultModelForProvider = (providerType: LLMProviderType): strin
     return models[0].id;
   }
   return "";
+};
+
+// Fetch models from provider API (server-side to avoid CORS)
+export interface FetchedModel {
+  id: string;
+  provider: string;
+  name: string;
+  context?: number;
+  max_tokens?: number;
+}
+
+export const fetchModelsFromProvider = async (
+  providerType: LLMProviderType,
+  config: ProviderConfig
+): Promise<{ models: FetchedModel[]; error?: string }> => {
+  try {
+    switch (providerType) {
+      case "nvidia-nim": {
+        if (!config.apiKey) {
+          return { models: [], error: "API key is required" };
+        }
+
+        const response = await fetch(`/api/models?provider=nvidia-nim&apiKey=${encodeURIComponent(config.apiKey)}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          return { models: [], error: data.error || `HTTP ${response.status}` };
+        }
+
+        return { models: data.models || [] };
+      }
+
+      case "google-ai-studio": {
+        if (!config.apiKey) {
+          return { models: [], error: "API key is required" };
+        }
+
+        const response = await fetch(`/api/models?provider=google-ai-studio&apiKey=${encodeURIComponent(config.apiKey)}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          return { models: [], error: data.error || `HTTP ${response.status}` };
+        }
+
+        return { models: data.models || [] };
+      }
+
+      case "google-vertex": {
+        if (!config.apiKey) {
+          return { models: [], error: "API key is required" };
+        }
+
+        const response = await fetch(`/api/models?provider=google-vertex&apiKey=${encodeURIComponent(config.apiKey)}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          return { models: [], error: data.error || `HTTP ${response.status}` };
+        }
+
+        return { models: data.models || [] };
+      }
+
+      case "puter": {
+        // Puter.js models are fetched client-side via window.puter.ai.listModels()
+        return { models: [], error: "Puter.js models must be fetched client-side" };
+      }
+
+      default:
+        return { models: [], error: `Unknown provider: ${providerType}` };
+    }
+  } catch (error) {
+    return { 
+      models: [], 
+      error: error instanceof Error ? error.message : "Unknown error occurred" 
+    };
+  }
 };

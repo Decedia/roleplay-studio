@@ -14,6 +14,8 @@ import {
   getDefaultModelForProvider,
   TestConnectionResult,
   VertexMode,
+  fetchModelsFromProvider,
+  FetchedModel,
 } from "@/lib/providers";
 import { readCharacterFile, buildFullSystemPrompt } from "@/lib/character-import";
 import { Character as CharacterType, CharacterBook, CharacterBookEntry } from "@/lib/types";
@@ -152,12 +154,12 @@ const CONNECTION_STATUS_KEY = "chat_connection_status";
 // Provider storage key - store config for each provider
 const getProviderConfigKey = (providerType: LLMProviderType) => `chat_provider_${providerType}`;
 
-// Default settings - use Google AI Studio model as default
+// Default settings - model selection starts empty, must be fetched from provider
 const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   temperature: 0.7,
   maxTokens: 2000,
   topP: 0.9,
-  modelId: "gemini-2.0-flash", // Default model for Google AI Studio
+  modelId: "", // Empty initially - user must connect to a provider first
   enableThinking: false,
 };
 
@@ -286,6 +288,8 @@ function SettingsModal({
   connectionStatus,
   onTestConnection,
   onConnect,
+  providerModels,
+  modelsFetching,
 }: {
   show: boolean;
   onClose: () => void;
@@ -303,33 +307,27 @@ function SettingsModal({
   connectionStatus: Record<LLMProviderType, ConnectionStatus>;
   onTestConnection: (providerType: LLMProviderType) => void;
   onConnect: (providerType: LLMProviderType) => void;
+  providerModels: Record<LLMProviderType, FetchedModel[]>;
+  modelsFetching: Record<LLMProviderType, boolean>;
 }) {
   const [expandedProviders, setExpandedProviders] = useState<Record<string, boolean>>({});
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [editingProvider, setEditingProvider] = useState<LLMProviderType | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Group models by provider
-  const providerGroups = models.reduce((acc, model) => {
-    const provider = model.provider || "Other";
-    if (!acc[provider]) acc[provider] = [];
-    acc[provider].push(model);
-    return acc;
-  }, {} as Record<string, Model[]>);
+  // Get models for the active provider (from fetched models or puter.js models)
+  const activeProviderModels = activeProvider === "puter" 
+    ? models.filter(m => m.provider === "Other" || !m.provider) // Puter.js models
+    : providerModels[activeProvider] || [];
+  
+  const isLoadingModels = activeProvider === "puter" 
+    ? modelsLoading 
+    : modelsFetching[activeProvider];
 
-  // Initialize all providers as expanded (using useMemo to avoid setState in effect)
-  const initialExpandedProviders = useMemo(() => {
-    const initial: Record<string, boolean> = {};
-    Object.keys(providerGroups).forEach(provider => {
-      initial[provider] = true;
-    });
-    return initial;
-  }, [providerGroups]);
-
-  // Use the memoized initial value
-  const effectiveExpandedProviders = Object.keys(expandedProviders).length === 0 
-    ? initialExpandedProviders 
-    : expandedProviders;
+  // Find selected model info
+  const selectedModel = activeProvider === "puter"
+    ? models.find(m => m.id === globalSettings.modelId)
+    : activeProviderModels.find(m => m.id === globalSettings.modelId);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -344,22 +342,25 @@ function SettingsModal({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showModelDropdown]);
 
-  const toggleProvider = (provider: string) => {
-    setExpandedProviders(prev => ({ ...prev, [provider]: !prev[provider] }));
-  };
-
   const selectModel = (modelId: string) => {
-    const selectedModel = models.find(m => m.id === modelId);
-    const maxOutput = selectedModel?.max_tokens || 4000;
+    const model = activeProviderModels.find(m => m.id === modelId);
+    const maxOutput = model?.max_tokens || 4000;
     const newMaxTokens = Math.min(globalSettings.maxTokens, maxOutput);
+    
+    // Update global settings
     setGlobalSettings({ ...globalSettings, modelId, maxTokens: newMaxTokens });
+    
+    // Also update the provider config
+    setProviderConfigs(prev => ({
+      ...prev,
+      [activeProvider]: { ...prev[activeProvider], selectedModel: modelId }
+    }));
+    
     setShowModelDropdown(false);
   };
 
-  const selectedModel = models.find(m => m.id === globalSettings.modelId);
-
-  const getModelCostInfo = (model: Model) => {
-    if (model.cost && model.cost.tokens) {
+  const getModelCostInfo = (model: Model | FetchedModel) => {
+    if ('cost' in model && model.cost && model.cost.tokens) {
       const inputCost = (model.cost.input || 0) / 100 * (1000000 / model.cost.tokens);
       const outputCost = (model.cost.output || 0) / 100 * (1000000 / model.cost.tokens);
       if (inputCost === 0 && outputCost === 0) {
@@ -383,15 +384,17 @@ function SettingsModal({
           {/* Model Selection */}
           <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
-              Model
+              Model {activeProvider !== "puter" && `(${AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || activeProvider})`}
             </label>
-            {modelsLoading ? (
+            {isLoadingModels ? (
               <div className="w-full bg-zinc-800 text-zinc-400 rounded-lg px-4 py-2 border border-zinc-700">
                 Loading models...
               </div>
-            ) : modelsError ? (
-              <div className="w-full bg-red-900/30 text-red-400 rounded-lg px-4 py-2 border border-red-800">
-                {modelsError}
+            ) : activeProviderModels.length === 0 ? (
+              <div className="w-full bg-zinc-800/50 text-zinc-400 rounded-lg px-4 py-2 border border-zinc-700">
+                {activeProvider === "puter" 
+                  ? "Connect to Puter.js to see models" 
+                  : "Test connection to load models"}
               </div>
             ) : (
               <>
@@ -406,9 +409,11 @@ function SettingsModal({
                       {selectedModel ? (
                         <>
                           {selectedModel.name || selectedModel.id}
-                          <span className="text-zinc-400 ml-2">
-                            ({selectedModel.context?.toLocaleString() || "?"} ctx)
-                          </span>
+                          {'context' in selectedModel && selectedModel.context && (
+                            <span className="text-zinc-400 ml-2">
+                              ({selectedModel.context?.toLocaleString() || "?"} ctx)
+                            </span>
+                          )}
                         </>
                       ) : (
                         "Select a model"
@@ -421,59 +426,43 @@ function SettingsModal({
 
                   {showModelDropdown && (
                     <div className="absolute z-50 w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-lg max-h-80 overflow-y-auto shadow-xl">
-                      {Object.entries(providerGroups).map(([provider, providerModels]) => (
-                        <div key={provider}>
+                      {activeProviderModels.map((model) => {
+                        const isSelected = model.id === globalSettings.modelId;
+                        return (
                           <button
+                            key={model.id}
                             type="button"
-                            onClick={() => toggleProvider(provider)}
-                            className="w-full px-4 py-2 text-left text-sm font-medium text-zinc-300 bg-zinc-900 hover:bg-zinc-800 flex items-center justify-between sticky top-0 z-10"
+                            onClick={() => selectModel(model.id)}
+                            className={`w-full px-4 py-2 text-left text-sm hover:bg-zinc-700 transition-colors ${
+                              isSelected ? "bg-blue-900/30 text-blue-300" : "text-zinc-300"
+                            }`}
                           >
-                            <span>{provider}</span>
-                            <svg className={`w-4 h-4 text-zinc-500 transition-transform ${effectiveExpandedProviders[provider] ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </button>
-                          {effectiveExpandedProviders[provider] && (
-                            <div className="border-t border-zinc-700">
-                              {providerModels.map((model) => {
-                                const isSelected = model.id === globalSettings.modelId;
-                                return (
-                                  <button
-                                    key={model.id}
-                                    type="button"
-                                    onClick={() => selectModel(model.id)}
-                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-zinc-700 transition-colors ${
-                                      isSelected ? "bg-blue-900/30 text-blue-300" : "text-zinc-300"
-                                    }`}
-                                  >
-                                    <div className="flex items-center justify-between">
-                                      <span className="font-medium">{model.name || model.id}</span>
-                                      {isSelected && (
-                                        <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                        </svg>
-                                      )}
-                                    </div>
-                                    <div className="text-xs text-zinc-500 mt-0.5">
-                                      {model.context?.toLocaleString() || "?"} ctx | {getModelCostInfo(model)}
-                                    </div>
-                                  </button>
-                                );
-                              })}
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium">{model.name || model.id}</span>
+                              {isSelected && (
+                                <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      ))}
+                            {'context' in model && model.context && (
+                              <div className="text-xs text-zinc-500 mt-0.5">
+                                {model.context?.toLocaleString() || "?"} ctx | {getModelCostInfo(model)}
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
 
                 {/* Selected Model Info */}
-                {selectedModel && (
+                {selectedModel && 'context' in selectedModel && selectedModel.context && (
                   <div className="mt-2 p-3 bg-zinc-800/50 rounded-lg text-xs text-zinc-400 space-y-1">
                     <div className="flex justify-between">
                       <span>Provider:</span>
-                      <span className="text-zinc-300">{selectedModel.provider || "Unknown"}</span>
+                      <span className="text-zinc-300">{selectedModel.provider || activeProvider}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Context Window:</span>
@@ -482,26 +471,6 @@ function SettingsModal({
                     <div className="flex justify-between">
                       <span>Max Output:</span>
                       <span className="text-zinc-300">{selectedModel.max_tokens?.toLocaleString() || "Unknown"} tokens</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Input Cost:</span>
-                      <span className="text-zinc-300">
-                        {selectedModel.cost && selectedModel.cost.tokens
-                          ? ((selectedModel.cost.input || 0) / 100 * (1000000 / selectedModel.cost.tokens)) === 0
-                            ? "Free"
-                            : `$${((selectedModel.cost.input || 0) / 100 * (1000000 / selectedModel.cost.tokens)).toFixed(2)} per 1M tokens`
-                          : "N/A"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Output Cost:</span>
-                      <span className="text-zinc-300">
-                        {selectedModel.cost && selectedModel.cost.tokens
-                          ? ((selectedModel.cost.output || 0) / 100 * (1000000 / selectedModel.cost.tokens)) === 0
-                            ? "Free"
-                            : `$${((selectedModel.cost.output || 0) / 100 * (1000000 / selectedModel.cost.tokens)).toFixed(2)} per 1M tokens`
-                          : "N/A"}
-                      </span>
                     </div>
                   </div>
                 )}
@@ -940,9 +909,23 @@ export default function Chat() {
   // Provider configuration state
   const [providerConfigs, setProviderConfigs] = useState<Record<LLMProviderType, ProviderConfig>>({
     "puter": { type: "puter", isEnabled: true, selectedModel: "" },
-    "google-ai-studio": { type: "google-ai-studio", isEnabled: false, apiKey: "", selectedModel: "gemini-2.0-flash" },
-    "google-vertex": { type: "google-vertex", isEnabled: false, apiKey: "", projectId: "", vertexMode: "express" as VertexMode, selectedModel: "gemini-2.0-flash" },
-    "nvidia-nim": { type: "nvidia-nim", isEnabled: false, apiKey: "", selectedModel: "z-ai/glm4.7" },
+    "google-ai-studio": { type: "google-ai-studio", isEnabled: false, apiKey: "", selectedModel: "" },
+    "google-vertex": { type: "google-vertex", isEnabled: false, apiKey: "", projectId: "", vertexMode: "express" as VertexMode, selectedModel: "" },
+    "nvidia-nim": { type: "nvidia-nim", isEnabled: false, apiKey: "", selectedModel: "" },
+  });
+  
+  // Provider-specific models (fetched from API after connection)
+  const [providerModels, setProviderModels] = useState<Record<LLMProviderType, FetchedModel[]>>({
+    "puter": [],
+    "google-ai-studio": [],
+    "google-vertex": [],
+    "nvidia-nim": [],
+  });
+  const [modelsFetching, setModelsFetching] = useState<Record<LLMProviderType, boolean>>({
+    "puter": false,
+    "google-ai-studio": false,
+    "google-vertex": false,
+    "nvidia-nim": false,
   });
   
   // Active provider state - default to Google AI Studio (not Puter)
@@ -1296,18 +1279,43 @@ export default function Chat() {
         lastTested: Date.now()
       }
     }));
+
+    // If connection successful, fetch models from the provider
+    if (result.success && providerType !== "puter") {
+      setModelsFetching(prev => ({ ...prev, [providerType]: true }));
+      const modelsResult = await fetchModelsFromProvider(providerType, config);
+      setModelsFetching(prev => ({ ...prev, [providerType]: false }));
+      
+      if (modelsResult.models.length > 0) {
+        setProviderModels(prev => ({
+          ...prev,
+          [providerType]: modelsResult.models
+        }));
+        
+        // Auto-select first model if no model is currently selected for this provider
+        if (!config.selectedModel && modelsResult.models[0]) {
+          setProviderConfigs(prev => ({
+            ...prev,
+            [providerType]: { ...prev[providerType], selectedModel: modelsResult.models[0].id }
+          }));
+        }
+      }
+    }
   };
 
   const handleConnectProvider = (providerType: LLMProviderType) => {
     // Set as active provider
     setActiveProvider(providerType);
     
-    // Get default model for this provider and update settings
-    const defaultModel = getDefaultModelForProvider(providerType);
-    if (defaultModel) {
+    // Get the selected model for this provider
+    const config = providerConfigs[providerType];
+    const selectedModel = config.selectedModel;
+    
+    // Update global settings with the provider's selected model
+    if (selectedModel) {
       setGlobalSettings(prev => ({
         ...prev,
-        modelId: defaultModel
+        modelId: selectedModel
       }));
     }
     
@@ -2608,6 +2616,8 @@ export default function Chat() {
           connectionStatus={connectionStatus}
           onTestConnection={handleTestConnection}
           onConnect={handleConnectProvider}
+          providerModels={providerModels}
+          modelsFetching={modelsFetching}
         />
       )}
     </div>
