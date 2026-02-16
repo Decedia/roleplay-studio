@@ -138,12 +138,16 @@ export interface LLMModel {
   supportsThinking?: boolean;
 }
 
+// Vertex AI mode type
+export type VertexMode = "express" | "full";
+
 // Provider configurations (stored in localStorage)
 export interface ProviderConfig {
   type: LLMProviderType;
   apiKey?: string;
   projectId?: string; // For Vertex AI
   serviceAccountJson?: string; // For Vertex AI
+  vertexMode?: VertexMode; // For Vertex AI: express (API key only) or full (project ID + service account)
   selectedModel?: string;
   isEnabled: boolean;
 }

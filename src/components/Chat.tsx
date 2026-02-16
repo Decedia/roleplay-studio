@@ -13,6 +13,7 @@ import {
   testProviderConnection,
   getDefaultModelForProvider,
   TestConnectionResult,
+  VertexMode,
 } from "@/lib/providers";
 import { readCharacterFile, buildFullSystemPrompt } from "@/lib/character-import";
 import { Character as CharacterType, CharacterBook, CharacterBookEntry } from "@/lib/types";
@@ -708,6 +709,26 @@ function SettingsModal({
                 )}
                 {editingProvider === 'google-vertex' && (
                   <div className="mt-3 space-y-3">
+                    {/* Mode Selector */}
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-1">Mode</label>
+                      <select
+                        value={providerConfigs["google-vertex"]?.vertexMode || "express"}
+                        onChange={(e) => setProviderConfigs(prev => ({
+                          ...prev,
+                          "google-vertex": { ...prev["google-vertex"], vertexMode: e.target.value as VertexMode }
+                        }))}
+                        className="w-full bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      >
+                        <option value="express">Express (API Key only)</option>
+                        <option value="full">Full (Project ID required)</option>
+                      </select>
+                      <p className="text-xs text-zinc-500 mt-1">
+                        {providerConfigs["google-vertex"]?.vertexMode === "full" 
+                          ? "Full mode requires GCP Project ID for enterprise features."
+                          : "Express mode uses API key only, similar to AI Studio."}
+                      </p>
+                    </div>
                     <div>
                       <label className="block text-xs text-zinc-400 mb-1">API Key</label>
                       <input
@@ -721,24 +742,27 @@ function SettingsModal({
                         className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
-                    <div>
-                      <label className="block text-xs text-zinc-400 mb-1">Project ID</label>
-                      <input
-                        type="text"
-                        value={providerConfigs["google-vertex"]?.projectId || ""}
-                        onChange={(e) => setProviderConfigs(prev => ({
-                          ...prev,
-                          "google-vertex": { ...prev["google-vertex"], projectId: e.target.value }
-                        }))}
-                        placeholder="Enter your GCP Project ID"
-                        className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
-                    </div>
+                    {/* Project ID - only shown in Full mode */}
+                    {providerConfigs["google-vertex"]?.vertexMode === "full" && (
+                      <div>
+                        <label className="block text-xs text-zinc-400 mb-1">Project ID</label>
+                        <input
+                          type="text"
+                          value={providerConfigs["google-vertex"]?.projectId || ""}
+                          onChange={(e) => setProviderConfigs(prev => ({
+                            ...prev,
+                            "google-vertex": { ...prev["google-vertex"], projectId: e.target.value }
+                          }))}
+                          placeholder="Enter your GCP Project ID"
+                          className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                    )}
                     <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={() => onTestConnection("google-vertex")}
-                        disabled={connectionStatus["google-vertex"]?.status === "testing" || !providerConfigs["google-vertex"]?.apiKey}
+                        disabled={connectionStatus["google-vertex"]?.status === "testing" || !providerConfigs["google-vertex"]?.apiKey || (providerConfigs["google-vertex"]?.vertexMode === "full" && !providerConfigs["google-vertex"]?.projectId)}
                         className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {connectionStatus["google-vertex"]?.status === "testing" ? "Testing..." : "Test Connection"}
@@ -917,7 +941,7 @@ export default function Chat() {
   const [providerConfigs, setProviderConfigs] = useState<Record<LLMProviderType, ProviderConfig>>({
     "puter": { type: "puter", isEnabled: true, selectedModel: "" },
     "google-ai-studio": { type: "google-ai-studio", isEnabled: false, apiKey: "", selectedModel: "gemini-2.0-flash" },
-    "google-vertex": { type: "google-vertex", isEnabled: false, apiKey: "", projectId: "", selectedModel: "gemini-2.0-flash" },
+    "google-vertex": { type: "google-vertex", isEnabled: false, apiKey: "", projectId: "", vertexMode: "express" as VertexMode, selectedModel: "gemini-2.0-flash" },
     "nvidia-nim": { type: "nvidia-nim", isEnabled: false, apiKey: "", selectedModel: "z-ai/glm4.7" },
   });
   

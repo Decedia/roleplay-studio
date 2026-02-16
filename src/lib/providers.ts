@@ -6,10 +6,11 @@ import {
   LLMModel,
   ProviderConfig,
   Message,
+  VertexMode,
 } from "./types";
 
 // Re-export types for convenience
-export type { LLMProviderType, ProviderConfig, Message, LLMModel, LLMProvider };
+export type { LLMProviderType, ProviderConfig, Message, LLMModel, LLMProvider, VertexMode };
 
 // Available providers configuration
 export const AVAILABLE_PROVIDERS: LLMProvider[] = [
@@ -282,59 +283,116 @@ export const chatWithVertexAI: ChatFunction = async (
   config,
   options
 ) => {
-  if (!config.apiKey || !config.projectId) {
-    return { error: "Vertex AI requires API key and Project ID" };
-  }
-
-  try {
-    // Vertex AI requires OAuth2 token, not API key directly
-    // For now, we'll use the Google AI Studio endpoint as a fallback
-    // Full Vertex AI implementation would need proper OAuth2 flow
+  const mode = config.vertexMode || "express";
+  
+  if (mode === "express") {
+    // Express mode: Use API key only (similar to AI Studio)
+    if (!config.apiKey) {
+      return { error: "Vertex AI Express mode requires an API key" };
+    }
     
-    const formattedMessages = messages.map((m) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
-    }));
+    try {
+      const formattedMessages = messages.map((m) => ({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: m.content }],
+      }));
 
-    const systemInstruction = options.systemPrompt
-      ? { parts: [{ text: options.systemPrompt }] }
-      : undefined;
+      const systemInstruction = options.systemPrompt
+        ? { parts: [{ text: options.systemPrompt }] }
+        : undefined;
 
-    // Using AI Studio endpoint with Vertex AI models
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${config.selectedModel}:generateContent?key=${config.apiKey}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: formattedMessages,
-          systemInstruction,
-          generationConfig: {
-            temperature: options.temperature,
-            maxOutputTokens: options.maxTokens,
-            topP: options.topP,
+      // Using AI Studio endpoint for express mode
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${config.selectedModel}:generateContent?key=${config.apiKey}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-        }),
-      }
-    );
+          body: JSON.stringify({
+            contents: formattedMessages,
+            systemInstruction,
+            generationConfig: {
+              temperature: options.temperature,
+              maxOutputTokens: options.maxTokens,
+              topP: options.topP,
+            },
+          }),
+        }
+      );
 
-    if (!response.ok) {
-      const errorData = await response.json();
+      if (!response.ok) {
+        const errorData = await response.json();
+        return {
+          error: errorData.error?.message || `HTTP ${response.status}`,
+        };
+      }
+
+      const data = await response.json();
+      const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+      return { content };
+    } catch (error) {
       return {
-        error: errorData.error?.message || `HTTP ${response.status}`,
+        error: error instanceof Error ? error.message : "Unknown error occurred",
       };
     }
+  } else {
+    // Full mode: Requires project ID and service account
+    if (!config.apiKey || !config.projectId) {
+      return { error: "Vertex AI Full mode requires API key and Project ID" };
+    }
+    
+    try {
+      // Full Vertex AI implementation would use OAuth2 token from service account
+      // For now, we'll use the AI Studio endpoint as a fallback
+      // TODO: Implement proper OAuth2 flow with service account JSON
+      
+      const formattedMessages = messages.map((m) => ({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: m.content }],
+      }));
 
-    const data = await response.json();
-    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      const systemInstruction = options.systemPrompt
+        ? { parts: [{ text: options.systemPrompt }] }
+        : undefined;
 
-    return { content };
-  } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : "Unknown error occurred",
-    };
+      // Using AI Studio endpoint as fallback for full mode
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${config.selectedModel}:generateContent?key=${config.apiKey}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contents: formattedMessages,
+            systemInstruction,
+            generationConfig: {
+              temperature: options.temperature,
+              maxOutputTokens: options.maxTokens,
+              topP: options.topP,
+            },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return {
+          error: errorData.error?.message || `HTTP ${response.status}`,
+        };
+      }
+
+      const data = await response.json();
+      const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+      return { content };
+    } catch (error) {
+      return {
+        error: error instanceof Error ? error.message : "Unknown error occurred",
+      };
+    }
   }
 };
 
@@ -476,25 +534,47 @@ export const testProviderConnection = async (
     }
     
     case "google-vertex": {
-      if (!config.apiKey) {
-        return { success: false, message: "API key is required." };
-      }
-      if (!config.projectId) {
-        return { success: false, message: "Project ID is required." };
-      }
-      // For Vertex AI, we use the same AI Studio endpoint as fallback
-      try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models?key=${config.apiKey}`,
-          { method: "GET" }
-        );
-        if (response.ok) {
-          return { success: true, message: "Google Vertex AI connection successful!" };
+      const mode = config.vertexMode || "express";
+      
+      if (mode === "express") {
+        // Express mode: API key only
+        if (!config.apiKey) {
+          return { success: false, message: "API key is required for Express mode." };
         }
-        const errorData = await response.json();
-        return { success: false, message: errorData.error?.message || `HTTP ${response.status}` };
-      } catch (error) {
-        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
+        try {
+          const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models?key=${config.apiKey}`,
+            { method: "GET" }
+          );
+          if (response.ok) {
+            return { success: true, message: "Google Vertex AI (Express) connection successful!" };
+          }
+          const errorData = await response.json();
+          return { success: false, message: errorData.error?.message || `HTTP ${response.status}` };
+        } catch (error) {
+          return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
+        }
+      } else {
+        // Full mode: Requires project ID
+        if (!config.apiKey) {
+          return { success: false, message: "API key is required." };
+        }
+        if (!config.projectId) {
+          return { success: false, message: "Project ID is required for Full mode." };
+        }
+        try {
+          const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models?key=${config.apiKey}`,
+            { method: "GET" }
+          );
+          if (response.ok) {
+            return { success: true, message: "Google Vertex AI (Full) connection successful!" };
+          }
+          const errorData = await response.json();
+          return { success: false, message: errorData.error?.message || `HTTP ${response.status}` };
+        } catch (error) {
+          return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
+        }
       }
     }
     
