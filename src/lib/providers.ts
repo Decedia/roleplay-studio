@@ -102,6 +102,14 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
     requiresApiKey: true,
     models: [
       {
+        id: "deepseek-ai/deepseek-r1",
+        name: "DeepSeek R1",
+        provider: "nvidia-nim",
+        contextWindow: 131072,
+        maxTokens: 16384,
+        supportsThinking: true,
+      },
+      {
         id: "z-ai/glm4.7",
         name: "GLM 4.7",
         provider: "nvidia-nim",
@@ -632,8 +640,10 @@ export const chatWithNvidiaNIM: ChatFunction = async (
     }
 
     const content = data.choices?.[0]?.message?.content || "";
+    // Handle reasoning_content (thinking) from reasoning models like DeepSeek R1
+    const thinking = data.choices?.[0]?.message?.reasoning_content || "";
 
-    return { content };
+    return { content, thinking };
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Unknown error occurred",
@@ -706,6 +716,7 @@ export const streamWithNvidiaNIM = async (
 
     const decoder = new TextDecoder();
     let fullContent = "";
+    let fullThinking = "";
     let buffer = "";
 
     while (true) {
@@ -738,6 +749,12 @@ export const streamWithNvidiaNIM = async (
             
             const delta = data.choices?.[0]?.delta;
             
+            // Handle reasoning_content (thinking) from reasoning models like DeepSeek R1
+            if (delta?.reasoning_content) {
+              fullThinking += delta.reasoning_content;
+              onChunk({ thinking: fullThinking });
+            }
+            
             if (delta?.content) {
               fullContent += delta.content;
               onChunk({ content: fullContent });
@@ -749,7 +766,7 @@ export const streamWithNvidiaNIM = async (
       }
     }
 
-    onChunk({ content: fullContent, done: true });
+    onChunk({ content: fullContent, thinking: fullThinking, done: true });
   } catch (error) {
     onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
   }
