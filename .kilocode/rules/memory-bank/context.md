@@ -60,6 +60,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **JSON import for instructions**
 - [x] **Global system prompt override**
 - [x] **Global post-history instructions**
+- [x] **Streaming system for real-time AI responses**
 
 ## Current Structure
 
@@ -303,6 +304,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date | Changes |
 |------|---------|
+| 2026-02-16 | Added streaming system for real-time AI responses with animated cursor |
 | 2026-02-16 | Added advanced global instructions: jailbreak support, system prompt override, post-history instructions, JSON import |
 | 2026-02-16 | Added roleplay text formatting: action (*text*), dialogue ("text"), thought ((text)), OOC, bold, code styling |
 | 2026-02-16 | Added SillyTavern-style instruction handling: scenario, system prompt override, post-history instructions, example messages |
