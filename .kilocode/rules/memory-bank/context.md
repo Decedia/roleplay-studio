@@ -43,6 +43,8 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **SillyTavern-style instruction handling**
 - [x] **Character Book (Lorebook) support**
 - [x] **Advanced instruction fields in character editor**
+- [x] **Changed default provider from Puter to Google AI Studio**
+- [x] **Added localStorage persistence for active provider**
 
 ## Current Structure
 

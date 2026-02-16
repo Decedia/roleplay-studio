@@ -134,16 +134,17 @@ const CONVERSATIONS_KEY = "chat_conversations";
 const GLOBAL_INSTRUCTIONS_KEY = "chat_global_instructions";
 const GLOBAL_SETTINGS_KEY = "chat_global_settings";
 const PROVIDER_CONFIGS_KEY = "chat_provider_configs";
+const ACTIVE_PROVIDER_KEY = "chat_active_provider";
 
 // Provider storage key - store config for each provider
 const getProviderConfigKey = (providerType: LLMProviderType) => `chat_provider_${providerType}`;
 
-// Default settings
+// Default settings - use Google AI Studio model as default
 const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   temperature: 0.7,
   maxTokens: 2000,
   topP: 0.9,
-  modelId: "", // Will be set when models are loaded
+  modelId: "gemini-2.0-flash", // Default model for Google AI Studio
   enableThinking: false,
 };
 
@@ -701,8 +702,8 @@ export default function Chat() {
     "nvidia-nim": { type: "nvidia-nim", isEnabled: false, apiKey: "", selectedModel: "meta/llama-3.3-70b-instruct" },
   });
   
-  // Active provider state
-  const [activeProvider, setActiveProvider] = useState<LLMProviderType>("puter");
+  // Active provider state - default to Google AI Studio (not Puter)
+  const [activeProvider, setActiveProvider] = useState<LLMProviderType>("google-ai-studio");
   const [showProviderConfig, setShowProviderConfig] = useState(false);
   const [editingProvider, setEditingProvider] = useState<LLMProviderType | null>(null);
   
@@ -740,6 +741,7 @@ export default function Chat() {
     const storedConversations = localStorage.getItem(CONVERSATIONS_KEY);
     const storedInstructions = localStorage.getItem(GLOBAL_INSTRUCTIONS_KEY);
     const storedSettings = localStorage.getItem(GLOBAL_SETTINGS_KEY);
+    const storedActiveProvider = localStorage.getItem(ACTIVE_PROVIDER_KEY);
     
     if (storedPersonas) {
       setPersonas(JSON.parse(storedPersonas));
@@ -755,6 +757,9 @@ export default function Chat() {
     }
     if (storedSettings) {
       setGlobalSettings(JSON.parse(storedSettings));
+    }
+    if (storedActiveProvider) {
+      setActiveProvider(storedActiveProvider as LLMProviderType);
     }
   }, []);
 
@@ -809,6 +814,11 @@ export default function Chat() {
   useEffect(() => {
     localStorage.setItem(PROVIDER_CONFIGS_KEY, JSON.stringify(providerConfigs));
   }, [providerConfigs]);
+
+  // Save active provider to localStorage
+  useEffect(() => {
+    localStorage.setItem(ACTIVE_PROVIDER_KEY, activeProvider);
+  }, [activeProvider]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
