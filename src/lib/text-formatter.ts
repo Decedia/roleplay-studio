@@ -119,10 +119,10 @@ function mergeAdjacentSegments(segments: TextSegment[]): TextSegment[] {
 /**
  * Get CSS classes for a text segment type
  * 
- * Color scheme for roleplay text:
- * - Action: Cyan/teal for character actions (*action*)
- * - Dialogue: Warm white/yellow for spoken words ("speech")
- * - Thought: Purple/violet for inner thoughts ((thought))
+ * Color scheme for roleplay text (high contrast, readable):
+ * - Action: Sky blue for character actions (*action*)
+ * - Dialogue: Soft white for spoken words ("speech")
+ * - Thought: Lavender for inner thoughts ((thought))
  * - Bold: Bright white for emphasis
  * - OOC: Amber highlight for out-of-character messages
  * - Code: Green monospace for code snippets
@@ -133,14 +133,14 @@ export function getSegmentClasses(type: TextSegmentType): string {
   
   switch (type) {
     case "action":
-      // Cyan/teal for actions - stands out as "doing" text
-      return `${baseClasses} italic text-cyan-300`;
+      // Sky blue for actions - clear and readable
+      return `${baseClasses} italic text-sky-300`;
     case "dialogue":
-      // Warm yellow-white for spoken dialogue - feels like speech
-      return `${baseClasses} text-amber-100`;
+      // Soft white for spoken dialogue - easy to read
+      return `${baseClasses} text-gray-100`;
     case "thought":
-      // Purple/violet for inner thoughts - dreamy, internal feel
-      return `${baseClasses} italic text-violet-300`;
+      // Lavender for inner thoughts - distinct but readable
+      return `${baseClasses} italic text-purple-300`;
     case "bold":
       // Bright white for emphasis
       return `${baseClasses} font-bold text-white`;
@@ -153,7 +153,7 @@ export function getSegmentClasses(type: TextSegmentType): string {
     case "narration":
     default:
       // Light gray for descriptive narration text
-      return `${baseClasses} text-zinc-300`;
+      return `${baseClasses} text-gray-300`;
   }
 }
 

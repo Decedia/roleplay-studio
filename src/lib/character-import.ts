@@ -1,87 +1,39 @@
-// SillyTavern Character Card import utilities
+// Simple Character Card import utilities
+// Only extracts: name, description, firstMessage, scenario
 
-import { Character, SillyTavernCharacterCard, CharacterBook, CharacterBookEntry, Message, GlobalInstructions } from "./types";
+import { Character, Message, GlobalInstructions } from "./types";
 
 // Generate a unique ID
 export const generateId = (): string => {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 };
 
-// Parse character book from SillyTavern format
-const parseCharacterBook = (book: unknown): CharacterBook | undefined => {
-  if (!book || typeof book !== "object") return undefined;
-  
-  const b = book as Record<string, unknown>;
-  const entries = Array.isArray(b.entries) ? b.entries : [];
-  
-  return {
-    entries: entries.map((entry: unknown, index: number): CharacterBookEntry => {
-      const e = (entry || {}) as Record<string, unknown>;
-      return {
-        id: typeof e.id === "number" ? e.id : index,
-        keys: Array.isArray(e.keys) ? e.keys.map(String) : [],
-        secondaryKeys: Array.isArray(e.secondary_keys) ? e.secondary_keys.map(String) : undefined,
-        content: typeof e.content === "string" ? e.content : "",
-        enabled: typeof e.enabled === "boolean" ? e.enabled : true,
-        insertionOrder: typeof e.insertion_order === "number" ? e.insertion_order : 100,
-        caseSensitive: typeof e.case_sensitive === "boolean" ? e.case_sensitive : false,
-        name: typeof e.name === "string" ? e.name : undefined,
-        priority: typeof e.priority === "number" ? e.priority : undefined,
-        position: typeof e.position === "string" ? e.position as CharacterBookEntry["position"] : undefined,
-        constant: typeof e.constant === "boolean" ? e.constant : false,
-        depth: typeof e.depth === "number" ? e.depth : undefined,
-        comment: typeof e.comment === "string" ? e.comment : undefined,
-      };
-    }),
-    scanDepth: typeof b.scan_depth === "number" ? b.scan_depth : 2,
-    tokenBudget: typeof b.token_budget === "number" ? b.token_budget : 2048,
-    recursiveScanning: typeof b.recursive_scanning === "boolean" ? b.recursive_scanning : false,
-  };
-};
-
-// Parse SillyTavern character card JSON
+// Parse character card JSON (simplified - only extracts basic fields)
 export const parseSillyTavernCard = (json: unknown): Character | null => {
   try {
-    const card = json as SillyTavernCharacterCard;
+    const card = json as Record<string, unknown>;
 
     // Handle V2 format (has data field)
     if (card.spec === "chara_card_v2" && card.data) {
+      const data = card.data as Record<string, unknown>;
       return {
         id: generateId(),
-        name: card.data.name || "Unknown Character",
-        description: card.data.description || "",
-        firstMessage: card.data.first_mes || "Hello!",
-        mesExample: card.data.mes_example,
-        scenario: card.data.scenario,
-        creatorNotes: card.data.creator_notes,
-        tags: card.data.tags,
-        avatar: card.data.avatar,
-        // Instruction fields
-        systemPrompt: card.data.system_prompt,
-        postHistoryInstructions: card.data.post_history_instructions,
-        characterBook: parseCharacterBook(card.data.character_book),
-        alternateGreetings: card.data.alternate_greetings,
+        name: typeof data.name === "string" ? data.name : "Unknown Character",
+        description: typeof data.description === "string" ? data.description : "",
+        firstMessage: typeof data.first_mes === "string" ? data.first_mes : "Hello!",
+        scenario: typeof data.scenario === "string" ? data.scenario : undefined,
         createdAt: Date.now(),
       };
     }
 
     // Handle V1 format (flat structure)
-    if (card.name) {
+    if (typeof card.name === "string") {
       return {
         id: generateId(),
         name: card.name,
-        description: card.description || "",
-        firstMessage: card.first_mes || "Hello!",
-        mesExample: card.mes_example,
-        scenario: card.scenario,
-        creatorNotes: card.creator_notes,
-        tags: card.tags,
-        avatar: card.avatar,
-        // Instruction fields (V2 fields may be present in V1 cards too)
-        systemPrompt: card.system_prompt,
-        postHistoryInstructions: card.post_history_instructions,
-        characterBook: parseCharacterBook(card.character_book),
-        alternateGreetings: card.alternate_greetings,
+        description: typeof card.description === "string" ? card.description : "",
+        firstMessage: typeof card.first_mes === "string" ? card.first_mes : "Hello!",
+        scenario: typeof card.scenario === "string" ? card.scenario : undefined,
         createdAt: Date.now(),
       };
     }
@@ -92,7 +44,7 @@ export const parseSillyTavernCard = (json: unknown): Character | null => {
   }
 };
 
-// Validate if JSON is a valid SillyTavern character card
+// Validate if JSON is a valid character card
 export const isValidSillyTavernCard = (json: unknown): boolean => {
   if (!json || typeof json !== "object") return false;
 
@@ -121,7 +73,7 @@ export const readCharacterFile = async (
         const json = JSON.parse(content);
 
         if (!isValidSillyTavernCard(json)) {
-          resolve({ error: "Invalid SillyTavern character card format" });
+          resolve({ error: "Invalid character card format. Expected a JSON with 'name' field." });
           return;
         }
 
@@ -144,51 +96,25 @@ export const readCharacterFile = async (
   });
 };
 
-// Convert Character to SillyTavern format for export
+// Convert Character to simple format for export
 export const exportToSillyTavern = (character: Character): string => {
   const card = {
-    spec: "chara_card_v2",
-    spec_version: "2.0",
     name: character.name,
     description: character.description,
     first_mes: character.firstMessage,
-    data: {
-      name: character.name,
-      description: character.description,
-      first_mes: character.firstMessage,
-      mes_example: character.mesExample,
-      scenario: character.scenario,
-      creator_notes: character.creatorNotes,
-      tags: character.tags,
-      avatar: character.avatar,
-      // Instruction fields
-      system_prompt: character.systemPrompt,
-      post_history_instructions: character.postHistoryInstructions,
-      character_book: character.characterBook,
-      alternate_greetings: character.alternateGreetings,
-    },
+    scenario: character.scenario,
   };
 
   return JSON.stringify(card, null, 2);
 };
 
-// Build system prompt from character (SillyTavern-style hierarchy)
+// Build system prompt from character
 export const buildCharacterSystemPrompt = (
   character: Character,
   personaName: string,
   personaDescription: string,
   globalInstructions?: GlobalInstructions
 ): string => {
-  // SillyTavern instruction hierarchy:
-  // 1. Jailbreak instructions (if enabled) - goes first to set the tone
-  // 2. Main system prompt (global override > character.systemPrompt > default)
-  // 3. Character description
-  // 4. Scenario
-  // 5. Example messages
-  // 6. Post-history instructions (global > character)
-  // 7. Custom instructions
-  // 8. Final instruction
-  
   const sections: string[] = [];
   
   // 1. Jailbreak instructions (if enabled)
@@ -199,8 +125,6 @@ export const buildCharacterSystemPrompt = (
   // 2. Main system prompt - global override takes precedence
   if (globalInstructions?.systemPrompt) {
     sections.push(globalInstructions.systemPrompt);
-  } else if (character.systemPrompt) {
-    sections.push(character.systemPrompt);
   } else {
     sections.push(`You are ${character.name}.`);
   }
@@ -218,113 +142,34 @@ export const buildCharacterSystemPrompt = (
   // 5. User persona info
   sections.push(`[User]\nThe user is roleplaying as ${personaName}.${personaDescription ? ` ${personaDescription}` : ""}`);
   
-  // 6. Example messages (helps establish character voice)
-  if (character.mesExample) {
-    sections.push(`[Example Dialogue]\n${character.mesExample}`);
-  }
-  
-  // 7. Post-history instructions (global takes precedence)
+  // 6. Post-history instructions (global takes precedence)
   if (globalInstructions?.postHistoryInstructions) {
     sections.push(`[Instructions]\n${globalInstructions.postHistoryInstructions}`);
-  } else if (character.postHistoryInstructions) {
-    sections.push(`[Instructions]\n${character.postHistoryInstructions}`);
   }
   
-  // 8. Custom instructions
+  // 7. Custom instructions
   if (globalInstructions?.customInstructions) {
     sections.push(`[Additional Instructions]\n${globalInstructions.customInstructions}`);
   }
   
-  // 9. Final instruction
+  // 8. Final instruction
   sections.push("Stay in character at all times. Respond naturally and engage with the roleplay scenario.");
   
   return sections.join("\n\n");
 };
 
-// Scan for lorebook entries triggered by keywords in messages
-export const scanLorebook = (
-  character: Character,
-  messages: Message[],
-  scanDepth: number = 2
-): string[] => {
-  if (!character.characterBook?.entries) return [];
-  
-  const triggeredContent: string[] = [];
-  
-  // Get recent messages to scan
-  const recentMessages = messages.slice(-scanDepth);
-  const textToScan = recentMessages
-    .map(m => m.content.toLowerCase())
-    .join(" ");
-  
-  // Check each lorebook entry
-  const enabledEntries = character.characterBook.entries
-    .filter(e => e.enabled)
-    .sort((a, b) => (a.insertionOrder || 100) - (b.insertionOrder || 100));
-  
-  for (const entry of enabledEntries) {
-    // Constant entries are always included
-    if (entry.constant) {
-      triggeredContent.push(entry.content);
-      continue;
-    }
-    
-    // Check if any key matches
-    const hasMatch = entry.keys.some(key => {
-      const searchKey = entry.caseSensitive ? key : key.toLowerCase();
-      const searchText = entry.caseSensitive 
-        ? recentMessages.map(m => m.content).join(" ")
-        : textToScan;
-      return searchText.includes(searchKey);
-    });
-    
-    // Check secondary keys if present (must also match for entry to trigger)
-    if (hasMatch && entry.secondaryKeys && entry.secondaryKeys.length > 0) {
-      const hasSecondaryMatch = entry.secondaryKeys.some(key => {
-        const searchKey = entry.caseSensitive ? key : key.toLowerCase();
-        const searchText = entry.caseSensitive 
-          ? recentMessages.map(m => m.content).join(" ")
-          : textToScan;
-        return searchText.includes(searchKey);
-      });
-      
-      if (hasSecondaryMatch) {
-        triggeredContent.push(entry.content);
-      }
-    } else if (hasMatch) {
-      triggeredContent.push(entry.content);
-    }
-  }
-  
-  return triggeredContent;
-};
-
-// Build full context with lorebook
+// Build full system prompt (simplified - no lorebook)
 export const buildFullSystemPrompt = (
   character: Character,
   personaName: string,
   personaDescription: string,
-  messages: Message[],
+  _messages: Message[],
   globalInstructions?: GlobalInstructions
 ): string => {
-  // Get base system prompt
-  const basePrompt = buildCharacterSystemPrompt(
+  return buildCharacterSystemPrompt(
     character,
     personaName,
     personaDescription,
     globalInstructions
   );
-  
-  // Get lorebook content
-  const lorebookContent = scanLorebook(
-    character,
-    messages,
-    character.characterBook?.scanDepth || 2
-  );
-  
-  if (lorebookContent.length > 0) {
-    return `${basePrompt}\n\n[World Knowledge]\n${lorebookContent.join("\n\n")}`;
-  }
-  
-  return basePrompt;
 };
