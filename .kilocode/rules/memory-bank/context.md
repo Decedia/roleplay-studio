@@ -56,6 +56,10 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **Thought text ((thought)) with dimmed italic styling**
 - [x] **OOC text ((OOC)) with amber highlight**
 - [x] **Bold and code formatting support**
+- [x] **Advanced global instructions with jailbreak support**
+- [x] **JSON import for instructions**
+- [x] **Global system prompt override**
+- [x] **Global post-history instructions**
 
 ## Current Structure
 
@@ -132,6 +136,12 @@ A chat application for roleplay conversations with multiple LLM provider support
 - Custom instructions applied to ALL conversations
 - Stored in localStorage separately from settings
 - Accessible via gear icon in header
+- **Advanced Instructions Section**:
+  - Jailbreak Instructions: Toggle-able instructions to bypass content restrictions
+  - System Prompt Override: Replaces character's system prompt globally
+  - Post-History Instructions: Added after conversation history
+- **JSON Import**: Import instruction presets from JSON files
+- Default jailbreak instruction provided for roleplay scenarios
 
 ### Chat Interface
 - Full-screen chat UI with black theme
@@ -241,6 +251,14 @@ interface GlobalSettings {
   activeProvider: LLMProviderType;
 }
 
+interface GlobalInstructions {
+  customInstructions: string;
+  systemPrompt?: string;
+  postHistoryInstructions?: string;
+  jailbreakInstructions?: string;
+  enableJailbreak: boolean;
+}
+
 interface Conversation {
   id: string;
   personaId: string;
@@ -261,15 +279,16 @@ interface Conversation {
 
 ### System Prompt Building
 The `buildFullSystemPrompt` function creates prompts following SillyTavern's hierarchy:
-1. System prompt override OR default "You are [name]..."
-2. Character description
-3. Scenario (if present)
-4. User persona info
-5. Example messages (if present)
-6. Post-history instructions (if present)
-7. Global instructions (if present)
-8. Lorebook content (keyword-triggered from recent messages)
-9. Final "Stay in character" instruction
+1. Jailbreak instructions (if enabled globally)
+2. System prompt override (global > character) OR default "You are [name]..."
+3. Character description
+4. Scenario (if present)
+5. User persona info
+6. Example messages (if present)
+7. Post-history instructions (global > character)
+8. Custom instructions (if present)
+9. Lorebook content (keyword-triggered from recent messages)
+10. Final "Stay in character" instruction
 
 ### Component Architecture
 - Client component with `"use client"` directive
@@ -284,6 +303,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date | Changes |
 |------|---------|
+| 2026-02-16 | Added advanced global instructions: jailbreak support, system prompt override, post-history instructions, JSON import |
 | 2026-02-16 | Added roleplay text formatting: action (*text*), dialogue ("text"), thought ((text)), OOC, bold, code styling |
 | 2026-02-16 | Added SillyTavern-style instruction handling: scenario, system prompt override, post-history instructions, example messages |
 | 2026-02-16 | Implemented Character Book (Lorebook) with keyword scanning and dynamic content injection |
