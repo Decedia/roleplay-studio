@@ -162,6 +162,17 @@ export interface GlobalSettings {
   activeProvider: LLMProviderType;
 }
 
+// Global instructions with advanced fields
+export interface GlobalInstructions {
+  // Basic instructions
+  customInstructions: string;
+  // Advanced instructions
+  systemPrompt?: string;
+  postHistoryInstructions?: string;
+  jailbreakInstructions?: string;
+  enableJailbreak: boolean;
+}
+
 // Model cost structure
 export interface ModelCost {
   currency?: string;

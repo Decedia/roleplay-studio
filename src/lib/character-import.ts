@@ -1,6 +1,6 @@
 // SillyTavern Character Card import utilities
 
-import { Character, SillyTavernCharacterCard, CharacterBook, CharacterBookEntry, Message } from "./types";
+import { Character, SillyTavernCharacterCard, CharacterBook, CharacterBookEntry, Message, GlobalInstructions } from "./types";
 
 // Generate a unique ID
 export const generateId = (): string => {
@@ -177,54 +177,65 @@ export const buildCharacterSystemPrompt = (
   character: Character,
   personaName: string,
   personaDescription: string,
-  globalInstructions?: string
+  globalInstructions?: GlobalInstructions
 ): string => {
   // SillyTavern instruction hierarchy:
-  // 1. Main system prompt (character.systemPrompt or default)
-  // 2. Character description
-  // 3. Scenario
-  // 4. Example messages
-  // 5. Post-history instructions
-  // 6. Global instructions (our addition)
+  // 1. Jailbreak instructions (if enabled) - goes first to set the tone
+  // 2. Main system prompt (global override > character.systemPrompt > default)
+  // 3. Character description
+  // 4. Scenario
+  // 5. Example messages
+  // 6. Post-history instructions (global > character)
+  // 7. Custom instructions
+  // 8. Final instruction
   
   const sections: string[] = [];
   
-  // 1. Main system prompt - either custom or default
-  if (character.systemPrompt) {
+  // 1. Jailbreak instructions (if enabled)
+  if (globalInstructions?.enableJailbreak && globalInstructions.jailbreakInstructions) {
+    sections.push(globalInstructions.jailbreakInstructions);
+  }
+  
+  // 2. Main system prompt - global override takes precedence
+  if (globalInstructions?.systemPrompt) {
+    sections.push(globalInstructions.systemPrompt);
+  } else if (character.systemPrompt) {
     sections.push(character.systemPrompt);
   } else {
     sections.push(`You are ${character.name}.`);
   }
   
-  // 2. Character description
+  // 3. Character description
   if (character.description) {
     sections.push(character.description);
   }
   
-  // 3. Scenario
+  // 4. Scenario
   if (character.scenario) {
     sections.push(`[Scenario]\n${character.scenario}`);
   }
   
-  // 4. User persona info
+  // 5. User persona info
   sections.push(`[User]\nThe user is roleplaying as ${personaName}.${personaDescription ? ` ${personaDescription}` : ""}`);
   
-  // 5. Example messages (helps establish character voice)
+  // 6. Example messages (helps establish character voice)
   if (character.mesExample) {
     sections.push(`[Example Dialogue]\n${character.mesExample}`);
   }
   
-  // 6. Post-history instructions (applied after chat context)
-  if (character.postHistoryInstructions) {
+  // 7. Post-history instructions (global takes precedence)
+  if (globalInstructions?.postHistoryInstructions) {
+    sections.push(`[Instructions]\n${globalInstructions.postHistoryInstructions}`);
+  } else if (character.postHistoryInstructions) {
     sections.push(`[Instructions]\n${character.postHistoryInstructions}`);
   }
   
-  // 7. Global instructions
-  if (globalInstructions) {
-    sections.push(`[Additional Instructions]\n${globalInstructions}`);
+  // 8. Custom instructions
+  if (globalInstructions?.customInstructions) {
+    sections.push(`[Additional Instructions]\n${globalInstructions.customInstructions}`);
   }
   
-  // 8. Final instruction
+  // 9. Final instruction
   sections.push("Stay in character at all times. Respond naturally and engage with the roleplay scenario.");
   
   return sections.join("\n\n");
@@ -294,7 +305,7 @@ export const buildFullSystemPrompt = (
   personaName: string,
   personaDescription: string,
   messages: Message[],
-  globalInstructions?: string
+  globalInstructions?: GlobalInstructions
 ): string => {
   // Get base system prompt
   const basePrompt = buildCharacterSystemPrompt(
