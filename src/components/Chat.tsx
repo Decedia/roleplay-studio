@@ -918,7 +918,7 @@ export default function Chat() {
     "puter": { type: "puter", isEnabled: true, selectedModel: "" },
     "google-ai-studio": { type: "google-ai-studio", isEnabled: false, apiKey: "", selectedModel: "gemini-2.0-flash" },
     "google-vertex": { type: "google-vertex", isEnabled: false, apiKey: "", projectId: "", selectedModel: "gemini-2.0-flash" },
-    "nvidia-nim": { type: "nvidia-nim", isEnabled: false, apiKey: "", selectedModel: "meta/llama-3.3-70b-instruct" },
+    "nvidia-nim": { type: "nvidia-nim", isEnabled: false, apiKey: "", selectedModel: "z-ai/glm4.7" },
   });
   
   // Active provider state - default to Google AI Studio (not Puter)

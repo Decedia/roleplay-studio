@@ -503,17 +503,37 @@ export const testProviderConnection = async (
         return { success: false, message: "API key is required." };
       }
       try {
-        // Test with a minimal request to the NVIDIA NIM API
-        const response = await fetch("https://integrate.api.nvidia.com/v1/models", {
-          method: "GET",
+        // Test with a minimal chat request using GLM 4.7 model
+        const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+          method: "POST",
           headers: {
             "Accept": "application/json",
+            "Content-Type": "application/json",
             "Authorization": `Bearer ${config.apiKey}`,
           },
+          body: JSON.stringify({
+            model: "z-ai/glm4.7",
+            messages: [{ role: "user", content: "Hi" }],
+            max_tokens: 5,
+          }),
         });
-        if (response.ok) {
+        
+        // 200 and 202 are success codes
+        if (response.status === 200 || response.status === 202) {
           return { success: true, message: "NVIDIA NIM connection successful!" };
         }
+        
+        // 422 and 500 are failure codes
+        if (response.status === 422) {
+          const errorData = await response.json();
+          return { success: false, message: errorData.error?.message || "Validation error (422)" };
+        }
+        
+        if (response.status === 500) {
+          return { success: false, message: "Server error (500) - please try again later" };
+        }
+        
+        // Other status codes
         const errorData = await response.json();
         return { success: false, message: errorData.error?.message || `HTTP ${response.status}` };
       } catch (error) {
