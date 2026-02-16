@@ -16,6 +16,7 @@ import {
 } from "@/lib/providers";
 import { readCharacterFile, buildFullSystemPrompt } from "@/lib/character-import";
 import { Character as CharacterType, CharacterBook, CharacterBookEntry } from "@/lib/types";
+import { parseRoleplayText, getSegmentClasses, TextSegment } from "@/lib/text-formatter";
 
 // Types - using imported Message interface
 export interface Persona {
@@ -196,6 +197,73 @@ function ThinkingSection({ content }: { content: string }) {
         </div>
       )}
     </div>
+  );
+}
+
+// Formatted Text Component for roleplay styling
+function FormattedText({ content }: { content: string }) {
+  const segments = useMemo(() => parseRoleplayText(content), [content]);
+  
+  return (
+    <span className="whitespace-pre-wrap break-words">
+      {segments.map((segment, index) => {
+        const key = `${segment.type}-${index}`;
+        const classes = getSegmentClasses(segment.type);
+        
+        switch (segment.type) {
+          case "action":
+            return (
+              <span key={key} className={classes}>
+                <span className="text-zinc-500">*</span>
+                {segment.content}
+                <span className="text-zinc-500">*</span>
+              </span>
+            );
+          case "dialogue":
+            return (
+              <span key={key} className={classes}>
+                <span className="text-zinc-400">&ldquo;</span>
+                {segment.content}
+                <span className="text-zinc-400">&rdquo;</span>
+              </span>
+            );
+          case "thought":
+            return (
+              <span key={key} className={classes}>
+                <span className="text-zinc-500">(</span>
+                {segment.content}
+                <span className="text-zinc-500">)</span>
+              </span>
+            );
+          case "ooc":
+            return (
+              <span key={key} className={classes}>
+                <span className="text-amber-500">((</span>
+                {segment.content}
+                <span className="text-amber-500">))</span>
+              </span>
+            );
+          case "bold":
+            return (
+              <strong key={key} className={classes}>
+                {segment.content}
+              </strong>
+            );
+          case "code":
+            return (
+              <code key={key} className={classes}>
+                {segment.content}
+              </code>
+            );
+          default:
+            return (
+              <span key={key} className={classes}>
+                {segment.content}
+              </span>
+            );
+        }
+      })}
+    </span>
   );
 }
 
@@ -2194,9 +2262,7 @@ export default function Chat() {
                           {thinkContent && (
                             <ThinkingSection content={thinkContent} />
                           )}
-                          <p className="whitespace-pre-wrap break-words">
-                            {displayContent}
-                          </p>
+                          <FormattedText content={displayContent} />
                         </div>
                         {message.role === "user" && (
                           <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
