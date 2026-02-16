@@ -479,7 +479,7 @@ export const chatWithVertexAI: ChatFunction = async (
   const mode = config.vertexMode || "express";
   
   if (mode === "express") {
-    // Express mode: Use API key only (similar to AI Studio)
+    // Express mode: Use API key with Vertex AI endpoint
     if (!config.apiKey) {
       return { error: "Vertex AI Express mode requires an API key" };
     }
@@ -494,13 +494,14 @@ export const chatWithVertexAI: ChatFunction = async (
         ? { parts: [{ text: options.systemPrompt }] }
         : undefined;
 
-      // Using AI Studio endpoint for express mode
+      // Vertex AI Express endpoint - uses x-goog-api-key header
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${config.selectedModel}:generateContent?key=${config.apiKey}`,
+        `https://us-central1-aiplatform.googleapis.com/v1/projects/-/locations/us-central1/publishers/google/models/${config.selectedModel}:generateContent`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "x-goog-api-key": config.apiKey,
           },
           body: JSON.stringify({
             contents: formattedMessages,
@@ -772,7 +773,7 @@ export const streamWithNvidiaNIM = async (
   }
 };
 
-// Vertex AI streaming implementation (uses same endpoint as AI Studio)
+// Vertex AI streaming implementation
 export const streamWithVertexAI = async (
   messages: Message[],
   config: ProviderConfig,
@@ -786,8 +787,114 @@ export const streamWithVertexAI = async (
   },
   onChunk: StreamCallback
 ): Promise<void> => {
-  // Vertex AI streaming uses the same approach as AI Studio for express mode
-  await streamWithGoogleAIStudio(messages, config, options, onChunk);
+  const mode = config.vertexMode || "express";
+  
+  if (mode === "express") {
+    // Express mode: Use Vertex AI endpoint with streaming
+    if (!config.apiKey) {
+      onChunk({ error: "Vertex AI Express mode requires an API key" });
+      return;
+    }
+
+    try {
+      const formattedMessages = messages.map((m) => ({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: m.content }],
+      }));
+
+      const systemInstruction = options.systemPrompt
+        ? { parts: [{ text: options.systemPrompt }] }
+        : undefined;
+
+      // Build generation config with optional thinking
+      const generationConfig: Record<string, unknown> = {
+        temperature: options.temperature,
+        maxOutputTokens: options.maxTokens,
+        topP: options.topP,
+        topK: options.topK,
+      };
+
+      // Add thinking config if enabled (for Gemini 2.0 models)
+      if (options.enableThinking) {
+        generationConfig.thinkingBudget = 8192;
+      }
+
+      // Vertex AI Express streaming endpoint
+      const response = await fetch(
+        `https://us-central1-aiplatform.googleapis.com/v1/projects/-/locations/us-central1/publishers/google/models/${config.selectedModel}:streamGenerateContent`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": config.apiKey,
+          },
+          body: JSON.stringify({
+            contents: formattedMessages,
+            systemInstruction,
+            generationConfig,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        onChunk({ error: errorData.error?.message || `HTTP ${response.status}` });
+        return;
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        onChunk({ error: "Failed to get response stream" });
+        return;
+      }
+
+      const decoder = new TextDecoder();
+      let fullContent = "";
+      let fullThinking = "";
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const jsonStr = line.slice(6).trim();
+            if (!jsonStr || jsonStr === "[DONE]") continue;
+
+            try {
+              const data = JSON.parse(jsonStr);
+              const parts = data.candidates?.[0]?.content?.parts || [];
+              
+              for (const part of parts) {
+                if (part.text) {
+                  fullContent += part.text;
+                  onChunk({ content: fullContent });
+                }
+                if (part.thought) {
+                  fullThinking += part.thought;
+                  onChunk({ thinking: fullThinking });
+                }
+              }
+            } catch {
+              // Skip invalid JSON
+            }
+          }
+        }
+      }
+
+      onChunk({ content: fullContent, thinking: fullThinking, done: true });
+    } catch (error) {
+      onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
+    }
+  } else {
+    // Full mode: Fall back to AI Studio endpoint
+    await streamWithGoogleAIStudio(messages, config, options, onChunk);
+  }
 };
 
 // Main chat function that routes to the correct provider
@@ -904,14 +1011,20 @@ export const testProviderConnection = async (
       const mode = config.vertexMode || "express";
       
       if (mode === "express") {
-        // Express mode: API key only
+        // Express mode: API key with Vertex AI endpoint
         if (!config.apiKey) {
           return { success: false, message: "API key is required for Express mode." };
         }
         try {
+          // Test with Vertex AI Express endpoint
           const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models?key=${config.apiKey}`,
-            { method: "GET" }
+            `https://us-central1-aiplatform.googleapis.com/v1/projects/-/locations/us-central1/publishers/google/models`,
+            {
+              method: "GET",
+              headers: {
+                "x-goog-api-key": config.apiKey,
+              },
+            }
           );
           if (response.ok) {
             return { success: true, message: "Google Vertex AI (Express) connection successful!" };

@@ -10,11 +10,21 @@ export type TextSegmentType =
   | "ooc"           // ((OOC)) - out of character
   | "code"          // `code` - inline code
   | "emphasis"      // *emphasis* (single asterisk when not action)
-  | "html";         // HTML tags like <b>, <i>, <u>, etc.
+  | "html";         // HTML content - rendered as raw HTML
 
 export interface TextSegment {
   type: TextSegmentType;
   content: string;
+}
+
+/**
+ * Check if text contains HTML tags that should be rendered
+ * This includes style tags, divs, spans, etc.
+ */
+export function containsHtmlTags(text: string): boolean {
+  // Check for common HTML tags that should be rendered
+  const htmlTagPattern = /<(style|div|span|p|br|hr|table|tr|td|th|ul|ol|li|a|img|font|center|b|i|u|s|strong|em|mark|sub|sup|small|del|ins|code|pre|blockquote|h[1-6])[^>]*>/i;
+  return htmlTagPattern.test(text);
 }
 
 /**
@@ -27,17 +37,22 @@ export interface TextSegment {
  * - (text) or ((text)) → thought
  * - ((OOC: text)) → out of character
  * - `text` → inline code
+ * - HTML tags → rendered as raw HTML (style, div, span, etc.)
  */
 export function parseRoleplayText(text: string): TextSegment[] {
+  // Check if the text contains HTML tags that should be rendered as-is
+  // If so, return the entire content as an HTML segment
+  if (containsHtmlTags(text)) {
+    return [{ type: "html", content: text }];
+  }
+  
   const segments: TextSegment[] = [];
   let remaining = text;
   
   // Combined regex pattern for all formats
   // Order matters: more specific patterns first
+  // Note: HTML tags are handled separately via containsHtmlTags() check above
   const patterns = [
-    // HTML tags (must come first to preserve them)
-    // Matches opening tags, closing tags, and self-closing tags
-    { regex: /^<\/?[a-zA-Z][a-zA-Z0-9]*(?:\s+[^>]*?)?\/?>/, type: "html" as TextSegmentType },
     // OOC (must come before thought)
     { regex: /^\(\(([^\)]+)\)\)/, type: "ooc" as TextSegmentType },
     // Bold with ** or __
@@ -73,8 +88,8 @@ export function parseRoleplayText(text: string): TextSegment[] {
     
     // If no pattern matched, consume text until next special character or end
     if (!matched) {
-      // Find the next special character (including < for HTML tags)
-      const nextSpecial = remaining.search(/[\*_\""\(\(`<>]/);
+      // Find the next special character
+      const nextSpecial = remaining.search(/[\*_\""\(\(`]/);
       
       if (nextSpecial === -1) {
         // No more special characters, rest is narration
