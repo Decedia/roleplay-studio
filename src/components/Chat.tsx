@@ -2,25 +2,39 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 
-// Types
-interface Persona {
+// Import our custom types and utilities
+import {
+  LLMProviderType,
+  ProviderConfig,
+  Message,
+  sendChatMessage,
+  AVAILABLE_PROVIDERS,
+  getModelsForProvider,
+} from "@/lib/providers";
+import { readCharacterFile, buildCharacterSystemPrompt } from "@/lib/character-import";
+
+// Types - using imported Message interface
+export interface Persona {
   id: string;
   name: string;
   description: string;
   createdAt: number;
 }
 
-interface Character {
+// AI character (who the AI roleplays as)
+export interface Character {
   id: string;
   name: string;
   description: string;
   firstMessage: string;
+  // SillyTavern extended fields
+  mesExample?: string;
+  scenario?: string;
+  creatorNotes?: string;
+  tags?: string[];
+  avatar?: string;
+  systemPrompt?: string;
   createdAt: number;
-}
-
-interface Message {
-  role: "user" | "assistant";
-  content: string;
 }
 
 // Model configuration from puter.ai.listModels()
@@ -114,6 +128,10 @@ const CHARACTERS_KEY = "chat_characters";
 const CONVERSATIONS_KEY = "chat_conversations";
 const GLOBAL_INSTRUCTIONS_KEY = "chat_global_instructions";
 const GLOBAL_SETTINGS_KEY = "chat_global_settings";
+const PROVIDER_CONFIGS_KEY = "chat_provider_configs";
+
+// Provider storage key - store config for each provider
+const getProviderConfigKey = (providerType: LLMProviderType) => `chat_provider_${providerType}`;
 
 // Default settings
 const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
@@ -175,6 +193,10 @@ function SettingsModal({
   models,
   modelsLoading,
   modelsError,
+  providerConfigs,
+  setProviderConfigs,
+  activeProvider,
+  setActiveProvider,
 }: {
   show: boolean;
   onClose: () => void;
@@ -185,9 +207,14 @@ function SettingsModal({
   models: Model[];
   modelsLoading: boolean;
   modelsError: string | null;
+  providerConfigs: Record<LLMProviderType, ProviderConfig>;
+  setProviderConfigs: React.Dispatch<React.SetStateAction<Record<LLMProviderType, ProviderConfig>>>;
+  activeProvider: LLMProviderType;
+  setActiveProvider: React.Dispatch<React.SetStateAction<LLMProviderType>>;
 }) {
   const [expandedProviders, setExpandedProviders] = useState<Record<string, boolean>>({});
   const [showModelDropdown, setShowModelDropdown] = useState(false);
+  const [editingProvider, setEditingProvider] = useState<LLMProviderType | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Group models by provider
@@ -486,6 +513,136 @@ function SettingsModal({
               Applied to all conversations globally
             </p>
           </div>
+
+          {/* Provider API Keys Configuration */}
+          <div className="border-t border-zinc-700 pt-6">
+            <h3 className="text-sm font-medium text-white mb-4">Provider API Keys</h3>
+            <div className="space-y-4">
+              {/* Google AI Studio */}
+              <div className="p-3 bg-zinc-800/50 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-blue-500" />
+                    <span className="text-sm font-medium text-white">Google AI Studio</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingProvider(editingProvider === 'google-ai-studio' ? null : 'google-ai-studio')}
+                    className="text-xs text-blue-400 hover:text-blue-300"
+                  >
+                    {editingProvider === 'google-ai-studio' ? 'Hide' : 'Configure'}
+                  </button>
+                </div>
+                {editingProvider === 'google-ai-studio' && (
+                  <div className="mt-3 space-y-3">
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                      <input
+                        type="password"
+                        value={providerConfigs["google-ai-studio"]?.apiKey || ""}
+                        onChange={(e) => setProviderConfigs(prev => ({
+                          ...prev,
+                          "google-ai-studio": { ...prev["google-ai-studio"], apiKey: e.target.value }
+                        }))}
+                        placeholder="Enter your Google AI Studio API key"
+                        className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Google Vertex AI */}
+              <div className="p-3 bg-zinc-800/50 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-purple-500" />
+                    <span className="text-sm font-medium text-white">Google Vertex AI</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingProvider(editingProvider === 'google-vertex' ? null : 'google-vertex')}
+                    className="text-xs text-blue-400 hover:text-blue-300"
+                  >
+                    {editingProvider === 'google-vertex' ? 'Hide' : 'Configure'}
+                  </button>
+                </div>
+                {editingProvider === 'google-vertex' && (
+                  <div className="mt-3 space-y-3">
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                      <input
+                        type="password"
+                        value={providerConfigs["google-vertex"]?.apiKey || ""}
+                        onChange={(e) => setProviderConfigs(prev => ({
+                          ...prev,
+                          "google-vertex": { ...prev["google-vertex"], apiKey: e.target.value }
+                        }))}
+                        placeholder="Enter your Google API key"
+                        className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-1">Project ID</label>
+                      <input
+                        type="text"
+                        value={providerConfigs["google-vertex"]?.projectId || ""}
+                        onChange={(e) => setProviderConfigs(prev => ({
+                          ...prev,
+                          "google-vertex": { ...prev["google-vertex"], projectId: e.target.value }
+                        }))}
+                        placeholder="Enter your GCP Project ID"
+                        className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* NVIDIA NIM */}
+              <div className="p-3 bg-zinc-800/50 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-orange-500" />
+                    <span className="text-sm font-medium text-white">NVIDIA NIM</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingProvider(editingProvider === 'nvidia-nim' ? null : 'nvidia-nim')}
+                    className="text-xs text-blue-400 hover:text-blue-300"
+                  >
+                    {editingProvider === 'nvidia-nim' ? 'Hide' : 'Configure'}
+                  </button>
+                </div>
+                {editingProvider === 'nvidia-nim' && (
+                  <div className="mt-3">
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                      <input
+                        type="password"
+                        value={providerConfigs["nvidia-nim"]?.apiKey || ""}
+                        onChange={(e) => setProviderConfigs(prev => ({
+                          ...prev,
+                          "nvidia-nim": { ...prev["nvidia-nim"], apiKey: e.target.value }
+                        }))}
+                        placeholder="Enter your NVIDIA NIM API key"
+                        className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Puter.js - No API key needed */}
+              <div className="p-3 bg-zinc-800/50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500" />
+                  <span className="text-sm font-medium text-white">Puter.js</span>
+                  <span className="text-xs text-zinc-500">(Free, no API key required)</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="flex gap-3 mt-6">
@@ -526,6 +683,19 @@ export default function Chat() {
   // Global settings state
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings>(DEFAULT_GLOBAL_SETTINGS);
   
+  // Provider configuration state
+  const [providerConfigs, setProviderConfigs] = useState<Record<LLMProviderType, ProviderConfig>>({
+    "puter": { type: "puter", isEnabled: true, selectedModel: "" },
+    "google-ai-studio": { type: "google-ai-studio", isEnabled: false, apiKey: "", selectedModel: "gemini-2.0-flash" },
+    "google-vertex": { type: "google-vertex", isEnabled: false, apiKey: "", projectId: "", selectedModel: "gemini-2.0-flash" },
+    "nvidia-nim": { type: "nvidia-nim", isEnabled: false, apiKey: "", selectedModel: "meta/llama-3.3-70b-instruct" },
+  });
+  
+  // Active provider state
+  const [activeProvider, setActiveProvider] = useState<LLMProviderType>("puter");
+  const [showProviderConfig, setShowProviderConfig] = useState(false);
+  const [editingProvider, setEditingProvider] = useState<LLMProviderType | null>(null);
+  
   // Chat state
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -547,6 +717,11 @@ export default function Chat() {
   
   // Global instructions state
   const [globalInstructions, setGlobalInstructions] = useState<string>("");
+  
+  // File input ref for character import
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importSuccess, setImportSuccess] = useState<string | null>(null);
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -603,6 +778,27 @@ export default function Chat() {
   useEffect(() => {
     localStorage.setItem(GLOBAL_SETTINGS_KEY, JSON.stringify(globalSettings));
   }, [globalSettings]);
+  
+  // Load provider configs from localStorage
+  useEffect(() => {
+    const loadProviderConfigs = () => {
+      const stored = localStorage.getItem(PROVIDER_CONFIGS_KEY);
+      if (stored) {
+        try {
+          const configs = JSON.parse(stored) as Record<LLMProviderType, ProviderConfig>;
+          setProviderConfigs(configs);
+        } catch (e) {
+          console.error("Failed to parse provider configs:", e);
+        }
+      }
+    };
+    loadProviderConfigs();
+  }, []);
+  
+  // Save provider configs to localStorage
+  useEffect(() => {
+    localStorage.setItem(PROVIDER_CONFIGS_KEY, JSON.stringify(providerConfigs));
+  }, [providerConfigs]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -855,6 +1051,30 @@ export default function Chat() {
     setCharacterFirstMessage(character.firstMessage);
     setShowCharacterModal(true);
   };
+  
+  // Import character from SillyTavern JSON file
+  const handleImportCharacter = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setImportError(null);
+    setImportSuccess(null);
+    
+    const result = await readCharacterFile(file);
+    
+    if ("error" in result) {
+      setImportError(result.error);
+    } else {
+      setCharacters((prev) => [...prev, result]);
+      setImportSuccess(`Successfully imported character: ${result.name}`);
+      setTimeout(() => setImportSuccess(null), 3000);
+    }
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   // Navigation functions
   const selectPersona = (persona: Persona) => {
@@ -938,34 +1158,36 @@ export default function Chat() {
     setIsLoading(true);
 
     try {
-      if (typeof window.puter === "undefined") {
-        throw new Error("Puter.js is still loading. Please wait a moment and try again.");
+      // Get current provider config
+      const currentConfig = providerConfigs[activeProvider];
+      
+      // Build system prompt
+      const systemPrompt = buildCharacterSystemPrompt(
+        selectedCharacter,
+        selectedPersona.name,
+        selectedPersona.description,
+        globalInstructions
+      );
+
+      // Use the sendChatMessage function from our providers library
+      const response = await sendChatMessage(
+        updatedMessages,
+        { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
+        {
+          temperature: globalSettings.temperature,
+          maxTokens: globalSettings.maxTokens,
+          topP: globalSettings.topP,
+          systemPrompt,
+        }
+      );
+
+      if (response.error) {
+        throw new Error(response.error);
       }
-
-      // Build system prompt - user is roleplaying as persona, AI is the character
-      const customInstructions = globalInstructions?.trim();
-      const systemPrompt = `You are ${selectedCharacter.name}. ${selectedCharacter.description}
-
-The user is roleplaying as ${selectedPersona.name}. ${selectedPersona.description}
-${customInstructions ? `\nAdditional Instructions: ${customInstructions}` : ""}
-Stay in character as ${selectedCharacter.name} throughout the conversation. Respond naturally and consistently with your character's personality.`;
-
-      // Prepare messages for API
-      const chatMessages = [
-        { role: "system", content: systemPrompt },
-        ...updatedMessages.map((m) => ({ role: m.role, content: m.content })),
-      ];
-
-      const response = await window.puter.ai.chat(chatMessages, {
-        model: globalSettings.modelId || models[0]?.id || "gpt-4o-mini",
-        temperature: globalSettings.temperature,
-        max_tokens: globalSettings.maxTokens,
-        top_p: globalSettings.topP,
-      });
 
       const finalMessages: Message[] = [
         ...updatedMessages,
-        { role: "assistant", content: response.message.content },
+        { role: "assistant", content: response.content || "", thinking: response.thinking },
       ];
 
       updateConversationMessages(finalMessages);
@@ -1020,34 +1242,36 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
     updateConversationMessages(messagesBeforeRetry);
 
     try {
-      if (typeof window.puter === "undefined") {
-        throw new Error("Puter.js is still loading. Please wait a moment and try again.");
+      // Get current provider config
+      const currentConfig = providerConfigs[activeProvider];
+      
+      // Build system prompt
+      const systemPrompt = buildCharacterSystemPrompt(
+        selectedCharacter,
+        selectedPersona.name,
+        selectedPersona.description,
+        globalInstructions
+      );
+
+      // Use the sendChatMessage function from our providers library
+      const response = await sendChatMessage(
+        messagesBeforeRetry,
+        { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
+        {
+          temperature: globalSettings.temperature,
+          maxTokens: globalSettings.maxTokens,
+          topP: globalSettings.topP,
+          systemPrompt,
+        }
+      );
+
+      if (response.error) {
+        throw new Error(response.error);
       }
-
-      // Build system prompt - user is roleplaying as persona, AI is the character
-      const customInstructions = globalInstructions?.trim();
-      const systemPrompt = `You are ${selectedCharacter.name}. ${selectedCharacter.description}
-
-The user is roleplaying as ${selectedPersona.name}. ${selectedPersona.description}
-${customInstructions ? `\nAdditional Instructions: ${customInstructions}` : ""}
-Stay in character as ${selectedCharacter.name} throughout the conversation. Respond naturally and consistently with your character's personality.`;
-
-      // Prepare messages for API
-      const chatMessages = [
-        { role: "system", content: systemPrompt },
-        ...messagesBeforeRetry.map((m) => ({ role: m.role, content: m.content })),
-      ];
-
-      const response = await window.puter.ai.chat(chatMessages, {
-        model: globalSettings.modelId || models[0]?.id || "gpt-4o-mini",
-        temperature: globalSettings.temperature,
-        max_tokens: globalSettings.maxTokens,
-        top_p: globalSettings.topP,
-      });
 
       const finalMessages: Message[] = [
         ...messagesBeforeRetry,
-        { role: "assistant", content: response.message.content },
+        { role: "assistant", content: response.content || "", thinking: response.thinking },
       ];
 
       updateConversationMessages(finalMessages);
@@ -1128,7 +1352,7 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
                     ? `${selectedPersona.name} × ${selectedCharacter.name}`
                     : view === "characters" && selectedPersona
                     ? `${selectedPersona.name} - Select Character`
-                    : "GLM 5 Chat"}
+                    : "Roleplay Studio"}
                 </h1>
                 <p className="text-sm text-zinc-500">
                   {view === "personas"
@@ -1137,7 +1361,7 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
                     ? "Select AI character"
                     : view === "conversations"
                     ? "Select or start a conversation"
-                    : "Powered by puter.js"}
+                    : `Powered by ${AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || 'AI'}`}
                 </p>
               </div>
             </div>
@@ -1153,6 +1377,91 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </button>
+            
+            {/* Provider Selector */}
+            <div className="relative mr-2">
+              <button
+                onClick={() => setShowProviderConfig(!showProviderConfig)}
+                className="flex items-center gap-2 px-3 py-2 bg-zinc-900 hover:bg-zinc-800 rounded-lg transition-colors border border-zinc-800"
+                title="Select AI Provider"
+              >
+                <div className={`w-2 h-2 rounded-full ${
+                  activeProvider === 'puter' ? 'bg-green-500' :
+                  activeProvider === 'google-ai-studio' ? 'bg-blue-500' :
+                  activeProvider === 'google-vertex' ? 'bg-purple-500' :
+                  activeProvider === 'nvidia-nim' ? 'bg-orange-500' : 'bg-zinc-500'
+                }`} />
+                <span className="text-sm text-zinc-300 hidden sm:block">
+                  {AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || "Select Provider"}
+                </span>
+                <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              
+              {showProviderConfig && (
+                <div className="absolute right-0 mt-2 w-64 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50">
+                  <div className="p-3 border-b border-zinc-800">
+                    <p className="text-sm font-medium text-white">Select AI Provider</p>
+                    <p className="text-xs text-zinc-500">Choose which AI service to use</p>
+                  </div>
+                  <div className="p-2">
+                    {AVAILABLE_PROVIDERS.map((provider) => (
+                      <button
+                        key={provider.id}
+                        onClick={() => {
+                          setActiveProvider(provider.id);
+                          setShowProviderConfig(false);
+                          // Update settings with default model for this provider
+                          if (provider.models.length > 0) {
+                            setGlobalSettings(prev => ({
+                              ...prev,
+                              modelId: provider.models[0].id
+                            }));
+                          }
+                        }}
+                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-left ${
+                          activeProvider === provider.id 
+                            ? "bg-blue-900/30 text-blue-300" 
+                            : "hover:bg-zinc-800 text-zinc-300"
+                        }`}
+                      >
+                        <div className={`w-2 h-2 rounded-full ${
+                          provider.id === 'puter' ? 'bg-green-500' :
+                          provider.id === 'google-ai-studio' ? 'bg-blue-500' :
+                          provider.id === 'google-vertex' ? 'bg-purple-500' :
+                          provider.id === 'nvidia-nim' ? 'bg-orange-500' : 'bg-zinc-500'
+                        }`} />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{provider.name}</p>
+                          <p className="text-xs text-zinc-500">{provider.description}</p>
+                        </div>
+                        {activeProvider === provider.id && (
+                          <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="p-2 border-t border-zinc-800">
+                    <button
+                      onClick={() => {
+                        setShowProviderConfig(false);
+                        openSettings();
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      Configure API Keys
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             
             {/* Usage Stats - Always Visible */}
             {usage && (
@@ -1353,22 +1662,54 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-medium text-white">AI Characters</h2>
-                <button
-                  onClick={() => {
-                    setEditingCharacter(null);
-                    setCharacterName("");
-                    setCharacterDescription("");
-                    setCharacterFirstMessage("");
-                    setShowCharacterModal(true);
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  Create Character
-                </button>
+                <div className="flex gap-2">
+                  {/* Import button */}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept=".json"
+                    onChange={handleImportCharacter}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-2 px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+                    title="Import SillyTavern Character"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    Import
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingCharacter(null);
+                      setCharacterName("");
+                      setCharacterDescription("");
+                      setCharacterFirstMessage("");
+                      setShowCharacterModal(true);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Create Character
+                  </button>
+                </div>
               </div>
+
+              {/* Import messages */}
+              {importError && (
+                <div className="bg-red-900/50 border border-red-800 rounded-lg px-4 py-3 text-red-200 text-sm">
+                  {importError}
+                </div>
+              )}
+              {importSuccess && (
+                <div className="bg-green-900/50 border border-green-800 rounded-lg px-4 py-3 text-green-200 text-sm">
+                  {importSuccess}
+                </div>
+              )}
 
               {characters.length === 0 ? (
                 <div className="text-center py-16">
@@ -1817,6 +2158,10 @@ Stay in character as ${selectedCharacter.name} throughout the conversation. Resp
           models={models}
           modelsLoading={modelsLoading}
           modelsError={modelsError}
+          providerConfigs={providerConfigs}
+          setProviderConfigs={setProviderConfigs}
+          activeProvider={activeProvider}
+          setActiveProvider={setActiveProvider}
         />
       )}
     </div>

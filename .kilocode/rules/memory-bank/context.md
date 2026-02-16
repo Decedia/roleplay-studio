@@ -1,10 +1,10 @@
-# Active Context: GLM 5 Chat Application
+# Active Context: Roleplay Studio
 
 ## Current State
 
 **Application Status**: ✅ Ready for use
 
-A chat application that enables users to converse with GLM 5 AI using puter.js. The app features a modern black theme with a dual persona/character system for roleplay conversations.
+A chat application for roleplay conversations with multiple LLM provider support. Features a modern black theme with dual persona/character system and SillyTavern character import.
 
 ## Recently Completed
 
@@ -35,6 +35,11 @@ A chat application that enables users to converse with GLM 5 AI using puter.js. 
 - [x] **Settings modal always accessible from header**
 - [x] **Collapsible think tag display for AI reasoning**
 - [x] **Empty message resends last user message**
+- [x] **Multiple LLM provider support (Puter.js, Google AI Studio, Google Vertex AI, NVIDIA NIM)**
+- [x] **Provider selector in header with visual indicators**
+- [x] **API key configuration in settings modal**
+- [x] **SillyTavern character JSON import**
+- [x] **Renamed app to "Roleplay Studio"**
 
 ## Current Structure
 

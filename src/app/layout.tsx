@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GLM 5 Chat",
-  description: "Chat with GLM 5 AI using puter.js",
+  title: "Roleplay Studio",
+  description: "AI-powered roleplay chat with multiple LLM providers and character import",
 };
 
 export default function RootLayout({
