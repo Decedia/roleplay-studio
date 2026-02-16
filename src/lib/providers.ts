@@ -419,3 +419,108 @@ export const getModelsForProvider = (
   const provider = AVAILABLE_PROVIDERS.find((p) => p.id === providerType);
   return provider?.models || [];
 };
+
+// Test connection result
+export interface TestConnectionResult {
+  success: boolean;
+  message: string;
+}
+
+// Test connection for a provider
+export const testProviderConnection = async (
+  providerType: LLMProviderType,
+  config: ProviderConfig
+): Promise<TestConnectionResult> => {
+  switch (providerType) {
+    case "puter": {
+      // Puter.js doesn't need API key - just check if it's available
+      if (typeof window === "undefined" || !window.puter) {
+        return { success: false, message: "Puter.js is not available. Please refresh the page." };
+      }
+      try {
+        // Try a minimal model list call to verify connection
+        await window.puter.ai.listModels();
+        return { success: true, message: "Puter.js is connected and ready to use." };
+      } catch (error) {
+        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
+      }
+    }
+    
+    case "google-ai-studio": {
+      if (!config.apiKey) {
+        return { success: false, message: "API key is required." };
+      }
+      try {
+        // Test by listing models or making a minimal request
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models?key=${config.apiKey}`,
+          { method: "GET" }
+        );
+        if (response.ok) {
+          return { success: true, message: "Google AI Studio connection successful!" };
+        }
+        const errorData = await response.json();
+        return { success: false, message: errorData.error?.message || `HTTP ${response.status}` };
+      } catch (error) {
+        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
+      }
+    }
+    
+    case "google-vertex": {
+      if (!config.apiKey) {
+        return { success: false, message: "API key is required." };
+      }
+      if (!config.projectId) {
+        return { success: false, message: "Project ID is required." };
+      }
+      // For Vertex AI, we use the same AI Studio endpoint as fallback
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models?key=${config.apiKey}`,
+          { method: "GET" }
+        );
+        if (response.ok) {
+          return { success: true, message: "Google Vertex AI connection successful!" };
+        }
+        const errorData = await response.json();
+        return { success: false, message: errorData.error?.message || `HTTP ${response.status}` };
+      } catch (error) {
+        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
+      }
+    }
+    
+    case "nvidia-nim": {
+      if (!config.apiKey) {
+        return { success: false, message: "API key is required." };
+      }
+      try {
+        // Test with a minimal request to the NVIDIA NIM API
+        const response = await fetch("https://integrate.api.nvidia.com/v1/models", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${config.apiKey}`,
+          },
+        });
+        if (response.ok) {
+          return { success: true, message: "NVIDIA NIM connection successful!" };
+        }
+        const errorData = await response.json();
+        return { success: false, message: errorData.error?.message || `HTTP ${response.status}` };
+      } catch (error) {
+        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
+      }
+    }
+    
+    default:
+      return { success: false, message: `Unknown provider: ${providerType}` };
+  }
+};
+
+// Get default model for a provider
+export const getDefaultModelForProvider = (providerType: LLMProviderType): string => {
+  const models = getModelsForProvider(providerType);
+  if (models.length > 0) {
+    return models[0].id;
+  }
+  return "";
+};

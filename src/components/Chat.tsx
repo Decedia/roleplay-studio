@@ -10,6 +10,9 @@ import {
   sendChatMessage,
   AVAILABLE_PROVIDERS,
   getModelsForProvider,
+  testProviderConnection,
+  getDefaultModelForProvider,
+  TestConnectionResult,
 } from "@/lib/providers";
 import { readCharacterFile, buildFullSystemPrompt } from "@/lib/character-import";
 import { Character as CharacterType, CharacterBook, CharacterBookEntry } from "@/lib/types";
@@ -127,6 +130,13 @@ interface PuterAppUsage {
   [key: string]: string | number | undefined;
 }
 
+// Connection status for each provider
+interface ConnectionStatus {
+  status: "disconnected" | "connected" | "testing" | "error";
+  message?: string;
+  lastTested?: number;
+}
+
 // Local storage keys
 const PERSONAS_KEY = "chat_personas";
 const CHARACTERS_KEY = "chat_characters";
@@ -135,6 +145,7 @@ const GLOBAL_INSTRUCTIONS_KEY = "chat_global_instructions";
 const GLOBAL_SETTINGS_KEY = "chat_global_settings";
 const PROVIDER_CONFIGS_KEY = "chat_provider_configs";
 const ACTIVE_PROVIDER_KEY = "chat_active_provider";
+const CONNECTION_STATUS_KEY = "chat_connection_status";
 
 // Provider storage key - store config for each provider
 const getProviderConfigKey = (providerType: LLMProviderType) => `chat_provider_${providerType}`;
@@ -203,6 +214,9 @@ function SettingsModal({
   setProviderConfigs,
   activeProvider,
   setActiveProvider,
+  connectionStatus,
+  onTestConnection,
+  onConnect,
 }: {
   show: boolean;
   onClose: () => void;
@@ -217,6 +231,9 @@ function SettingsModal({
   setProviderConfigs: React.Dispatch<React.SetStateAction<Record<LLMProviderType, ProviderConfig>>>;
   activeProvider: LLMProviderType;
   setActiveProvider: React.Dispatch<React.SetStateAction<LLMProviderType>>;
+  connectionStatus: Record<LLMProviderType, ConnectionStatus>;
+  onTestConnection: (providerType: LLMProviderType) => void;
+  onConnect: (providerType: LLMProviderType) => void;
 }) {
   const [expandedProviders, setExpandedProviders] = useState<Record<string, boolean>>({});
   const [showModelDropdown, setShowModelDropdown] = useState(false);
@@ -522,14 +539,21 @@ function SettingsModal({
 
           {/* Provider API Keys Configuration */}
           <div className="border-t border-zinc-700 pt-6">
-            <h3 className="text-sm font-medium text-white mb-4">Provider API Keys</h3>
+            <h3 className="text-sm font-medium text-white mb-4">Provider Connections</h3>
             <div className="space-y-4">
               {/* Google AI Studio */}
               <div className="p-3 bg-zinc-800/50 rounded-lg">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-blue-500" />
+                    <div className={`w-2 h-2 rounded-full ${
+                      connectionStatus["google-ai-studio"]?.status === "connected" ? "bg-green-500" :
+                      connectionStatus["google-ai-studio"]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
+                      connectionStatus["google-ai-studio"]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
+                    }`} />
                     <span className="text-sm font-medium text-white">Google AI Studio</span>
+                    {activeProvider === "google-ai-studio" && (
+                      <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
+                    )}
                   </div>
                   <button
                     type="button"
@@ -539,6 +563,14 @@ function SettingsModal({
                     {editingProvider === 'google-ai-studio' ? 'Hide' : 'Configure'}
                   </button>
                 </div>
+                {connectionStatus["google-ai-studio"]?.message && (
+                  <p className={`text-xs mb-2 ${
+                    connectionStatus["google-ai-studio"]?.status === "connected" ? "text-green-400" :
+                    connectionStatus["google-ai-studio"]?.status === "error" ? "text-red-400" : "text-zinc-400"
+                  }`}>
+                    {connectionStatus["google-ai-studio"].message}
+                  </p>
+                )}
                 {editingProvider === 'google-ai-studio' && (
                   <div className="mt-3 space-y-3">
                     <div>
@@ -554,6 +586,24 @@ function SettingsModal({
                         className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onTestConnection("google-ai-studio")}
+                        disabled={connectionStatus["google-ai-studio"]?.status === "testing" || !providerConfigs["google-ai-studio"]?.apiKey}
+                        className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {connectionStatus["google-ai-studio"]?.status === "testing" ? "Testing..." : "Test Connection"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onConnect("google-ai-studio")}
+                        disabled={connectionStatus["google-ai-studio"]?.status !== "connected"}
+                        className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Connect
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -562,8 +612,15 @@ function SettingsModal({
               <div className="p-3 bg-zinc-800/50 rounded-lg">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-purple-500" />
+                    <div className={`w-2 h-2 rounded-full ${
+                      connectionStatus["google-vertex"]?.status === "connected" ? "bg-green-500" :
+                      connectionStatus["google-vertex"]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
+                      connectionStatus["google-vertex"]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
+                    }`} />
                     <span className="text-sm font-medium text-white">Google Vertex AI</span>
+                    {activeProvider === "google-vertex" && (
+                      <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
+                    )}
                   </div>
                   <button
                     type="button"
@@ -573,6 +630,14 @@ function SettingsModal({
                     {editingProvider === 'google-vertex' ? 'Hide' : 'Configure'}
                   </button>
                 </div>
+                {connectionStatus["google-vertex"]?.message && (
+                  <p className={`text-xs mb-2 ${
+                    connectionStatus["google-vertex"]?.status === "connected" ? "text-green-400" :
+                    connectionStatus["google-vertex"]?.status === "error" ? "text-red-400" : "text-zinc-400"
+                  }`}>
+                    {connectionStatus["google-vertex"].message}
+                  </p>
+                )}
                 {editingProvider === 'google-vertex' && (
                   <div className="mt-3 space-y-3">
                     <div>
@@ -601,6 +666,24 @@ function SettingsModal({
                         className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onTestConnection("google-vertex")}
+                        disabled={connectionStatus["google-vertex"]?.status === "testing" || !providerConfigs["google-vertex"]?.apiKey}
+                        className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {connectionStatus["google-vertex"]?.status === "testing" ? "Testing..." : "Test Connection"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onConnect("google-vertex")}
+                        disabled={connectionStatus["google-vertex"]?.status !== "connected"}
+                        className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Connect
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -609,8 +692,15 @@ function SettingsModal({
               <div className="p-3 bg-zinc-800/50 rounded-lg">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-orange-500" />
+                    <div className={`w-2 h-2 rounded-full ${
+                      connectionStatus["nvidia-nim"]?.status === "connected" ? "bg-green-500" :
+                      connectionStatus["nvidia-nim"]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
+                      connectionStatus["nvidia-nim"]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
+                    }`} />
                     <span className="text-sm font-medium text-white">NVIDIA NIM</span>
+                    {activeProvider === "nvidia-nim" && (
+                      <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
+                    )}
                   </div>
                   <button
                     type="button"
@@ -620,8 +710,16 @@ function SettingsModal({
                     {editingProvider === 'nvidia-nim' ? 'Hide' : 'Configure'}
                   </button>
                 </div>
+                {connectionStatus["nvidia-nim"]?.message && (
+                  <p className={`text-xs mb-2 ${
+                    connectionStatus["nvidia-nim"]?.status === "connected" ? "text-green-400" :
+                    connectionStatus["nvidia-nim"]?.status === "error" ? "text-red-400" : "text-zinc-400"
+                  }`}>
+                    {connectionStatus["nvidia-nim"].message}
+                  </p>
+                )}
                 {editingProvider === 'nvidia-nim' && (
-                  <div className="mt-3">
+                  <div className="mt-3 space-y-3">
                     <div>
                       <label className="block text-xs text-zinc-400 mb-1">API Key</label>
                       <input
@@ -635,16 +733,69 @@ function SettingsModal({
                         className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onTestConnection("nvidia-nim")}
+                        disabled={connectionStatus["nvidia-nim"]?.status === "testing" || !providerConfigs["nvidia-nim"]?.apiKey}
+                        className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {connectionStatus["nvidia-nim"]?.status === "testing" ? "Testing..." : "Test Connection"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onConnect("nvidia-nim")}
+                        disabled={connectionStatus["nvidia-nim"]?.status !== "connected"}
+                        className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Connect
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
 
               {/* Puter.js - No API key needed */}
               <div className="p-3 bg-zinc-800/50 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-green-500" />
-                  <span className="text-sm font-medium text-white">Puter.js</span>
-                  <span className="text-xs text-zinc-500">(Free, no API key required)</span>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${
+                      connectionStatus["puter"]?.status === "connected" ? "bg-green-500" :
+                      connectionStatus["puter"]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
+                      connectionStatus["puter"]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
+                    }`} />
+                    <span className="text-sm font-medium text-white">Puter.js</span>
+                    {activeProvider === "puter" && (
+                      <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
+                    )}
+                    <span className="text-xs text-zinc-500">(Free, no API key required)</span>
+                  </div>
+                </div>
+                {connectionStatus["puter"]?.message && (
+                  <p className={`text-xs mb-2 ${
+                    connectionStatus["puter"]?.status === "connected" ? "text-green-400" :
+                    connectionStatus["puter"]?.status === "error" ? "text-red-400" : "text-zinc-400"
+                  }`}>
+                    {connectionStatus["puter"].message}
+                  </p>
+                )}
+                <div className="flex gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => onTestConnection("puter")}
+                    disabled={connectionStatus["puter"]?.status === "testing"}
+                    className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {connectionStatus["puter"]?.status === "testing" ? "Testing..." : "Test Connection"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onConnect("puter")}
+                    disabled={connectionStatus["puter"]?.status === "error"}
+                    className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Connect
+                  </button>
                 </div>
               </div>
             </div>
@@ -733,6 +884,14 @@ export default function Chat() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
+  
+  // Connection status state for each provider
+  const [connectionStatus, setConnectionStatus] = useState<Record<LLMProviderType, ConnectionStatus>>({
+    "puter": { status: "disconnected" },
+    "google-ai-studio": { status: "disconnected" },
+    "google-vertex": { status: "disconnected" },
+    "nvidia-nim": { status: "disconnected" },
+  });
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -742,6 +901,7 @@ export default function Chat() {
     const storedInstructions = localStorage.getItem(GLOBAL_INSTRUCTIONS_KEY);
     const storedSettings = localStorage.getItem(GLOBAL_SETTINGS_KEY);
     const storedActiveProvider = localStorage.getItem(ACTIVE_PROVIDER_KEY);
+    const storedConnectionStatus = localStorage.getItem(CONNECTION_STATUS_KEY);
     
     if (storedPersonas) {
       setPersonas(JSON.parse(storedPersonas));
@@ -760,6 +920,13 @@ export default function Chat() {
     }
     if (storedActiveProvider) {
       setActiveProvider(storedActiveProvider as LLMProviderType);
+    }
+    if (storedConnectionStatus) {
+      try {
+        setConnectionStatus(JSON.parse(storedConnectionStatus));
+      } catch (e) {
+        console.error("Failed to parse connection status:", e);
+      }
     }
   }, []);
 
@@ -819,6 +986,11 @@ export default function Chat() {
   useEffect(() => {
     localStorage.setItem(ACTIVE_PROVIDER_KEY, activeProvider);
   }, [activeProvider]);
+
+  // Save connection status to localStorage
+  useEffect(() => {
+    localStorage.setItem(CONNECTION_STATUS_KEY, JSON.stringify(connectionStatus));
+  }, [connectionStatus]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -1011,6 +1183,55 @@ export default function Chat() {
     setPersonaName(persona.name);
     setPersonaDescription(persona.description);
     setShowPersonaModal(true);
+  };
+
+  // Provider connection functions
+  const handleTestConnection = async (providerType: LLMProviderType) => {
+    // Set testing status
+    setConnectionStatus(prev => ({
+      ...prev,
+      [providerType]: { status: "testing", message: "Testing connection..." }
+    }));
+
+    const config = providerConfigs[providerType];
+    const result = await testProviderConnection(providerType, config);
+
+    setConnectionStatus(prev => ({
+      ...prev,
+      [providerType]: {
+        status: result.success ? "connected" : "error",
+        message: result.message,
+        lastTested: Date.now()
+      }
+    }));
+  };
+
+  const handleConnectProvider = (providerType: LLMProviderType) => {
+    // Set as active provider
+    setActiveProvider(providerType);
+    
+    // Get default model for this provider and update settings
+    const defaultModel = getDefaultModelForProvider(providerType);
+    if (defaultModel) {
+      setGlobalSettings(prev => ({
+        ...prev,
+        modelId: defaultModel
+      }));
+    }
+    
+    // Mark as connected if not already
+    if (connectionStatus[providerType].status !== "connected") {
+      setConnectionStatus(prev => ({
+        ...prev,
+        [providerType]: {
+          status: "connected",
+          message: "Connected"
+        }
+      }));
+    }
+    
+    // Close the provider config dropdown
+    setShowProviderConfig(false);
   };
 
   // Character functions
@@ -1433,10 +1654,9 @@ export default function Chat() {
                 title="Select AI Provider"
               >
                 <div className={`w-2 h-2 rounded-full ${
-                  activeProvider === 'puter' ? 'bg-green-500' :
-                  activeProvider === 'google-ai-studio' ? 'bg-blue-500' :
-                  activeProvider === 'google-vertex' ? 'bg-purple-500' :
-                  activeProvider === 'nvidia-nim' ? 'bg-orange-500' : 'bg-zinc-500'
+                  connectionStatus[activeProvider]?.status === "connected" ? "bg-green-500" :
+                  connectionStatus[activeProvider]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
+                  connectionStatus[activeProvider]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
                 }`} />
                 <span className="text-sm text-zinc-300 hidden sm:block">
                   {AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || "Select Provider"}
@@ -1447,49 +1667,68 @@ export default function Chat() {
               </button>
               
               {showProviderConfig && (
-                <div className="absolute right-0 mt-2 w-64 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50">
+                <div className="absolute right-0 mt-2 w-72 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50">
                   <div className="p-3 border-b border-zinc-800">
                     <p className="text-sm font-medium text-white">Select AI Provider</p>
-                    <p className="text-xs text-zinc-500">Choose which AI service to use</p>
+                    <p className="text-xs text-zinc-500">Test connection and connect to use</p>
                   </div>
                   <div className="p-2">
-                    {AVAILABLE_PROVIDERS.map((provider) => (
-                      <button
-                        key={provider.id}
-                        onClick={() => {
-                          setActiveProvider(provider.id);
-                          setShowProviderConfig(false);
-                          // Update settings with default model for this provider
-                          if (provider.models.length > 0) {
-                            setGlobalSettings(prev => ({
-                              ...prev,
-                              modelId: provider.models[0].id
-                            }));
-                          }
-                        }}
-                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-left ${
-                          activeProvider === provider.id 
-                            ? "bg-blue-900/30 text-blue-300" 
-                            : "hover:bg-zinc-800 text-zinc-300"
-                        }`}
-                      >
-                        <div className={`w-2 h-2 rounded-full ${
-                          provider.id === 'puter' ? 'bg-green-500' :
-                          provider.id === 'google-ai-studio' ? 'bg-blue-500' :
-                          provider.id === 'google-vertex' ? 'bg-purple-500' :
-                          provider.id === 'nvidia-nim' ? 'bg-orange-500' : 'bg-zinc-500'
-                        }`} />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">{provider.name}</p>
-                          <p className="text-xs text-zinc-500">{provider.description}</p>
+                    {AVAILABLE_PROVIDERS.map((provider) => {
+                      const status = connectionStatus[provider.id]?.status;
+                      const isConnected = status === "connected";
+                      const isTesting = status === "testing";
+                      const hasError = status === "error";
+                      
+                      return (
+                        <div
+                          key={provider.id}
+                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                            activeProvider === provider.id 
+                              ? "bg-blue-900/30" 
+                              : "hover:bg-zinc-800"
+                          }`}
+                        >
+                          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                            isConnected ? 'bg-green-500' :
+                            isTesting ? 'bg-yellow-500 animate-pulse' :
+                            hasError ? 'bg-red-500' : 'bg-zinc-500'
+                          }`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-zinc-300">{provider.name}</p>
+                            <p className="text-xs text-zinc-500 truncate">{provider.description}</p>
+                          </div>
+                          <div className="flex gap-1 flex-shrink-0">
+                            {activeProvider === provider.id && (
+                              <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleTestConnection(provider.id);
+                              }}
+                              disabled={isTesting}
+                              className="px-2 py-1 text-xs bg-zinc-700 text-zinc-300 rounded hover:bg-zinc-600 transition-colors disabled:opacity-50"
+                              title="Test connection"
+                            >
+                              {isTesting ? "..." : "Test"}
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleConnectProvider(provider.id);
+                              }}
+                              disabled={!isConnected && provider.id !== 'puter'}
+                              className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Connect to this provider"
+                            >
+                              Connect
+                            </button>
+                          </div>
                         </div>
-                        {activeProvider === provider.id && (
-                          <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                      </button>
-                    ))}
+                      );
+                    })}
                   </div>
                   <div className="p-2 border-t border-zinc-800">
                     <button
@@ -2276,6 +2515,9 @@ export default function Chat() {
           setProviderConfigs={setProviderConfigs}
           activeProvider={activeProvider}
           setActiveProvider={setActiveProvider}
+          connectionStatus={connectionStatus}
+          onTestConnection={handleTestConnection}
+          onConnect={handleConnectProvider}
         />
       )}
     </div>

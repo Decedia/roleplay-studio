@@ -45,6 +45,11 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **Advanced instruction fields in character editor**
 - [x] **Changed default provider from Puter to Google AI Studio**
 - [x] **Added localStorage persistence for active provider**
+- [x] **Connection status tracking for each provider**
+- [x] **Test Connection button to verify API keys**
+- [x] **Connect button to switch active provider**
+- [x] **Auto-select default model when connecting to provider**
+- [x] **Visual connection status indicators (green=connected, yellow=testing, red=error)**
 
 ## Current Structure
 
