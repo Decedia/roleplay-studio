@@ -61,6 +61,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **Global system prompt override**
 - [x] **Global post-history instructions**
 - [x] **Streaming system for real-time AI responses**
+- [x] **Data export/import for backup and restore**
 
 ## Current Structure
 
@@ -172,6 +173,18 @@ A chat application for roleplay conversations with multiple LLM provider support
 - Detailed usage breakdown in user menu dropdown
 - Shows: chat tokens, image generations, storage used
 - Loading states and error handling for usage data
+
+### Data Export/Import
+- **Export Data**: Download all data as a JSON backup file
+  - Personas, characters, conversations
+  - Global settings and instructions
+  - Provider configurations (API keys preserved)
+- **Import Data**: Restore from JSON backup file
+  - Validates file version
+  - Merges with existing data
+  - Preserves existing API keys for security
+- Accessible via Settings modal → Data Backup section
+- File naming: `roleplay-studio-backup-YYYY-MM-DD.json`
 
 ### AI Integration
 - Multiple LLM providers supported:
@@ -304,6 +317,8 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date | Changes |
 |------|---------|
+| 2026-02-16 | Added data export/import for backup and restore - users can save all data to JSON file and restore on any device |
+| 2026-02-16 | Fixed NVIDIA NIM error handling for non-JSON responses (Cloudflare 524 timeout) |
 | 2026-02-16 | Added streaming system for real-time AI responses with animated cursor |
 | 2026-02-16 | Added advanced global instructions: jailbreak support, system prompt override, post-history instructions, JSON import |
 | 2026-02-16 | Added roleplay text formatting: action (*text*), dialogue ("text"), thought ((text)), OOC, bold, code styling |
