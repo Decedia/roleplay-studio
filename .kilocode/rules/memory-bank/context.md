@@ -63,6 +63,8 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **Streaming system for real-time AI responses**
 - [x] **Data export/import for backup and restore**
 - [x] **Auto-export feature with configurable interval (1-60 minutes)**
+- [x] **Context token counter in chat header - shows estimated tokens for current conversation**
+- [x] **Fixed send button alignment with text input (items-end flexbox)**
 
 ## Current Structure
 
@@ -322,6 +324,8 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date | Changes |
 |------|---------|
+| 2026-02-16 | Added context token counter in chat header showing estimated tokens for current conversation |
+| 2026-02-16 | Fixed send button alignment with text input using items-end flexbox |
 | 2026-02-16 | Added auto-export feature with configurable interval (1-60 minutes) for automatic data backup |
 | 2026-02-16 | Added data export/import for backup and restore - users can save all data to JSON file and restore on any device |
 | 2026-02-16 | Fixed NVIDIA NIM error handling for non-JSON responses (Cloudflare 524 timeout) |
