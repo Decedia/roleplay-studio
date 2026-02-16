@@ -118,26 +118,42 @@ function mergeAdjacentSegments(segments: TextSegment[]): TextSegment[] {
 
 /**
  * Get CSS classes for a text segment type
+ * 
+ * Color scheme for roleplay text:
+ * - Action: Cyan/teal for character actions (*action*)
+ * - Dialogue: Warm white/yellow for spoken words ("speech")
+ * - Thought: Purple/violet for inner thoughts ((thought))
+ * - Bold: Bright white for emphasis
+ * - OOC: Amber highlight for out-of-character messages
+ * - Code: Green monospace for code snippets
+ * - Narration: Light gray for descriptive text
  */
 export function getSegmentClasses(type: TextSegmentType): string {
   const baseClasses = "inline";
   
   switch (type) {
     case "action":
-      return `${baseClasses} italic text-zinc-300`;
+      // Cyan/teal for actions - stands out as "doing" text
+      return `${baseClasses} italic text-cyan-300`;
     case "dialogue":
-      return `${baseClasses} text-white`;
+      // Warm yellow-white for spoken dialogue - feels like speech
+      return `${baseClasses} text-amber-100`;
     case "thought":
-      return `${baseClasses} italic text-zinc-400 text-opacity-80`;
+      // Purple/violet for inner thoughts - dreamy, internal feel
+      return `${baseClasses} italic text-violet-300`;
     case "bold":
+      // Bright white for emphasis
       return `${baseClasses} font-bold text-white`;
     case "ooc":
+      // Amber highlight for out-of-character messages
       return `${baseClasses} text-amber-400 text-sm bg-amber-400/10 px-1.5 py-0.5 rounded`;
     case "code":
+      // Green monospace for code snippets
       return `${baseClasses} font-mono text-sm bg-zinc-700 px-1.5 py-0.5 rounded text-green-400`;
     case "narration":
     default:
-      return `${baseClasses} text-zinc-100`;
+      // Light gray for descriptive narration text
+      return `${baseClasses} text-zinc-300`;
   }
 }
 
