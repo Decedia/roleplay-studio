@@ -76,6 +76,7 @@ interface GlobalSettings {
   temperature: number;
   maxTokens: number;
   topP: number;
+  topK: number;
   modelId: string;
   enableThinking: boolean;
 }
@@ -193,6 +194,7 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   temperature: 0.7,
   maxTokens: 2000,
   topP: 0.9,
+  topK: 40,
   modelId: "", // Empty initially - user must connect to a provider first
   enableThinking: false,
 };
@@ -605,6 +607,25 @@ function SettingsModal({
             />
             <p className="text-xs text-zinc-500 mt-1">
               Controls diversity of word selection
+            </p>
+          </div>
+
+          {/* Top K */}
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">
+              Top K: {globalSettings.topK}
+            </label>
+            <input
+              type="range"
+              min="1"
+              max="100"
+              step="1"
+              value={globalSettings.topK}
+              onChange={(e) => setGlobalSettings({ ...globalSettings, topK: parseInt(e.target.value) })}
+              className="w-full"
+            />
+            <p className="text-xs text-zinc-500 mt-1">
+              Limits word choices to top K most likely tokens
             </p>
           </div>
 
@@ -2009,6 +2030,7 @@ export default function Chat() {
           temperature: globalSettings.temperature,
           maxTokens: globalSettings.maxTokens,
           topP: globalSettings.topP,
+          topK: globalSettings.topK,
           systemPrompt,
         },
         (chunk) => {
@@ -2109,6 +2131,7 @@ export default function Chat() {
           temperature: globalSettings.temperature,
           maxTokens: globalSettings.maxTokens,
           topP: globalSettings.topP,
+          topK: globalSettings.topK,
           systemPrompt,
         },
         (chunk) => {

@@ -179,6 +179,7 @@ type ChatFunction = (
     temperature: number;
     maxTokens: number;
     topP: number;
+    topK: number;
     systemPrompt?: string;
   }
 ) => Promise<ChatResponse>;
@@ -230,6 +231,7 @@ export const streamWithPuter = async (
     temperature: number;
     maxTokens: number;
     topP: number;
+    topK: number;
     systemPrompt?: string;
   },
   onChunk: StreamCallback
@@ -320,6 +322,7 @@ export const chatWithGoogleAIStudio: ChatFunction = async (
             temperature: options.temperature,
             maxOutputTokens: options.maxTokens,
             topP: options.topP,
+            topK: options.topK,
           },
         }),
       }
@@ -351,6 +354,7 @@ export const streamWithGoogleAIStudio = async (
     temperature: number;
     maxTokens: number;
     topP: number;
+    topK: number;
     systemPrompt?: string;
   },
   onChunk: StreamCallback
@@ -384,6 +388,7 @@ export const streamWithGoogleAIStudio = async (
             temperature: options.temperature,
             maxOutputTokens: options.maxTokens,
             topP: options.topP,
+            topK: options.topK,
           },
         }),
       }
@@ -485,6 +490,7 @@ export const chatWithVertexAI: ChatFunction = async (
               temperature: options.temperature,
               maxOutputTokens: options.maxTokens,
               topP: options.topP,
+              topK: options.topK,
             },
           }),
         }
@@ -541,6 +547,7 @@ export const chatWithVertexAI: ChatFunction = async (
               temperature: options.temperature,
               maxOutputTokens: options.maxTokens,
               topP: options.topP,
+              topK: options.topK,
             },
           }),
         }
@@ -631,6 +638,7 @@ export const streamWithNvidiaNIM = async (
     temperature: number;
     maxTokens: number;
     topP: number;
+    topK: number;
     systemPrompt?: string;
   },
   onChunk: StreamCallback
@@ -665,6 +673,7 @@ export const streamWithNvidiaNIM = async (
           temperature: options.temperature,
           max_tokens: options.maxTokens,
           top_p: options.topP,
+          top_k: options.topK,
           stream: true,
         },
         stream: true,
@@ -742,6 +751,7 @@ export const streamWithVertexAI = async (
     temperature: number;
     maxTokens: number;
     topP: number;
+    topK: number;
     systemPrompt?: string;
   },
   onChunk: StreamCallback
@@ -758,6 +768,7 @@ export const sendChatMessage = async (
     temperature: number;
     maxTokens: number;
     topP: number;
+    topK: number;
     systemPrompt?: string;
   }
 ): Promise<ChatResponse> => {
@@ -783,6 +794,7 @@ export const streamChatMessage = async (
     temperature: number;
     maxTokens: number;
     topP: number;
+    topK: number;
     systemPrompt?: string;
   },
   onChunk: StreamCallback
@@ -798,6 +810,7 @@ export const streamChatMessage = async (
       return streamWithNvidiaNIM(messages, config, options, onChunk);
     default:
       onChunk({ error: `Unknown provider: ${config.type}` });
+      return;
   }
 };
 

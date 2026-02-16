@@ -157,6 +157,7 @@ export interface GlobalSettings {
   temperature: number;
   maxTokens: number;
   topP: number;
+  topK: number;
   modelId: string;
   enableThinking: boolean;
   activeProvider: LLMProviderType;
