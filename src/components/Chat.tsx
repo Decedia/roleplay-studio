@@ -515,13 +515,11 @@ function SettingsModal({
               <input
                 type="number"
                 min="100"
-                max={selectedModel?.max_tokens || 4000}
                 value={globalSettings.maxTokens}
                 onChange={(e) => {
                   const value = parseInt(e.target.value);
-                  if (!isNaN(value)) {
-                    const clampedValue = Math.max(100, Math.min(value, selectedModel?.max_tokens || 4000));
-                    setGlobalSettings({ ...globalSettings, maxTokens: clampedValue });
+                  if (!isNaN(value) && value >= 100) {
+                    setGlobalSettings({ ...globalSettings, maxTokens: value });
                   }
                 }}
                 className="w-24 px-2 py-1 bg-zinc-800 border border-zinc-700 rounded text-white text-center text-sm focus:outline-none focus:border-purple-500"
