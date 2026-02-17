@@ -3083,7 +3083,7 @@ Make the character interesting, well-rounded, and suitable for roleplay. Include
                           </button>
                         </div>
                       </div>
-                      <h3 className="text-lg font-medium text-white mb-1">{persona.name}</h3>
+                      <h3 className="text-lg font-medium text-white mb-1 truncate">{persona.name}</h3>
                       <p className="text-sm text-zinc-400 line-clamp-2 mb-4">{persona.description}</p>
                       <button
                         onClick={() => selectPersona(persona)}
@@ -3604,7 +3604,7 @@ Make the character interesting, well-rounded, and suitable for roleplay. Include
                           </button>
                         </div>
                       </div>
-                      <h3 className="text-lg font-medium text-white mb-1">{character.name}</h3>
+                      <h3 className="text-lg font-medium text-white mb-1 truncate">{character.name}</h3>
                       <p className="text-sm text-zinc-400 line-clamp-2 mb-2">{character.description}</p>
                       <p className="text-xs text-zinc-500 italic line-clamp-2 mb-4">&ldquo;{character.firstMessage}&rdquo;</p>
                       <button
