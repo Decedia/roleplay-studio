@@ -188,6 +188,7 @@ const CONNECTION_STATUS_KEY = "chat_connection_status";
 const AUTO_EXPORT_KEY = "chat_auto_export";
 const BRAINSTORM_INSTRUCTIONS_KEY = "chat_brainstorm_instructions";
 const BRAINSTORM_MESSAGES_KEY = "chat_brainstorm_messages";
+const GENERATOR_INSTRUCTIONS_KEY = "chat_generator_instructions";
 
 // Default brainstorm instructions - exclusive to the brainstorm tab
 const DEFAULT_BRAINSTORM_INSTRUCTIONS = `You are a creative roleplay instruction brainstorming assistant. Your purpose is to help users create detailed, immersive roleplay instructions.
@@ -213,6 +214,30 @@ When providing instructions, use this format:
 - When the user seems ready, provide complete instructions they can apply directly
 
 Remember: Your goal is to help create compelling roleplay experiences through well-crafted instructions.`;
+
+// Default generator instructions - exclusive to the character generator
+const DEFAULT_GENERATOR_INSTRUCTIONS = `You are a character creator for roleplay. Generate detailed, interesting characters based on the user's description.
+
+## Output Format
+Respond with ONLY a JSON object in this exact format (no markdown, no code blocks):
+{
+  "name": "Character Name",
+  "description": "Detailed character description including personality, appearance, background, and traits. Be creative and detailed.",
+  "firstMessage": "A greeting or opening message the character would say when first meeting someone. Should be in character and engaging.",
+  "scenario": "The setting or scenario where this character exists",
+  "mesExample": "Example dialogue showing how the character speaks and behaves. Use {{char}} for character name and {{user}} for user."
+}
+
+## Guidelines
+- Make characters interesting, well-rounded, and suitable for roleplay
+- Include flaws and quirks to make them feel real
+- Give them distinct personalities with clear motivations
+- Create engaging first messages that set the tone
+- Consider the character's background and how it shapes their behavior
+- Add unique mannerisms or speech patterns
+- Make the scenario interesting and open-ended
+
+Remember: Create characters that would be fun to interact with in a roleplay setting.`;
 
 // Provider storage key - store config for each provider
 const getProviderConfigKey = (providerType: LLMProviderType) => `chat_provider_${providerType}`;
@@ -1320,6 +1345,8 @@ export default function Chat() {
   const [appliedInstructions, setAppliedInstructions] = useState<Set<string>>(new Set());
   const [brainstormInstructions, setBrainstormInstructions] = useState<string>(DEFAULT_BRAINSTORM_INSTRUCTIONS);
   const [showBrainstormInstructionsEditor, setShowBrainstormInstructionsEditor] = useState(false);
+  const [generatorInstructions, setGeneratorInstructions] = useState<string>(DEFAULT_GENERATOR_INSTRUCTIONS);
+  const [showGeneratorInstructionsEditor, setShowGeneratorInstructionsEditor] = useState(false);
   const [showCharacterModal, setShowCharacterModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -1491,6 +1518,12 @@ export default function Chat() {
         console.error("Failed to parse brainstorm messages:", e);
       }
     }
+    
+    // Load generator instructions
+    const storedGeneratorInstructions = localStorage.getItem(GENERATOR_INSTRUCTIONS_KEY);
+    if (storedGeneratorInstructions) {
+      setGeneratorInstructions(storedGeneratorInstructions);
+    }
   }, []);
 
   // Save personas to localStorage
@@ -1533,6 +1566,11 @@ export default function Chat() {
   useEffect(() => {
     localStorage.setItem(BRAINSTORM_MESSAGES_KEY, JSON.stringify(brainstormMessages));
   }, [brainstormMessages]);
+  
+  // Save generator instructions to localStorage
+  useEffect(() => {
+    localStorage.setItem(GENERATOR_INSTRUCTIONS_KEY, generatorInstructions);
+  }, [generatorInstructions]);
   
   // Load provider configs from localStorage
   useEffect(() => {
@@ -2132,18 +2170,8 @@ export default function Chat() {
     setGeneratorError(null);
     setGeneratedCharacter(null);
     
-    const systemPrompt = `You are a character creator for roleplay. Generate a detailed character based on the user's description. 
-
-Respond with ONLY a JSON object in this exact format (no markdown, no code blocks):
-{
-  "name": "Character Name",
-  "description": "Detailed character description including personality, appearance, background, and traits. Be creative and detailed.",
-  "firstMessage": "A greeting or opening message the character would say when first meeting someone. Should be in character and engaging.",
-  "scenario": "The setting or scenario where this character exists",
-  "mesExample": "Example dialogue showing how the character speaks and behaves. Use {{char}} for character name and {{user}} for user."
-}
-
-Make the character interesting, well-rounded, and suitable for roleplay. Include flaws and quirks to make them feel real.`;
+    // Use the exclusive generator instructions (not global instructions)
+    const systemPrompt = generatorInstructions;
 
     const userPrompt = `Create a character based on this description: ${generatorPrompt.trim()}`;
     
@@ -3172,6 +3200,41 @@ Make the character interesting, well-rounded, and suitable for roleplay. Include
                   {generatorError}
                 </div>
               )}
+              
+              {/* Generator Instructions Editor */}
+              <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+                <button
+                  onClick={() => setShowGeneratorInstructionsEditor(!showGeneratorInstructionsEditor)}
+                  className="flex items-center justify-between w-full text-left"
+                >
+                  <span className="text-sm font-medium text-zinc-300">📝 Generator Instructions</span>
+                  <svg className={`w-5 h-5 text-zinc-500 transition-transform ${showGeneratorInstructionsEditor ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {showGeneratorInstructionsEditor && (
+                  <div className="mt-4 space-y-3">
+                    <p className="text-xs text-zinc-500">
+                      These instructions are exclusive to the character generator and tell the AI how to create characters.
+                    </p>
+                    <textarea
+                      value={generatorInstructions}
+                      onChange={(e) => setGeneratorInstructions(e.target.value)}
+                      className="w-full h-64 bg-zinc-800 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-200 font-mono resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                      placeholder="Enter instructions for the character generator AI..."
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setGeneratorInstructions(DEFAULT_GENERATOR_INSTRUCTIONS)}
+                        className="px-3 py-1.5 text-xs bg-zinc-700 text-zinc-300 rounded-lg hover:bg-zinc-600 transition-colors"
+                      >
+                        Reset to Default
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
               
               {/* Generated Character Preview */}
               {generatedCharacter && (
