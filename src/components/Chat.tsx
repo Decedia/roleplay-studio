@@ -2245,8 +2245,18 @@ Make the character interesting, well-rounded, and suitable for roleplay. Include
 
     try {
       const config = providerConfigs[activeProvider];
+      
+      // Build messages array with conversation history
       const messages: Message[] = [
-        { role: "user", content: `${systemPrompt}\n\nUser message: ${userMessage}` }
+        // System prompt as a system message
+        { role: "system", content: systemPrompt },
+        // Include all previous brainstorm messages for context
+        ...brainstormMessages.map(msg => ({
+          role: msg.role as "user" | "assistant",
+          content: msg.content
+        })),
+        // Add the current user message
+        { role: "user" as const, content: userMessage }
       ];
       
       let responseText: string;

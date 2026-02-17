@@ -101,7 +101,7 @@ export interface SillyTavernCharacterCard {
 
 // Chat message
 export interface Message {
-  role: "user" | "assistant";
+  role: "system" | "user" | "assistant";
   content: string;
   thinking?: string; // For AI reasoning display
 }
