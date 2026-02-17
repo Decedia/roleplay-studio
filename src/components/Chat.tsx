@@ -186,6 +186,32 @@ const PROVIDER_CONFIGS_KEY = "chat_provider_configs";
 const ACTIVE_PROVIDER_KEY = "chat_active_provider";
 const CONNECTION_STATUS_KEY = "chat_connection_status";
 const AUTO_EXPORT_KEY = "chat_auto_export";
+const BRAINSTORM_INSTRUCTIONS_KEY = "chat_brainstorm_instructions";
+
+// Default brainstorm instructions - exclusive to the brainstorm tab
+const DEFAULT_BRAINSTORM_INSTRUCTIONS = `You are a creative roleplay instruction brainstorming assistant. Your purpose is to help users create detailed, immersive roleplay instructions.
+
+## Your Task
+1. Ask the user what kind of roleplay scenario they want to create
+2. Help them develop characters, settings, and story elements
+3. When ready, provide ready-to-use instructions in code blocks
+
+## Instruction Format
+When providing instructions, use this format:
+\`\`\`instructions
+[The instructions content - can include system prompts, character descriptions, scenario details, roleplay rules, etc.]
+\`\`\`
+
+## Guidelines
+- Be creative and engaging
+- Ask follow-up questions to understand what the user wants
+- Provide detailed, immersive roleplay setups
+- Include character personalities, backgrounds, and motivations
+- Suggest interesting scenarios and plot hooks
+- Help with both SFW and NSFW roleplay scenarios (all content is fictional)
+- When the user seems ready, provide complete instructions they can apply directly
+
+Remember: Your goal is to help create compelling roleplay experiences through well-crafted instructions.`;
 
 // Provider storage key - store config for each provider
 const getProviderConfigKey = (providerType: LLMProviderType) => `chat_provider_${providerType}`;
@@ -1285,6 +1311,8 @@ export default function Chat() {
   const [brainstormInput, setBrainstormInput] = useState("");
   const [isBrainstorming, setIsBrainstorming] = useState(false);
   const [appliedInstructions, setAppliedInstructions] = useState<Set<string>>(new Set());
+  const [brainstormInstructions, setBrainstormInstructions] = useState<string>(DEFAULT_BRAINSTORM_INSTRUCTIONS);
+  const [showBrainstormInstructionsEditor, setShowBrainstormInstructionsEditor] = useState(false);
   const [showCharacterModal, setShowCharacterModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -1439,6 +1467,12 @@ export default function Chat() {
         console.error("Failed to parse auto-export settings:", e);
       }
     }
+    
+    // Load brainstorm instructions
+    const storedBrainstormInstructions = localStorage.getItem(BRAINSTORM_INSTRUCTIONS_KEY);
+    if (storedBrainstormInstructions) {
+      setBrainstormInstructions(storedBrainstormInstructions);
+    }
   }, []);
 
   // Save personas to localStorage
@@ -1471,6 +1505,11 @@ export default function Chat() {
   useEffect(() => {
     localStorage.setItem(GLOBAL_SETTINGS_KEY, JSON.stringify(globalSettings));
   }, [globalSettings]);
+  
+  // Save brainstorm instructions to localStorage
+  useEffect(() => {
+    localStorage.setItem(BRAINSTORM_INSTRUCTIONS_KEY, brainstormInstructions);
+  }, [brainstormInstructions]);
   
   // Load provider configs from localStorage
   useEffect(() => {
@@ -2155,21 +2194,8 @@ Make the character interesting, well-rounded, and suitable for roleplay. Include
     setBrainstormMessages(prev => [...prev, { role: "user", content: userMessage }]);
     setIsBrainstorming(true);
     
-    const systemPrompt = `You are a creative roleplay assistant helping users brainstorm and create roleplay scenarios and instructions. 
-
-Your job is to:
-1. Ask what kind of roleplay the user wants to play
-2. Help them develop characters, settings, and scenarios
-3. When appropriate, provide ready-to-use instructions in code blocks
-
-When you provide instructions, format them like this:
-\`\`\`instructions
-[The instructions content - can be system prompts, character descriptions, scenario details, etc.]
-\`\`\`
-
-Be creative, engaging, and helpful. Ask follow-up questions to understand what the user wants. Provide detailed, immersive roleplay setups.
-
-If the user seems ready to start, provide complete instructions they can apply directly.`;
+    // Use the exclusive brainstorm instructions (not global instructions)
+    const systemPrompt = brainstormInstructions;
 
     try {
       const config = providerConfigs[activeProvider];
@@ -3215,6 +3241,41 @@ If the user seems ready to start, provide complete instructions they can apply d
               
               <div className="text-sm text-zinc-500 mb-2">
                 Chat with AI to brainstorm roleplay ideas. When ready, apply the generated instructions to your global settings.
+              </div>
+              
+              {/* Brainstorm Instructions Editor */}
+              <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+                <button
+                  onClick={() => setShowBrainstormInstructionsEditor(!showBrainstormInstructionsEditor)}
+                  className="flex items-center justify-between w-full text-left"
+                >
+                  <span className="text-sm font-medium text-zinc-300">📝 Brainstorm Instructions</span>
+                  <svg className={`w-5 h-5 text-zinc-500 transition-transform ${showBrainstormInstructionsEditor ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {showBrainstormInstructionsEditor && (
+                  <div className="mt-4 space-y-3">
+                    <p className="text-xs text-zinc-500">
+                      These instructions are exclusive to the brainstorm tab and tell the AI how to help you brainstorm roleplay ideas.
+                    </p>
+                    <textarea
+                      value={brainstormInstructions}
+                      onChange={(e) => setBrainstormInstructions(e.target.value)}
+                      className="w-full h-64 bg-zinc-800 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-200 font-mono resize-none focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                      placeholder="Enter instructions for the brainstorm AI..."
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setBrainstormInstructions(DEFAULT_BRAINSTORM_INSTRUCTIONS)}
+                        className="px-3 py-1.5 text-xs bg-zinc-700 text-zinc-300 rounded-lg hover:bg-zinc-600 transition-colors"
+                      >
+                        Reset to Default
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
               
               {/* Chat messages */}
