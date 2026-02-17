@@ -1286,6 +1286,7 @@ export default function Chat() {
   const [isBrainstorming, setIsBrainstorming] = useState(false);
   const [showCharacterModal, setShowCharacterModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
   const [editingCharacter, setEditingCharacter] = useState<Character | null>(null);
   
@@ -2849,19 +2850,21 @@ If the user seems ready to start, provide complete instructions they can apply d
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-medium text-white">Your Personas</h2>
-                <div className="flex gap-2">
+                
+                {/* Desktop buttons - hidden on mobile */}
+                <div className="hidden md:flex gap-2">
                   <button
                     onClick={() => setView("brainstorm")}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-colors text-sm"
                   >
                     <span className="text-lg">🎭</span>
                     Brainstorm
                   </button>
                   <button
                     onClick={() => setView("generator")}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors text-sm"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                     AI Generator
@@ -2873,15 +2876,72 @@ If the user seems ready to start, provide complete instructions they can apply d
                       setPersonaDescription("");
                       setShowPersonaModal(true);
                     }}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                     Create Persona
                   </button>
                 </div>
+                
+                {/* Mobile hamburger menu button */}
+                <button
+                  onClick={() => setShowMobileMenu(!showMobileMenu)}
+                  className="md:hidden p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                >
+                  <svg className="w-6 h-6 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {showMobileMenu ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    )}
+                  </svg>
+                </button>
               </div>
+              
+              {/* Mobile menu dropdown */}
+              {showMobileMenu && view === "personas" && (
+                <div className="md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2">
+                  <button
+                    onClick={() => {
+                      setView("brainstorm");
+                      setShowMobileMenu(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-colors"
+                  >
+                    <span className="text-xl">🎭</span>
+                    <span>Brainstorm</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setView("generator");
+                      setShowMobileMenu(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    <span>AI Generator</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingPersona(null);
+                      setPersonaName("");
+                      setPersonaDescription("");
+                      setShowPersonaModal(true);
+                      setShowMobileMenu(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span>Create Persona</span>
+                  </button>
+                </div>
+              )}
 
               {personas.length === 0 ? (
                 <div className="text-center py-16">
@@ -2953,13 +3013,13 @@ If the user seems ready to start, provide complete instructions they can apply d
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-medium text-white">AI Character Generator</h2>
-                <div className="text-sm text-zinc-500">
+                <div className="text-sm text-zinc-500 hidden sm:block">
                   Powered by {AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || "AI"}
                 </div>
               </div>
               
               {/* Generator Input */}
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 sm:p-6">
                 <label className="block text-sm font-medium text-zinc-400 mb-2">
                   Describe your character
                 </label>
@@ -2968,17 +3028,17 @@ If the user seems ready to start, provide complete instructions they can apply d
                   onChange={(e) => setGeneratorPrompt(e.target.value)}
                   placeholder="E.g., A mysterious vampire who runs a bookstore in modern Tokyo. They're elegant, sarcastic, and secretly lonely..."
                   rows={4}
-                  className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none"
+                  className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none text-sm"
                   disabled={isGenerating}
                 />
-                <div className="flex justify-between items-center mt-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-4 gap-3">
                   <p className="text-xs text-zinc-500">
                     Be as detailed as you like. The AI will create a full character profile.
                   </p>
                   <button
                     onClick={generateCharacter}
                     disabled={!generatorPrompt.trim() || isGenerating}
-                    className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   >
                     {isGenerating ? (
                       <>
@@ -3009,23 +3069,23 @@ If the user seems ready to start, provide complete instructions they can apply d
               
               {/* Generated Character Preview */}
               {generatedCharacter && (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 sm:p-6">
                   {/* Buttons at top */}
-                  <div className="flex gap-2 mb-4">
+                  <div className="flex flex-col sm:flex-row gap-2 mb-4">
                     <button
                       onClick={() => {
                         setGeneratedCharacter(null);
                         setGeneratorPrompt("");
                       }}
-                      className="px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+                      className="px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors text-sm"
                     >
                       Clear
                     </button>
                     <button
                       onClick={importGeneratedCharacter}
-                      className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                       </svg>
                       Import Character
@@ -3034,15 +3094,15 @@ If the user seems ready to start, provide complete instructions they can apply d
                   
                   {/* Character header */}
                   <div className="flex items-center gap-4 mb-4">
-                    <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                      <span className="text-2xl text-white font-semibold">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+                      <span className="text-xl sm:text-2xl text-white font-semibold">
                         {generatedCharacter.name.charAt(0).toUpperCase()}
                       </span>
                     </div>
-                    <div>
-                      <h3 className="text-xl font-semibold text-white">{generatedCharacter.name}</h3>
+                    <div className="min-w-0">
+                      <h3 className="text-lg sm:text-xl font-semibold text-white truncate">{generatedCharacter.name}</h3>
                       {generatedCharacter.scenario && (
-                        <p className="text-sm text-zinc-500">{generatedCharacter.scenario}</p>
+                        <p className="text-sm text-zinc-500 line-clamp-2">{generatedCharacter.scenario}</p>
                       )}
                     </div>
                   </div>
@@ -3094,18 +3154,53 @@ If the user seems ready to start, provide complete instructions they can apply d
             <div className="space-y-6 h-full flex flex-col">
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-medium text-white">🎭 Roleplay Brainstorm</h2>
-                <div className="flex gap-2">
+                
+                {/* Desktop button - hidden on mobile */}
+                <div className="hidden md:flex gap-2">
                   <button
                     onClick={() => {
                       setBrainstormMessages([]);
                       setBrainstormInput("");
                     }}
-                    className="px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+                    className="px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors text-sm"
                   >
                     Clear Chat
                   </button>
                 </div>
+                
+                {/* Mobile hamburger menu button */}
+                <button
+                  onClick={() => setShowMobileMenu(!showMobileMenu)}
+                  className="md:hidden p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                >
+                  <svg className="w-6 h-6 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {showMobileMenu ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    )}
+                  </svg>
+                </button>
               </div>
+              
+              {/* Mobile menu dropdown for brainstorm */}
+              {showMobileMenu && view === "brainstorm" && (
+                <div className="md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3">
+                  <button
+                    onClick={() => {
+                      setBrainstormMessages([]);
+                      setBrainstormInput("");
+                      setShowMobileMenu(false);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span>Clear Chat</span>
+                  </button>
+                </div>
+              )}
               
               <div className="text-sm text-zinc-500 mb-2">
                 Chat with AI to brainstorm roleplay ideas. When ready, apply the generated instructions to your global settings.
@@ -3211,7 +3306,9 @@ If the user seems ready to start, provide complete instructions they can apply d
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-medium text-white">AI Characters</h2>
-                <div className="flex gap-2">
+                
+                {/* Desktop buttons - hidden on mobile */}
+                <div className="hidden md:flex gap-2">
                   {/* Import button */}
                   <input
                     type="file"
@@ -3222,10 +3319,10 @@ If the user seems ready to start, provide complete instructions they can apply d
                   />
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-2 px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors text-sm"
                     title="Import SillyTavern Character"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                     </svg>
                     Import
@@ -3238,15 +3335,70 @@ If the user seems ready to start, provide complete instructions they can apply d
                       setCharacterFirstMessage("");
                       setShowCharacterModal(true);
                     }}
-                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                     Create Character
                   </button>
                 </div>
+                
+                {/* Mobile hamburger menu button */}
+                <button
+                  onClick={() => setShowMobileMenu(!showMobileMenu)}
+                  className="md:hidden p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                >
+                  <svg className="w-6 h-6 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {showMobileMenu ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    )}
+                  </svg>
+                </button>
               </div>
+              
+              {/* Mobile menu dropdown for characters */}
+              {showMobileMenu && view === "characters" && (
+                <div className="md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept=".json"
+                    onChange={handleImportCharacter}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => {
+                      fileInputRef.current?.click();
+                      setShowMobileMenu(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    <span>Import Character</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingCharacter(null);
+                      setCharacterName("");
+                      setCharacterDescription("");
+                      setCharacterFirstMessage("");
+                      setShowCharacterModal(true);
+                      setShowMobileMenu(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span>Create Character</span>
+                  </button>
+                </div>
+              )}
 
               {/* Import messages */}
               {importError && (
@@ -3331,16 +3483,52 @@ If the user seems ready to start, provide complete instructions they can apply d
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-medium text-white">Conversations</h2>
+                
+                {/* Desktop button - hidden on mobile */}
+                <div className="hidden md:flex gap-2">
+                  <button
+                    onClick={createConversation}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    New Chat
+                  </button>
+                </div>
+                
+                {/* Mobile hamburger menu button */}
                 <button
-                  onClick={createConversation}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  onClick={() => setShowMobileMenu(!showMobileMenu)}
+                  className="md:hidden p-2 hover:bg-zinc-800 rounded-lg transition-colors"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  <svg className="w-6 h-6 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {showMobileMenu ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    )}
                   </svg>
-                  New Chat
                 </button>
               </div>
+              
+              {/* Mobile menu dropdown for conversations */}
+              {showMobileMenu && view === "conversations" && (
+                <div className="md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3">
+                  <button
+                    onClick={() => {
+                      createConversation();
+                      setShowMobileMenu(false);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span>New Chat</span>
+                  </button>
+                </div>
+              )}
 
               {filteredConversations.length === 0 ? (
                 <div className="text-center py-16">
