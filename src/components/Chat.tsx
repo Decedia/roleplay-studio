@@ -2698,7 +2698,7 @@ export default function Chat() {
                   </svg>
                 </button>
               )}
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
                 <svg
                   className="w-6 h-6 text-white"
                   fill="none"
@@ -2713,8 +2713,8 @@ export default function Chat() {
                   />
                 </svg>
               </div>
-              <div>
-                <h1 className="text-xl font-semibold text-white">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-xl font-semibold text-white truncate">
                   {view === "chat" && selectedPersona && selectedCharacter
                     ? `${selectedPersona.name} × ${selectedCharacter.name}`
                     : view === "conversations" && selectedPersona && selectedCharacter
@@ -2727,7 +2727,7 @@ export default function Chat() {
                     ? "Roleplay Brainstorm"
                     : "Roleplay Studio"}
                 </h1>
-                <p className="text-sm text-zinc-500">
+                <p className="text-sm text-zinc-500 truncate">
                   {view === "personas"
                     ? "Select your persona"
                     : view === "characters"
