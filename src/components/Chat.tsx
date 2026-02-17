@@ -1970,6 +1970,29 @@ export default function Chat() {
     setShowProviderConfig(false);
   };
 
+  const handleDisconnectProvider = (providerType: LLMProviderType) => {
+    // Reset connection status for this provider
+    setConnectionStatus(prev => ({
+      ...prev,
+      [providerType]: {
+        status: "disconnected",
+        message: undefined
+      }
+    }));
+    
+    // If this was the active provider, clear the active provider
+    if (activeProvider === providerType) {
+      // Clear the model selection
+      setGlobalSettings(prev => ({
+        ...prev,
+        modelId: ""
+      }));
+    }
+    
+    // Close the provider config dropdown
+    setShowProviderConfig(false);
+  };
+
   // Character functions
   const createCharacter = () => {
     if (!characterName.trim() || !characterDescription.trim() || !characterFirstMessage.trim()) return;
@@ -2739,17 +2762,30 @@ Make the character interesting, well-rounded, and suitable for roleplay. Include
                             >
                               {isTesting ? "..." : "Test"}
                             </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleConnectProvider(provider.id);
-                              }}
-                              disabled={!isConnected && provider.id !== 'puter'}
-                              className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              title="Connect to this provider"
-                            >
-                              Connect
-                            </button>
+                            {activeProvider === provider.id ? (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDisconnectProvider(provider.id);
+                                }}
+                                className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                                title="Disconnect from this provider"
+                              >
+                                Disconnect
+                              </button>
+                            ) : (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleConnectProvider(provider.id);
+                                }}
+                                disabled={!isConnected && provider.id !== 'puter'}
+                                className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Connect to this provider"
+                              >
+                                Connect
+                              </button>
+                            )}
                           </div>
                         </div>
                       );

@@ -78,6 +78,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **Responsive hamburger menu for mobile views - collapsible dropdown menus for all action buttons**
 - [x] **Visual feedback for brainstorm apply button - shows "Applied!" with checkmark for 3 seconds**
 - [x] **Exclusive brainstorm instructions - separate from global instructions, customizable by user**
+- [x] **Disconnect button for providers - allows users to disconnect from the current model/provider**
 
 ## Current Structure
 
@@ -354,6 +355,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date | Changes |
 |------|---------|
+| 2026-02-17 | Added disconnect button for providers - allows users to disconnect from the current model/provider in the provider dropdown |
 | 2026-02-17 | Added exclusive brainstorm instructions - separate from global instructions, customizable by user with collapsible editor in brainstorm tab |
 | 2026-02-17 | Added visual feedback for brainstorm apply button - shows "Applied!" with checkmark for 3 seconds when instructions are applied to global settings |
 | 2026-02-17 | Added responsive hamburger menu for mobile views - collapsible dropdown menus for all action buttons in personas, characters, conversations, brainstorm, and generator views |
