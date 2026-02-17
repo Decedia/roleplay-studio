@@ -2677,12 +2677,12 @@ export default function Chat() {
           : "border-b border-zinc-800 bg-black"
       }`}>
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between gap-2 overflow-hidden">
+            <div className="flex items-center gap-3 min-w-0 overflow-hidden">
               {view !== "personas" && (
                 <button
                   onClick={goBack}
-                  className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                  className="p-2 hover:bg-zinc-800 rounded-lg transition-colors flex-shrink-0"
                 >
                   <svg
                     className="w-5 h-5 text-zinc-400"
@@ -2714,7 +2714,7 @@ export default function Chat() {
                   />
                 </svg>
               </div>
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 overflow-hidden">
                 <h1 className="text-xl font-semibold text-white truncate">
                   {view === "chat" && selectedPersona && selectedCharacter
                     ? `${selectedPersona.name} × ${selectedCharacter.name}`
