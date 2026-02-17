@@ -1284,6 +1284,7 @@ export default function Chat() {
   const [brainstormMessages, setBrainstormMessages] = useState<Array<{role: "user" | "assistant", content: string}>>([]);
   const [brainstormInput, setBrainstormInput] = useState("");
   const [isBrainstorming, setIsBrainstorming] = useState(false);
+  const [appliedInstructions, setAppliedInstructions] = useState<Set<string>>(new Set());
   const [showCharacterModal, setShowCharacterModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -2238,6 +2239,16 @@ If the user seems ready to start, provide complete instructions they can apply d
         ? `${prev.customInstructions}\n\n${instructions}`
         : instructions,
     }));
+    // Mark as applied for visual feedback
+    setAppliedInstructions(prev => new Set(prev).add(instructions));
+    // Clear the applied status after 3 seconds
+    setTimeout(() => {
+      setAppliedInstructions(prev => {
+        const next = new Set(prev);
+        next.delete(instructions);
+        return next;
+      });
+    }, 3000);
   };
 
   // Navigation functions
@@ -3239,20 +3250,37 @@ If the user seems ready to start, provide complete instructions they can apply d
                           {/* Instruction blocks with apply buttons */}
                           {instructions.length > 0 && (
                             <div className="mt-2 space-y-2">
-                              {instructions.map((instr, i) => (
-                                <div key={i} className="bg-zinc-800 border border-zinc-700 rounded-lg overflow-hidden">
-                                  <div className="bg-zinc-700/50 px-3 py-1.5 flex justify-between items-center">
-                                    <span className="text-xs text-zinc-400">Instructions</span>
-                                    <button
-                                      onClick={() => applyInstructions(instr)}
-                                      className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-                                    >
-                                      Apply to Global Instructions
-                                    </button>
+                              {instructions.map((instr, i) => {
+                                const isApplied = appliedInstructions.has(instr);
+                                return (
+                                  <div key={i} className={`bg-zinc-800 border rounded-lg overflow-hidden ${isApplied ? 'border-green-500' : 'border-zinc-700'}`}>
+                                    <div className="bg-zinc-700/50 px-3 py-1.5 flex justify-between items-center">
+                                      <span className="text-xs text-zinc-400">Instructions</span>
+                                      <button
+                                        onClick={() => applyInstructions(instr)}
+                                        disabled={isApplied}
+                                        className={`text-xs px-3 py-1.5 rounded font-medium transition-all ${
+                                          isApplied 
+                                            ? 'bg-green-600 text-white cursor-default' 
+                                            : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
+                                        }`}
+                                      >
+                                        {isApplied ? (
+                                          <span className="flex items-center gap-1">
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            Applied!
+                                          </span>
+                                        ) : (
+                                          'Apply to Global Instructions'
+                                        )}
+                                      </button>
+                                    </div>
+                                    <pre className="p-3 text-xs text-zinc-300 overflow-x-auto whitespace-pre-wrap max-h-40 overflow-y-auto">{instr}</pre>
                                   </div>
-                                  <pre className="p-3 text-xs text-zinc-300 overflow-x-auto whitespace-pre-wrap max-h-40 overflow-y-auto">{instr}</pre>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           )}
                         </div>
