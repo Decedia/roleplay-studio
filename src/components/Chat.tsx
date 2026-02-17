@@ -143,6 +143,7 @@ declare global {
         getUser: () => Promise<PuterUser | null>;
         getMonthlyUsage: () => Promise<PuterUsage>;
         getDetailedAppUsage: (appId: string) => Promise<PuterAppUsage>;
+        signOut: () => Promise<void>;
       };
     };
   }
@@ -2746,7 +2747,7 @@ export default function Chat() {
             {/* Settings button - always visible */}
             <button
               onClick={openSettings}
-              className="p-2 hover:bg-zinc-800 rounded-lg transition-colors mr-2"
+              className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
               title="Global Settings"
             >
               <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2755,8 +2756,8 @@ export default function Chat() {
               </svg>
             </button>
             
-            {/* Provider Selector */}
-            <div className="relative mr-2">
+            {/* Provider Selector - hidden on mobile */}
+            <div className="relative hidden sm:block">
               <button
                 onClick={() => setShowProviderConfig(!showProviderConfig)}
                 className="flex items-center gap-2 px-3 py-2 bg-zinc-900 hover:bg-zinc-800 rounded-lg transition-colors border border-zinc-800"
@@ -2967,6 +2968,28 @@ export default function Chat() {
                           </div>
                         </div>
                       )}
+                    </div>
+                    
+                    {/* Sign Out Button */}
+                    <div className="p-3 border-t border-zinc-800">
+                      <button
+                        onClick={async () => {
+                          try {
+                            await window.puter.auth.signOut();
+                            setUser(null);
+                            setUsage(null);
+                            setShowUserMenu(false);
+                          } catch (error) {
+                            console.error("Sign out error:", error);
+                          }
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-zinc-800 rounded-lg transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        Sign Out
+                      </button>
                     </div>
                   </div>
                 )}
