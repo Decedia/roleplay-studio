@@ -9,11 +9,13 @@ export type TextSegmentType =
   | "bold"          // **bold** or __bold__
   | "ooc"           // ((OOC)) - out of character
   | "code"          // `code` - inline code
-  | "codeblock";    // ```code``` - multi-line code block
+  | "codeblock"     // ```code``` - multi-line code block
+  | "collapsible";  // <tag>content</tag> - collapsible section
 
 export interface TextSegment {
   type: TextSegmentType;
   content: string;
+  tagName?: string; // For collapsible tags, stores the tag name
 }
 
 /**
@@ -36,6 +38,8 @@ export function parseRoleplayText(text: string): TextSegment[] {
   // Order matters: more specific patterns first
   // Note: HTML tags are handled separately via containsHtmlTags() check above
   const patterns = [
+    // Collapsible tag with <tag>content</tag> (must come before other patterns)
+    { regex: /^<(\w+)>([\s\S]*?)<\/\1>/, type: "collapsible" as TextSegmentType },
     // Multi-line code block with ``` (must come before inline code)
     { regex: /^```(\w*)\n?([\s\S]*?)```/, type: "codeblock" as TextSegmentType },
     // OOC (must come before thought)
@@ -61,11 +65,16 @@ export function parseRoleplayText(text: string): TextSegment[] {
     for (const { regex, type } of patterns) {
       const match = remaining.match(regex);
       if (match) {
+        // For collapsible: match[1] is tag name, match[2] is content
         // For codeblock: match[1] is language, match[2] is content
         // For bold and action: match[2] is content
         // For others: match[1] is content
-        const content = type === "codeblock" ? match[2] : (match[2] || match[1]);
-        segments.push({ type, content });
+        if (type === "collapsible") {
+          segments.push({ type, content: match[2], tagName: match[1] });
+        } else {
+          const content = type === "codeblock" ? match[2] : (match[2] || match[1]);
+          segments.push({ type, content });
+        }
         remaining = remaining.slice(match[0].length);
         matched = true;
         break;
@@ -74,8 +83,8 @@ export function parseRoleplayText(text: string): TextSegment[] {
     
     // If no pattern matched, consume text until next special character or end
     if (!matched) {
-      // Find the next special character
-      const nextSpecial = remaining.search(/[\*_\""\(\(`]/);
+      // Find the next special character (including < for tags)
+      const nextSpecial = remaining.search(/[\*_\""\(\(`<]/);
       
       if (nextSpecial === -1) {
         // No more special characters, rest is narration
@@ -158,6 +167,9 @@ export function getSegmentClasses(type: TextSegmentType): string {
     case "codeblock":
       // Multi-line code block - will be rendered as block element
       return "block font-mono text-sm bg-zinc-800 p-3 rounded-lg text-green-400 overflow-x-auto whitespace-pre my-2";
+    case "collapsible":
+      // Collapsible tag - will be rendered as collapsible section
+      return "block";
     case "narration":
     default:
       // Grey-ish for normal text without punctuation

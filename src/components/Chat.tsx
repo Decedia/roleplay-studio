@@ -340,6 +340,37 @@ function ThinkingSection({ content }: { content: string }) {
   );
 }
 
+// Collapsible Tag Section Component
+function CollapsibleTagSection({ tagName, content }: { tagName: string; content: string }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div className="my-2">
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors"
+      >
+        <svg 
+          className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-90" : ""}`} 
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+        <span className="font-mono">&lt;{tagName}&gt;</span>
+        <span className="text-zinc-500">...</span>
+        <span className="font-mono">&lt;/{tagName}&gt;</span>
+      </button>
+      {isExpanded && (
+        <div className="mt-2 ml-4 p-3 bg-zinc-900/50 rounded-lg border border-zinc-700 text-sm text-zinc-300 whitespace-pre-wrap">
+          {content}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Formatted Text Component for roleplay styling
 function FormattedText({ content }: { content: string }) {
   const segments = useMemo(() => parseRoleplayText(content), [content]);
@@ -400,6 +431,14 @@ function FormattedText({ content }: { content: string }) {
               <pre key={key} className={classes}>
                 <code>{segment.content}</code>
               </pre>
+            );
+          case "collapsible":
+            return (
+              <CollapsibleTagSection 
+                key={key} 
+                tagName={segment.tagName || "tag"} 
+                content={segment.content} 
+              />
             );
           default:
             return (
