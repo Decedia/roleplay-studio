@@ -187,6 +187,7 @@ const ACTIVE_PROVIDER_KEY = "chat_active_provider";
 const CONNECTION_STATUS_KEY = "chat_connection_status";
 const AUTO_EXPORT_KEY = "chat_auto_export";
 const BRAINSTORM_INSTRUCTIONS_KEY = "chat_brainstorm_instructions";
+const BRAINSTORM_MESSAGES_KEY = "chat_brainstorm_messages";
 
 // Default brainstorm instructions - exclusive to the brainstorm tab
 const DEFAULT_BRAINSTORM_INSTRUCTIONS = `You are a creative roleplay instruction brainstorming assistant. Your purpose is to help users create detailed, immersive roleplay instructions.
@@ -1473,6 +1474,17 @@ export default function Chat() {
     if (storedBrainstormInstructions) {
       setBrainstormInstructions(storedBrainstormInstructions);
     }
+    
+    // Load brainstorm messages
+    const storedBrainstormMessages = localStorage.getItem(BRAINSTORM_MESSAGES_KEY);
+    if (storedBrainstormMessages) {
+      try {
+        const messages = JSON.parse(storedBrainstormMessages) as Array<{role: "user" | "assistant", content: string}>;
+        setBrainstormMessages(messages);
+      } catch (e) {
+        console.error("Failed to parse brainstorm messages:", e);
+      }
+    }
   }, []);
 
   // Save personas to localStorage
@@ -1510,6 +1522,11 @@ export default function Chat() {
   useEffect(() => {
     localStorage.setItem(BRAINSTORM_INSTRUCTIONS_KEY, brainstormInstructions);
   }, [brainstormInstructions]);
+  
+  // Save brainstorm messages to localStorage
+  useEffect(() => {
+    localStorage.setItem(BRAINSTORM_MESSAGES_KEY, JSON.stringify(brainstormMessages));
+  }, [brainstormMessages]);
   
   // Load provider configs from localStorage
   useEffect(() => {
