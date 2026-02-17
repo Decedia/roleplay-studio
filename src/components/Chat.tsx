@@ -3368,28 +3368,39 @@ Make the character interesting, well-rounded, and suitable for roleplay. Include
                                 const isApplied = appliedInstructions.has(instr);
                                 return (
                                   <div key={i} className={`bg-zinc-800 border rounded-lg overflow-hidden ${isApplied ? 'border-green-500' : 'border-zinc-700'}`}>
-                                    <div className="bg-zinc-700/50 px-3 py-1.5 flex justify-between items-center">
+                                    <div className="bg-zinc-700/50 px-3 py-1.5 flex justify-between items-center gap-2">
                                       <span className="text-xs text-zinc-400">Instructions</span>
-                                      <button
-                                        onClick={() => applyInstructions(instr)}
-                                        disabled={isApplied}
-                                        className={`text-xs px-3 py-1.5 rounded font-medium transition-all ${
-                                          isApplied 
-                                            ? 'bg-green-600 text-white cursor-default' 
-                                            : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
-                                        }`}
-                                      >
-                                        {isApplied ? (
-                                          <span className="flex items-center gap-1">
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                            </svg>
-                                            Applied!
-                                          </span>
-                                        ) : (
-                                          'Apply to Global Instructions'
-                                        )}
-                                      </button>
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={() => {
+                                            setBrainstormInput(`Please implement this instruction:\n\`\`\`\n${instr}\n\`\`\``);
+                                          }}
+                                          disabled={isBrainstorming}
+                                          className="text-xs px-3 py-1.5 rounded font-medium bg-blue-600 text-white hover:bg-blue-700 cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                          Add to Next Response
+                                        </button>
+                                        <button
+                                          onClick={() => applyInstructions(instr)}
+                                          disabled={isApplied}
+                                          className={`text-xs px-3 py-1.5 rounded font-medium transition-all ${
+                                            isApplied 
+                                              ? 'bg-green-600 text-white cursor-default' 
+                                              : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
+                                          }`}
+                                        >
+                                          {isApplied ? (
+                                            <span className="flex items-center gap-1">
+                                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                              </svg>
+                                              Applied!
+                                            </span>
+                                          ) : (
+                                            'Apply to Global Instructions'
+                                          )}
+                                        </button>
+                                      </div>
                                     </div>
                                     <pre className="p-3 text-xs text-zinc-300 overflow-x-auto whitespace-pre-wrap max-h-40 overflow-y-auto">{instr}</pre>
                                   </div>
