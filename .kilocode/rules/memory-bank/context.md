@@ -75,6 +75,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **Brainstorm tab - AI-assisted roleplay instruction brainstorming with apply-to-global-instructions buttons**
 - [x] **Moved Clear/Import buttons above description in character generator preview**
 - [x] **Changed user message bubble color from blue to greyish (bg-zinc-700)**
+- [x] **Responsive hamburger menu for mobile views - collapsible dropdown menus for all action buttons**
 
 ## Current Structure
 
@@ -351,6 +352,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date | Changes |
 |------|---------|
+| 2026-02-17 | Added responsive hamburger menu for mobile views - collapsible dropdown menus for all action buttons in personas, characters, conversations, brainstorm, and generator views |
 | 2026-02-16 | Changed user message bubble color from blue to greyish (bg-zinc-700) |
 | 2026-02-16 | Moved Clear/Import buttons above description in character generator preview |
 | 2026-02-16 | Added Brainstorm tab - AI-assisted roleplay instruction brainstorming with apply-to-global-instructions buttons |
