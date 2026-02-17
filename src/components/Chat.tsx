@@ -2779,7 +2779,7 @@ Make the character interesting, well-rounded, and suitable for roleplay. Include
                                   e.stopPropagation();
                                   handleConnectProvider(provider.id);
                                 }}
-                                disabled={!isConnected && provider.id !== 'puter'}
+                                disabled={provider.id !== 'puter' && !providerConfigs[provider.id]?.apiKey}
                                 className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="Connect to this provider"
                               >
