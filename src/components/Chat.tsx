@@ -15,6 +15,7 @@ import {
   getDefaultModelForProvider,
   TestConnectionResult,
   VertexMode,
+  VertexLocation,
   fetchModelsFromProvider,
   FetchedModel,
 } from "@/lib/providers";
@@ -80,6 +81,7 @@ interface GlobalSettings {
   topK: number;
   modelId: string;
   enableThinking: boolean;
+  thinkingBudget: number; // Thinking budget for Gemini 2.0 models (in tokens)
 }
 
 // Global instructions with advanced fields
@@ -252,6 +254,7 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   topK: 40,
   modelId: "", // Empty initially - user must connect to a provider first
   enableThinking: false,
+  thinkingBudget: 8192, // Default thinking budget for Gemini 2.0 models
 };
 
 // Estimate token count for text (rough approximation: ~4 chars per token)
@@ -836,9 +839,33 @@ function SettingsModal({
               />
             </button>
             <p className="text-xs text-zinc-500 mt-1">
-              Allow AI to show its reasoning process
+              Allow AI to show its reasoning process (Gemini 2.0 only)
             </p>
           </div>
+
+          {/* Thinking Budget - Only for Google providers */}
+          {(activeProvider === "google-ai-studio" || activeProvider === "google-vertex") && globalSettings.enableThinking && (
+            <div>
+              <label className="block text-sm font-medium text-zinc-400 mb-2">
+                Thinking Budget (tokens)
+              </label>
+              <select
+                value={globalSettings.thinkingBudget}
+                onChange={(e) => setGlobalSettings({ ...globalSettings, thinkingBudget: parseInt(e.target.value) })}
+                className="w-full bg-zinc-800 text-white rounded-lg px-4 py-2 border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="1024">1,024 tokens (Quick)</option>
+                <option value="2048">2,048 tokens (Short)</option>
+                <option value="4096">4,096 tokens (Medium)</option>
+                <option value="8192">8,192 tokens (Standard)</option>
+                <option value="16384">16,384 tokens (Extended)</option>
+                <option value="24576">24,576 tokens (Deep)</option>
+              </select>
+              <p className="text-xs text-zinc-500 mt-1">
+                Maximum tokens allocated for AI reasoning (affects response quality and speed)
+              </p>
+            </div>
+          )}
 
           {/* Global Instructions */}
           <div className="border-t border-zinc-700 pt-6">
@@ -1107,6 +1134,30 @@ function SettingsModal({
                         {providerConfigs["google-vertex"]?.vertexMode === "full" 
                           ? "Full mode requires GCP Project ID for enterprise features."
                           : "Express mode uses API key only, similar to AI Studio."}
+                      </p>
+                    </div>
+                    {/* Server Location */}
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-1">Server Location</label>
+                      <select
+                        value={providerConfigs["google-vertex"]?.vertexLocation || "us-central1"}
+                        onChange={(e) => setProviderConfigs(prev => ({
+                          ...prev,
+                          "google-vertex": { ...prev["google-vertex"], vertexLocation: e.target.value as VertexLocation }
+                        }))}
+                        className="w-full bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      >
+                        <option value="us-central1">US Central (Iowa)</option>
+                        <option value="us-east1">US East (South Carolina)</option>
+                        <option value="us-west1">US West (Oregon)</option>
+                        <option value="europe-west1">Europe West (Belgium)</option>
+                        <option value="europe-west4">Europe West (Netherlands)</option>
+                        <option value="asia-east1">Asia East (Taiwan)</option>
+                        <option value="asia-northeast1">Asia Northeast (Tokyo)</option>
+                        <option value="asia-southeast1">Asia Southeast (Singapore)</option>
+                      </select>
+                      <p className="text-xs text-zinc-500 mt-1">
+                        Choose the closest region for lower latency
                       </p>
                     </div>
                     <div>
@@ -2506,6 +2557,7 @@ export default function Chat() {
           topK: globalSettings.topK,
           systemPrompt,
           enableThinking: globalSettings.enableThinking,
+          thinkingBudget: globalSettings.thinkingBudget,
         },
         (chunk) => {
           if (chunk.error) {
@@ -2616,6 +2668,7 @@ export default function Chat() {
           topK: globalSettings.topK,
           systemPrompt,
           enableThinking: globalSettings.enableThinking,
+          thinkingBudget: globalSettings.thinkingBudget,
         },
         (chunk) => {
           if (chunk.error) {

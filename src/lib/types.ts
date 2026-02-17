@@ -141,6 +141,9 @@ export interface LLMModel {
 // Vertex AI mode type
 export type VertexMode = "express" | "full";
 
+// Vertex AI locations
+export type VertexLocation = "us-central1" | "us-east1" | "us-west1" | "europe-west1" | "europe-west4" | "asia-east1" | "asia-northeast1" | "asia-southeast1";
+
 // Provider configurations (stored in localStorage)
 export interface ProviderConfig {
   type: LLMProviderType;
@@ -148,6 +151,7 @@ export interface ProviderConfig {
   projectId?: string; // For Vertex AI
   serviceAccountJson?: string; // For Vertex AI
   vertexMode?: VertexMode; // For Vertex AI: express (API key only) or full (project ID + service account)
+  vertexLocation?: VertexLocation; // For Vertex AI: server location
   selectedModel?: string;
   isEnabled: boolean;
 }

@@ -7,10 +7,11 @@ import {
   ProviderConfig,
   Message,
   VertexMode,
+  VertexLocation,
 } from "./types";
 
 // Re-export types for convenience
-export type { LLMProviderType, ProviderConfig, Message, LLMModel, LLMProvider, VertexMode };
+export type { LLMProviderType, ProviderConfig, Message, LLMModel, LLMProvider, VertexMode, VertexLocation };
 
 // Available providers configuration
 export const AVAILABLE_PROVIDERS: LLMProvider[] = [
@@ -190,6 +191,7 @@ type ChatFunction = (
     topK: number;
     systemPrompt?: string;
     enableThinking?: boolean;
+    thinkingBudget?: number;
   }
 ) => Promise<ChatResponse>;
 
@@ -318,6 +320,19 @@ export const chatWithGoogleAIStudio: ChatFunction = async (
       ? { parts: [{ text: options.systemPrompt }] }
       : undefined;
 
+    // Build generation config with optional thinking
+    const generationConfig: Record<string, unknown> = {
+      temperature: options.temperature,
+      maxOutputTokens: options.maxTokens,
+      topP: options.topP,
+      topK: options.topK,
+    };
+
+    // Add thinking config if enabled (for Gemini 2.0 models)
+    if (options.enableThinking) {
+      generationConfig.thinkingBudget = options.thinkingBudget || 8192;
+    }
+
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${config.selectedModel}:generateContent?key=${config.apiKey}`,
       {
@@ -328,12 +343,7 @@ export const chatWithGoogleAIStudio: ChatFunction = async (
         body: JSON.stringify({
           contents: formattedMessages,
           systemInstruction,
-          generationConfig: {
-            temperature: options.temperature,
-            maxOutputTokens: options.maxTokens,
-            topP: options.topP,
-            topK: options.topK,
-          },
+          generationConfig,
         }),
       }
     );
@@ -367,6 +377,7 @@ export const streamWithGoogleAIStudio = async (
     topK: number;
     systemPrompt?: string;
     enableThinking?: boolean;
+    thinkingBudget?: number;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -395,7 +406,7 @@ export const streamWithGoogleAIStudio = async (
 
     // Add thinking config if enabled (for Gemini 2.0 models)
     if (options.enableThinking) {
-      generationConfig.thinkingBudget = 8192; // Allocate tokens for thinking
+      generationConfig.thinkingBudget = options.thinkingBudget || 8192; // Use configured budget or default
     }
 
     const response = await fetch(
@@ -477,6 +488,7 @@ export const chatWithVertexAI: ChatFunction = async (
   options
 ) => {
   const mode = config.vertexMode || "express";
+  const location = config.vertexLocation || "us-central1";
   
   if (mode === "express") {
     // Express mode: Use API key with Vertex AI endpoint
@@ -494,9 +506,22 @@ export const chatWithVertexAI: ChatFunction = async (
         ? { parts: [{ text: options.systemPrompt }] }
         : undefined;
 
+      // Build generation config with optional thinking
+      const generationConfig: Record<string, unknown> = {
+        temperature: options.temperature,
+        maxOutputTokens: options.maxTokens,
+        topP: options.topP,
+        topK: options.topK,
+      };
+
+      // Add thinking config if enabled (for Gemini 2.0 models)
+      if (options.enableThinking) {
+        generationConfig.thinkingBudget = options.thinkingBudget || 8192;
+      }
+
       // Vertex AI Express endpoint - uses x-goog-api-key header
       const response = await fetch(
-        `https://us-central1-aiplatform.googleapis.com/v1/projects/-/locations/us-central1/publishers/google/models/${config.selectedModel}:generateContent`,
+        `https://${location}-aiplatform.googleapis.com/v1/projects/-/locations/${location}/publishers/google/models/${config.selectedModel}:generateContent`,
         {
           method: "POST",
           headers: {
@@ -506,12 +531,7 @@ export const chatWithVertexAI: ChatFunction = async (
           body: JSON.stringify({
             contents: formattedMessages,
             systemInstruction,
-            generationConfig: {
-              temperature: options.temperature,
-              maxOutputTokens: options.maxTokens,
-              topP: options.topP,
-              topK: options.topK,
-            },
+            generationConfig,
           }),
         }
       );
@@ -552,6 +572,19 @@ export const chatWithVertexAI: ChatFunction = async (
         ? { parts: [{ text: options.systemPrompt }] }
         : undefined;
 
+      // Build generation config with optional thinking
+      const generationConfig: Record<string, unknown> = {
+        temperature: options.temperature,
+        maxOutputTokens: options.maxTokens,
+        topP: options.topP,
+        topK: options.topK,
+      };
+
+      // Add thinking config if enabled (for Gemini 2.0 models)
+      if (options.enableThinking) {
+        generationConfig.thinkingBudget = options.thinkingBudget || 8192;
+      }
+
       // Using AI Studio endpoint as fallback for full mode
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${config.selectedModel}:generateContent?key=${config.apiKey}`,
@@ -563,12 +596,7 @@ export const chatWithVertexAI: ChatFunction = async (
           body: JSON.stringify({
             contents: formattedMessages,
             systemInstruction,
-            generationConfig: {
-              temperature: options.temperature,
-              maxOutputTokens: options.maxTokens,
-              topP: options.topP,
-              topK: options.topK,
-            },
+            generationConfig,
           }),
         }
       );
@@ -784,10 +812,12 @@ export const streamWithVertexAI = async (
     topK: number;
     systemPrompt?: string;
     enableThinking?: boolean;
+    thinkingBudget?: number;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
   const mode = config.vertexMode || "express";
+  const location = config.vertexLocation || "us-central1";
   
   if (mode === "express") {
     // Express mode: Use Vertex AI endpoint with streaming
@@ -816,12 +846,12 @@ export const streamWithVertexAI = async (
 
       // Add thinking config if enabled (for Gemini 2.0 models)
       if (options.enableThinking) {
-        generationConfig.thinkingBudget = 8192;
+        generationConfig.thinkingBudget = options.thinkingBudget || 8192;
       }
 
-      // Vertex AI Express streaming endpoint
+      // Vertex AI Express streaming endpoint - use configured location
       const response = await fetch(
-        `https://us-central1-aiplatform.googleapis.com/v1/projects/-/locations/us-central1/publishers/google/models/${config.selectedModel}:streamGenerateContent`,
+        `https://${location}-aiplatform.googleapis.com/v1/projects/-/locations/${location}/publishers/google/models/${config.selectedModel}:streamGenerateContent?alt=sse`,
         {
           method: "POST",
           headers: {
@@ -908,6 +938,7 @@ export const sendChatMessage = async (
     topK: number;
     systemPrompt?: string;
     enableThinking?: boolean;
+    thinkingBudget?: number;
   }
 ): Promise<ChatResponse> => {
   switch (config.type) {
@@ -935,6 +966,7 @@ export const streamChatMessage = async (
     topK: number;
     systemPrompt?: string;
     enableThinking?: boolean;
+    thinkingBudget?: number;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -1009,6 +1041,7 @@ export const testProviderConnection = async (
     
     case "google-vertex": {
       const mode = config.vertexMode || "express";
+      const location = config.vertexLocation || "us-central1";
       
       if (mode === "express") {
         // Express mode: API key with Vertex AI endpoint
@@ -1016,9 +1049,9 @@ export const testProviderConnection = async (
           return { success: false, message: "API key is required for Express mode." };
         }
         try {
-          // Test with Vertex AI Express endpoint
+          // Test with Vertex AI Express endpoint using configured location
           const response = await fetch(
-            `https://us-central1-aiplatform.googleapis.com/v1/projects/-/locations/us-central1/publishers/google/models`,
+            `https://${location}-aiplatform.googleapis.com/v1/projects/-/locations/${location}/publishers/google/models`,
             {
               method: "GET",
               headers: {
@@ -1027,7 +1060,7 @@ export const testProviderConnection = async (
             }
           );
           if (response.ok) {
-            return { success: true, message: "Google Vertex AI (Express) connection successful!" };
+            return { success: true, message: `Google Vertex AI (Express - ${location}) connection successful!` };
           }
           const errorData = await response.json();
           return { success: false, message: errorData.error?.message || `HTTP ${response.status}` };
