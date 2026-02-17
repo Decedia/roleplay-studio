@@ -369,6 +369,12 @@ function FormattedText({ content }: { content: string }) {
                 {segment.content}
               </code>
             );
+          case "codeblock":
+            return (
+              <pre key={key} className={classes}>
+                <code>{segment.content}</code>
+              </pre>
+            );
           case "html":
             // Render HTML tags using dangerouslySetInnerHTML
             // This allows AI responses to include basic HTML formatting
@@ -3358,7 +3364,7 @@ Make the character interesting, well-rounded, and suitable for roleplay. Include
                               ? "bg-zinc-700 text-white" 
                               : "bg-zinc-800 text-zinc-200"
                           }`}>
-                            <p className="whitespace-pre-wrap">{contentWithoutInstructions}</p>
+                            <FormattedText content={contentWithoutInstructions} />
                           </div>
                           
                           {/* Instruction blocks with apply buttons */}

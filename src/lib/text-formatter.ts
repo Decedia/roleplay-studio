@@ -9,6 +9,7 @@ export type TextSegmentType =
   | "bold"          // **bold** or __bold__
   | "ooc"           // ((OOC)) - out of character
   | "code"          // `code` - inline code
+  | "codeblock"     // ```code``` - multi-line code block
   | "emphasis"      // *emphasis* (single asterisk when not action)
   | "html";         // HTML content - rendered as raw HTML
 
@@ -53,6 +54,8 @@ export function parseRoleplayText(text: string): TextSegment[] {
   // Order matters: more specific patterns first
   // Note: HTML tags are handled separately via containsHtmlTags() check above
   const patterns = [
+    // Multi-line code block with ``` (must come before inline code)
+    { regex: /^```(\w*)\n?([\s\S]*?)```/, type: "codeblock" as TextSegmentType },
     // OOC (must come before thought)
     { regex: /^\(\(([^\)]+)\)\)/, type: "ooc" as TextSegmentType },
     // Bold with ** or __
@@ -76,9 +79,10 @@ export function parseRoleplayText(text: string): TextSegment[] {
     for (const { regex, type } of patterns) {
       const match = remaining.match(regex);
       if (match) {
-        // For bold and action, the content is in match[2]
-        // For others, it's in match[1]
-        const content = match[2] || match[1];
+        // For codeblock: match[1] is language, match[2] is content
+        // For bold and action: match[2] is content
+        // For others: match[1] is content
+        const content = type === "codeblock" ? match[2] : (match[2] || match[1]);
         segments.push({ type, content });
         remaining = remaining.slice(match[0].length);
         matched = true;
@@ -169,6 +173,9 @@ export function getSegmentClasses(type: TextSegmentType): string {
     case "code":
       // Green monospace for code snippets
       return `${baseClasses} font-mono text-sm bg-zinc-700 px-1.5 py-0.5 rounded text-green-400`;
+    case "codeblock":
+      // Multi-line code block - will be rendered as block element
+      return "block font-mono text-sm bg-zinc-800 p-3 rounded-lg text-green-400 overflow-x-auto whitespace-pre my-2";
     case "narration":
     default:
       // Grey-ish for normal text without punctuation
