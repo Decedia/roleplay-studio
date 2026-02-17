@@ -9,23 +9,11 @@ export type TextSegmentType =
   | "bold"          // **bold** or __bold__
   | "ooc"           // ((OOC)) - out of character
   | "code"          // `code` - inline code
-  | "codeblock"     // ```code``` - multi-line code block
-  | "emphasis"      // *emphasis* (single asterisk when not action)
-  | "html";         // HTML content - rendered as raw HTML
+  | "codeblock";    // ```code``` - multi-line code block
 
 export interface TextSegment {
   type: TextSegmentType;
   content: string;
-}
-
-/**
- * Check if text contains HTML tags that should be rendered
- * This includes style tags, divs, spans, etc.
- */
-export function containsHtmlTags(text: string): boolean {
-  // Check for common HTML tags that should be rendered
-  const htmlTagPattern = /<(style|div|span|p|br|hr|table|tr|td|th|ul|ol|li|a|img|font|center|b|i|u|s|strong|em|mark|sub|sup|small|del|ins|code|pre|blockquote|h[1-6])[^>]*>/i;
-  return htmlTagPattern.test(text);
 }
 
 /**
@@ -38,15 +26,9 @@ export function containsHtmlTags(text: string): boolean {
  * - (text) or ((text)) → thought
  * - ((OOC: text)) → out of character
  * - `text` → inline code
- * - HTML tags → rendered as raw HTML (style, div, span, etc.)
+ * - ```code``` → code block
  */
 export function parseRoleplayText(text: string): TextSegment[] {
-  // Check if the text contains HTML tags that should be rendered as-is
-  // If so, return the entire content as an HTML segment
-  if (containsHtmlTags(text)) {
-    return [{ type: "html", content: text }];
-  }
-  
   const segments: TextSegment[] = [];
   let remaining = text;
   
@@ -180,9 +162,6 @@ export function getSegmentClasses(type: TextSegmentType): string {
     default:
       // Grey-ish for normal text without punctuation
       return `${baseClasses} text-gray-400`;
-    case "html":
-      // HTML tags - render as-is, will use dangerouslySetInnerHTML
-      return baseClasses;
   }
 }
 
