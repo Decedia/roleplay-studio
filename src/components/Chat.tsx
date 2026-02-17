@@ -3867,9 +3867,9 @@ export default function Chat() {
               ) : (
                 <div className="space-y-6">
                   {currentConversation.messages.map((message, index) => {
-                    // Parse think tags for assistant messages
+                    // Get thinking content from message.thinking property or extract from content
                     const thinkContent = message.role === "assistant" 
-                      ? extractThinkContent(message.content) 
+                      ? (message.thinking || extractThinkContent(message.content))
                       : null;
                     // Apply macro replacement for {{user}} -> persona name
                     const rawContent = message.role === "assistant"
