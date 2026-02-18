@@ -2091,9 +2091,20 @@ export default function Chat() {
         
         // Auto-select first model if no model is currently selected for this provider
         if (!config.selectedModel && modelsResult.models[0]) {
+          const firstModel = modelsResult.models[0];
           setProviderConfigs(prev => ({
             ...prev,
-            [providerType]: { ...prev[providerType], selectedModel: modelsResult.models[0].id }
+            [providerType]: { ...prev[providerType], selectedModel: firstModel.id }
+          }));
+          
+          // Also update global settings with the model's capabilities
+          const maxOutput = firstModel.max_tokens || 4000;
+          const maxContext = firstModel.context || 128000;
+          setGlobalSettings(prev => ({
+            ...prev,
+            modelId: firstModel.id,
+            maxTokens: maxOutput,
+            maxContextTokens: maxContext
           }));
         }
       }
@@ -2106,13 +2117,22 @@ export default function Chat() {
     
     // Get the selected model for this provider
     const config = providerConfigs[providerType];
-    const selectedModel = config.selectedModel;
+    const selectedModelId = config.selectedModel;
     
-    // Update global settings with the provider's selected model
-    if (selectedModel) {
+    // Find the model in providerModels to get context and max_tokens
+    const models = providerModels[providerType] || [];
+    const selectedModel = models.find(m => m.id === selectedModelId);
+    
+    // Update global settings with the provider's selected model and its capabilities
+    if (selectedModelId) {
+      const maxOutput = selectedModel?.max_tokens || 4000;
+      const maxContext = selectedModel?.context || 128000;
+      
       setGlobalSettings(prev => ({
         ...prev,
-        modelId: selectedModel
+        modelId: selectedModelId,
+        maxTokens: maxOutput,
+        maxContextTokens: maxContext
       }));
     }
     

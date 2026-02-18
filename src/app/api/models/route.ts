@@ -76,16 +76,48 @@ export async function GET(request: NextRequest) {
 
         const data = await response.json();
         
+        // Known model capabilities (context window and max output tokens)
+        // These are based on Google's documentation
+        const modelCapabilities: Record<string, { context: number; max_tokens: number; supportsThinking?: boolean }> = {
+          "gemini-2.0-flash": { context: 1048576, max_tokens: 8192, supportsThinking: true },
+          "gemini-2.0-flash-lite": { context: 1048576, max_tokens: 8192, supportsThinking: false },
+          "gemini-2.0-pro-exp-02-05": { context: 1048576, max_tokens: 8192, supportsThinking: true },
+          "gemini-2.0-pro-exp": { context: 1048576, max_tokens: 8192, supportsThinking: true },
+          "gemini-1.5-pro": { context: 2097152, max_tokens: 8192, supportsThinking: false },
+          "gemini-1.5-flash": { context: 1048576, max_tokens: 8192, supportsThinking: false },
+          "gemini-1.5-pro-002": { context: 2097152, max_tokens: 8192, supportsThinking: false },
+          "gemini-1.5-flash-002": { context: 1048576, max_tokens: 8192, supportsThinking: false },
+          "gemini-1.5-flash-8b": { context: 1048576, max_tokens: 8192, supportsThinking: false },
+          "gemini-1.5-flash-8b-exp-0924": { context: 1048576, max_tokens: 8192, supportsThinking: false },
+          "gemini-exp-1206": { context: 1048576, max_tokens: 8192, supportsThinking: true },
+          "gemini-exp-1121": { context: 1048576, max_tokens: 8192, supportsThinking: true },
+          "gemini-exp-1114": { context: 1048576, max_tokens: 8192, supportsThinking: true },
+          "gemini-2.0-flash-exp": { context: 1048576, max_tokens: 8192, supportsThinking: true },
+          "gemini-2.0-flash-thinking-exp-1219": { context: 1048576, max_tokens: 8192, supportsThinking: true },
+          "gemini-2.0-flash-thinking-exp": { context: 1048576, max_tokens: 8192, supportsThinking: true },
+          "gemini-3-pro": { context: 1048576, max_tokens: 65536, supportsThinking: true },
+          "gemini-3-flash": { context: 1048576, max_tokens: 65536, supportsThinking: true },
+          "gemini-3-flash-lite": { context: 1048576, max_tokens: 65536, supportsThinking: false },
+        };
+        
         // Transform Google AI models to our format
         const models = (data.models || [])
           .filter((model: { supportedGenerationMethods?: string[] }) => 
             model.supportedGenerationMethods?.includes("generateContent")
           )
-          .map((model: { name: string; displayName?: string }) => ({
-            id: model.name.replace("models/", ""),
-            provider: provider,
-            name: model.displayName || model.name.replace("models/", ""),
-          }));
+          .map((model: { name: string; displayName?: string }) => {
+            const modelId = model.name.replace("models/", "");
+            const capabilities = modelCapabilities[modelId] || { context: 128000, max_tokens: 8192, supportsThinking: false };
+            
+            return {
+              id: modelId,
+              provider: provider,
+              name: model.displayName || modelId,
+              context: capabilities.context,
+              max_tokens: capabilities.max_tokens,
+              supportsThinking: capabilities.supportsThinking,
+            };
+          });
 
         return NextResponse.json({ models });
       }

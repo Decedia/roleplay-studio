@@ -1146,6 +1146,7 @@ export interface FetchedModel {
   name: string;
   context?: number;
   max_tokens?: number;
+  supportsThinking?: boolean;
 }
 
 export const fetchModelsFromProvider = async (
