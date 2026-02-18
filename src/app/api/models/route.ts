@@ -129,13 +129,18 @@ export async function GET(request: NextRequest) {
           );
         }
 
-        // Get location from query params (default to us-central1)
-        const location = searchParams.get("location") || "us-central1";
+        // Get location from query params (default to global)
+        const location = searchParams.get("location") || "global";
         const vertexMode = searchParams.get("vertexMode") || "express";
 
         // For Express mode, use Vertex AI endpoint with x-goog-api-key header
+        // For global location, use the global endpoint without location prefix
+        const endpoint = location === "global"
+          ? `https://aiplatform.googleapis.com/v1/projects/-/locations/global/publishers/google/models`
+          : `https://${location}-aiplatform.googleapis.com/v1/projects/-/locations/${location}/publishers/google/models`;
+        
         const response = await fetch(
-          `https://${location}-aiplatform.googleapis.com/v1/projects/-/locations/${location}/publishers/google/models`,
+          endpoint,
           {
             method: "GET",
             headers: {

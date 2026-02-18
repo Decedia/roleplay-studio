@@ -142,7 +142,7 @@ export interface LLMModel {
 export type VertexMode = "express" | "full";
 
 // Vertex AI locations
-export type VertexLocation = "us-central1" | "us-east1" | "us-west1" | "europe-west1" | "europe-west4" | "asia-east1" | "asia-northeast1" | "asia-southeast1";
+export type VertexLocation = "global" | "us-central1" | "us-east1" | "us-west1" | "europe-west1" | "europe-west4" | "asia-east1" | "asia-northeast1" | "asia-southeast1";
 
 // Provider configurations (stored in localStorage)
 export interface ProviderConfig {

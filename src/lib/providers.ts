@@ -484,7 +484,7 @@ export const chatWithVertexAI: ChatFunction = async (
   options
 ) => {
   const mode = config.vertexMode || "express";
-  const location = config.vertexLocation || "us-central1";
+  const location = config.vertexLocation || "global";
   
   if (mode === "express") {
     // Express mode: Use API key with Vertex AI endpoint
@@ -514,8 +514,13 @@ export const chatWithVertexAI: ChatFunction = async (
       // Thinking is automatically enabled for Gemini 2.0 Flash models
 
       // Vertex AI Express endpoint - uses x-goog-api-key header
+      // For global location, use the global endpoint without location prefix
+      const endpoint = location === "global"
+        ? `https://aiplatform.googleapis.com/v1/projects/-/locations/global/publishers/google/models/${config.selectedModel}:generateContent`
+        : `https://${location}-aiplatform.googleapis.com/v1/projects/-/locations/${location}/publishers/google/models/${config.selectedModel}:generateContent`;
+      
       const response = await fetch(
-        `https://${location}-aiplatform.googleapis.com/v1/projects/-/locations/${location}/publishers/google/models/${config.selectedModel}:generateContent`,
+        endpoint,
         {
           method: "POST",
           headers: {
@@ -809,7 +814,7 @@ export const streamWithVertexAI = async (
   onChunk: StreamCallback
 ): Promise<void> => {
   const mode = config.vertexMode || "express";
-  const location = config.vertexLocation || "us-central1";
+  const location = config.vertexLocation || "global";
   
   if (mode === "express") {
     // Express mode: Use Vertex AI endpoint with streaming
@@ -840,8 +845,13 @@ export const streamWithVertexAI = async (
       // Thinking is automatically enabled for Gemini 2.0 Flash models
 
       // Vertex AI Express streaming endpoint - use configured location
+      // For global location, use the global endpoint without location prefix
+      const endpoint = location === "global"
+        ? `https://aiplatform.googleapis.com/v1/projects/-/locations/global/publishers/google/models/${config.selectedModel}:streamGenerateContent?alt=sse`
+        : `https://${location}-aiplatform.googleapis.com/v1/projects/-/locations/${location}/publishers/google/models/${config.selectedModel}:streamGenerateContent?alt=sse`;
+      
       const response = await fetch(
-        `https://${location}-aiplatform.googleapis.com/v1/projects/-/locations/${location}/publishers/google/models/${config.selectedModel}:streamGenerateContent?alt=sse`,
+        endpoint,
         {
           method: "POST",
           headers: {
@@ -1031,7 +1041,7 @@ export const testProviderConnection = async (
     
     case "google-vertex": {
       const mode = config.vertexMode || "express";
-      const location = config.vertexLocation || "us-central1";
+      const location = config.vertexLocation || "global";
       
       if (mode === "express") {
         // Express mode: API key with Vertex AI endpoint
@@ -1040,8 +1050,13 @@ export const testProviderConnection = async (
         }
         try {
           // Test with Vertex AI Express endpoint using configured location
+          // For global location, use the global endpoint without location prefix
+          const endpoint = location === "global"
+            ? `https://aiplatform.googleapis.com/v1/projects/-/locations/global/publishers/google/models`
+            : `https://${location}-aiplatform.googleapis.com/v1/projects/-/locations/${location}/publishers/google/models`;
+          
           const response = await fetch(
-            `https://${location}-aiplatform.googleapis.com/v1/projects/-/locations/${location}/publishers/google/models`,
+            endpoint,
             {
               method: "GET",
               headers: {
@@ -1190,7 +1205,7 @@ export const fetchModelsFromProvider = async (
           return { models: [], error: "API key is required" };
         }
 
-        const location = config.vertexLocation || "us-central1";
+        const location = config.vertexLocation || "global";
         const vertexMode = config.vertexMode || "express";
         const response = await fetch(`/api/models?provider=google-vertex&apiKey=${encodeURIComponent(config.apiKey)}&location=${encodeURIComponent(location)}&vertexMode=${encodeURIComponent(vertexMode)}`);
         const data = await response.json();

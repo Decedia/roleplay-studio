@@ -1141,13 +1141,14 @@ function SettingsModal({
                     <div>
                       <label className="block text-xs text-zinc-400 mb-1">Server Location</label>
                       <select
-                        value={providerConfigs["google-vertex"]?.vertexLocation || "us-central1"}
+                        value={providerConfigs["google-vertex"]?.vertexLocation || "global"}
                         onChange={(e) => setProviderConfigs(prev => ({
                           ...prev,
                           "google-vertex": { ...prev["google-vertex"], vertexLocation: e.target.value as VertexLocation }
                         }))}
                         className="w-full bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       >
+                        <option value="global">Global (Auto-routing)</option>
                         <option value="us-central1">US Central (Iowa)</option>
                         <option value="us-east1">US East (South Carolina)</option>
                         <option value="us-west1">US West (Oregon)</option>
@@ -1202,7 +1203,7 @@ function SettingsModal({
                       <button
                         type="button"
                         onClick={() => onConnect("google-vertex")}
-                        disabled={connectionStatus["google-vertex"]?.status !== "connected"}
+                        disabled={!providerConfigs["google-vertex"]?.apiKey || (providerConfigs["google-vertex"]?.vertexMode === "full" && !providerConfigs["google-vertex"]?.projectId)}
                         className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Connect
@@ -2116,7 +2117,7 @@ export default function Chat() {
     }
   };
 
-  const handleConnectProvider = (providerType: LLMProviderType) => {
+  const handleConnectProvider = async (providerType: LLMProviderType) => {
     // Set as active provider
     setActiveProvider(providerType);
     
@@ -2150,6 +2151,39 @@ export default function Chat() {
           message: "Connected"
         }
       }));
+    }
+    
+    // Fetch models for Vertex AI if not already fetched
+    if (providerType === "google-vertex" && models.length === 0 && config.apiKey) {
+      setModelsFetching(prev => ({ ...prev, [providerType]: true }));
+      const modelsResult = await fetchModelsFromProvider(providerType, config);
+      setModelsFetching(prev => ({ ...prev, [providerType]: false }));
+      
+      if (modelsResult.models.length > 0) {
+        setProviderModels(prev => ({
+          ...prev,
+          [providerType]: modelsResult.models
+        }));
+        
+        // Auto-select first model if no model is currently selected for this provider
+        if (!config.selectedModel && modelsResult.models[0]) {
+          const firstModel = modelsResult.models[0];
+          setProviderConfigs(prev => ({
+            ...prev,
+            [providerType]: { ...prev[providerType], selectedModel: firstModel.id }
+          }));
+          
+          // Also update global settings with the model's capabilities
+          const maxOutput = firstModel.max_tokens || 4000;
+          const maxContext = firstModel.context || 128000;
+          setGlobalSettings(prev => ({
+            ...prev,
+            modelId: firstModel.id,
+            maxTokens: maxOutput,
+            maxContextTokens: maxContext
+          }));
+        }
+      }
     }
     
     // Close the provider config dropdown
