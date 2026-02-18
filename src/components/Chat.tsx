@@ -192,6 +192,7 @@ const AUTO_EXPORT_KEY = "chat_auto_export";
 const BRAINSTORM_INSTRUCTIONS_KEY = "chat_brainstorm_instructions";
 const BRAINSTORM_MESSAGES_KEY = "chat_brainstorm_messages";
 const GENERATOR_INSTRUCTIONS_KEY = "chat_generator_instructions";
+const GENERATOR_MESSAGES_KEY = "chat_generator_messages";
 
 // Default brainstorm instructions - exclusive to the brainstorm tab
 const DEFAULT_BRAINSTORM_INSTRUCTIONS = `You are a creative roleplay instruction brainstorming assistant. Your purpose is to help users create detailed, immersive roleplay instructions.
@@ -1519,10 +1520,12 @@ export default function Chat() {
   const autoExportTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Character generator state
-  const [generatorPrompt, setGeneratorPrompt] = useState("");
+  const [generatorMessages, setGeneratorMessages] = useState<Array<{role: "user" | "assistant", content: string}>>([]);
+  const [generatorInput, setGeneratorInput] = useState("");
   const [generatedCharacter, setGeneratedCharacter] = useState<Character | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatorError, setGeneratorError] = useState<string | null>(null);
+  const [appliedCharacters, setAppliedCharacters] = useState<Set<string>>(new Set());
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -1605,6 +1608,17 @@ export default function Chat() {
     if (storedGeneratorInstructions) {
       setGeneratorInstructions(storedGeneratorInstructions);
     }
+    
+    // Load generator messages
+    const storedGeneratorMessages = localStorage.getItem(GENERATOR_MESSAGES_KEY);
+    if (storedGeneratorMessages) {
+      try {
+        const messages = JSON.parse(storedGeneratorMessages) as Array<{role: "user" | "assistant", content: string}>;
+        setGeneratorMessages(messages);
+      } catch (e) {
+        console.error("Failed to parse generator messages:", e);
+      }
+    }
   }, []);
 
   // Save personas to localStorage
@@ -1652,6 +1666,11 @@ export default function Chat() {
   useEffect(() => {
     localStorage.setItem(GENERATOR_INSTRUCTIONS_KEY, generatorInstructions);
   }, [generatorInstructions]);
+  
+  // Save generator messages to localStorage
+  useEffect(() => {
+    localStorage.setItem(GENERATOR_MESSAGES_KEY, JSON.stringify(generatorMessages));
+  }, [generatorMessages]);
   
   // Load provider configs from localStorage
   useEffect(() => {
@@ -2243,37 +2262,45 @@ export default function Chat() {
     }
   };
   
-  // Character Generator function
-  const generateCharacter = async () => {
-    if (!generatorPrompt.trim()) return;
+  // Character Generator function - chat-based like brainstorm
+  const sendGeneratorMessage = async () => {
+    if (!generatorInput.trim() || isGenerating) return;
     
+    const userMessage = generatorInput.trim();
+    setGeneratorInput("");
+    setGeneratorMessages(prev => [...prev, { role: "user", content: userMessage }]);
     setIsGenerating(true);
     setGeneratorError(null);
-    setGeneratedCharacter(null);
     
     // Use the exclusive generator instructions (not global instructions)
     const systemPrompt = generatorInstructions;
 
-    const userPrompt = `Create a character based on this description: ${generatorPrompt.trim()}`;
-    
     try {
       const config = providerConfigs[activeProvider];
+      
+      // Build messages array with conversation history
       const messages: Message[] = [
-        { role: "user", content: `${systemPrompt}\n\n${userPrompt}` }
+        // System prompt as a system message
+        { role: "system", content: systemPrompt },
+        // Include all previous generator messages for context
+        ...generatorMessages.map(msg => ({
+          role: msg.role as "user" | "assistant",
+          content: msg.content
+        })),
+        // Add the current user message
+        { role: "user" as const, content: userMessage }
       ];
       
       let responseText: string;
       
       if (activeProvider === "puter") {
-        // Use puter.js
         const response = await window.puter.ai.chat(messages, {
           model: globalSettings.modelId,
-          temperature: 0.8, // Higher temperature for creativity
+          temperature: 0.8,
           max_tokens: 2000,
         });
         responseText = response.message.content;
       } else {
-        // Use other providers - ensure selectedModel is set
         const configWithModel = {
           ...config,
           selectedModel: globalSettings.modelId || config.selectedModel,
@@ -2295,39 +2322,80 @@ export default function Chat() {
         responseText = response.content || "";
       }
       
-      // Parse the JSON response
-      // Remove any markdown code blocks if present
-      let jsonStr = responseText.trim();
-      if (jsonStr.startsWith("```json")) {
-        jsonStr = jsonStr.slice(7);
-      } else if (jsonStr.startsWith("```")) {
-        jsonStr = jsonStr.slice(3);
-      }
-      if (jsonStr.endsWith("```")) {
-        jsonStr = jsonStr.slice(0, -3);
-      }
-      jsonStr = jsonStr.trim();
-      
-      const parsed = JSON.parse(jsonStr);
-      
-      // Create the character object
-      const newCharacter: Character = {
-        id: crypto.randomUUID(),
-        name: parsed.name || "Unnamed Character",
-        description: parsed.description || "",
-        firstMessage: parsed.firstMessage || "*nods in greeting*",
-        scenario: parsed.scenario || undefined,
-        mesExample: parsed.mesExample || undefined,
-        createdAt: Date.now(),
-      };
-      
-      setGeneratedCharacter(newCharacter);
+      setGeneratorMessages(prev => [...prev, { role: "assistant", content: responseText }]);
     } catch (error) {
-      console.error("Error generating character:", error);
-      setGeneratorError(error instanceof Error ? error.message : "Failed to generate character. Please try again.");
+      console.error("Generator error:", error);
+      setGeneratorMessages(prev => [...prev, { 
+        role: "assistant", 
+        content: "I encountered an error. Please try again." 
+      }]);
+      setGeneratorError(error instanceof Error ? error.message : "An error occurred. Please try again.");
     } finally {
       setIsGenerating(false);
     }
+  };
+  
+  // Extract character JSON from code blocks
+  const extractCharacterJson = (content: string): Array<{name: string, description: string, firstMessage: string, scenario?: string, mesExample?: string}> => {
+    const results: Array<{name: string, description: string, firstMessage: string, scenario?: string, mesExample?: string}> = [];
+    
+    // Try to find JSON code blocks
+    const jsonRegex = /```json\n([\s\S]*?)```/g;
+    let match;
+    while ((match = jsonRegex.exec(content)) !== null) {
+      try {
+        let jsonStr = match[1].trim();
+        const parsed = JSON.parse(jsonStr);
+        if (parsed.name && parsed.description) {
+          results.push({
+            name: parsed.name,
+            description: parsed.description,
+            firstMessage: parsed.firstMessage || "*nods in greeting*",
+            scenario: parsed.scenario,
+            mesExample: parsed.mesExample,
+          });
+        }
+      } catch {
+        // Invalid JSON, skip
+      }
+    }
+    
+    // Also try to find raw JSON objects in the content
+    const jsonObjectRegex = /\{[\s\S]*?"name"[\s\S]*?"description"[\s\S]*?\}/g;
+    while ((match = jsonObjectRegex.exec(content)) !== null) {
+      try {
+        const parsed = JSON.parse(match[0]);
+        if (parsed.name && parsed.description && !results.some(r => r.name === parsed.name)) {
+          results.push({
+            name: parsed.name,
+            description: parsed.description,
+            firstMessage: parsed.firstMessage || "*nods in greeting*",
+            scenario: parsed.scenario,
+            mesExample: parsed.mesExample,
+          });
+        }
+      } catch {
+        // Invalid JSON, skip
+      }
+    }
+    
+    return results;
+  };
+  
+  // Import a character from extracted JSON
+  const importCharacterFromJson = (charData: {name: string, description: string, firstMessage: string, scenario?: string, mesExample?: string}) => {
+    const newCharacter: Character = {
+      id: crypto.randomUUID(),
+      name: charData.name,
+      description: charData.description,
+      firstMessage: charData.firstMessage,
+      scenario: charData.scenario,
+      mesExample: charData.mesExample,
+      createdAt: Date.now(),
+    };
+    
+    setCharacters((prev) => [...prev, newCharacter]);
+    setAppliedCharacters(prev => new Set(prev).add(JSON.stringify(charData)));
   };
   
   // Import generated character to the character list
@@ -2336,7 +2404,6 @@ export default function Chat() {
     
     setCharacters((prev) => [...prev, generatedCharacter]);
     setGeneratedCharacter(null);
-    setGeneratorPrompt("");
     setView("characters");
   };
   
@@ -3249,62 +3316,62 @@ export default function Chat() {
 
           {/* Character Generator View */}
           {view === "generator" && (
-            <div className="space-y-6">
+            <div className="space-y-6 h-full flex flex-col">
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-medium text-white">AI Character Generator</h2>
-                <div className="text-sm text-zinc-500 hidden sm:block">
-                  Powered by {AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || "AI"}
-                </div>
-              </div>
-              
-              {/* Generator Input */}
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 sm:p-6">
-                <label className="block text-sm font-medium text-zinc-400 mb-2">
-                  Describe your character
-                </label>
-                <textarea
-                  value={generatorPrompt}
-                  onChange={(e) => setGeneratorPrompt(e.target.value)}
-                  placeholder="E.g., A mysterious vampire who runs a bookstore in modern Tokyo. They're elegant, sarcastic, and secretly lonely..."
-                  rows={4}
-                  className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none text-sm"
-                  disabled={isGenerating}
-                />
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-4 gap-3">
-                  <p className="text-xs text-zinc-500">
-                    Be as detailed as you like. The AI will create a full character profile.
-                  </p>
+                
+                {/* Desktop button - hidden on mobile */}
+                <div className="hidden md:flex gap-2">
                   <button
-                    onClick={generateCharacter}
-                    disabled={!generatorPrompt.trim() || isGenerating}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    onClick={() => {
+                      setGeneratorMessages([]);
+                      setGeneratorInput("");
+                      setGeneratedCharacter(null);
+                    }}
+                    className="px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors text-sm"
                   >
-                    {isGenerating ? (
-                      <>
-                        <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                        Generate Character
-                      </>
-                    )}
+                    Clear Chat
                   </button>
                 </div>
+                
+                {/* Mobile hamburger menu button */}
+                <button
+                  onClick={() => setShowMobileMenu(!showMobileMenu)}
+                  className="md:hidden p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                >
+                  <svg className="w-6 h-6 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {showMobileMenu ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    )}
+                  </svg>
+                </button>
               </div>
               
-              {/* Error Message */}
-              {generatorError && (
-                <div className="bg-red-900/50 border border-red-800 rounded-lg px-4 py-3 text-red-200 text-sm">
-                  {generatorError}
+              {/* Mobile menu dropdown for generator */}
+              {showMobileMenu && view === "generator" && (
+                <div className="md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3">
+                  <button
+                    onClick={() => {
+                      setGeneratorMessages([]);
+                      setGeneratorInput("");
+                      setGeneratedCharacter(null);
+                      setShowMobileMenu(false);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span>Clear Chat</span>
+                  </button>
                 </div>
               )}
+              
+              <div className="text-sm text-zinc-500 mb-2">
+                Chat with AI to create a character. Describe what you want, and the AI will generate a character profile for you.
+              </div>
               
               {/* Generator Instructions Editor */}
               <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
@@ -3341,84 +3408,154 @@ export default function Chat() {
                 )}
               </div>
               
-              {/* Generated Character Preview */}
-              {generatedCharacter && (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 sm:p-6">
-                  {/* Buttons at top */}
-                  <div className="flex flex-col sm:flex-row gap-2 mb-4">
-                    <button
-                      onClick={() => {
-                        setGeneratedCharacter(null);
-                        setGeneratorPrompt("");
-                      }}
-                      className="px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors text-sm"
-                    >
-                      Clear
-                    </button>
-                    <button
-                      onClick={importGeneratedCharacter}
-                      className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
-                      Import Character
-                    </button>
+              {/* Chat messages */}
+              <div className="flex-1 overflow-y-auto space-y-4 bg-zinc-900/50 rounded-xl p-4 min-h-[400px] max-h-[500px]">
+                {generatorMessages.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mx-auto mb-4">
+                      <span className="text-2xl">👤</span>
+                    </div>
+                    <h3 className="text-lg font-medium text-white mb-2">Create a Character</h3>
+                    <p className="text-zinc-500 max-w-md mx-auto">
+                      Describe the character you want to create. I&apos;ll generate a full profile including name, description, and first message.
+                    </p>
                   </div>
-                  
-                  {/* Character header */}
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
-                      <span className="text-xl sm:text-2xl text-white font-semibold">
-                        {generatedCharacter.name.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="text-lg sm:text-xl font-semibold text-white truncate">{generatedCharacter.name}</h3>
-                      {generatedCharacter.scenario && (
-                        <p className="text-sm text-zinc-500 line-clamp-2">{generatedCharacter.scenario}</p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    {/* Description */}
-                    <div>
-                      <h4 className="text-sm font-medium text-zinc-400 mb-1">Description</h4>
-                      <p className="text-zinc-300 whitespace-pre-wrap">{generatedCharacter.description}</p>
-                    </div>
+                ) : (
+                  generatorMessages.map((msg, idx) => {
+                    // Check if message contains character JSON
+                    const characterData = msg.role === "assistant" ? extractCharacterJson(msg.content) : [];
+                    const contentWithoutJson = msg.role === "assistant" 
+                      ? msg.content.replace(/```json\n[\s\S]*?```/g, "").trim()
+                      : msg.content;
                     
-                    {/* First Message */}
-                    <div>
-                      <h4 className="text-sm font-medium text-zinc-400 mb-1">First Message</h4>
-                      <div className="bg-zinc-800/50 rounded-lg p-3 border border-zinc-700">
-                        <p className="text-zinc-300 italic whitespace-pre-wrap">&ldquo;{generatedCharacter.firstMessage}&rdquo;</p>
-                      </div>
-                    </div>
-                    
-                    {/* Example Messages */}
-                    {generatedCharacter.mesExample && (
-                      <div>
-                        <h4 className="text-sm font-medium text-zinc-400 mb-1">Example Dialogue</h4>
-                        <div className="bg-zinc-800/50 rounded-lg p-3 border border-zinc-700">
-                          <p className="text-zinc-400 text-sm whitespace-pre-wrap">{generatedCharacter.mesExample}</p>
+                    return (
+                      <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                        <div className={`max-w-[90%] ${msg.role === "user" ? "order-2" : "order-1"}`}>
+                          <div className={`rounded-2xl px-4 py-3 ${
+                            msg.role === "user" 
+                              ? "bg-zinc-700 text-white" 
+                              : "bg-zinc-800 text-zinc-200"
+                          }`}>
+                            <FormattedText content={contentWithoutJson || (characterData.length > 0 ? "Here is the generated character:" : "")} />
+                          </div>
+                          
+                          {/* Generated Character Preview */}
+                          {characterData.length > 0 && (
+                            <div className="mt-4 space-y-4">
+                              {characterData.map((char, i) => {
+                                const isApplied = appliedCharacters.has(char.name);
+                                return (
+                                  <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+                                    {/* Character header */}
+                                    <div className="flex items-center gap-4 mb-4">
+                                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+                                        <span className="text-xl text-white font-semibold">
+                                          {char.name.charAt(0).toUpperCase()}
+                                        </span>
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <h3 className="text-lg font-semibold text-white truncate">{char.name}</h3>
+                                        {char.scenario && (
+                                          <p className="text-xs text-zinc-500 line-clamp-1">{char.scenario}</p>
+                                        )}
+                                      </div>
+                                      <button
+                                        onClick={() => {
+                                          setGeneratedCharacter({
+                                            id: crypto.randomUUID(),
+                                            name: char.name,
+                                            description: char.description,
+                                            firstMessage: char.firstMessage,
+                                            scenario: char.scenario,
+                                            mesExample: char.mesExample,
+                                            createdAt: Date.now(),
+                                          });
+                                          importGeneratedCharacter();
+                                          setAppliedCharacters(prev => new Set(prev).add(char.name));
+                                        }}
+                                        disabled={isApplied}
+                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                          isApplied
+                                            ? "bg-green-600 text-white cursor-default"
+                                            : "bg-green-600 text-white hover:bg-green-700"
+                                        }`}
+                                      >
+                                        {isApplied ? (
+                                          <>
+                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            Imported
+                                          </>
+                                        ) : (
+                                          <>
+                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                            </svg>
+                                            Import Character
+                                          </>
+                                        )}
+                                      </button>
+                                    </div>
+                                    
+                                    <div className="space-y-3 text-sm">
+                                      <div>
+                                        <h4 className="text-xs font-medium text-zinc-500 mb-1">Description</h4>
+                                        <p className="text-zinc-300 line-clamp-3">{char.description}</p>
+                                      </div>
+                                      
+                                      <div>
+                                        <h4 className="text-xs font-medium text-zinc-500 mb-1">First Message</h4>
+                                        <p className="text-zinc-300 italic line-clamp-2">&ldquo;{char.firstMessage}&rdquo;</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       </div>
-                    )}
+                    );
+                  })
+                )}
+                
+                {isGenerating && (
+                  <div className="flex justify-start">
+                    <div className="bg-zinc-800 rounded-2xl px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
+                        <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
+                        <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
               
-              {/* Tips */}
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
-                <h3 className="text-sm font-medium text-white mb-2">💡 Tips for better characters</h3>
-                <ul className="text-sm text-zinc-400 space-y-1">
-                  <li>• Include personality traits, flaws, and quirks</li>
-                  <li>• Describe their appearance and mannerisms</li>
-                  <li>• Mention their background or occupation</li>
-                  <li>• Add details about how they speak or act</li>
-                  <li>• Specify the setting or scenario you want</li>
-                </ul>
+              {/* Input area */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={generatorInput}
+                  onChange={(e) => setGeneratorInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      sendGeneratorMessage();
+                    }
+                  }}
+                  placeholder="Describe the character you want to create..."
+                  className="flex-1 bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700"
+                  disabled={isGenerating}
+                />
+                <button
+                  onClick={sendGeneratorMessage}
+                  disabled={!generatorInput.trim() || isGenerating}
+                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Send
+                </button>
               </div>
             </div>
           )}

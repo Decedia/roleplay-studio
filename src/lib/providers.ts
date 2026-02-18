@@ -320,7 +320,7 @@ export const chatWithGoogleAIStudio: ChatFunction = async (
       ? { parts: [{ text: options.systemPrompt }] }
       : undefined;
 
-    // Build generation config with optional thinking
+    // Build generation config
     const generationConfig: Record<string, unknown> = {
       temperature: options.temperature,
       maxOutputTokens: options.maxTokens,
@@ -328,10 +328,8 @@ export const chatWithGoogleAIStudio: ChatFunction = async (
       topK: options.topK,
     };
 
-    // Add thinking config if enabled (for Gemini 2.0 models)
-    if (options.enableThinking) {
-      generationConfig.thinkingBudget = options.thinkingBudget || 8192;
-    }
+    // Note: thinkingBudget is not supported in the current Google AI Studio API
+    // Thinking is automatically enabled for Gemini 2.0 Flash models
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${config.selectedModel}:generateContent?key=${config.apiKey}`,
@@ -404,10 +402,8 @@ export const streamWithGoogleAIStudio = async (
       topK: options.topK,
     };
 
-    // Add thinking config if enabled (for Gemini 2.0 models)
-    if (options.enableThinking) {
-      generationConfig.thinkingBudget = options.thinkingBudget || 8192; // Use configured budget or default
-    }
+    // Note: thinkingBudget is not supported in the current Google AI Studio API
+    // Thinking is automatically enabled for Gemini 2.0 Flash models
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${config.selectedModel}:streamGenerateContent?key=${config.apiKey}&alt=sse`,
@@ -506,7 +502,7 @@ export const chatWithVertexAI: ChatFunction = async (
         ? { parts: [{ text: options.systemPrompt }] }
         : undefined;
 
-      // Build generation config with optional thinking
+      // Build generation config
       const generationConfig: Record<string, unknown> = {
         temperature: options.temperature,
         maxOutputTokens: options.maxTokens,
@@ -514,10 +510,8 @@ export const chatWithVertexAI: ChatFunction = async (
         topK: options.topK,
       };
 
-      // Add thinking config if enabled (for Gemini 2.0 models)
-      if (options.enableThinking) {
-        generationConfig.thinkingBudget = options.thinkingBudget || 8192;
-      }
+      // Note: thinkingBudget is not supported in the current Vertex AI API
+      // Thinking is automatically enabled for Gemini 2.0 Flash models
 
       // Vertex AI Express endpoint - uses x-goog-api-key header
       const response = await fetch(
@@ -580,10 +574,8 @@ export const chatWithVertexAI: ChatFunction = async (
         topK: options.topK,
       };
 
-      // Add thinking config if enabled (for Gemini 2.0 models)
-      if (options.enableThinking) {
-        generationConfig.thinkingBudget = options.thinkingBudget || 8192;
-      }
+      // Note: thinkingBudget is not supported in the current Google AI Studio API
+      // Thinking is automatically enabled for Gemini 2.0 Flash models
 
       // Using AI Studio endpoint as fallback for full mode
       const response = await fetch(
@@ -844,10 +836,8 @@ export const streamWithVertexAI = async (
         topK: options.topK,
       };
 
-      // Add thinking config if enabled (for Gemini 2.0 models)
-      if (options.enableThinking) {
-        generationConfig.thinkingBudget = options.thinkingBudget || 8192;
-      }
+      // Note: thinkingBudget is not supported in the current Vertex AI API
+      // Thinking is automatically enabled for Gemini 2.0 Flash models
 
       // Vertex AI Express streaming endpoint - use configured location
       const response = await fetch(
