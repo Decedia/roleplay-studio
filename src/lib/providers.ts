@@ -1190,7 +1190,9 @@ export const fetchModelsFromProvider = async (
           return { models: [], error: "API key is required" };
         }
 
-        const response = await fetch(`/api/models?provider=google-vertex&apiKey=${encodeURIComponent(config.apiKey)}`);
+        const location = config.vertexLocation || "us-central1";
+        const vertexMode = config.vertexMode || "express";
+        const response = await fetch(`/api/models?provider=google-vertex&apiKey=${encodeURIComponent(config.apiKey)}&location=${encodeURIComponent(location)}&vertexMode=${encodeURIComponent(vertexMode)}`);
         const data = await response.json();
 
         if (!response.ok) {

@@ -52,11 +52,10 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ models });
       }
 
-      case "google-ai-studio":
-      case "google-vertex": {
+      case "google-ai-studio": {
         if (!apiKey) {
           return NextResponse.json(
-            { error: "API key is required for Google AI" },
+            { error: "API key is required for Google AI Studio" },
             { status: 400 }
           );
         }
@@ -111,7 +110,7 @@ export async function GET(request: NextRequest) {
             
             return {
               id: modelId,
-              provider: provider,
+              provider: "google-ai-studio",
               name: model.displayName || modelId,
               context: capabilities.context,
               max_tokens: capabilities.max_tokens,
@@ -120,6 +119,75 @@ export async function GET(request: NextRequest) {
           });
 
         return NextResponse.json({ models });
+      }
+
+      case "google-vertex": {
+        if (!apiKey) {
+          return NextResponse.json(
+            { error: "API key is required for Google Vertex AI" },
+            { status: 400 }
+          );
+        }
+
+        // Get location from query params (default to us-central1)
+        const location = searchParams.get("location") || "us-central1";
+        const vertexMode = searchParams.get("vertexMode") || "express";
+
+        // For Express mode, use Vertex AI endpoint with x-goog-api-key header
+        const response = await fetch(
+          `https://${location}-aiplatform.googleapis.com/v1/projects/-/locations/${location}/publishers/google/models`,
+          {
+            method: "GET",
+            headers: {
+              "x-goog-api-key": apiKey,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          return NextResponse.json(
+            { error: errorData.error?.message || `HTTP ${response.status}` },
+            { status: response.status }
+          );
+        }
+
+        const data = await response.json();
+        
+        // Known model capabilities for Vertex AI
+        const modelCapabilities: Record<string, { context: number; max_tokens: number; supportsThinking?: boolean }> = {
+          "gemini-2.0-flash": { context: 1048576, max_tokens: 8192, supportsThinking: true },
+          "gemini-2.0-flash-lite": { context: 1048576, max_tokens: 8192, supportsThinking: false },
+          "gemini-2.0-pro-exp-02-05": { context: 1048576, max_tokens: 8192, supportsThinking: true },
+          "gemini-2.0-pro-exp": { context: 1048576, max_tokens: 8192, supportsThinking: true },
+          "gemini-1.5-pro": { context: 2097152, max_tokens: 8192, supportsThinking: false },
+          "gemini-1.5-flash": { context: 1048576, max_tokens: 8192, supportsThinking: false },
+          "gemini-1.5-pro-002": { context: 2097152, max_tokens: 8192, supportsThinking: false },
+          "gemini-1.5-flash-002": { context: 1048576, max_tokens: 8192, supportsThinking: false },
+          "gemini-3-pro": { context: 1048576, max_tokens: 65536, supportsThinking: true },
+          "gemini-3-flash": { context: 1048576, max_tokens: 65536, supportsThinking: true },
+          "gemini-3-flash-lite": { context: 1048576, max_tokens: 65536, supportsThinking: false },
+        };
+        
+        // Transform Vertex AI models to our format
+        // Vertex AI returns models in a different format
+        const models = (data.models || data.aiPlatformModels || [])
+          .map((model: { name: string; displayName?: string; supportedGenerationMethods?: string[] }) => {
+            // Vertex AI model names are like "projects/-/locations/us-central1/publishers/google/models/gemini-2.0-flash"
+            const modelId = model.name.split("/").pop() || model.name;
+            const capabilities = modelCapabilities[modelId] || { context: 128000, max_tokens: 8192, supportsThinking: false };
+            
+            return {
+              id: modelId,
+              provider: "google-vertex",
+              name: model.displayName || modelId,
+              context: capabilities.context,
+              max_tokens: capabilities.max_tokens,
+              supportsThinking: capabilities.supportsThinking,
+            };
+          });
+
+        return NextResponse.json({ models, location, vertexMode });
       }
 
       case "puter": {
