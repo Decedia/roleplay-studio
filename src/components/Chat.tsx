@@ -1526,6 +1526,11 @@ export default function Chat() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatorError, setGeneratorError] = useState<string | null>(null);
   const [appliedCharacters, setAppliedCharacters] = useState<Set<string>>(new Set());
+  
+  // Message editing state
+  const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
+  const [editingMessageContent, setEditingMessageContent] = useState<string>("");
+  const [showMessageMenu, setShowMessageMenu] = useState<number | null>(null);
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -2788,6 +2793,125 @@ export default function Chat() {
     } finally {
       setIsLoading(false);
       inputRef.current?.focus();
+    }
+  };
+
+  // Delete a message from the conversation
+  const handleDeleteMessage = (index: number) => {
+    if (!currentConversation) return;
+    
+    const updatedMessages = currentConversation.messages.filter((_, i) => i !== index);
+    updateConversationMessages(updatedMessages);
+    setShowMessageMenu(null);
+  };
+
+  // Start editing a message
+  const handleStartEditMessage = (index: number) => {
+    if (!currentConversation) return;
+    
+    const message = currentConversation.messages[index];
+    setEditingMessageIndex(index);
+    setEditingMessageContent(message.content);
+    setShowMessageMenu(null);
+  };
+
+  // Cancel editing
+  const handleCancelEdit = () => {
+    setEditingMessageIndex(null);
+    setEditingMessageContent("");
+  };
+
+  // Save edited message
+  const handleSaveEdit = async (index: number) => {
+    if (!currentConversation || !selectedPersona || !selectedCharacter) return;
+    if (!editingMessageContent.trim()) return;
+    
+    const message = currentConversation.messages[index];
+    const updatedMessages = [...currentConversation.messages];
+    updatedMessages[index] = { ...message, content: editingMessageContent.trim() };
+    
+    // If editing a user message, we need to regenerate the AI response
+    if (message.role === "user") {
+      // Remove all messages after this one
+      const messagesAfterEdit = updatedMessages.slice(0, index + 1);
+      updateConversationMessages(messagesAfterEdit);
+      
+      setEditingMessageIndex(null);
+      setEditingMessageContent("");
+      
+      // Regenerate AI response
+      setError(null);
+      setIsLoading(true);
+      setStreamingContent("");
+      setStreamingThinking("");
+      
+      try {
+        const currentConfig = providerConfigs[activeProvider];
+        
+        const systemPrompt = buildFullSystemPrompt(
+          selectedCharacter,
+          selectedPersona.name,
+          selectedPersona.description,
+          messagesAfterEdit,
+          globalInstructions
+        );
+        
+        const systemPromptTokens = estimateTokens(systemPrompt);
+        const truncatedMessages = truncateMessagesToContext(
+          messagesAfterEdit,
+          globalSettings.maxContextTokens,
+          systemPromptTokens
+        );
+
+        await streamChatMessage(
+          truncatedMessages,
+          { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
+          {
+            temperature: globalSettings.temperature,
+            maxTokens: globalSettings.maxTokens,
+            topP: globalSettings.topP,
+            topK: globalSettings.topK,
+            systemPrompt,
+            enableThinking: globalSettings.enableThinking,
+            thinkingBudget: globalSettings.thinkingBudget,
+          },
+          (chunk) => {
+            if (chunk.error) {
+              setError(chunk.error);
+              return;
+            }
+            
+            if (chunk.content !== undefined) {
+              setStreamingContent(chunk.content);
+            }
+            
+            if (chunk.thinking !== undefined) {
+              setStreamingThinking(chunk.thinking);
+            }
+            
+            if (chunk.done) {
+              const finalMessages: Message[] = [
+                ...messagesAfterEdit,
+                { role: "assistant", content: chunk.content || "", thinking: chunk.thinking },
+              ];
+              updateConversationMessages(finalMessages);
+              setStreamingContent("");
+              setStreamingThinking("");
+            }
+          }
+        );
+      } catch (err) {
+        console.error("Edit regenerate error:", err);
+        setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
+      } finally {
+        setIsLoading(false);
+        inputRef.current?.focus();
+      }
+    } else {
+      // Just update the AI message without regenerating
+      updateConversationMessages(updatedMessages);
+      setEditingMessageIndex(null);
+      setEditingMessageContent("");
     }
   };
 
@@ -4117,6 +4241,10 @@ export default function Chat() {
                     const displayContent = selectedPersona 
                       ? replaceMacros(rawContent, selectedPersona.name)
                       : rawContent;
+                    
+                    const isEditing = editingMessageIndex === index;
+                    const isLastMessage = index === currentConversation.messages.length - 1;
+                    const isLastAssistantMessage = message.role === "assistant" && isLastMessage;
 
                     return (
                       <div
@@ -4132,18 +4260,86 @@ export default function Chat() {
                             </span>
                           </div>
                         )}
-                        <div
-                          className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                            message.role === "user"
-                              ? "bg-zinc-700 text-white"
-                              : "bg-zinc-800 text-zinc-100"
-                          }`}
-                        >
-                          {/* Thinking section - collapsible */}
-                          {thinkContent && selectedPersona && (
-                            <ThinkingSection content={replaceMacros(thinkContent, selectedPersona.name)} />
+                        <div className={`max-w-[80%] ${message.role === "user" ? "order-first" : ""}`}>
+                          <div
+                            className={`rounded-2xl px-4 py-3 ${
+                              message.role === "user"
+                                ? "bg-zinc-700 text-white"
+                                : "bg-zinc-800 text-zinc-100"
+                            }`}
+                          >
+                            {isEditing ? (
+                              <div className="space-y-2">
+                                <textarea
+                                  value={editingMessageContent}
+                                  onChange={(e) => setEditingMessageContent(e.target.value)}
+                                  className="w-full bg-zinc-900 text-white rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700"
+                                  rows={3}
+                                  autoFocus
+                                />
+                                <div className="flex gap-2 justify-end">
+                                  <button
+                                    onClick={handleCancelEdit}
+                                    className="px-3 py-1 text-sm bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    onClick={() => handleSaveEdit(index)}
+                                    className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                  >
+                                    Save & {message.role === "user" ? "Regenerate" : "Update"}
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                {/* Thinking section - collapsible */}
+                                {thinkContent && selectedPersona && (
+                                  <ThinkingSection content={replaceMacros(thinkContent, selectedPersona.name)} />
+                                )}
+                                <FormattedText content={displayContent} />
+                              </>
+                            )}
+                          </div>
+                          {/* Message actions - edit, delete, retry - only on last message */}
+                          {!isEditing && isLastMessage && (
+                            <div className={`flex gap-1 mt-1 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                              {/* Edit button */}
+                              <button
+                                onClick={() => handleStartEditMessage(index)}
+                                className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors"
+                                title="Edit message"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                              {/* Delete button */}
+                              <button
+                                onClick={() => handleDeleteMessage(index)}
+                                className="p-1 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded transition-colors"
+                                title="Delete message"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                              {/* Retry button - only for last assistant message */}
+                              {isLastAssistantMessage && (
+                                <button
+                                  onClick={handleRetry}
+                                  disabled={isLoading}
+                                  className="p-1 text-zinc-500 hover:text-blue-400 hover:bg-zinc-800 rounded transition-colors disabled:opacity-50"
+                                  title="Regenerate response"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
                           )}
-                          <FormattedText content={displayContent} />
                         </div>
                         {message.role === "user" && (
                           <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
@@ -4221,39 +4417,49 @@ export default function Chat() {
       {view === "chat" && currentConversation && (
         <div className="flex-shrink-0 border-t border-zinc-800 bg-black">
           <div className="max-w-4xl mx-auto px-4 py-4">
-            <form onSubmit={handleSubmit} className="flex items-end gap-2">
-              <div className="flex-1 relative">
-                <textarea
-                  ref={inputRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={`Message as ${selectedPersona?.name}...`}
-                  rows={1}
-                  className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded-xl px-4 py-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent border border-zinc-800"
-                  style={{ minHeight: "48px", maxHeight: "200px" }}
-                  disabled={isLoading}
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+            <form onSubmit={handleSubmit}>
+              <div className="flex items-end gap-3 bg-zinc-900 rounded-2xl border border-zinc-800 p-2">
+                <div className="flex-1 relative">
+                  <textarea
+                    ref={inputRef}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder={`Message as ${selectedPersona?.name}...`}
+                    rows={1}
+                    className="w-full bg-transparent text-white placeholder-zinc-500 px-3 py-2 resize-none focus:outline-none"
+                    style={{ minHeight: "24px", maxHeight: "200px" }}
+                    disabled={isLoading}
                   />
-                </svg>
-              </button>
+                </div>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl hover:from-blue-500 hover:to-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-600/20"
+                  title={input.trim() ? "Send message" : "Resend last message"}
+                >
+                  {isLoading ? (
+                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  ) : (
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                      />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </form>
             <p className="text-xs text-zinc-600 mt-2 text-center">
               Press Enter to send, Shift+Enter for new line. Empty message resends last.
