@@ -1477,6 +1477,7 @@ export default function Chat() {
   const [activeProvider, setActiveProvider] = useState<LLMProviderType>("google-ai-studio");
   const [showProviderConfig, setShowProviderConfig] = useState(false);
   const [editingProvider, setEditingProvider] = useState<LLMProviderType | null>(null);
+  const providerDropdownRef = useRef<HTMLDivElement>(null);
   
   // Chat state
   const [input, setInput] = useState("");
@@ -1883,6 +1884,19 @@ export default function Chat() {
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
   }, [showUserMenu]);
+
+  // Close provider dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (providerDropdownRef.current && !providerDropdownRef.current.contains(e.target as Node)) {
+        setShowProviderConfig(false);
+      }
+    };
+    if (showProviderConfig) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showProviderConfig]);
 
   // Persona functions
   const createPersona = () => {
@@ -3084,7 +3098,7 @@ export default function Chat() {
             </button>
             
             {/* Provider Selector - hidden on mobile */}
-            <div className="relative hidden sm:block">
+            <div className="relative hidden sm:block" ref={providerDropdownRef}>
               <button
                 onClick={() => setShowProviderConfig(!showProviderConfig)}
                 className="flex items-center gap-2 px-3 py-2 bg-zinc-900 hover:bg-zinc-800 rounded-lg transition-colors border border-zinc-800"
