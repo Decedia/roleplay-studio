@@ -477,7 +477,7 @@ export const streamWithGoogleAIStudio = async (
   }
 };
 
-// Google Vertex AI chat implementation
+// Google Vertex AI chat implementation - uses server-side proxy to avoid CORS
 export const chatWithVertexAI: ChatFunction = async (
   messages,
   config,
@@ -486,134 +486,61 @@ export const chatWithVertexAI: ChatFunction = async (
   const mode = config.vertexMode || "express";
   const location = config.vertexLocation || "global";
   
-  if (mode === "express") {
-    // Express mode: Use API key with Vertex AI endpoint
-    if (!config.apiKey) {
-      return { error: "Vertex AI Express mode requires an API key" };
-    }
-    
-    try {
-      const formattedMessages = messages.map((m) => ({
-        role: m.role === "assistant" ? "model" : "user",
-        parts: [{ text: m.content }],
-      }));
+  if (!config.apiKey) {
+    return { error: "Vertex AI requires an API key" };
+  }
+  
+  try {
+    const formattedMessages = messages.map((m) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }],
+    }));
 
-      const systemInstruction = options.systemPrompt
-        ? { parts: [{ text: options.systemPrompt }] }
-        : undefined;
+    const systemInstruction = options.systemPrompt
+      ? { parts: [{ text: options.systemPrompt }] }
+      : undefined;
 
-      // Build generation config
-      const generationConfig: Record<string, unknown> = {
-        temperature: options.temperature,
-        maxOutputTokens: options.maxTokens,
-        topP: options.topP,
-        topK: options.topK,
-      };
+    // Build generation config
+    const generationConfig: Record<string, unknown> = {
+      temperature: options.temperature,
+      maxOutputTokens: options.maxTokens,
+      topP: options.topP,
+      topK: options.topK,
+    };
 
-      // Note: thinkingBudget is not supported in the current Vertex AI API
-      // Thinking is automatically enabled for Gemini 2.0 Flash models
+    // Use server-side proxy to avoid CORS issues
+    const response = await fetch("/api/vertex-ai", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        endpoint: `${config.selectedModel}:generateContent`,
+        apiKey: config.apiKey,
+        location: location,
+        payload: {
+          contents: formattedMessages,
+          systemInstruction,
+          generationConfig,
+        },
+      }),
+    });
 
-      // Vertex AI Express endpoint - uses x-goog-api-key header
-      // For global location, use the global endpoint without location prefix
-      const endpoint = location === "global"
-        ? `https://aiplatform.googleapis.com/v1/projects/-/locations/global/publishers/google/models/${config.selectedModel}:generateContent`
-        : `https://${location}-aiplatform.googleapis.com/v1/projects/-/locations/${location}/publishers/google/models/${config.selectedModel}:generateContent`;
-      
-      const response = await fetch(
-        endpoint,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": config.apiKey,
-          },
-          body: JSON.stringify({
-            contents: formattedMessages,
-            systemInstruction,
-            generationConfig,
-          }),
-        }
-      );
+    const data = await response.json();
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        return {
-          error: errorData.error?.message || `HTTP ${response.status}`,
-        };
-      }
-
-      const data = await response.json();
-      const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-
-      return { content };
-    } catch (error) {
+    if (!response.ok) {
       return {
-        error: error instanceof Error ? error.message : "Unknown error occurred",
+        error: data.error || `HTTP ${response.status}`,
       };
     }
-  } else {
-    // Full mode: Requires project ID and service account
-    if (!config.apiKey || !config.projectId) {
-      return { error: "Vertex AI Full mode requires API key and Project ID" };
-    }
-    
-    try {
-      // Full Vertex AI implementation would use OAuth2 token from service account
-      // For now, we'll use the AI Studio endpoint as a fallback
-      // TODO: Implement proper OAuth2 flow with service account JSON
-      
-      const formattedMessages = messages.map((m) => ({
-        role: m.role === "assistant" ? "model" : "user",
-        parts: [{ text: m.content }],
-      }));
 
-      const systemInstruction = options.systemPrompt
-        ? { parts: [{ text: options.systemPrompt }] }
-        : undefined;
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
-      // Build generation config with optional thinking
-      const generationConfig: Record<string, unknown> = {
-        temperature: options.temperature,
-        maxOutputTokens: options.maxTokens,
-        topP: options.topP,
-        topK: options.topK,
-      };
-
-      // Note: thinkingBudget is not supported in the current Google AI Studio API
-      // Thinking is automatically enabled for Gemini 2.0 Flash models
-
-      // Using AI Studio endpoint as fallback for full mode
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${config.selectedModel}:generateContent?key=${config.apiKey}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            contents: formattedMessages,
-            systemInstruction,
-            generationConfig,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        return {
-          error: errorData.error?.message || `HTTP ${response.status}`,
-        };
-      }
-
-      const data = await response.json();
-      const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-
-      return { content };
-    } catch (error) {
-      return {
-        error: error instanceof Error ? error.message : "Unknown error occurred",
-      };
-    }
+    return { content };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
   }
 };
 
@@ -798,7 +725,7 @@ export const streamWithNvidiaNIM = async (
   }
 };
 
-// Vertex AI streaming implementation
+// Vertex AI streaming implementation - uses server-side proxy to avoid CORS
 export const streamWithVertexAI = async (
   messages: Message[],
   config: ProviderConfig,
@@ -813,117 +740,103 @@ export const streamWithVertexAI = async (
   },
   onChunk: StreamCallback
 ): Promise<void> => {
-  const mode = config.vertexMode || "express";
   const location = config.vertexLocation || "global";
   
-  if (mode === "express") {
-    // Express mode: Use Vertex AI endpoint with streaming
-    if (!config.apiKey) {
-      onChunk({ error: "Vertex AI Express mode requires an API key" });
+  if (!config.apiKey) {
+    onChunk({ error: "Vertex AI requires an API key" });
+    return;
+  }
+
+  try {
+    const formattedMessages = messages.map((m) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }],
+    }));
+
+    const systemInstruction = options.systemPrompt
+      ? { parts: [{ text: options.systemPrompt }] }
+      : undefined;
+
+    // Build generation config with optional thinking
+    const generationConfig: Record<string, unknown> = {
+      temperature: options.temperature,
+      maxOutputTokens: options.maxTokens,
+      topP: options.topP,
+      topK: options.topK,
+    };
+
+    // Use server-side proxy to avoid CORS issues
+    const response = await fetch("/api/vertex-ai", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        endpoint: `${config.selectedModel}:streamGenerateContent?alt=sse`,
+        apiKey: config.apiKey,
+        location: location,
+        payload: {
+          contents: formattedMessages,
+          systemInstruction,
+          generationConfig,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      onChunk({ error: errorData.error || `HTTP ${response.status}` });
       return;
     }
 
-    try {
-      const formattedMessages = messages.map((m) => ({
-        role: m.role === "assistant" ? "model" : "user",
-        parts: [{ text: m.content }],
-      }));
+    const reader = response.body?.getReader();
+    if (!reader) {
+      onChunk({ error: "Failed to get response stream" });
+      return;
+    }
 
-      const systemInstruction = options.systemPrompt
-        ? { parts: [{ text: options.systemPrompt }] }
-        : undefined;
+    const decoder = new TextDecoder();
+    let fullContent = "";
+    let fullThinking = "";
+    let buffer = "";
 
-      // Build generation config with optional thinking
-      const generationConfig: Record<string, unknown> = {
-        temperature: options.temperature,
-        maxOutputTokens: options.maxTokens,
-        topP: options.topP,
-        topK: options.topK,
-      };
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-      // Note: thinkingBudget is not supported in the current Vertex AI API
-      // Thinking is automatically enabled for Gemini 2.0 Flash models
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
 
-      // Vertex AI Express streaming endpoint - use configured location
-      // For global location, use the global endpoint without location prefix
-      const endpoint = location === "global"
-        ? `https://aiplatform.googleapis.com/v1/projects/-/locations/global/publishers/google/models/${config.selectedModel}:streamGenerateContent?alt=sse`
-        : `https://${location}-aiplatform.googleapis.com/v1/projects/-/locations/${location}/publishers/google/models/${config.selectedModel}:streamGenerateContent?alt=sse`;
-      
-      const response = await fetch(
-        endpoint,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": config.apiKey,
-          },
-          body: JSON.stringify({
-            contents: formattedMessages,
-            systemInstruction,
-            generationConfig,
-          }),
-        }
-      );
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr || jsonStr === "[DONE]") continue;
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        onChunk({ error: errorData.error?.message || `HTTP ${response.status}` });
-        return;
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) {
-        onChunk({ error: "Failed to get response stream" });
-        return;
-      }
-
-      const decoder = new TextDecoder();
-      let fullContent = "";
-      let fullThinking = "";
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const jsonStr = line.slice(6).trim();
-            if (!jsonStr || jsonStr === "[DONE]") continue;
-
-            try {
-              const data = JSON.parse(jsonStr);
-              const parts = data.candidates?.[0]?.content?.parts || [];
-              
-              for (const part of parts) {
-                if (part.text) {
-                  fullContent += part.text;
-                  onChunk({ content: fullContent });
-                }
-                if (part.thought) {
-                  fullThinking += part.thought;
-                  onChunk({ thinking: fullThinking });
-                }
+          try {
+            const data = JSON.parse(jsonStr);
+            const parts = data.candidates?.[0]?.content?.parts || [];
+            
+            for (const part of parts) {
+              if (part.text) {
+                fullContent += part.text;
+                onChunk({ content: fullContent });
               }
-            } catch {
-              // Skip invalid JSON
+              if (part.thought) {
+                fullThinking += part.thought;
+                onChunk({ thinking: fullThinking });
+              }
             }
+          } catch {
+            // Skip invalid JSON
           }
         }
       }
-
-      onChunk({ content: fullContent, thinking: fullThinking, done: true });
-    } catch (error) {
-      onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
     }
-  } else {
-    // Full mode: Fall back to AI Studio endpoint
-    await streamWithGoogleAIStudio(messages, config, options, onChunk);
+
+    onChunk({ content: fullContent, thinking: fullThinking, done: true });
+  } catch (error) {
+    onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
   }
 };
 
@@ -1040,59 +953,36 @@ export const testProviderConnection = async (
     }
     
     case "google-vertex": {
-      const mode = config.vertexMode || "express";
       const location = config.vertexLocation || "global";
       
-      if (mode === "express") {
-        // Express mode: API key with Vertex AI endpoint
-        if (!config.apiKey) {
-          return { success: false, message: "API key is required for Express mode." };
+      if (!config.apiKey) {
+        return { success: false, message: "API key is required." };
+      }
+      try {
+        // Test with Vertex AI endpoint using server-side proxy to avoid CORS
+        const response = await fetch("/api/vertex-ai", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            endpoint: "gemini-2.0-flash:generateContent",
+            apiKey: config.apiKey,
+            location: location,
+            payload: {
+              contents: [{ role: "user", parts: [{ text: "test" }] }],
+              generationConfig: { maxOutputTokens: 1 },
+            },
+          }),
+        });
+        
+        if (response.ok) {
+          return { success: true, message: `Google Vertex AI (${location}) connection successful!` };
         }
-        try {
-          // Test with Vertex AI Express endpoint using configured location
-          // For global location, use the global endpoint without location prefix
-          const endpoint = location === "global"
-            ? `https://aiplatform.googleapis.com/v1/projects/-/locations/global/publishers/google/models`
-            : `https://${location}-aiplatform.googleapis.com/v1/projects/-/locations/${location}/publishers/google/models`;
-          
-          const response = await fetch(
-            endpoint,
-            {
-              method: "GET",
-              headers: {
-                "x-goog-api-key": config.apiKey,
-              },
-            }
-          );
-          if (response.ok) {
-            return { success: true, message: `Google Vertex AI (Express - ${location}) connection successful!` };
-          }
-          const errorData = await response.json();
-          return { success: false, message: errorData.error?.message || `HTTP ${response.status}` };
-        } catch (error) {
-          return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
-        }
-      } else {
-        // Full mode: Requires project ID
-        if (!config.apiKey) {
-          return { success: false, message: "API key is required." };
-        }
-        if (!config.projectId) {
-          return { success: false, message: "Project ID is required for Full mode." };
-        }
-        try {
-          const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models?key=${config.apiKey}`,
-            { method: "GET" }
-          );
-          if (response.ok) {
-            return { success: true, message: "Google Vertex AI (Full) connection successful!" };
-          }
-          const errorData = await response.json();
-          return { success: false, message: errorData.error?.message || `HTTP ${response.status}` };
-        } catch (error) {
-          return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
-        }
+        const errorData = await response.json();
+        return { success: false, message: errorData.error || `HTTP ${response.status}` };
+      } catch (error) {
+        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
       }
     }
     
