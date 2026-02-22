@@ -3853,6 +3853,16 @@ Write an engaging story segment. If this is a good point for player interaction,
                   </button>
                   <button
                     onClick={() => {
+                      setView("vn-generator");
+                      setShowMobileMenu(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-colors"
+                  >
+                    <span className="text-xl">📖</span>
+                    <span>VN Generator</span>
+                  </button>
+                  <button
+                    onClick={() => {
                       setEditingPersona(null);
                       setPersonaName("");
                       setPersonaDescription("");
