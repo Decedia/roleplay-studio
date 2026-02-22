@@ -243,6 +243,56 @@ Respond with ONLY a JSON object in this exact format (no markdown, no code block
 
 Remember: Create characters that would be fun to interact with in a roleplay setting.`;
 
+// Default VN generator instructions
+const DEFAULT_VN_INSTRUCTIONS = `You are a Visual Novel creator assistant. You help users create immersive visual novel experiences with compelling stories, characters, and interactive choices.
+
+## Your Tasks
+1. **Premise Development**: Help users develop their story idea into a full premise
+2. **Character Creation**: Create memorable characters with distinct personalities, motivations, and roles
+3. **Plot Generation**: Generate a complete plot from beginning to end with key story beats
+4. **Story Writing**: Write engaging story segments with narration, dialogue, and player choices
+
+## Output Formats
+
+### Characters (JSON array):
+[
+  {
+    "id": "unique-id",
+    "name": "Character Name",
+    "description": "Physical description and background",
+    "personality": "Personality traits and mannerisms",
+    "role": "protagonist|antagonist|supporting|npc"
+  }
+]
+
+### Plot Points (JSON array):
+[
+  {
+    "id": "unique-id",
+    "title": "Plot Point Title",
+    "description": "What happens in this part of the story",
+    "order": 1
+  }
+]
+
+### Story Segment (JSON):
+{
+  "content": "The narrative text with dialogue and descriptions",
+  "type": "narration|dialogue|choice",
+  "characterId": "id-of-speaking-character (for dialogue)",
+  "choices": [{"id": "c1", "text": "Choice text"}] (for choice type)
+}
+
+## Guidelines
+- Create engaging, immersive stories with meaningful choices
+- Develop characters with depth and clear motivations
+- Build tension and emotional moments
+- Write natural dialogue that fits each character
+- Ensure choices have meaningful consequences
+- Maintain consistent tone and pacing
+
+Remember: Your goal is to create visual novel experiences that players will remember.`;
+
 // Provider storage key - store config for each provider
 const getProviderConfigKey = (providerType: LLMProviderType) => `chat_provider_${providerType}`;
 
@@ -1418,7 +1468,7 @@ export default function Chat() {
   const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
-  const [view, setView] = useState<"personas" | "characters" | "conversations" | "chat" | "generator" | "brainstorm">("personas");
+  const [view, setView] = useState<"personas" | "characters" | "conversations" | "chat" | "generator" | "brainstorm" | "vn-generator">("personas");
   const [showPersonaModal, setShowPersonaModal] = useState(false);
   
   // Brainstorm state
@@ -1528,6 +1578,48 @@ export default function Chat() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatorError, setGeneratorError] = useState<string | null>(null);
   const [appliedCharacters, setAppliedCharacters] = useState<Set<string>>(new Set());
+  
+  // VN Generator state
+  type VNStep = "premise" | "characters" | "plot" | "story" | "play";
+  interface VNCharacter {
+    id: string;
+    name: string;
+    description: string;
+    personality: string;
+    role: "protagonist" | "antagonist" | "supporting" | "npc";
+  }
+  interface VNPlotPoint {
+    id: string;
+    title: string;
+    description: string;
+    order: number;
+  }
+  interface VNStorySegment {
+    id: string;
+    content: string;
+    type: "narration" | "dialogue" | "choice";
+    characterId?: string;
+    choices?: { id: string; text: string }[];
+    selectedChoice?: string;
+  }
+  interface VNProject {
+    id: string;
+    title: string;
+    premise: string;
+    characters: VNCharacter[];
+    plot: VNPlotPoint[];
+    story: VNStorySegment[];
+    currentPlotIndex: number;
+    createdAt: number;
+    updatedAt: number;
+  }
+  const [vnStep, setVnStep] = useState<VNStep>("premise");
+  const [vnProject, setVnProject] = useState<VNProject | null>(null);
+  const [vnPremise, setVnPremise] = useState("");
+  const [vnIsGenerating, setVnIsGenerating] = useState(false);
+  const [vnError, setVnError] = useState<string | null>(null);
+  const [vnInstructions, setVnInstructions] = useState<string>(DEFAULT_VN_INSTRUCTIONS);
+  const [showVnInstructionsEditor, setShowVnInstructionsEditor] = useState(false);
   
   // Message editing state
   const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
@@ -2580,6 +2672,342 @@ export default function Chat() {
         return next;
       });
     }, 3000);
+  };
+  
+  // VN Generator functions
+  const generateVNCharacters = async () => {
+    if (!vnPremise.trim() || vnIsGenerating) return;
+    
+    setVnIsGenerating(true);
+    setVnError(null);
+    
+    const systemPrompt = vnInstructions;
+    const userPrompt = `Based on this premise, create the main characters for the visual novel:
+
+Premise: ${vnPremise}
+
+Generate 3-5 main characters. Respond with ONLY a JSON array of characters in this format:
+[
+  {
+    "id": "unique-id",
+    "name": "Character Name",
+    "description": "Physical description and background",
+    "personality": "Personality traits and mannerisms",
+    "role": "protagonist|antagonist|supporting|npc"
+  }
+]`;
+
+    try {
+      const config = providerConfigs[activeProvider];
+      const messages: Message[] = [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ];
+      
+      let responseText: string;
+      
+      if (activeProvider === "puter") {
+        const response = await window.puter.ai.chat(messages, {
+          model: globalSettings.modelId,
+          temperature: 0.8,
+          max_tokens: 2000,
+        });
+        responseText = response.message.content;
+      } else {
+        const configWithModel = {
+          ...config,
+          selectedModel: globalSettings.modelId || config.selectedModel,
+        };
+        const response = await sendChatMessage(
+          messages,
+          configWithModel,
+          {
+            temperature: 0.8,
+            maxTokens: 2000,
+            topP: 0.9,
+            topK: 40,
+            enableThinking: false,
+          }
+        );
+        if (response.error) {
+          throw new Error(response.error);
+        }
+        responseText = response.content || "";
+      }
+      
+      // Parse JSON from response
+      let jsonStr = responseText.trim();
+      if (jsonStr.startsWith("```json")) {
+        jsonStr = jsonStr.slice(7);
+      } else if (jsonStr.startsWith("```")) {
+        jsonStr = jsonStr.slice(3);
+      }
+      if (jsonStr.endsWith("```")) {
+        jsonStr = jsonStr.slice(0, -3);
+      }
+      jsonStr = jsonStr.trim();
+      
+      const characters: VNCharacter[] = JSON.parse(jsonStr);
+      
+      // Create project with premise and characters
+      const project: VNProject = {
+        id: crypto.randomUUID(),
+        title: vnPremise.slice(0, 50) + (vnPremise.length > 50 ? "..." : ""),
+        premise: vnPremise,
+        characters: characters.map(c => ({ ...c, id: c.id || crypto.randomUUID() })),
+        plot: [],
+        story: [],
+        currentPlotIndex: 0,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      
+      setVnProject(project);
+      setVnStep("characters");
+    } catch (error) {
+      console.error("Error generating VN characters:", error);
+      setVnError(error instanceof Error ? error.message : "Failed to generate characters. Please try again.");
+    } finally {
+      setVnIsGenerating(false);
+    }
+  };
+  
+  const generateVNPlot = async () => {
+    if (!vnProject || vnIsGenerating) return;
+    
+    setVnIsGenerating(true);
+    setVnError(null);
+    
+    const systemPrompt = vnInstructions;
+    const charactersDesc = vnProject.characters.map(c => 
+      `- ${c.name} (${c.role}): ${c.description}`
+    ).join("\n");
+    
+    const userPrompt = `Based on this premise and characters, create a complete plot outline for the visual novel from beginning to end.
+
+Premise: ${vnProject.premise}
+
+Characters:
+${charactersDesc}
+
+Generate 5-10 plot points that tell a complete story. Respond with ONLY a JSON array:
+[
+  {
+    "id": "unique-id",
+    "title": "Plot Point Title",
+    "description": "What happens in this part of the story",
+    "order": 1
+  }
+]`;
+
+    try {
+      const config = providerConfigs[activeProvider];
+      const messages: Message[] = [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ];
+      
+      let responseText: string;
+      
+      if (activeProvider === "puter") {
+        const response = await window.puter.ai.chat(messages, {
+          model: globalSettings.modelId,
+          temperature: 0.8,
+          max_tokens: 2000,
+        });
+        responseText = response.message.content;
+      } else {
+        const configWithModel = {
+          ...config,
+          selectedModel: globalSettings.modelId || config.selectedModel,
+        };
+        const response = await sendChatMessage(
+          messages,
+          configWithModel,
+          {
+            temperature: 0.8,
+            maxTokens: 2000,
+            topP: 0.9,
+            topK: 40,
+            enableThinking: false,
+          }
+        );
+        if (response.error) {
+          throw new Error(response.error);
+        }
+        responseText = response.content || "";
+      }
+      
+      // Parse JSON from response
+      let jsonStr = responseText.trim();
+      if (jsonStr.startsWith("```json")) {
+        jsonStr = jsonStr.slice(7);
+      } else if (jsonStr.startsWith("```")) {
+        jsonStr = jsonStr.slice(3);
+      }
+      if (jsonStr.endsWith("```")) {
+        jsonStr = jsonStr.slice(0, -3);
+      }
+      jsonStr = jsonStr.trim();
+      
+      const plotPoints: VNPlotPoint[] = JSON.parse(jsonStr);
+      
+      setVnProject(prev => prev ? {
+        ...prev,
+        plot: plotPoints.map((p, i) => ({ ...p, id: p.id || crypto.randomUUID(), order: i + 1 })),
+        updatedAt: Date.now(),
+      } : null);
+      setVnStep("plot");
+    } catch (error) {
+      console.error("Error generating VN plot:", error);
+      setVnError(error instanceof Error ? error.message : "Failed to generate plot. Please try again.");
+    } finally {
+      setVnIsGenerating(false);
+    }
+  };
+  
+  const generateVNStorySegment = async () => {
+    if (!vnProject || vnIsGenerating) return;
+    
+    setVnIsGenerating(true);
+    setVnError(null);
+    
+    const systemPrompt = vnInstructions;
+    const charactersDesc = vnProject.characters.map(c => 
+      `- ${c.name} (${c.role}): ${c.description}. Personality: ${c.personality}`
+    ).join("\n");
+    
+    const currentPlot = vnProject.plot[vnProject.currentPlotIndex];
+    const previousStory = vnProject.story.slice(-3).map(s => s.content).join("\n\n");
+    
+    const userPrompt = `Write the next story segment for the visual novel.
+
+Premise: ${vnProject.premise}
+
+Characters:
+${charactersDesc}
+
+Current Plot Point: ${currentPlot?.title || "Beginning"} - ${currentPlot?.description || "Opening scene"}
+
+${previousStory ? `Previous Story (for context):\n${previousStory}\n` : ""}
+
+Write an engaging story segment. If this is a good point for player interaction, include choices. Respond with ONLY a JSON object:
+{
+  "content": "The narrative text with dialogue and descriptions. Use *actions* for actions, \"dialogue\" for speech.",
+  "type": "narration|dialogue|choice",
+  "characterId": "id-of-speaking-character (for dialogue, optional)",
+  "choices": [{"id": "c1", "text": "Choice text"}] (include if type is choice)
+}`;
+
+    try {
+      const config = providerConfigs[activeProvider];
+      const messages: Message[] = [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ];
+      
+      let responseText: string;
+      
+      if (activeProvider === "puter") {
+        const response = await window.puter.ai.chat(messages, {
+          model: globalSettings.modelId,
+          temperature: 0.9,
+          max_tokens: 2000,
+        });
+        responseText = response.message.content;
+      } else {
+        const configWithModel = {
+          ...config,
+          selectedModel: globalSettings.modelId || config.selectedModel,
+        };
+        const response = await sendChatMessage(
+          messages,
+          configWithModel,
+          {
+            temperature: 0.9,
+            maxTokens: 2000,
+            topP: 0.95,
+            topK: 40,
+            enableThinking: false,
+          }
+        );
+        if (response.error) {
+          throw new Error(response.error);
+        }
+        responseText = response.content || "";
+      }
+      
+      // Parse JSON from response
+      let jsonStr = responseText.trim();
+      if (jsonStr.startsWith("```json")) {
+        jsonStr = jsonStr.slice(7);
+      } else if (jsonStr.startsWith("```")) {
+        jsonStr = jsonStr.slice(3);
+      }
+      if (jsonStr.endsWith("```")) {
+        jsonStr = jsonStr.slice(0, -3);
+      }
+      jsonStr = jsonStr.trim();
+      
+      const segment: VNStorySegment = {
+        ...JSON.parse(jsonStr),
+        id: crypto.randomUUID(),
+      };
+      
+      setVnProject(prev => prev ? {
+        ...prev,
+        story: [...prev.story, segment],
+        updatedAt: Date.now(),
+      } : null);
+      setVnStep("story");
+    } catch (error) {
+      console.error("Error generating story segment:", error);
+      setVnError(error instanceof Error ? error.message : "Failed to generate story. Please try again.");
+    } finally {
+      setVnIsGenerating(false);
+    }
+  };
+  
+  const continueVNStory = async (choiceId?: string) => {
+    if (!vnProject || vnIsGenerating) return;
+    
+    // If there was a choice, record it
+    if (choiceId && vnProject.story.length > 0) {
+      const lastSegment = vnProject.story[vnProject.story.length - 1];
+      if (lastSegment.choices) {
+        setVnProject(prev => {
+          if (!prev) return null;
+          const updatedStory = [...prev.story];
+          updatedStory[updatedStory.length - 1] = {
+            ...lastSegment,
+            selectedChoice: choiceId
+          };
+          return { ...prev, story: updatedStory };
+        });
+      }
+    }
+    
+    // Check if we should advance to next plot point
+    const currentPlotIndex = vnProject.currentPlotIndex;
+    const storyLength = vnProject.story.length;
+    
+    // Advance plot every 3-5 segments
+    if (storyLength > 0 && storyLength % 4 === 0 && currentPlotIndex < vnProject.plot.length - 1) {
+      setVnProject(prev => prev ? {
+        ...prev,
+        currentPlotIndex: prev.currentPlotIndex + 1,
+        updatedAt: Date.now(),
+      } : null);
+    }
+    
+    await generateVNStorySegment();
+  };
+  
+  const startNewVN = () => {
+    setVnProject(null);
+    setVnPremise("");
+    setVnStep("premise");
+    setVnError(null);
   };
 
   // Navigation functions
@@ -3964,6 +4392,329 @@ export default function Chat() {
                   Send
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* VN Generator View */}
+          {view === "vn-generator" && (
+            <div className="space-y-6 h-full flex flex-col">
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg font-medium text-white">📖 Visual Novel Generator</h2>
+                
+                {/* Desktop buttons - hidden on mobile */}
+                <div className="hidden md:flex gap-2">
+                  {vnProject && (
+                    <button
+                      onClick={startNewVN}
+                      className="px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors text-sm"
+                    >
+                      New Project
+                    </button>
+                  )}
+                </div>
+                
+                {/* Mobile hamburger menu button */}
+                <button
+                  onClick={() => setShowMobileMenu(!showMobileMenu)}
+                  className="md:hidden p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                >
+                  <svg className="w-6 h-6 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {showMobileMenu ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    )}
+                  </svg>
+                </button>
+              </div>
+              
+              {/* Mobile menu dropdown for VN generator */}
+              {showMobileMenu && view === "vn-generator" && (
+                <div className="md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3">
+                  {vnProject && (
+                    <button
+                      onClick={() => {
+                        startNewVN();
+                        setShowMobileMenu(false);
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      <span>New Project</span>
+                    </button>
+                  )}
+                </div>
+              )}
+              
+              {/* Step indicator */}
+              <div className="flex items-center gap-2 text-sm">
+                {["premise", "characters", "plot", "story", "play"].map((step, i) => (
+                  <div key={step} className="flex items-center">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
+                      vnStep === step 
+                        ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white" 
+                        : i < ["premise", "characters", "plot", "story", "play"].indexOf(vnStep)
+                          ? "bg-green-600 text-white"
+                          : "bg-zinc-700 text-zinc-400"
+                    }`}>
+                      {i < ["premise", "characters", "plot", "story", "play"].indexOf(vnStep) ? "✓" : i + 1}
+                    </div>
+                    {i < 4 && (
+                      <div className={`w-8 h-0.5 ${
+                        i < ["premise", "characters", "plot", "story", "play"].indexOf(vnStep)
+                          ? "bg-green-600"
+                          : "bg-zinc-700"
+                      }`} />
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-4 text-xs text-zinc-500">
+                <span>Premise</span>
+                <span>Characters</span>
+                <span>Plot</span>
+                <span>Story</span>
+                <span>Play</span>
+              </div>
+              
+              {/* VN Instructions Editor */}
+              <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+                <button
+                  onClick={() => setShowVnInstructionsEditor(!showVnInstructionsEditor)}
+                  className="flex items-center justify-between w-full text-left"
+                >
+                  <span className="text-sm font-medium text-zinc-300">📝 VN Generator Instructions</span>
+                  <svg className={`w-5 h-5 text-zinc-500 transition-transform ${showVnInstructionsEditor ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {showVnInstructionsEditor && (
+                  <div className="mt-4 space-y-3">
+                    <p className="text-xs text-zinc-500">
+                      These instructions tell the AI how to create visual novels.
+                    </p>
+                    <textarea
+                      value={vnInstructions}
+                      onChange={(e) => setVnInstructions(e.target.value)}
+                      className="w-full h-64 bg-zinc-800 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-200 font-mono resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                      placeholder="Enter instructions for the VN generator AI..."
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setVnInstructions(DEFAULT_VN_INSTRUCTIONS)}
+                        className="px-3 py-1.5 text-xs bg-zinc-700 text-zinc-300 rounded-lg hover:bg-zinc-600 transition-colors"
+                      >
+                        Reset to Default
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Error display */}
+              {vnError && (
+                <div className="bg-red-900/30 border border-red-700 rounded-lg p-3 text-sm text-red-300">
+                  {vnError}
+                </div>
+              )}
+              
+              {/* Premise Step */}
+              {vnStep === "premise" && (
+                <div className="space-y-4">
+                  <div className="text-sm text-zinc-500 mb-2">
+                    Describe your visual novel idea. What kind of story do you want to tell?
+                  </div>
+                  <textarea
+                    value={vnPremise}
+                    onChange={(e) => setVnPremise(e.target.value)}
+                    placeholder="Example: A young detective moves to a mysterious town where people have been disappearing. They must uncover the truth while dealing with supernatural forces and forming relationships with the locals..."
+                    className="w-full h-40 bg-zinc-800 border border-zinc-700 rounded-lg p-4 text-sm text-zinc-200 resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                    disabled={vnIsGenerating}
+                  />
+                  <button
+                    onClick={generateVNCharacters}
+                    disabled={!vnPremise.trim() || vnIsGenerating}
+                    className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {vnIsGenerating ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Generating Characters...
+                      </span>
+                    ) : (
+                      "Generate Characters →"
+                    )}
+                  </button>
+                </div>
+              )}
+              
+              {/* Characters Step */}
+              {vnStep === "characters" && vnProject && (
+                <div className="space-y-4">
+                  <div className="text-sm text-zinc-500 mb-2">
+                    Review your characters. You can edit them before generating the plot.
+                  </div>
+                  <div className="grid gap-4">
+                    {vnProject.characters.map((char, idx) => (
+                      <div key={char.id} className="bg-zinc-800 border border-zinc-700 rounded-xl p-4">
+                        <div className="flex items-start gap-4">
+                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                            char.role === "protagonist" ? "bg-gradient-to-br from-blue-500 to-cyan-500" :
+                            char.role === "antagonist" ? "bg-gradient-to-br from-red-500 to-orange-500" :
+                            "bg-gradient-to-br from-purple-500 to-pink-500"
+                          }`}>
+                            <span className="text-xl text-white font-semibold">
+                              {char.name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="text-lg font-semibold text-white">{char.name}</h3>
+                              <span className={`text-xs px-2 py-0.5 rounded ${
+                                char.role === "protagonist" ? "bg-blue-600" :
+                                char.role === "antagonist" ? "bg-red-600" :
+                                char.role === "supporting" ? "bg-purple-600" :
+                                "bg-zinc-600"
+                              } text-white`}>
+                                {char.role}
+                              </span>
+                            </div>
+                            <p className="text-sm text-zinc-400 mb-2">{char.description}</p>
+                            <p className="text-xs text-zinc-500 italic">{char.personality}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    onClick={generateVNPlot}
+                    disabled={vnIsGenerating}
+                    className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {vnIsGenerating ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Generating Plot...
+                      </span>
+                    ) : (
+                      "Generate Plot →"
+                    )}
+                  </button>
+                </div>
+              )}
+              
+              {/* Plot Step */}
+              {vnStep === "plot" && vnProject && vnProject.plot.length > 0 && (
+                <div className="space-y-4">
+                  <div className="text-sm text-zinc-500 mb-2">
+                    Review your plot outline. The story will follow these beats.
+                  </div>
+                  <div className="space-y-3">
+                    {vnProject.plot.map((point, idx) => (
+                      <div key={point.id} className="bg-zinc-800 border border-zinc-700 rounded-xl p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+                            <span className="text-sm text-white font-medium">{point.order}</span>
+                          </div>
+                          <div>
+                            <h4 className="text-white font-medium">{point.title}</h4>
+                            <p className="text-sm text-zinc-400">{point.description}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => {
+                      setVnStep("story");
+                      generateVNStorySegment();
+                    }}
+                    disabled={vnIsGenerating}
+                    className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {vnIsGenerating ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Starting Story...
+                      </span>
+                    ) : (
+                      "Start Story →"
+                    )}
+                  </button>
+                </div>
+              )}
+              
+              {/* Story/Play Step */}
+              {(vnStep === "story" || vnStep === "play") && vnProject && vnProject.story.length > 0 && (
+                <div className="space-y-4">
+                  <div className="text-sm text-zinc-500 mb-2">
+                    Read the story and make choices when prompted.
+                  </div>
+                  
+                  {/* Current plot indicator */}
+                  {vnProject.plot.length > 0 && (
+                    <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-zinc-400">
+                      Current: {vnProject.plot[vnProject.currentPlotIndex]?.title || "Beginning"}
+                    </div>
+                  )}
+                  
+                  {/* Story segments */}
+                  <div className="flex-1 overflow-y-auto space-y-4 bg-zinc-900/50 rounded-xl p-4 min-h-[400px] max-h-[500px]">
+                    {vnProject.story.map((segment) => (
+                      <div key={segment.id} className="space-y-2">
+                        <FormattedText content={segment.content} />
+                        
+                        {/* Choices */}
+                        {segment.choices && segment.choices.length > 0 && !segment.selectedChoice && (
+                          <div className="mt-4 space-y-2">
+                            {segment.choices.map((choice) => (
+                              <button
+                                key={choice.id}
+                                onClick={() => continueVNStory(choice.id)}
+                                disabled={vnIsGenerating}
+                                className="w-full text-left px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg hover:border-purple-500 hover:bg-zinc-700 transition-colors text-zinc-200 disabled:opacity-50"
+                              >
+                                → {choice.text}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {/* Selected choice indicator */}
+                        {segment.selectedChoice && segment.choices && (
+                          <div className="mt-2 text-sm text-zinc-500 italic">
+                            You chose: {segment.choices.find(c => c.id === segment.selectedChoice)?.text}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    
+                    {vnIsGenerating && (
+                      <div className="flex items-center gap-2 text-zinc-500">
+                        <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
+                        <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
+                        <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
+                        <span className="text-sm">Writing...</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Continue button (for non-choice segments) */}
+                  {vnProject.story.length > 0 && 
+                   !vnProject.story[vnProject.story.length - 1].choices && 
+                   !vnIsGenerating && (
+                    <button
+                      onClick={() => continueVNStory()}
+                      className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors"
+                    >
+                      Continue Story →
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
