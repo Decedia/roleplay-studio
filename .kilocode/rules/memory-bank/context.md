@@ -80,6 +80,11 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **Exclusive brainstorm instructions - separate from global instructions, customizable by user**
 - [x] **Disconnect button for providers - allows users to disconnect from the current model/provider**
 - [x] **Improved Vertex AI integration - separate model fetching with location support for Express mode**
+- [x] **Enhanced AI character generator: asks for character details first, only generates JSON when user says "create now"**
+- [x] **Added character JSON display in code blocks with syntax highlighting**
+- [x] **Added "Create Character" button to immediately start a conversation with the generated character**
+- [x] **Added "Export JSON" button to download character as JSON file with character name as filename**
+- [x] **Improved generator instructions: allows skipping question phase if user provides enough details upfront**
 
 ## Current Structure
 
@@ -123,6 +128,9 @@ A chat application for roleplay conversations with multiple LLM provider support
 - Accessible from personas view via "AI Generator" button
 - Uses current provider and model for generation
 - Higher temperature (0.8) for creative character creation
+- **Interactive character creation process**:
+  - AI asks for character details first (type, personality, appearance, background)
+  - Only generates JSON when user says "create now"
 - Generates full character profile:
   - Name
   - Description (personality, appearance, background)
@@ -130,7 +138,9 @@ A chat application for roleplay conversations with multiple LLM provider support
   - Scenario (setting)
   - Example dialogue
 - Preview generated character before importing
-- One-click import to character list
+- **Character JSON display**: Shows generated JSON in code blocks with syntax highlighting
+- **"Create Character" button**: Immediately starts a conversation with the generated character
+- **"Export JSON" button**: Downloads character as JSON file with character name as filename
 
 ### SillyTavern Import
 - Import character cards from JSON files
@@ -356,6 +366,8 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date | Changes |
 |------|---------|
+| 2026-02-23 | Improved generator instructions: allows skipping question phase if user provides enough details upfront, clarified "create now" trigger requirement |
+| 2026-02-23 | Enhanced AI character generator: asks for character details first, only generates JSON when user says "create now", added character JSON display with "Create Character" and "Export JSON" buttons |
 | 2026-02-18 | Improved Vertex AI integration - separate model fetching endpoint with location support for Express mode |
 | 2026-02-17 | Added disconnect button for providers - allows users to disconnect from the current model/provider in the provider dropdown |
 | 2026-02-17 | Added exclusive brainstorm instructions - separate from global instructions, customizable by user with collapsible editor in brainstorm tab |
