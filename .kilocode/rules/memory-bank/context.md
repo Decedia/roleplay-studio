@@ -86,6 +86,8 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **Added "Export JSON" button to download character as JSON file with character name as filename**
 - [x] **Improved generator instructions: allows skipping question phase if user provides enough details upfront**
 - [x] **Updated VN generator instructions: asks questions first, only generates when user says "create now"**
+- [x] **Added custom size checkbox for context/output tokens - when disabled, auto-uses model max sizes**
+- [x] **Fixed Vertex AI connection - now requires Google Cloud Project ID for all requests**
 
 ## Current Structure
 
@@ -367,6 +369,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date | Changes |
 |------|---------|
+| 2026-02-23 | Added custom size checkbox for context/output tokens, fixed Vertex AI to require Project ID for all requests |
 | 2026-02-23 | Updated VN generator instructions: asks questions first, only generates when user says "create now", merged changes to main branch |
 | 2026-02-23 | Improved generator instructions: allows skipping question phase if user provides enough details upfront, clarified "create now" trigger requirement |
 | 2026-02-23 | Enhanced AI character generator: asks for character details first, only generates JSON when user says "create now", added character JSON display with "Create Character" and "Export JSON" buttons |
