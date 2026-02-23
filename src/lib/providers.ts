@@ -1109,10 +1109,13 @@ export const fetchModelsFromProvider = async (
         if (!config.apiKey) {
           return { models: [], error: "API key is required" };
         }
+        if (!config.projectId) {
+          return { models: [], error: "Project ID is required for Vertex AI" };
+        }
 
         const location = config.vertexLocation || "global";
         const vertexMode = config.vertexMode || "express";
-        const response = await fetch(`/api/models?provider=google-vertex&apiKey=${encodeURIComponent(config.apiKey)}&location=${encodeURIComponent(location)}&vertexMode=${encodeURIComponent(vertexMode)}`);
+        const response = await fetch(`/api/models?provider=google-vertex&apiKey=${encodeURIComponent(config.apiKey)}&projectId=${encodeURIComponent(config.projectId)}&location=${encodeURIComponent(location)}&vertexMode=${encodeURIComponent(vertexMode)}`);
         const data = await response.json();
 
         if (!response.ok) {
