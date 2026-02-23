@@ -489,6 +489,10 @@ export const chatWithVertexAI: ChatFunction = async (
   if (!config.apiKey) {
     return { error: "Vertex AI requires an API key" };
   }
+
+  if (!config.projectId) {
+    return { error: "Vertex AI requires a Google Cloud Project ID. Please enter your project ID in the provider settings." };
+  }
   
   try {
     const formattedMessages = messages.map((m) => ({
@@ -517,6 +521,7 @@ export const chatWithVertexAI: ChatFunction = async (
       body: JSON.stringify({
         endpoint: `${config.selectedModel}:generateContent`,
         apiKey: config.apiKey,
+        projectId: config.projectId,
         location: location,
         payload: {
           contents: formattedMessages,
@@ -747,6 +752,11 @@ export const streamWithVertexAI = async (
     return;
   }
 
+  if (!config.projectId) {
+    onChunk({ error: "Vertex AI requires a Google Cloud Project ID. Please enter your project ID in the provider settings." });
+    return;
+  }
+
   try {
     const formattedMessages = messages.map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
@@ -774,6 +784,7 @@ export const streamWithVertexAI = async (
       body: JSON.stringify({
         endpoint: `${config.selectedModel}:streamGenerateContent?alt=sse`,
         apiKey: config.apiKey,
+        projectId: config.projectId,
         location: location,
         payload: {
           contents: formattedMessages,
@@ -958,6 +969,9 @@ export const testProviderConnection = async (
       if (!config.apiKey) {
         return { success: false, message: "API key is required." };
       }
+      if (!config.projectId) {
+        return { success: false, message: "Project ID is required for Vertex AI. Please enter your Google Cloud project ID." };
+      }
       try {
         // Test with Vertex AI endpoint using server-side proxy to avoid CORS
         const response = await fetch("/api/vertex-ai", {
@@ -968,6 +982,7 @@ export const testProviderConnection = async (
           body: JSON.stringify({
             endpoint: "gemini-2.0-flash:generateContent",
             apiKey: config.apiKey,
+            projectId: config.projectId,
             location: location,
             payload: {
               contents: [{ role: "user", parts: [{ text: "test" }] }],

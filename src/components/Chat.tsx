@@ -82,6 +82,7 @@ interface GlobalSettings {
   modelId: string;
   enableThinking: boolean;
   thinkingBudget: number; // Thinking budget for Gemini 2.0 models (in tokens)
+  useCustomSize: boolean; // Enable custom context/output sizes
 }
 
 // Global instructions with advanced fields
@@ -332,6 +333,7 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   modelId: "", // Empty initially - user must connect to a provider first
   enableThinking: false,
   thinkingBudget: 8192, // Default thinking budget for Gemini 2.0 models
+  useCustomSize: false, // By default, use model max sizes
 };
 
 // Estimate token count for text (rough approximation: ~4 chars per token)
@@ -775,8 +777,35 @@ function SettingsModal({
             </p>
           </div>
 
+          {/* Custom Size Toggle */}
+          <div className="flex items-center gap-3 mb-4">
+            <input
+              type="checkbox"
+              id="useCustomSize"
+              checked={globalSettings.useCustomSize}
+              onChange={(e) => {
+                const useCustom = e.target.checked;
+                if (!useCustom && selectedModel) {
+                  // Reset to model max when disabling custom size
+                  setGlobalSettings({ 
+                    ...globalSettings, 
+                    useCustomSize: false,
+                    maxTokens: selectedModel.max_tokens || 4000,
+                    maxContextTokens: selectedModel.context || 128000
+                  });
+                } else {
+                  setGlobalSettings({ ...globalSettings, useCustomSize: useCustom });
+                }
+              }}
+              className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-purple-600 focus:ring-purple-500 focus:ring-offset-zinc-900"
+            />
+            <label htmlFor="useCustomSize" className="text-sm text-zinc-300">
+              Use custom output/context sizes
+            </label>
+          </div>
+
           {/* Max Output Tokens */}
-          <div>
+          <div className={globalSettings.useCustomSize ? "" : "opacity-50 pointer-events-none"}>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
               Max Output Tokens
             </label>
@@ -789,6 +818,7 @@ function SettingsModal({
                 value={globalSettings.maxTokens}
                 onChange={(e) => setGlobalSettings({ ...globalSettings, maxTokens: parseInt(e.target.value) })}
                 className="flex-1"
+                disabled={!globalSettings.useCustomSize}
               />
               <input
                 type="number"
@@ -803,11 +833,13 @@ function SettingsModal({
                   }
                 }}
                 className="w-24 px-2 py-1 bg-zinc-800 border border-zinc-700 rounded text-white text-center text-sm focus:outline-none focus:border-purple-500"
+                disabled={!globalSettings.useCustomSize}
               />
               <button
                 onClick={() => setGlobalSettings({ ...globalSettings, maxTokens: selectedModel?.max_tokens || 4000 })}
                 className="px-2 py-1 bg-purple-600 hover:bg-purple-700 rounded text-xs text-white transition-colors"
                 title="Set to model maximum"
+                disabled={!globalSettings.useCustomSize}
               >
                 Max
               </button>
@@ -818,7 +850,7 @@ function SettingsModal({
           </div>
 
           {/* Max Context Tokens */}
-          <div>
+          <div className={globalSettings.useCustomSize ? "" : "opacity-50 pointer-events-none"}>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
               Max Context Tokens
             </label>
@@ -831,6 +863,7 @@ function SettingsModal({
                 value={globalSettings.maxContextTokens}
                 onChange={(e) => setGlobalSettings({ ...globalSettings, maxContextTokens: parseInt(e.target.value) })}
                 className="flex-1"
+                disabled={!globalSettings.useCustomSize}
               />
               <input
                 type="number"
@@ -845,11 +878,13 @@ function SettingsModal({
                   }
                 }}
                 className="w-24 px-2 py-1 bg-zinc-800 border border-zinc-700 rounded text-white text-center text-sm focus:outline-none focus:border-purple-500"
+                disabled={!globalSettings.useCustomSize}
               />
               <button
                 onClick={() => setGlobalSettings({ ...globalSettings, maxContextTokens: selectedModel?.context || 128000 })}
                 className="px-2 py-1 bg-purple-600 hover:bg-purple-700 rounded text-xs text-white transition-colors"
                 title="Set to model maximum"
+                disabled={!globalSettings.useCustomSize}
               >
                 Max
               </button>
@@ -1204,13 +1239,28 @@ function SettingsModal({
                         }))}
                         className="w-full bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       >
-                        <option value="express">Express (API Key only)</option>
-                        <option value="full">Full (Project ID required)</option>
+                        <option value="express">Express (API Key + Project ID)</option>
+                        <option value="full">Full (Service Account)</option>
                       </select>
                       <p className="text-xs text-zinc-500 mt-1">
-                        {providerConfigs["google-vertex"]?.vertexMode === "full" 
-                          ? "Full mode requires GCP Project ID for enterprise features."
-                          : "Express mode uses API key only, similar to AI Studio."}
+                        Express mode uses API key authentication. Both modes require a Google Cloud Project ID.
+                      </p>
+                    </div>
+                    {/* Project ID - always required for Vertex AI */}
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-1">Google Cloud Project ID <span className="text-red-400">*</span></label>
+                      <input
+                        type="text"
+                        value={providerConfigs["google-vertex"]?.projectId || ""}
+                        onChange={(e) => setProviderConfigs(prev => ({
+                          ...prev,
+                          "google-vertex": { ...prev["google-vertex"], projectId: e.target.value }
+                        }))}
+                        placeholder="your-project-id"
+                        className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                      <p className="text-xs text-zinc-500 mt-1">
+                        Find your Project ID in the <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Google Cloud Console</a>
                       </p>
                     </div>
                     {/* Server Location */}
@@ -1251,27 +1301,11 @@ function SettingsModal({
                         className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
-                    {/* Project ID - only shown in Full mode */}
-                    {providerConfigs["google-vertex"]?.vertexMode === "full" && (
-                      <div>
-                        <label className="block text-xs text-zinc-400 mb-1">Project ID</label>
-                        <input
-                          type="text"
-                          value={providerConfigs["google-vertex"]?.projectId || ""}
-                          onChange={(e) => setProviderConfigs(prev => ({
-                            ...prev,
-                            "google-vertex": { ...prev["google-vertex"], projectId: e.target.value }
-                          }))}
-                          placeholder="Enter your GCP Project ID"
-                          className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
-                      </div>
-                    )}
                     <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={() => onTestConnection("google-vertex")}
-                        disabled={connectionStatus["google-vertex"]?.status === "testing" || !providerConfigs["google-vertex"]?.apiKey || (providerConfigs["google-vertex"]?.vertexMode === "full" && !providerConfigs["google-vertex"]?.projectId)}
+                        disabled={connectionStatus["google-vertex"]?.status === "testing" || !providerConfigs["google-vertex"]?.apiKey || !providerConfigs["google-vertex"]?.projectId}
                         className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {connectionStatus["google-vertex"]?.status === "testing" ? "Testing..." : "Test Connection"}
@@ -1279,7 +1313,7 @@ function SettingsModal({
                       <button
                         type="button"
                         onClick={() => onConnect("google-vertex")}
-                        disabled={!providerConfigs["google-vertex"]?.apiKey || (providerConfigs["google-vertex"]?.vertexMode === "full" && !providerConfigs["google-vertex"]?.projectId)}
+                        disabled={!providerConfigs["google-vertex"]?.apiKey || !providerConfigs["google-vertex"]?.projectId}
                         className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Connect
