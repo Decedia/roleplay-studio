@@ -1091,38 +1091,75 @@ export const fetchModelsFromProvider = async (
       }
 
       case "google-ai-studio": {
-        if (!config.apiKey) {
-          return { models: [], error: "API key is required" };
-        }
+        // Return static popular Google AI Studio models instead of fetching from API
+        const staticModels: FetchedModel[] = [
+          {
+            id: "gemini-2.0-flash",
+            name: "Gemini 2.0 Flash",
+            provider: "google-ai-studio",
+            context: 1048576,
+            max_tokens: 8192,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-2.0-flash-lite",
+            name: "Gemini 2.0 Flash Lite",
+            provider: "google-ai-studio",
+            context: 1048576,
+            max_tokens: 8192,
+            supportsThinking: false,
+          },
+          {
+            id: "gemini-1.5-pro",
+            name: "Gemini 1.5 Pro",
+            provider: "google-ai-studio",
+            context: 2097152,
+            max_tokens: 8192,
+            supportsThinking: false,
+          },
+          {
+            id: "gemini-1.5-flash",
+            name: "Gemini 1.5 Flash",
+            provider: "google-ai-studio",
+            context: 1048576,
+            max_tokens: 8192,
+            supportsThinking: false,
+          },
+        ];
 
-        const response = await fetch(`/api/models?provider=google-ai-studio&apiKey=${encodeURIComponent(config.apiKey)}`);
-        const data = await response.json();
-
-        if (!response.ok) {
-          return { models: [], error: data.error || `HTTP ${response.status}` };
-        }
-
-        return { models: data.models || [] };
+        return { models: staticModels };
       }
 
       case "google-vertex": {
-        if (!config.apiKey) {
-          return { models: [], error: "API key is required" };
-        }
-        if (!config.projectId) {
-          return { models: [], error: "Project ID is required for Vertex AI" };
-        }
+        // Return static popular Google Vertex AI models instead of fetching from API
+        const staticModels: FetchedModel[] = [
+          {
+            id: "gemini-2.0-flash",
+            name: "Gemini 2.0 Flash",
+            provider: "google-vertex",
+            context: 1048576,
+            max_tokens: 8192,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-1.5-pro",
+            name: "Gemini 1.5 Pro",
+            provider: "google-vertex",
+            context: 2097152,
+            max_tokens: 8192,
+            supportsThinking: false,
+          },
+          {
+            id: "gemini-1.5-flash",
+            name: "Gemini 1.5 Flash",
+            provider: "google-vertex",
+            context: 1048576,
+            max_tokens: 8192,
+            supportsThinking: false,
+          },
+        ];
 
-        const location = config.vertexLocation || "global";
-        const vertexMode = config.vertexMode || "express";
-        const response = await fetch(`/api/models?provider=google-vertex&apiKey=${encodeURIComponent(config.apiKey)}&projectId=${encodeURIComponent(config.projectId)}&location=${encodeURIComponent(location)}&vertexMode=${encodeURIComponent(vertexMode)}`);
-        const data = await response.json();
-
-        if (!response.ok) {
-          return { models: [], error: data.error || `HTTP ${response.status}` };
-        }
-
-        return { models: data.models || [] };
+        return { models: staticModels };
       }
 
       case "puter": {
