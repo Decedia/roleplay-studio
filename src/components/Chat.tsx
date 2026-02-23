@@ -2624,30 +2624,26 @@ export default function Chat() {
   };
   
   // Import generated character to the character list
-  const importGeneratedCharacter = (transitionToChat: boolean = false) => {
-    if (!generatedCharacter) return;
-    
-    setCharacters((prev) => [...prev, generatedCharacter]);
-    const newCharacter = generatedCharacter;
-    setGeneratedCharacter(null);
+  const importGeneratedCharacter = (character: Character, transitionToChat: boolean = false) => {
+    setCharacters((prev) => [...prev, character]);
     
     if (transitionToChat && selectedPersona) {
       // Create a new conversation with the selected persona and new character
       const newConversation: Conversation = {
         id: crypto.randomUUID(),
         personaId: selectedPersona.id,
-        characterId: newCharacter.id,
+        characterId: character.id,
         messages: [
           {
             role: "assistant",
-            content: newCharacter.firstMessage,
+            content: character.firstMessage,
           },
         ],
         createdAt: Date.now(),
         updatedAt: Date.now(),
       };
       setConversations((prev) => [...prev, newConversation]);
-      setSelectedCharacter(newCharacter);
+      setSelectedCharacter(character);
       setCurrentConversation(newConversation);
       setView("chat");
     } else {
@@ -3488,6 +3484,8 @@ Write an engaging story segment. If this is a good point for player interaction,
       setView("personas");
     } else if (view === "brainstorm") {
       setView("personas");
+    } else if (view === "vn-generator") {
+      setView("personas");
     }
   };
 
@@ -4175,7 +4173,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                                       <div className="flex gap-2">
                                         <button
                                           onClick={() => {
-                                            setGeneratedCharacter({
+                                            const newChar: Character = {
                                               id: crypto.randomUUID(),
                                               name: char.name,
                                               description: char.description,
@@ -4183,8 +4181,8 @@ Write an engaging story segment. If this is a good point for player interaction,
                                               scenario: char.scenario,
                                               mesExample: char.mesExample,
                                               createdAt: Date.now(),
-                                            });
-                                            importGeneratedCharacter(true);
+                                            };
+                                            importGeneratedCharacter(newChar, true);
                                             setAppliedCharacters(prev => new Set(prev).add(char.name));
                                           }}
                                           disabled={isApplied}
