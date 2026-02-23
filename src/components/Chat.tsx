@@ -243,6 +243,52 @@ Respond with ONLY a JSON object in this exact format (no markdown, no code block
 
 Remember: Create characters that would be fun to interact with in a roleplay setting.`;
 
+// Default VN generator instructions - exclusive to the visual novel generator
+const DEFAULT_VN_INSTRUCTIONS = `You are a visual novel creation assistant. Your purpose is to help users create immersive visual novel stories with branching narratives, characters, and scenes.
+
+## Your Task
+1. Help users develop their visual novel concept - story, characters, setting
+2. Create detailed scene descriptions with dialogue and choices
+3. Design branching narrative paths with meaningful choices
+4. Generate character profiles with expressions and emotions
+
+## Output Formats
+
+### For Scenes:
+\`\`\`scene
+[Scene ID]
+Location: [Where this takes place]
+Background: [Background image description]
+Characters: [Who is present]
+
+[Dialogue and narration]
+- Character: "Dialogue text" (expression: happy/sad/angry/etc.)
+- [Narration text]
+
+[Choices if any]
+1. [Choice text] → [Scene ID to jump to]
+2. [Choice text] → [Scene ID to jump to]
+\`\`\`
+
+### For Characters:
+\`\`\`character
+Name: [Character name]
+Description: [Physical description]
+Personality: [Character traits]
+Expressions: [List of key expressions/emotions]
+Background: [Character backstory]
+\`\`\`
+
+## Guidelines
+- Create engaging, emotionally resonant stories
+- Design meaningful choices that affect the narrative
+- Include vivid scene descriptions for visual storytelling
+- Develop multi-dimensional characters with clear motivations
+- Consider pacing and dramatic tension
+- Support various genres: romance, mystery, fantasy, slice-of-life, etc.
+
+Remember: Your goal is to help create compelling visual novel experiences with rich storytelling and player agency.`;
+
 // Provider storage key - store config for each provider
 const getProviderConfigKey = (providerType: LLMProviderType) => `chat_provider_${providerType}`;
 
@@ -1418,7 +1464,7 @@ export default function Chat() {
   const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
-  const [view, setView] = useState<"personas" | "characters" | "conversations" | "chat" | "generator" | "brainstorm">("personas");
+  const [view, setView] = useState<"personas" | "characters" | "conversations" | "chat" | "generator" | "brainstorm" | "vn">("personas");
   const [showPersonaModal, setShowPersonaModal] = useState(false);
   
   // Brainstorm state
@@ -1430,6 +1476,13 @@ export default function Chat() {
   const [showBrainstormInstructionsEditor, setShowBrainstormInstructionsEditor] = useState(false);
   const [generatorInstructions, setGeneratorInstructions] = useState<string>(DEFAULT_GENERATOR_INSTRUCTIONS);
   const [showGeneratorInstructionsEditor, setShowGeneratorInstructionsEditor] = useState(false);
+  
+  // VN Generator state
+  const [vnMessages, setVnMessages] = useState<Array<{role: "user" | "assistant", content: string}>>([]);
+  const [vnInput, setVnInput] = useState("");
+  const [isVnGenerating, setIsVnGenerating] = useState(false);
+  const [vnInstructions, setVnInstructions] = useState<string>(DEFAULT_VN_INSTRUCTIONS);
+  const [showVnInstructionsEditor, setShowVnInstructionsEditor] = useState(false);
   const [showCharacterModal, setShowCharacterModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -2551,6 +2604,77 @@ export default function Chat() {
     }
   };
   
+  // VN Generator function - AI helps user create visual novels
+  const sendVnMessage = async () => {
+    if (!vnInput.trim() || isVnGenerating) return;
+    
+    const userMessage = vnInput.trim();
+    setVnInput("");
+    setVnMessages(prev => [...prev, { role: "user", content: userMessage }]);
+    setIsVnGenerating(true);
+    
+    // Use the exclusive VN instructions
+    const systemPrompt = vnInstructions;
+
+    try {
+      const config = providerConfigs[activeProvider];
+      
+      // Build messages array with conversation history
+      const messages: Message[] = [
+        // System prompt as a system message
+        { role: "system", content: systemPrompt },
+        // Include all previous VN messages for context
+        ...vnMessages.map(msg => ({
+          role: msg.role as "user" | "assistant",
+          content: msg.content
+        })),
+        // Add the current user message
+        { role: "user" as const, content: userMessage }
+      ];
+      
+      let responseText: string;
+      
+      if (activeProvider === "puter") {
+        const response = await window.puter.ai.chat(messages, {
+          model: globalSettings.modelId,
+          temperature: 0.8,
+          max_tokens: 2000,
+        });
+        responseText = response.message.content;
+      } else {
+        const configWithModel = {
+          ...config,
+          selectedModel: globalSettings.modelId || config.selectedModel,
+        };
+        const response = await sendChatMessage(
+          messages,
+          configWithModel,
+          {
+            temperature: 0.8,
+            maxTokens: 2000,
+            topP: 0.9,
+            topK: 40,
+            enableThinking: false,
+          }
+        );
+        if (response.error) {
+          throw new Error(response.error);
+        }
+        responseText = response.content || "";
+      }
+      
+      setVnMessages(prev => [...prev, { role: "assistant", content: responseText }]);
+    } catch (error) {
+      console.error("VN Generator error:", error);
+      setVnMessages(prev => [...prev, { 
+        role: "assistant", 
+        content: "I encountered an error. Please try again." 
+      }]);
+    } finally {
+      setIsVnGenerating(false);
+    }
+  };
+  
   // Extract instructions from code blocks
   const extractInstructions = (content: string): string[] => {
     const regex = /```instructions\n([\s\S]*?)```/g;
@@ -2977,6 +3101,8 @@ export default function Chat() {
       setView("personas");
     } else if (view === "brainstorm") {
       setView("personas");
+    } else if (view === "vn") {
+      setView("personas");
     }
   };
 
@@ -3067,6 +3193,8 @@ export default function Chat() {
                     ? "Character Generator"
                     : view === "brainstorm"
                     ? "Roleplay Brainstorm"
+                    : view === "vn"
+                    ? "Visual Novel Generator"
                     : "Roleplay Studio"}
                 </h1>
                 <p className="text-sm text-zinc-500 truncate">
@@ -3080,6 +3208,8 @@ export default function Chat() {
                     ? "Create characters with AI"
                     : view === "brainstorm"
                     ? "Brainstorm roleplay ideas with AI"
+                    : view === "vn"
+                    ? "Create visual novels with AI"
                     : `~${contextTokens.toLocaleString()} context tokens • ${AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || 'AI'}`}
                 </p>
               </div>
@@ -3350,7 +3480,7 @@ export default function Chat() {
                 <h2 className="text-lg font-medium text-white">Your Personas</h2>
                 
                 {/* Desktop buttons - hidden on mobile */}
-                <div className="hidden md:flex gap-2">
+                <div className="hidden md:flex gap-2 flex-wrap justify-end">
                   <button
                     onClick={() => setView("brainstorm")}
                     className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-colors text-sm"
@@ -3366,6 +3496,13 @@ export default function Chat() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                     AI Generator
+                  </button>
+                  <button
+                    onClick={() => setView("vn")}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg hover:from-emerald-600 hover:to-teal-600 transition-colors text-sm"
+                  >
+                    <span className="text-lg">📖</span>
+                    VN
                   </button>
                   <button
                     onClick={() => {
@@ -3422,6 +3559,16 @@ export default function Chat() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                     <span>AI Generator</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setView("vn");
+                      setShowMobileMenu(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg hover:from-emerald-600 hover:to-teal-600 transition-colors"
+                  >
+                    <span className="text-xl">📖</span>
+                    <span>VN Generator</span>
                   </button>
                   <button
                     onClick={() => {
@@ -3960,6 +4107,166 @@ export default function Chat() {
                   onClick={sendBrainstormMessage}
                   disabled={!brainstormInput.trim() || isBrainstorming}
                   className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Send
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* VN Generator View */}
+          {view === "vn" && (
+            <div className="space-y-6 h-full flex flex-col">
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg font-medium text-white">📖 Visual Novel Generator</h2>
+                
+                {/* Desktop button - hidden on mobile */}
+                <div className="hidden md:flex gap-2">
+                  <button
+                    onClick={() => {
+                      setVnMessages([]);
+                      setVnInput("");
+                    }}
+                    className="px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors text-sm"
+                  >
+                    Clear Chat
+                  </button>
+                </div>
+                
+                {/* Mobile hamburger menu button */}
+                <button
+                  onClick={() => setShowMobileMenu(!showMobileMenu)}
+                  className="md:hidden p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                >
+                  <svg className="w-6 h-6 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {showMobileMenu ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    )}
+                  </svg>
+                </button>
+              </div>
+              
+              {/* Mobile menu dropdown for VN */}
+              {showMobileMenu && view === "vn" && (
+                <div className="md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3">
+                  <button
+                    onClick={() => {
+                      setVnMessages([]);
+                      setVnInput("");
+                      setShowMobileMenu(false);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span>Clear Chat</span>
+                  </button>
+                </div>
+              )}
+              
+              <div className="text-sm text-zinc-500 mb-2">
+                Create visual novels with AI assistance. Describe your story, characters, and scenes to generate a complete visual novel script.
+              </div>
+              
+              {/* VN Instructions Editor */}
+              <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+                <button
+                  onClick={() => setShowVnInstructionsEditor(!showVnInstructionsEditor)}
+                  className="flex items-center justify-between w-full text-left"
+                >
+                  <span className="text-sm font-medium text-zinc-300">📝 VN Generator Instructions</span>
+                  <svg className={`w-5 h-5 text-zinc-500 transition-transform ${showVnInstructionsEditor ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {showVnInstructionsEditor && (
+                  <div className="mt-4 space-y-3">
+                    <p className="text-xs text-zinc-500">
+                      These instructions tell the AI how to help you create visual novels.
+                    </p>
+                    <textarea
+                      value={vnInstructions}
+                      onChange={(e) => setVnInstructions(e.target.value)}
+                      className="w-full h-64 bg-zinc-800 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-200 font-mono resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                      placeholder="Enter instructions for the VN generator AI..."
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setVnInstructions(DEFAULT_VN_INSTRUCTIONS)}
+                        className="px-3 py-1.5 text-xs bg-zinc-700 text-zinc-300 rounded-lg hover:bg-zinc-600 transition-colors"
+                      >
+                        Reset to Default
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Chat messages */}
+              <div className="flex-1 overflow-y-auto space-y-4 bg-zinc-900/50 rounded-xl p-4 min-h-[400px] max-h-[500px]">
+                {vnMessages.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center mx-auto mb-4">
+                      <span className="text-2xl">📖</span>
+                    </div>
+                    <h3 className="text-lg font-medium text-white mb-2">Create Your Visual Novel</h3>
+                    <p className="text-zinc-500 max-w-md mx-auto">
+                      Describe your visual novel idea - the story, characters, setting, and style. I&apos;ll help you create scenes, dialogue, and branching narratives.
+                    </p>
+                  </div>
+                ) : (
+                  vnMessages.map((msg, idx) => (
+                    <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                      <div className={`max-w-[80%] ${msg.role === "user" ? "order-2" : "order-1"}`}>
+                        <div className={`rounded-2xl px-4 py-3 ${
+                          msg.role === "user" 
+                            ? "bg-zinc-700 text-white" 
+                            : "bg-zinc-800 text-zinc-200"
+                        }`}>
+                          <FormattedText content={msg.content} />
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+                
+                {isVnGenerating && (
+                  <div className="flex justify-start">
+                    <div className="bg-zinc-800 rounded-2xl px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
+                        <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
+                        <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Input area */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={vnInput}
+                  onChange={(e) => setVnInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      sendVnMessage();
+                    }
+                  }}
+                  placeholder="Describe your visual novel idea..."
+                  className="flex-1 bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 border border-zinc-700"
+                  disabled={isVnGenerating}
+                />
+                <button
+                  onClick={sendVnMessage}
+                  disabled={!vnInput.trim() || isVnGenerating}
+                  className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg hover:from-emerald-600 hover:to-teal-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Send
                 </button>
