@@ -220,10 +220,23 @@ When providing instructions, use this format:
 Remember: Your goal is to help create compelling roleplay experiences through well-crafted instructions.`;
 
 // Default generator instructions - exclusive to the character generator
-const DEFAULT_GENERATOR_INSTRUCTIONS = `You are a character creator for roleplay. Generate detailed, interesting characters based on the user's description.
+const DEFAULT_GENERATOR_INSTRUCTIONS = `You are a character creator for roleplay. Your task is to help users create detailed, interesting characters for roleplay.
+
+## Initial Step
+First, ask the user what kind of character they want to create. Ask about:
+- Character type (e.g., fantasy, sci-fi, modern, anime, historical)
+- Personality traits and characteristics
+- Appearance and physical description
+- Background and backstory
+- Role or profession
+- Any specific preferences for the character
+
+## When to Generate Character
+Only generate the character JSON when the user says "create now" or indicates they want to proceed with character creation.
 
 ## Output Format
-Respond with ONLY a JSON object in this exact format (no markdown, no code blocks):
+When generating the character, respond with ONLY a JSON object in a code block:
+\`\`\`json
 {
   "name": "Character Name",
   "description": "Detailed character description including personality, appearance, background, and traits. Be creative and detailed.",
@@ -231,8 +244,10 @@ Respond with ONLY a JSON object in this exact format (no markdown, no code block
   "scenario": "The setting or scenario where this character exists",
   "mesExample": "Example dialogue showing how the character speaks and behaves. Use {{char}} for character name and {{user}} for user."
 }
+\`\`\`
 
 ## Guidelines
+- Ask follow-up questions to understand the user's needs
 - Make characters interesting, well-rounded, and suitable for roleplay
 - Include flaws and quirks to make them feel real
 - Give them distinct personalities with clear motivations
@@ -241,7 +256,7 @@ Respond with ONLY a JSON object in this exact format (no markdown, no code block
 - Add unique mannerisms or speech patterns
 - Make the scenario interesting and open-ended
 
-Remember: Create characters that would be fun to interact with in a roleplay setting.`;
+Remember: Your goal is to help users create characters they'll love roleplaying with.`;
 
 // Default VN generator instructions
 const DEFAULT_VN_INSTRUCTIONS = `You are a Visual Novel creator assistant. You help users create immersive visual novel experiences with compelling stories, characters, and interactive choices.
@@ -2564,12 +2579,35 @@ export default function Chat() {
   };
   
   // Import generated character to the character list
-  const importGeneratedCharacter = () => {
+  const importGeneratedCharacter = (transitionToChat: boolean = false) => {
     if (!generatedCharacter) return;
     
     setCharacters((prev) => [...prev, generatedCharacter]);
+    const newCharacter = generatedCharacter;
     setGeneratedCharacter(null);
-    setView("characters");
+    
+    if (transitionToChat && selectedPersona) {
+      // Create a new conversation with the selected persona and new character
+      const newConversation: Conversation = {
+        id: crypto.randomUUID(),
+        personaId: selectedPersona.id,
+        characterId: newCharacter.id,
+        messages: [
+          {
+            role: "assistant",
+            content: newCharacter.firstMessage,
+          },
+        ],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      setConversations((prev) => [...prev, newConversation]);
+      setSelectedCharacter(newCharacter);
+      setCurrentConversation(newConversation);
+      setView("chat");
+    } else {
+      setView("characters");
+    }
   };
   
   // Brainstorm function - AI helps user create roleplay instructions
@@ -4089,43 +4127,66 @@ Write an engaging story segment. If this is a good point for player interaction,
                                           <p className="text-xs text-zinc-500 line-clamp-1">{char.scenario}</p>
                                         )}
                                       </div>
-                                      <button
-                                        onClick={() => {
-                                          setGeneratedCharacter({
-                                            id: crypto.randomUUID(),
-                                            name: char.name,
-                                            description: char.description,
-                                            firstMessage: char.firstMessage,
-                                            scenario: char.scenario,
-                                            mesExample: char.mesExample,
-                                            createdAt: Date.now(),
-                                          });
-                                          importGeneratedCharacter();
-                                          setAppliedCharacters(prev => new Set(prev).add(char.name));
-                                        }}
-                                        disabled={isApplied}
-                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                                          isApplied
-                                            ? "bg-green-600 text-white cursor-default"
-                                            : "bg-green-600 text-white hover:bg-green-700"
-                                        }`}
-                                      >
-                                        {isApplied ? (
-                                          <>
-                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                            </svg>
-                                            Imported
-                                          </>
-                                        ) : (
-                                          <>
-                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                            </svg>
-                                            Import Character
-                                          </>
-                                        )}
-                                      </button>
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={() => {
+                                            setGeneratedCharacter({
+                                              id: crypto.randomUUID(),
+                                              name: char.name,
+                                              description: char.description,
+                                              firstMessage: char.firstMessage,
+                                              scenario: char.scenario,
+                                              mesExample: char.mesExample,
+                                              createdAt: Date.now(),
+                                            });
+                                            importGeneratedCharacter(true);
+                                            setAppliedCharacters(prev => new Set(prev).add(char.name));
+                                          }}
+                                          disabled={isApplied}
+                                          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                            isApplied
+                                              ? "bg-green-600 text-white cursor-default"
+                                              : "bg-green-600 text-white hover:bg-green-700"
+                                          }`}
+                                        >
+                                          {isApplied ? (
+                                            <>
+                                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                              </svg>
+                                              Imported
+                                            </>
+                                          ) : (
+                                            <>
+                                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                              </svg>
+                                              Create Character
+                                            </>
+                                          )}
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            // Export character as JSON file
+                                            const characterJson = JSON.stringify(char, null, 2);
+                                            const blob = new Blob([characterJson], { type: "application/json" });
+                                            const url = URL.createObjectURL(blob);
+                                            const a = document.createElement("a");
+                                            a.href = url;
+                                            a.download = `${char.name.replace(/\s+/g, "-").toLowerCase()}.json`;
+                                            document.body.appendChild(a);
+                                            a.click();
+                                            document.body.removeChild(a);
+                                            URL.revokeObjectURL(url);
+                                          }}
+                                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                                        >
+                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                          </svg>
+                                          Export JSON
+                                        </button>
+                                      </div>
                                     </div>
                                     
                                     <div className="space-y-3 text-sm">
@@ -4137,6 +4198,13 @@ Write an engaging story segment. If this is a good point for player interaction,
                                       <div>
                                         <h4 className="text-xs font-medium text-zinc-500 mb-1">First Message</h4>
                                         <p className="text-zinc-300 italic line-clamp-2">&ldquo;{char.firstMessage}&rdquo;</p>
+                                      </div>
+                                      
+                                      <div>
+                                        <h4 className="text-xs font-medium text-zinc-500 mb-1">Character JSON</h4>
+                                        <pre className="bg-zinc-800 rounded-lg p-3 text-xs font-mono text-zinc-300 overflow-x-auto max-h-40">
+                                          <code>{JSON.stringify(char, null, 2)}</code>
+                                        </pre>
                                       </div>
                                     </div>
                                   </div>
