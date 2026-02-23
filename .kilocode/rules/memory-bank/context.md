@@ -84,6 +84,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **Added character JSON display in code blocks with syntax highlighting**
 - [x] **Added "Create Character" button to immediately start a conversation with the generated character**
 - [x] **Added "Export JSON" button to download character as JSON file with character name as filename**
+- [x] **Improved generator instructions: allows skipping question phase if user provides enough details upfront**
 
 ## Current Structure
 
@@ -365,6 +366,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date | Changes |
 |------|---------|
+| 2026-02-23 | Improved generator instructions: allows skipping question phase if user provides enough details upfront, clarified "create now" trigger requirement |
 | 2026-02-23 | Enhanced AI character generator: asks for character details first, only generates JSON when user says "create now", added character JSON display with "Create Character" and "Export JSON" buttons |
 | 2026-02-18 | Improved Vertex AI integration - separate model fetching endpoint with location support for Express mode |
 | 2026-02-17 | Added disconnect button for providers - allows users to disconnect from the current model/provider in the provider dropdown |
