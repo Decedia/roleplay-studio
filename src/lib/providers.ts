@@ -1094,6 +1094,30 @@ export const fetchModelsFromProvider = async (
         // Return static popular Google AI Studio models instead of fetching from API
         const staticModels: FetchedModel[] = [
           {
+            id: "gemini-2.5-pro-preview-06-05",
+            name: "Gemini 2.5 Pro Preview (06-05)",
+            provider: "google-ai-studio",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-2.5-pro-preview-05-06",
+            name: "Gemini 2.5 Pro Preview (05-06)",
+            provider: "google-ai-studio",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-2.5-flash-preview-05-20",
+            name: "Gemini 2.5 Flash Preview",
+            provider: "google-ai-studio",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: true,
+          },
+          {
             id: "gemini-2.0-flash",
             name: "Gemini 2.0 Flash",
             provider: "google-ai-studio",
@@ -1133,6 +1157,30 @@ export const fetchModelsFromProvider = async (
       case "google-vertex": {
         // Return static popular Google Vertex AI models instead of fetching from API
         const staticModels: FetchedModel[] = [
+          {
+            id: "gemini-2.5-pro-preview-06-05",
+            name: "Gemini 2.5 Pro Preview (06-05)",
+            provider: "google-vertex",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-2.5-pro-preview-05-06",
+            name: "Gemini 2.5 Pro Preview (05-06)",
+            provider: "google-vertex",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-2.5-flash-preview-05-20",
+            name: "Gemini 2.5 Flash Preview",
+            provider: "google-vertex",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: true,
+          },
           {
             id: "gemini-2.0-flash",
             name: "Gemini 2.0 Flash",
