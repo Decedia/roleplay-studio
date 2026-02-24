@@ -5675,7 +5675,6 @@ Write an engaging story segment. If this is a good point for player interaction,
         </div>
       </div>
 
-<<<<<<< HEAD
       {/* Error Message - Fixed above input area */}
       {error && (
         <div className="fixed bottom-24 left-0 right-0 px-4 py-2 relative z-60">
