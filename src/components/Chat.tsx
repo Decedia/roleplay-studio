@@ -2627,7 +2627,13 @@ export default function Chat() {
   const importGeneratedCharacter = (character: Character, transitionToChat: boolean = false) => {
     setCharacters((prev) => [...prev, character]);
     
-    if (transitionToChat && selectedPersona) {
+    if (transitionToChat) {
+      // If no persona is selected, go to persona selection first
+      if (!selectedPersona) {
+        setView("personas");
+        return;
+      }
+      
       // Create a new conversation with the selected persona and new character
       const newConversation: Conversation = {
         id: crypto.randomUUID(),
@@ -4276,8 +4282,7 @@ Write an engaging story segment. If this is a good point for player interaction,
               
               {/* Input area */}
               <div className="flex gap-2">
-                <input
-                  type="text"
+                <textarea
                   value={generatorInput}
                   onChange={(e) => setGeneratorInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -4287,8 +4292,14 @@ Write an engaging story segment. If this is a good point for player interaction,
                     }
                   }}
                   placeholder="Describe the character you want to create..."
-                  className="flex-1 bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700"
+                  className="flex-1 bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none min-h-[48px] max-h-[200px]"
                   disabled={isGenerating}
+                  rows={1}
+                  onInput={(e) => {
+                    const target = e.target as HTMLTextAreaElement;
+                    target.style.height = "auto";
+                    target.style.height = Math.min(target.scrollHeight, 200) + "px";
+                  }}
                 />
                 <button
                   onClick={sendGeneratorMessage}
@@ -4491,8 +4502,7 @@ Write an engaging story segment. If this is a good point for player interaction,
               
               {/* Input area */}
               <div className="flex gap-2">
-                <input
-                  type="text"
+                <textarea
                   value={brainstormInput}
                   onChange={(e) => setBrainstormInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -4502,8 +4512,14 @@ Write an engaging story segment. If this is a good point for player interaction,
                     }
                   }}
                   placeholder="Describe the roleplay you want to play..."
-                  className="flex-1 bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500 border border-zinc-700"
+                  className="flex-1 bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500 border border-zinc-700 resize-none min-h-[48px] max-h-[200px]"
                   disabled={isBrainstorming}
+                  rows={1}
+                  onInput={(e) => {
+                    const target = e.target as HTMLTextAreaElement;
+                    target.style.height = "auto";
+                    target.style.height = Math.min(target.scrollHeight, 200) + "px";
+                  }}
                 />
                 <button
                   onClick={sendBrainstormMessage}
