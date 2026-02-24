@@ -87,6 +87,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **Improved generator instructions: allows skipping question phase if user provides enough details upfront**
 - [x] **Thinking feature now available for all models when enabled - removed Gemini 2.0-only restriction**
 - [x] **Fixed error popup z-index to appear above input area**
+- [x] **Vertex AI project management system - store and manage multiple project configurations with API keys**
 
 ## Current Structure
 
@@ -239,8 +240,20 @@ A chat application for roleplay conversations with multiple LLM provider support
 - Multiple LLM providers supported:
   - **Puter.js** (default, free, no API key required)
   - **Google AI Studio** (Gemini models)
-  - **Google Vertex AI** (enterprise Gemini)
+  - **Google Vertex AI** (enterprise Gemini) with project management system
   - **NVIDIA NIM** (DeepSeek R1, Llama, Mistral, Codestral)
+
+### Vertex AI Project Management System
+- **Multiple Project Configurations**: Store and manage multiple Vertex AI project setups
+- **Project ID & API Key Storage**: Save complete project configurations including project ID and API key
+- **Hidden API Key**: API keys are hidden after pasting (password input type)
+- **Project Selection Dropdown**: Dropdown shows project IDs and allows quick switching between saved projects
+- **Auto-Fill on Selection**: When a project is selected from the dropdown, both project ID and API key are automatically filled
+- **Save Configuration**: Button to save current project ID and API key as a new configuration
+- **Duplicate Detection**: Prevents saving duplicate project configurations
+- **Clear All Projects**: Button to remove all saved project configurations
+- **Data Import/Export**: Project configurations are included in data backup/restore
+- **Backward Compatibility**: Works with existing single project setup
 - System prompt follows SillyTavern hierarchy:
   1. Main system prompt (custom or default)
   2. Character description

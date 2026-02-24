@@ -19,6 +19,7 @@ import {
   fetchModelsFromProvider,
   FetchedModel,
 } from "@/lib/providers";
+import { VertexProjectConfig } from "@/lib/types";
 import { readCharacterFile, buildFullSystemPrompt } from "@/lib/character-import";
 import { Character as CharacterType, CharacterBook, CharacterBookEntry } from "@/lib/types";
 import { parseRoleplayText, getSegmentClasses, TextSegment } from "@/lib/text-formatter";
@@ -1238,21 +1239,38 @@ function SettingsModal({
                         Choose the closest region for lower latency
                       </p>
                     </div>
+                    {/* Project Configuration Management */}
                     <div>
-                      <label className="block text-xs text-zinc-400 mb-1">API Key</label>
-                      <input
-                        type="password"
-                        value={providerConfigs["google-vertex"]?.apiKey || ""}
-                        onChange={(e) => setProviderConfigs(prev => ({
-                          ...prev,
-                          "google-vertex": { ...prev["google-vertex"], apiKey: e.target.value }
-                        }))}
-                        placeholder="Enter your Google API key"
-                        className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
+                      <label className="block text-xs text-zinc-400 mb-1">Saved Projects</label>
+                      <select
+                        value={providerConfigs["google-vertex"]?.selectedVertexProjectIndex ?? ""}
+                        onChange={(e) => {
+                          const index = parseInt(e.target.value);
+                          const projects = providerConfigs["google-vertex"]?.vertexProjects || [];
+                          if (index >= 0 && index < projects.length) {
+                            const selectedProject = projects[index];
+                            setProviderConfigs(prev => ({
+                              ...prev,
+                              "google-vertex": {
+                                ...prev["google-vertex"],
+                                selectedVertexProjectIndex: index,
+                                projectId: selectedProject.projectId,
+                                apiKey: selectedProject.apiKey
+                              }
+                            }));
+                          }
+                        }}
+                        className="w-full bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      >
+                        <option value="">Select a saved project...</option>
+                        {providerConfigs["google-vertex"]?.vertexProjects?.map((project, index) => (
+                          <option key={index} value={index}>
+                            {project.projectId}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                    {/* Project ID - only shown in Full mode */}
-                    {providerConfigs["google-vertex"]?.vertexMode === "full" && (
+                    <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="block text-xs text-zinc-400 mb-1">Project ID</label>
                         <input
@@ -1262,10 +1280,76 @@ function SettingsModal({
                             ...prev,
                             "google-vertex": { ...prev["google-vertex"], projectId: e.target.value }
                           }))}
-                          placeholder="Enter your GCP Project ID"
+                          placeholder="Enter GCP Project ID"
                           className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
                       </div>
+                      <div>
+                        <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                        <input
+                          type="password"
+                          value={providerConfigs["google-vertex"]?.apiKey || ""}
+                          onChange={(e) => setProviderConfigs(prev => ({
+                            ...prev,
+                            "google-vertex": { ...prev["google-vertex"], apiKey: e.target.value }
+                          }))}
+                          placeholder="Enter API key"
+                          className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const projectId = providerConfigs["google-vertex"]?.projectId?.trim();
+                        const apiKey = providerConfigs["google-vertex"]?.apiKey?.trim();
+                        if (projectId && apiKey) {
+                          // Check if project already exists
+                          const existingProjects = providerConfigs["google-vertex"]?.vertexProjects || [];
+                          const projectExists = existingProjects.some(
+                            p => p.projectId === projectId && p.apiKey === apiKey
+                          );
+                          
+                          if (!projectExists) {
+                            const newProject: VertexProjectConfig = {
+                              projectId,
+                              apiKey,
+                              createdAt: Date.now()
+                            };
+                            
+                            setProviderConfigs(prev => ({
+                              ...prev,
+                              "google-vertex": {
+                                ...prev["google-vertex"],
+                                vertexProjects: [...existingProjects, newProject],
+                                selectedVertexProjectIndex: existingProjects.length
+                              }
+                            }));
+                          }
+                        }
+                      }}
+                      disabled={!providerConfigs["google-vertex"]?.projectId?.trim() || !providerConfigs["google-vertex"]?.apiKey?.trim()}
+                      className="w-full py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Save Project Configuration
+                    </button>
+                    {providerConfigs["google-vertex"]?.vertexProjects && providerConfigs["google-vertex"].vertexProjects.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProviderConfigs(prev => ({
+                            ...prev,
+                            "google-vertex": {
+                              ...prev["google-vertex"],
+                              vertexProjects: [],
+                              selectedVertexProjectIndex: undefined
+                            }
+                          }));
+                        }}
+                        className="w-full py-1.5 text-xs bg-red-600 text-white rounded hover:bg-red-500 transition-colors"
+                      >
+                        Clear All Saved Projects
+                      </button>
                     )}
                     <div className="flex gap-2">
                       <button
@@ -1531,7 +1615,16 @@ export default function Chat() {
   const [providerConfigs, setProviderConfigs] = useState<Record<LLMProviderType, ProviderConfig>>({
     "puter": { type: "puter", isEnabled: true, selectedModel: "" },
     "google-ai-studio": { type: "google-ai-studio", isEnabled: false, apiKey: "", selectedModel: "" },
-    "google-vertex": { type: "google-vertex", isEnabled: false, apiKey: "", projectId: "", vertexMode: "express" as VertexMode, selectedModel: "" },
+    "google-vertex": { 
+      type: "google-vertex", 
+      isEnabled: false, 
+      apiKey: "", 
+      projectId: "", 
+      vertexMode: "express" as VertexMode, 
+      selectedModel: "",
+      vertexProjects: [],
+      selectedVertexProjectIndex: undefined
+    },
     "nvidia-nim": { type: "nvidia-nim", isEnabled: false, apiKey: "", selectedModel: "" },
   });
   
@@ -2176,6 +2269,9 @@ export default function Chat() {
             merged[key] = {
               ...json.providerConfigs[key],
               apiKey: existingApiKey || json.providerConfigs[key].apiKey,
+              // Preserve existing vertex projects if present
+              vertexProjects: json.providerConfigs[key].vertexProjects || prev[key]?.vertexProjects || [],
+              selectedVertexProjectIndex: json.providerConfigs[key].selectedVertexProjectIndex ?? prev[key]?.selectedVertexProjectIndex,
             };
           }
           return merged;
