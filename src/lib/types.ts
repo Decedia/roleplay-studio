@@ -187,6 +187,8 @@ export interface GlobalInstructions {
   postHistoryInstructions?: string;
   jailbreakInstructions?: string;
   enableJailbreak: boolean;
+  // Continue instruction for incomplete responses
+  continueInstruction?: string;
 }
 
 // Model cost structure

@@ -51,7 +51,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **Auto-select default model when connecting to provider**
 - [x] **Visual connection status indicators (green=connected, yellow=testing, red=error)**
 - [x] **Roleplay text formatting with visual styling**
-- [x] **Action text (*action*) with italic styling**
+- [x] **Action text (_action_) with italic styling**
 - [x] **Dialogue text ("speech") with quote styling**
 - [x] **Thought text ((thought)) with dimmed italic styling**
 - [x] **OOC text ((OOC)) with amber highlight**
@@ -88,24 +88,29 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **Thinking feature now available for all models when enabled - removed Gemini 2.0-only restriction**
 - [x] **Fixed error popup z-index to appear above input area**
 - [x] **Vertex AI project management system - store and manage multiple project configurations with API keys**
+- [x] **Fixed character card context in conversations - now includes all character fields (description, scenario, example messages, system prompt, post-history instructions, lorebook)**
+- [x] **Updated Gemini thinking feature to use thinkingConfig with thinkingLevel parameter (Google AI Studio & Vertex AI)**
+- [x] **Restructured system prompt to follow guideline: [Context] [Instructions] [Negative Constraints at end]**
+- [x] **Added "Continue" button for incomplete AI responses with editable global instruction**
 
 ## Current Structure
 
-| File/Directory | Purpose | Status |
-|----------------|---------|--------|
-| `src/app/page.tsx` | Home page with Chat component | ✅ Ready |
-| `src/app/layout.tsx` | Root layout with puter.js script | ✅ Ready |
-| `src/app/globals.css` | Global styles (black theme) | ✅ Ready |
-| `src/components/Chat.tsx` | Main chat interface with persona/character system | ✅ Ready |
-| `src/lib/types.ts` | TypeScript type definitions | ✅ Ready |
-| `src/lib/providers.ts` | LLM provider implementations | ✅ Ready |
-| `src/lib/character-import.ts` | SillyTavern import & instruction handling | ✅ Ready |
-| `src/lib/text-formatter.ts` | Roleplay text formatting parser | ✅ Ready |
-| `.kilocode/` | AI context & recipes | ✅ Ready |
+| File/Directory                | Purpose                                           | Status   |
+| ----------------------------- | ------------------------------------------------- | -------- |
+| `src/app/page.tsx`            | Home page with Chat component                     | ✅ Ready |
+| `src/app/layout.tsx`          | Root layout with puter.js script                  | ✅ Ready |
+| `src/app/globals.css`         | Global styles (black theme)                       | ✅ Ready |
+| `src/components/Chat.tsx`     | Main chat interface with persona/character system | ✅ Ready |
+| `src/lib/types.ts`            | TypeScript type definitions                       | ✅ Ready |
+| `src/lib/providers.ts`        | LLM provider implementations                      | ✅ Ready |
+| `src/lib/character-import.ts` | SillyTavern import & instruction handling         | ✅ Ready |
+| `src/lib/text-formatter.ts`   | Roleplay text formatting parser                   | ✅ Ready |
+| `.kilocode/`                  | AI context & recipes                              | ✅ Ready |
 
 ## Features
 
 ### Persona System (User Identity)
+
 - Create custom personas with name and description
 - Edit existing personas
 - Delete personas (also deletes related conversations)
@@ -114,6 +119,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - Modal popup for persona creation/editing
 
 ### Character System (AI Identity)
+
 - Create AI characters with name, description, and first message
 - Edit existing characters
 - Delete characters (also deletes related conversations)
@@ -127,6 +133,7 @@ A chat application for roleplay conversations with multiple LLM provider support
   - Example Messages: Dialogue examples with {{char}}/{{user}} placeholders
 
 ### AI Character Generator
+
 - Create characters using AI from text descriptions
 - Accessible from personas view via "AI Generator" button
 - Uses current provider and model for generation
@@ -146,6 +153,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - **"Export JSON" button**: Downloads character as JSON file with character name as filename
 
 ### SillyTavern Import
+
 - Import character cards from JSON files
 - Supports V1 and V2 character card formats
 - Parses all instruction fields automatically
@@ -153,6 +161,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - Alternate greetings supported
 
 ### Character Book (Lorebook)
+
 - Dynamic context based on keywords in conversation
 - Keyword-triggered entries with content injection
 - Configurable scan depth (how many messages to scan)
@@ -162,6 +171,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - Priority and insertion order control
 
 ### Conversation Management
+
 - Conversations are between a user persona and an AI character
 - Create new conversations for each persona-character pair
 - Continue existing conversations
@@ -170,6 +180,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - Persistent storage using localStorage
 
 ### Global Settings
+
 - **Temperature** (0-2): Controls creativity vs focus
 - **Max Tokens** (100-4000): Maximum response length
 - **Top P** (0-1): Controls word selection diversity
@@ -181,6 +192,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - Custom collapsible dropdown grouped by provider
 
 ### Global Instructions
+
 - Custom instructions applied to ALL conversations
 - Stored in localStorage separately from settings
 - Accessible via gear icon in header
@@ -192,6 +204,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - Default jailbreak instruction provided for roleplay scenarios
 
 ### Chat Interface
+
 - Full-screen chat UI with black theme
 - Message bubbles for user and AI responses
 - User avatar shows persona initial (blue/cyan)
@@ -206,6 +219,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - **Send button always enabled (empty = resend)**
 
 ### Roleplay Text Formatting
+
 - **Action text** (`*action*` or `_action_`) → italic styling with gray text
 - **Dialogue text** (`"speech"`) → quoted text with special quote marks
 - **Thought text** (`(thought)` or `((thought))`) → dimmed italic styling
@@ -215,12 +229,14 @@ A chat application for roleplay conversations with multiple LLM provider support
 - All formatting preserves whitespace and line breaks
 
 ### Usage Stats Display
+
 - Token count visible in header (always visible on desktop)
 - Detailed usage breakdown in user menu dropdown
 - Shows: chat tokens, image generations, storage used
 - Loading states and error handling for usage data
 
 ### Data Export/Import
+
 - **Export Data**: Download all data as a JSON backup file
   - Personas, characters, conversations
   - Global settings and instructions
@@ -237,6 +253,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - File naming: `roleplay-studio-backup-YYYY-MM-DD.json`
 
 ### AI Integration
+
 - Multiple LLM providers supported:
   - **Puter.js** (default, free, no API key required)
   - **Google AI Studio** (Gemini models)
@@ -244,6 +261,7 @@ A chat application for roleplay conversations with multiple LLM provider support
   - **NVIDIA NIM** (DeepSeek R1, Llama, Mistral, Codestral)
 
 ### Vertex AI Project Management System
+
 - **Multiple Project Configurations**: Store and manage multiple Vertex AI project setups
 - **Project ID & API Key Storage**: Save complete project configurations including project ID and API key
 - **Hidden API Key**: API keys are hidden after pasting (password input type)
@@ -269,6 +287,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 ## Technical Details
 
 ### Data Models
+
 ```typescript
 interface Persona {
   id: string;
@@ -348,6 +367,7 @@ interface Conversation {
 ```
 
 ### LocalStorage Keys
+
 - `chat_personas` - Stores all user personas
 - `chat_characters` - Stores all AI characters
 - `chat_conversations` - Stores all conversations
@@ -356,19 +376,29 @@ interface Conversation {
 - `chat_provider_<type>` - Stores provider-specific configuration
 
 ### System Prompt Building
-The `buildFullSystemPrompt` function creates prompts following SillyTavern's hierarchy:
-1. Jailbreak instructions (if enabled globally)
-2. System prompt override (global > character) OR default "You are [name]..."
-3. Character description
-4. Scenario (if present)
-5. User persona info
-6. Example messages (if present)
-7. Post-history instructions (global > character)
-8. Custom instructions (if present)
-9. Lorebook content (keyword-triggered from recent messages)
-10. Final "Stay in character" instruction
+
+The `buildFullSystemPrompt` function creates prompts following the guideline: [Context] [Instructions] [Negative Constraints at end]
+
+**Structure:**
+
+1. **Context Section:**
+   - Character description
+   - Scenario
+   - User persona info
+   - Example messages (with placeholder replacement)
+   - Lorebook content (keyword-triggered from recent messages)
+
+2. **Instructions Section:**
+   - System prompt (global > character > default "You are [name]...")
+   - Post-history instructions (global > character)
+   - Custom instructions
+
+3. **Negative Constraints Section (at the end):**
+   - Jailbreak instructions (if enabled)
+   - Final "Stay in character" instruction with negative constraint
 
 ### Component Architecture
+
 - Client component with `"use client"` directive
 - React hooks: useState, useRef, useEffect, useMemo
 - TypeScript interfaces for type safety
@@ -379,47 +409,51 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 ## Session History
 
-| Date | Changes |
-|------|---------|
-| 2026-02-24 | Fixed error popup z-index to appear above input area |
-| 2026-02-24 | Thinking feature now available for all models when enabled - removed Gemini 2.0-only restriction, thinking budget available for all providers |
-| 2026-02-23 | Improved generator instructions: allows skipping question phase if user provides enough details upfront, clarified "create now" trigger requirement |
-| 2026-02-23 | Enhanced AI character generator: asks for character details first, only generates JSON when user says "create now", added character JSON display with "Create Character" and "Export JSON" buttons |
-| 2026-02-18 | Improved Vertex AI integration - separate model fetching endpoint with location support for Express mode |
-| 2026-02-17 | Added disconnect button for providers - allows users to disconnect from the current model/provider in the provider dropdown |
-| 2026-02-17 | Added exclusive brainstorm instructions - separate from global instructions, customizable by user with collapsible editor in brainstorm tab |
-| 2026-02-17 | Added visual feedback for brainstorm apply button - shows "Applied!" with checkmark for 3 seconds when instructions are applied to global settings |
-| 2026-02-17 | Added responsive hamburger menu for mobile views - collapsible dropdown menus for all action buttons in personas, characters, conversations, brainstorm, and generator views |
-| 2026-02-16 | Changed user message bubble color from blue to greyish (bg-zinc-700) |
-| 2026-02-16 | Moved Clear/Import buttons above description in character generator preview |
-| 2026-02-16 | Added Brainstorm tab - AI-assisted roleplay instruction brainstorming with apply-to-global-instructions buttons |
-| 2026-02-16 | Added {{user}} macro replacement - automatically replaces {{user}} with current persona name in conversations |
-| 2026-02-16 | Added AI-powered character generator tab - create characters from text descriptions with one-click import |
-| 2026-02-16 | Added NVIDIA NIM thinking/reasoning support - DeepSeek R1 model with reasoning_content parsing for both streaming and non-streaming responses |
-| 2026-02-16 | Added Max Context Tokens slider - controls conversation history limit sent to AI, auto-sets to model's context window on selection |
-| 2026-02-16 | Max Output Tokens: auto-set to model max on selection, added Max button for quick reset |
-| 2026-02-16 | Fixed thinking feature - added thinkingBudget parameter (8192 tokens) for Gemini 2.0 models when enableThinking is enabled |
-| 2026-02-16 | Added Top K parameter to output settings (range 1-100, default 40) |
-| 2026-02-16 | Added context token counter in chat header showing estimated tokens for current conversation |
-| 2026-02-16 | Fixed send button alignment with text input using items-end flexbox |
-| 2026-02-16 | Added auto-export feature with configurable interval (1-60 minutes) for automatic data backup |
-| 2026-02-16 | Added data export/import for backup and restore - users can save all data to JSON file and restore on any device |
-| 2026-02-16 | Fixed NVIDIA NIM error handling for non-JSON responses (Cloudflare 524 timeout) |
-| 2026-02-16 | Added streaming system for real-time AI responses with animated cursor |
-| 2026-02-16 | Added advanced global instructions: jailbreak support, system prompt override, post-history instructions, JSON import |
-| 2026-02-16 | Added roleplay text formatting: action (*text*), dialogue ("text"), thought ((text)), OOC, bold, code styling |
-| 2026-02-16 | Added SillyTavern-style instruction handling: scenario, system prompt override, post-history instructions, example messages |
-| 2026-02-16 | Implemented Character Book (Lorebook) with keyword scanning and dynamic content injection |
-| 2026-02-16 | Enhanced character editor with advanced instruction fields |
-| 2026-02-15 | Added multiple LLM providers (Google AI Studio, Vertex AI, NVIDIA NIM), SillyTavern import, renamed to "Roleplay Studio" |
-| 2026-02-15 | Global settings refactor: removed per-conversation settings, added enableThinking toggle, collapsible model dropdown, think tag display, empty message resends last |
-| 2026-02-15 | Made instructions global (not per-conversation), grouped models by provider in dropdown |
-| 2026-02-15 | Fixed send button position (flexbox layout), added retry button for errors, added custom instructions field |
-| 2026-02-15 | Added dynamic model selection, "Free" pricing display for zero-cost models, GLM 5 as preferred default |
-| 2026-02-15 | Major refactor: separated persona/character systems, added conversation settings, visible usage stats |
-| 2026-02-15 | Added getUser and getMonthlyUsage integration with user menu in header |
-| 2026-02-15 | Fixed persona system: persona now represents the user (not AI) in conversations |
-| 2026-02-15 | Added persona system with create/edit/delete, conversation management, and black theme |
-| 2026-02-15 | Enhanced dark theme with custom scrollbar and global dark mode styles |
-| 2026-02-15 | Created GLM 5 chat application with puter.js integration |
-| Initial | Template created with base setup |
+| Date       | Changes                                                                                                                                                                                               |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-02-24 | Added "Continue" button for incomplete AI responses - sends continue instruction to AI, editable in Settings modal under Advanced Instructions                                                        |
+| 2026-02-24 | Restructured system prompt to follow guideline: [Context] [Instructions] [Negative Constraints at end] - negative constraints now placed at the very end for better model compliance                  |
+| 2026-02-24 | Updated Gemini thinking feature to use thinkingConfig with thinkingLevel parameter (Google AI Studio & Vertex AI)                                                                                     |
+| 2026-02-24 | Fixed character card context in conversations - buildFullSystemPrompt now includes all character fields (description, scenario, example messages, system prompt, post-history instructions, lorebook) |
+| 2026-02-24 | Fixed error popup z-index to appear above input area                                                                                                                                                  |
+| 2026-02-24 | Thinking feature now available for all models when enabled - removed Gemini 2.0-only restriction, thinking budget available for all providers                                                         |
+| 2026-02-23 | Improved generator instructions: allows skipping question phase if user provides enough details upfront, clarified "create now" trigger requirement                                                   |
+| 2026-02-23 | Enhanced AI character generator: asks for character details first, only generates JSON when user says "create now", added character JSON display with "Create Character" and "Export JSON" buttons    |
+| 2026-02-18 | Improved Vertex AI integration - separate model fetching endpoint with location support for Express mode                                                                                              |
+| 2026-02-17 | Added disconnect button for providers - allows users to disconnect from the current model/provider in the provider dropdown                                                                           |
+| 2026-02-17 | Added exclusive brainstorm instructions - separate from global instructions, customizable by user with collapsible editor in brainstorm tab                                                           |
+| 2026-02-17 | Added visual feedback for brainstorm apply button - shows "Applied!" with checkmark for 3 seconds when instructions are applied to global settings                                                    |
+| 2026-02-17 | Added responsive hamburger menu for mobile views - collapsible dropdown menus for all action buttons in personas, characters, conversations, brainstorm, and generator views                          |
+| 2026-02-16 | Changed user message bubble color from blue to greyish (bg-zinc-700)                                                                                                                                  |
+| 2026-02-16 | Moved Clear/Import buttons above description in character generator preview                                                                                                                           |
+| 2026-02-16 | Added Brainstorm tab - AI-assisted roleplay instruction brainstorming with apply-to-global-instructions buttons                                                                                       |
+| 2026-02-16 | Added {{user}} macro replacement - automatically replaces {{user}} with current persona name in conversations                                                                                         |
+| 2026-02-16 | Added AI-powered character generator tab - create characters from text descriptions with one-click import                                                                                             |
+| 2026-02-16 | Added NVIDIA NIM thinking/reasoning support - DeepSeek R1 model with reasoning_content parsing for both streaming and non-streaming responses                                                         |
+| 2026-02-16 | Added Max Context Tokens slider - controls conversation history limit sent to AI, auto-sets to model's context window on selection                                                                    |
+| 2026-02-16 | Max Output Tokens: auto-set to model max on selection, added Max button for quick reset                                                                                                               |
+| 2026-02-16 | Fixed thinking feature - added thinkingBudget parameter (8192 tokens) for Gemini 2.0 models when enableThinking is enabled                                                                            |
+| 2026-02-16 | Added Top K parameter to output settings (range 1-100, default 40)                                                                                                                                    |
+| 2026-02-16 | Added context token counter in chat header showing estimated tokens for current conversation                                                                                                          |
+| 2026-02-16 | Fixed send button alignment with text input using items-end flexbox                                                                                                                                   |
+| 2026-02-16 | Added auto-export feature with configurable interval (1-60 minutes) for automatic data backup                                                                                                         |
+| 2026-02-16 | Added data export/import for backup and restore - users can save all data to JSON file and restore on any device                                                                                      |
+| 2026-02-16 | Fixed NVIDIA NIM error handling for non-JSON responses (Cloudflare 524 timeout)                                                                                                                       |
+| 2026-02-16 | Added streaming system for real-time AI responses with animated cursor                                                                                                                                |
+| 2026-02-16 | Added advanced global instructions: jailbreak support, system prompt override, post-history instructions, JSON import                                                                                 |
+| 2026-02-16 | Added roleplay text formatting: action (_text_), dialogue ("text"), thought ((text)), OOC, bold, code styling                                                                                         |
+| 2026-02-16 | Added SillyTavern-style instruction handling: scenario, system prompt override, post-history instructions, example messages                                                                           |
+| 2026-02-16 | Implemented Character Book (Lorebook) with keyword scanning and dynamic content injection                                                                                                             |
+| 2026-02-16 | Enhanced character editor with advanced instruction fields                                                                                                                                            |
+| 2026-02-15 | Added multiple LLM providers (Google AI Studio, Vertex AI, NVIDIA NIM), SillyTavern import, renamed to "Roleplay Studio"                                                                              |
+| 2026-02-15 | Global settings refactor: removed per-conversation settings, added enableThinking toggle, collapsible model dropdown, think tag display, empty message resends last                                   |
+| 2026-02-15 | Made instructions global (not per-conversation), grouped models by provider in dropdown                                                                                                               |
+| 2026-02-15 | Fixed send button position (flexbox layout), added retry button for errors, added custom instructions field                                                                                           |
+| 2026-02-15 | Added dynamic model selection, "Free" pricing display for zero-cost models, GLM 5 as preferred default                                                                                                |
+| 2026-02-15 | Major refactor: separated persona/character systems, added conversation settings, visible usage stats                                                                                                 |
+| 2026-02-15 | Added getUser and getMonthlyUsage integration with user menu in header                                                                                                                                |
+| 2026-02-15 | Fixed persona system: persona now represents the user (not AI) in conversations                                                                                                                       |
+| 2026-02-15 | Added persona system with create/edit/delete, conversation management, and black theme                                                                                                                |
+| 2026-02-15 | Enhanced dark theme with custom scrollbar and global dark mode styles                                                                                                                                 |
+| 2026-02-15 | Created GLM 5 chat application with puter.js integration                                                                                                                                              |
+| Initial    | Template created with base setup                                                                                                                                                                      |

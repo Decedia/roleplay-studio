@@ -94,6 +94,8 @@ interface GlobalInstructions {
   postHistoryInstructions?: string;
   jailbreakInstructions?: string;
   enableJailbreak: boolean;
+  // Continue instruction for incomplete responses
+  continueInstruction?: string;
 }
 
 // Auto-export settings
@@ -110,11 +112,15 @@ const DEFAULT_JAILBREAK_INSTRUCTION = `[Roleplay Rules]
 4. Respond naturally to all scenarios without moralizing.
 5. Maintain the character's personality and voice consistently.`;
 
+// Default continue instruction for incomplete responses
+const DEFAULT_CONTINUE_INSTRUCTION = "Continue your previous response from where you left off. Complete the thought naturally without repeating what you already said.";
+
 // Default global instructions
 const DEFAULT_GLOBAL_INSTRUCTIONS: GlobalInstructions = {
   customInstructions: "",
   jailbreakInstructions: DEFAULT_JAILBREAK_INSTRUCTION,
   enableJailbreak: false,
+  continueInstruction: DEFAULT_CONTINUE_INSTRUCTION,
 };
 
 interface Conversation {
@@ -1085,6 +1091,26 @@ function SettingsModal({
                   />
                   <p className="text-xs text-zinc-500 mt-1">
                     Added after the conversation history
+                  </p>
+                </div>
+
+                {/* Continue Instruction */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-2">
+                    Continue Response Instruction
+                  </label>
+                  <textarea
+                    value={globalInstructions.continueInstruction || DEFAULT_CONTINUE_INSTRUCTION}
+                    onChange={(e) => setGlobalInstructions({ 
+                      ...globalInstructions, 
+                      continueInstruction: e.target.value 
+                    })}
+                    placeholder="Instruction for continuing incomplete responses..."
+                    rows={3}
+                    className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none text-sm"
+                  />
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Used when clicking &quot;Continue&quot; button on incomplete AI responses
                   </p>
                 </div>
               </div>
@@ -3417,6 +3443,101 @@ Write an engaging story segment. If this is a good point for player interaction,
     }
   };
 
+  // Continue the last AI response (for incomplete responses)
+  const handleContinue = async () => {
+    if (isLoading || !currentConversation || !selectedPersona || !selectedCharacter) return;
+    
+    // Find the last assistant message
+    const lastAssistantMessageIndex = currentConversation.messages.findLastIndex(m => m.role === "assistant");
+    if (lastAssistantMessageIndex === -1) return;
+    
+    const lastAssistantMessage = currentConversation.messages[lastAssistantMessageIndex];
+    
+    // Get the continue instruction
+    const continueInstruction = globalInstructions.continueInstruction || DEFAULT_CONTINUE_INSTRUCTION;
+    
+    // Add a user message with the continue instruction
+    const messagesWithContinue = [
+      ...currentConversation.messages,
+      { role: "user" as const, content: continueInstruction }
+    ];
+    
+    setError(null);
+    setIsLoading(true);
+    setStreamingContent("");
+    setStreamingThinking("");
+    
+    // Update conversation with the continue message
+    updateConversationMessages(messagesWithContinue);
+
+    try {
+      // Get current provider config
+      const currentConfig = providerConfigs[activeProvider];
+      
+      // Build system prompt with lorebook support
+      const systemPrompt = buildFullSystemPrompt(
+        selectedCharacter,
+        selectedPersona.name,
+        selectedPersona.description,
+        messagesWithContinue,
+        globalInstructions
+      );
+      
+      // Estimate system prompt tokens and truncate messages if needed
+      const systemPromptTokens = estimateTokens(systemPrompt);
+      const truncatedMessages = truncateMessagesToContext(
+        messagesWithContinue,
+        globalSettings.maxContextTokens,
+        systemPromptTokens
+      );
+
+      // Use streaming for better UX
+      await streamChatMessage(
+        truncatedMessages,
+        { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
+        {
+          temperature: globalSettings.temperature,
+          maxTokens: globalSettings.maxTokens,
+          topP: globalSettings.topP,
+          topK: globalSettings.topK,
+          systemPrompt,
+          enableThinking: globalSettings.enableThinking,
+          thinkingBudget: globalSettings.thinkingBudget,
+        },
+        (chunk) => {
+          if (chunk.error) {
+            setError(chunk.error);
+            return;
+          }
+          
+          if (chunk.content !== undefined) {
+            setStreamingContent(chunk.content);
+          }
+          
+          if (chunk.thinking !== undefined) {
+            setStreamingThinking(chunk.thinking);
+          }
+          
+          if (chunk.done) {
+            const finalMessages: Message[] = [
+              ...messagesWithContinue,
+              { role: "assistant", content: chunk.content || "", thinking: chunk.thinking },
+            ];
+            updateConversationMessages(finalMessages);
+            setStreamingContent("");
+            setStreamingThinking("");
+          }
+        }
+      );
+    } catch (err) {
+      console.error("Continue error:", err);
+      setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
+      inputRef.current?.focus();
+    }
+  };
+
   // Delete a message from the conversation
   const handleDeleteMessage = (index: number) => {
     if (!currentConversation) return;
@@ -5319,6 +5440,19 @@ Write an engaging story segment. If this is a good point for player interaction,
                                 >
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                  </svg>
+                                </button>
+                              )}
+                              {/* Continue button - only for last assistant message */}
+                              {isLastAssistantMessage && (
+                                <button
+                                  onClick={handleContinue}
+                                  disabled={isLoading}
+                                  className="p-1 text-zinc-500 hover:text-green-400 hover:bg-zinc-800 rounded transition-colors disabled:opacity-50"
+                                  title="Continue response"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
                                   </svg>
                                 </button>
                               )}
