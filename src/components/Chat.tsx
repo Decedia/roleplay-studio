@@ -83,6 +83,7 @@ interface GlobalSettings {
   enableThinking: boolean;
   thinkingBudget: number; // Thinking budget for Gemini 2.0 models (in tokens)
   useCustomSize: boolean; // Enable custom context/output sizes
+  enableStreaming: boolean; // Enable/disable streaming for all AI responses
 }
 
 // Global instructions with advanced fields
@@ -334,6 +335,7 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   enableThinking: false,
   thinkingBudget: 8192, // Default thinking budget for Gemini 2.0 models
   useCustomSize: false, // By default, use model max sizes
+  enableStreaming: true, // Streaming enabled by default for better UX
 };
 
 // Estimate token count for text (rough approximation: ~4 chars per token)
@@ -952,6 +954,29 @@ function SettingsModal({
             </button>
             <p className="text-xs text-zinc-500 mt-1">
               Allow AI to show its reasoning process (Gemini 2.0 only)
+            </p>
+          </div>
+
+          {/* Enable Streaming */}
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">
+              Enable Streaming
+            </label>
+            <button
+              type="button"
+              onClick={() => setGlobalSettings({ ...globalSettings, enableStreaming: !globalSettings.enableStreaming })}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                globalSettings.enableStreaming ? "bg-blue-600" : "bg-zinc-700"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  globalSettings.enableStreaming ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+            <p className="text-xs text-zinc-500 mt-1">
+              Stream AI responses in real-time (disable for slower but more stable responses)
             </p>
           </div>
 
@@ -2530,21 +2555,50 @@ export default function Chat() {
           ...config,
           selectedModel: globalSettings.modelId || config.selectedModel,
         };
-        const response = await sendChatMessage(
-          messages,
-          configWithModel,
-          {
-            temperature: 0.8,
-            maxTokens: 2000,
-            topP: 0.9,
-            topK: 40,
-            enableThinking: false,
+        
+        if (globalSettings.enableStreaming) {
+          // Use streaming
+          let streamedContent = "";
+          await streamChatMessage(
+            messages,
+            configWithModel,
+            {
+              temperature: 0.8,
+              maxTokens: 2000,
+              topP: 0.9,
+              topK: 40,
+              enableThinking: false,
+            },
+            (chunk) => {
+              if (chunk.error) {
+                throw new Error(chunk.error);
+              }
+              if (chunk.content !== undefined) {
+                streamedContent = chunk.content;
+              }
+              if (chunk.done) {
+                responseText = chunk.content || "";
+              }
+            }
+          );
+        } else {
+          // Use non-streaming
+          const response = await sendChatMessage(
+            messages,
+            configWithModel,
+            {
+              temperature: 0.8,
+              maxTokens: 2000,
+              topP: 0.9,
+              topK: 40,
+              enableThinking: false,
+            }
+          );
+          if (response.error) {
+            throw new Error(response.error);
           }
-        );
-        if (response.error) {
-          throw new Error(response.error);
+          responseText = response.content || "";
         }
-        responseText = response.content || "";
       }
       
       setGeneratorMessages(prev => [...prev, { role: "assistant", content: responseText }]);
@@ -2699,21 +2753,50 @@ export default function Chat() {
           ...config,
           selectedModel: globalSettings.modelId || config.selectedModel,
         };
-        const response = await sendChatMessage(
-          messages,
-          configWithModel,
-          {
-            temperature: 0.8,
-            maxTokens: 2000,
-            topP: 0.9,
-            topK: 40,
-            enableThinking: false,
+        
+        if (globalSettings.enableStreaming) {
+          // Use streaming
+          let streamedContent = "";
+          await streamChatMessage(
+            messages,
+            configWithModel,
+            {
+              temperature: 0.8,
+              maxTokens: 2000,
+              topP: 0.9,
+              topK: 40,
+              enableThinking: false,
+            },
+            (chunk) => {
+              if (chunk.error) {
+                throw new Error(chunk.error);
+              }
+              if (chunk.content !== undefined) {
+                streamedContent = chunk.content;
+              }
+              if (chunk.done) {
+                responseText = chunk.content || "";
+              }
+            }
+          );
+        } else {
+          // Use non-streaming
+          const response = await sendChatMessage(
+            messages,
+            configWithModel,
+            {
+              temperature: 0.8,
+              maxTokens: 2000,
+              topP: 0.9,
+              topK: 40,
+              enableThinking: false,
+            }
+          );
+          if (response.error) {
+            throw new Error(response.error);
           }
-        );
-        if (response.error) {
-          throw new Error(response.error);
+          responseText = response.content || "";
         }
-        responseText = response.content || "";
       }
       
       setBrainstormMessages(prev => [...prev, { role: "assistant", content: responseText }]);
@@ -3199,44 +3282,72 @@ Write an engaging story segment. If this is a good point for player interaction,
         systemPromptTokens
       );
 
-      // Use streaming for better UX
-      await streamChatMessage(
-        truncatedMessages,
-        { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
-        {
-          temperature: globalSettings.temperature,
-          maxTokens: globalSettings.maxTokens,
-          topP: globalSettings.topP,
-          topK: globalSettings.topK,
-          systemPrompt,
-          enableThinking: globalSettings.enableThinking,
-          thinkingBudget: globalSettings.thinkingBudget,
-        },
-        (chunk) => {
-          if (chunk.error) {
-            setError(chunk.error);
-            return;
+      // Use streaming or non-streaming based on settings
+      if (globalSettings.enableStreaming) {
+        // Streaming mode for real-time responses
+        await streamChatMessage(
+          truncatedMessages,
+          { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
+          {
+            temperature: globalSettings.temperature,
+            maxTokens: globalSettings.maxTokens,
+            topP: globalSettings.topP,
+            topK: globalSettings.topK,
+            systemPrompt,
+            enableThinking: globalSettings.enableThinking,
+            thinkingBudget: globalSettings.thinkingBudget,
+          },
+          (chunk) => {
+            if (chunk.error) {
+              setError(chunk.error);
+              return;
+            }
+            
+            if (chunk.content !== undefined) {
+              setStreamingContent(chunk.content);
+            }
+            
+            if (chunk.thinking !== undefined) {
+              setStreamingThinking(chunk.thinking);
+            }
+            
+            if (chunk.done) {
+              const finalMessages: Message[] = [
+                ...updatedMessages,
+                { role: "assistant", content: chunk.content || "", thinking: chunk.thinking },
+              ];
+              updateConversationMessages(finalMessages);
+              setStreamingContent("");
+              setStreamingThinking("");
+            }
           }
-          
-          if (chunk.content !== undefined) {
-            setStreamingContent(chunk.content);
+        );
+      } else {
+        // Non-streaming mode for stable responses
+        const response = await sendChatMessage(
+          truncatedMessages,
+          { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
+          {
+            temperature: globalSettings.temperature,
+            maxTokens: globalSettings.maxTokens,
+            topP: globalSettings.topP,
+            topK: globalSettings.topK,
+            systemPrompt,
+            enableThinking: globalSettings.enableThinking,
+            thinkingBudget: globalSettings.thinkingBudget,
           }
-          
-          if (chunk.thinking !== undefined) {
-            setStreamingThinking(chunk.thinking);
-          }
-          
-          if (chunk.done) {
-            const finalMessages: Message[] = [
-              ...updatedMessages,
-              { role: "assistant", content: chunk.content || "", thinking: chunk.thinking },
-            ];
-            updateConversationMessages(finalMessages);
-            setStreamingContent("");
-            setStreamingThinking("");
-          }
+        );
+        
+        if (response.error) {
+          setError(response.error);
+        } else {
+          const finalMessages: Message[] = [
+            ...updatedMessages,
+            { role: "assistant", content: response.content || "", thinking: response.thinking },
+          ];
+          updateConversationMessages(finalMessages);
         }
-      );
+      }
     } catch (err) {
       console.error("Chat error:", err);
       setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
@@ -3310,44 +3421,72 @@ Write an engaging story segment. If this is a good point for player interaction,
         systemPromptTokens
       );
 
-      // Use streaming for better UX
-      await streamChatMessage(
-        truncatedMessages,
-        { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
-        {
-          temperature: globalSettings.temperature,
-          maxTokens: globalSettings.maxTokens,
-          topP: globalSettings.topP,
-          topK: globalSettings.topK,
-          systemPrompt,
-          enableThinking: globalSettings.enableThinking,
-          thinkingBudget: globalSettings.thinkingBudget,
-        },
-        (chunk) => {
-          if (chunk.error) {
-            setError(chunk.error);
-            return;
+      // Use streaming or non-streaming based on settings
+      if (globalSettings.enableStreaming) {
+        // Streaming mode for real-time responses
+        await streamChatMessage(
+          truncatedMessages,
+          { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
+          {
+            temperature: globalSettings.temperature,
+            maxTokens: globalSettings.maxTokens,
+            topP: globalSettings.topP,
+            topK: globalSettings.topK,
+            systemPrompt,
+            enableThinking: globalSettings.enableThinking,
+            thinkingBudget: globalSettings.thinkingBudget,
+          },
+          (chunk) => {
+            if (chunk.error) {
+              setError(chunk.error);
+              return;
+            }
+            
+            if (chunk.content !== undefined) {
+              setStreamingContent(chunk.content);
+            }
+            
+            if (chunk.thinking !== undefined) {
+              setStreamingThinking(chunk.thinking);
+            }
+            
+            if (chunk.done) {
+              const finalMessages: Message[] = [
+                ...messagesBeforeRetry,
+                { role: "assistant", content: chunk.content || "", thinking: chunk.thinking },
+              ];
+              updateConversationMessages(finalMessages);
+              setStreamingContent("");
+              setStreamingThinking("");
+            }
           }
-          
-          if (chunk.content !== undefined) {
-            setStreamingContent(chunk.content);
+        );
+      } else {
+        // Non-streaming mode for stable responses
+        const response = await sendChatMessage(
+          truncatedMessages,
+          { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
+          {
+            temperature: globalSettings.temperature,
+            maxTokens: globalSettings.maxTokens,
+            topP: globalSettings.topP,
+            topK: globalSettings.topK,
+            systemPrompt,
+            enableThinking: globalSettings.enableThinking,
+            thinkingBudget: globalSettings.thinkingBudget,
           }
-          
-          if (chunk.thinking !== undefined) {
-            setStreamingThinking(chunk.thinking);
-          }
-          
-          if (chunk.done) {
-            const finalMessages: Message[] = [
-              ...messagesBeforeRetry,
-              { role: "assistant", content: chunk.content || "", thinking: chunk.thinking },
-            ];
-            updateConversationMessages(finalMessages);
-            setStreamingContent("");
-            setStreamingThinking("");
-          }
+        );
+        
+        if (response.error) {
+          setError(response.error);
+        } else {
+          const finalMessages: Message[] = [
+            ...messagesBeforeRetry,
+            { role: "assistant", content: response.content || "", thinking: response.thinking },
+          ];
+          updateConversationMessages(finalMessages);
         }
-      );
+      }
     } catch (err) {
       console.error("Retry error:", err);
       setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
@@ -3424,43 +3563,70 @@ Write an engaging story segment. If this is a good point for player interaction,
           systemPromptTokens
         );
 
-        await streamChatMessage(
-          truncatedMessages,
-          { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
-          {
-            temperature: globalSettings.temperature,
-            maxTokens: globalSettings.maxTokens,
-            topP: globalSettings.topP,
-            topK: globalSettings.topK,
-            systemPrompt,
-            enableThinking: globalSettings.enableThinking,
-            thinkingBudget: globalSettings.thinkingBudget,
-          },
-          (chunk) => {
-            if (chunk.error) {
-              setError(chunk.error);
-              return;
+        // Use streaming or non-streaming based on settings
+        if (globalSettings.enableStreaming) {
+          await streamChatMessage(
+            truncatedMessages,
+            { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
+            {
+              temperature: globalSettings.temperature,
+              maxTokens: globalSettings.maxTokens,
+              topP: globalSettings.topP,
+              topK: globalSettings.topK,
+              systemPrompt,
+              enableThinking: globalSettings.enableThinking,
+              thinkingBudget: globalSettings.thinkingBudget,
+            },
+            (chunk) => {
+              if (chunk.error) {
+                setError(chunk.error);
+                return;
+              }
+              
+              if (chunk.content !== undefined) {
+                setStreamingContent(chunk.content);
+              }
+              
+              if (chunk.thinking !== undefined) {
+                setStreamingThinking(chunk.thinking);
+              }
+              
+              if (chunk.done) {
+                const finalMessages: Message[] = [
+                  ...messagesAfterEdit,
+                  { role: "assistant", content: chunk.content || "", thinking: chunk.thinking },
+                ];
+                updateConversationMessages(finalMessages);
+                setStreamingContent("");
+                setStreamingThinking("");
+              }
             }
-            
-            if (chunk.content !== undefined) {
-              setStreamingContent(chunk.content);
+          );
+        } else {
+          const response = await sendChatMessage(
+            truncatedMessages,
+            { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
+            {
+              temperature: globalSettings.temperature,
+              maxTokens: globalSettings.maxTokens,
+              topP: globalSettings.topP,
+              topK: globalSettings.topK,
+              systemPrompt,
+              enableThinking: globalSettings.enableThinking,
+              thinkingBudget: globalSettings.thinkingBudget,
             }
-            
-            if (chunk.thinking !== undefined) {
-              setStreamingThinking(chunk.thinking);
-            }
-            
-            if (chunk.done) {
-              const finalMessages: Message[] = [
-                ...messagesAfterEdit,
-                { role: "assistant", content: chunk.content || "", thinking: chunk.thinking },
-              ];
-              updateConversationMessages(finalMessages);
-              setStreamingContent("");
-              setStreamingThinking("");
-            }
+          );
+          
+          if (response.error) {
+            setError(response.error);
+          } else {
+            const finalMessages: Message[] = [
+              ...messagesAfterEdit,
+              { role: "assistant", content: response.content || "", thinking: response.thinking },
+            ];
+            updateConversationMessages(finalMessages);
           }
-        );
+        }
       } catch (err) {
         console.error("Edit regenerate error:", err);
         setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
