@@ -5282,7 +5282,7 @@ Write an engaging story segment. If this is a good point for player interaction,
 
       {/* Error Message */}
       {error && (
-        <div className="flex-shrink-0 px-4 py-2">
+        <div className="flex-shrink-0 px-4 py-2 relative z-50">
           <div className="max-w-4xl mx-auto">
             <div className="bg-red-900/50 border border-red-800 rounded-lg px-4 py-3 text-red-200 text-sm flex items-center justify-between gap-3">
               <span>{error}</span>
