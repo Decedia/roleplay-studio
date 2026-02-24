@@ -3692,12 +3692,8 @@ Write an engaging story segment. If this is a good point for player interaction,
 
   return (
     <div className="flex flex-col h-screen bg-black">
-      {/* Header - Fixed floating bar in chat view */}
-      <header className={`flex-shrink-0 z-50 ${
-        view === "chat" 
-          ? "fixed top-0 left-0 right-0 bg-black/80 backdrop-blur-xl border-b border-zinc-800/50" 
-          : "border-b border-zinc-800 bg-black"
-      }`}>
+      {/* Header - Fixed on top for all views on mobile */}
+      <header className={`flex-shrink-0 z-50 fixed top-0 left-0 right-0 bg-black/80 backdrop-blur-xl border-b border-zinc-800/50`}>
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-3 min-w-0 overflow-hidden">
@@ -4021,8 +4017,8 @@ Write an engaging story segment. If this is a good point for player interaction,
         </div>
       </header>
 
-      {/* Main Content - Add top padding when in chat view for fixed header */}
-      <div className={`flex-1 overflow-y-auto ${view === "chat" ? "pt-20" : ""}`}>
+      {/* Main Content - Add top padding for fixed header */}
+      <div className="flex-1 overflow-y-auto pt-20">
         <div className="max-w-4xl mx-auto px-4 py-6">
           {/* Personas View */}
           {view === "personas" && (
@@ -5499,7 +5495,7 @@ Write an engaging story segment. If this is a good point for player interaction,
 
           {/* Chat View */}
           {view === "chat" && currentConversation && (
-            <>
+            <div className="pb-32">
               {currentConversation.messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center">
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mb-6">
@@ -5674,7 +5670,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                   <div ref={messagesEndRef} />
                 </div>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>
@@ -5700,9 +5696,9 @@ Write an engaging story segment. If this is a good point for player interaction,
         </div>
       )}
 
-      {/* Input Area - Only show in chat view */}
+      {/* Input Area - Fixed at bottom for chat view */}
       {view === "chat" && currentConversation && (
-        <div className="flex-shrink-0 border-t border-zinc-800 bg-black">
+        <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-800 bg-black/80 backdrop-blur-xl z-50">
           <div className="max-w-4xl mx-auto px-4 py-4">
             <form onSubmit={handleSubmit}>
               <div className="flex items-end gap-3 bg-zinc-900 rounded-2xl border border-zinc-800 p-2">
