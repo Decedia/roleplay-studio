@@ -504,13 +504,20 @@ export const chatWithVertexAI: ChatFunction = async (
       ? { parts: [{ text: options.systemPrompt }] }
       : undefined;
 
-    // Build generation config
+    // Build generation config with optional thinking
     const generationConfig: Record<string, unknown> = {
       temperature: options.temperature,
       maxOutputTokens: options.maxTokens,
       topP: options.topP,
       topK: options.topK,
     };
+
+    // Add thinking config for Gemini 2.0 models if enabled
+    if (options.enableThinking && config.selectedModel?.includes("gemini-2")) {
+      generationConfig.thinkingConfig = {
+        thinkingBudget: options.thinkingBudget || 8192,
+      };
+    }
 
     // Use server-side proxy to avoid CORS issues
     const response = await fetch("/api/vertex-ai", {
@@ -774,6 +781,13 @@ export const streamWithVertexAI = async (
       topP: options.topP,
       topK: options.topK,
     };
+
+    // Add thinking config for Gemini 2.0 models if enabled
+    if (options.enableThinking && config.selectedModel?.includes("gemini-2")) {
+      generationConfig.thinkingConfig = {
+        thinkingBudget: options.thinkingBudget || 8192,
+      };
+    }
 
     // Use server-side proxy to avoid CORS issues
     const response = await fetch("/api/vertex-ai", {
