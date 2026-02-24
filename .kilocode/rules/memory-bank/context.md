@@ -91,6 +91,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **Fixed VN tab back button - now correctly navigates to personas view**
 - [x] **Fixed character generator Create Character button - now correctly imports character and starts conversation**
 - [x] **Enable Streaming toggle in global settings - allows users to disable streaming for more stable responses**
+- [x] **Fixed header to top and input to bottom for mobile views - better mobile UX with fixed positioning**
 
 ## Current Structure
 
@@ -376,6 +377,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date | Changes |
 |------|---------|
+| 2026-02-24 | Fixed header to top and input to bottom for mobile views - better mobile UX with fixed positioning |
 | 2026-02-24 | Added Enable Streaming toggle in global settings - allows users to disable streaming for more stable responses |
 | 2026-02-23 | Fixed VN tab back button and character generator Create Character button |
 | 2026-02-23 | Added custom size checkbox for context/output tokens, fixed Vertex AI to require Project ID for all requests |
