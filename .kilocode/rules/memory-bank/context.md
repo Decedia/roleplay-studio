@@ -90,6 +90,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **Fixed Vertex AI connection - now requires Google Cloud Project ID for all requests**
 - [x] **Fixed VN tab back button - now correctly navigates to personas view**
 - [x] **Fixed character generator Create Character button - now correctly imports character and starts conversation**
+- [x] **Enable Streaming toggle in global settings - allows users to disable streaming for more stable responses**
 
 ## Current Structure
 
@@ -177,6 +178,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - **Top P** (0-1): Controls word selection diversity
 - **Top K** (1-100): Limits token selection to top K choices
 - **Enable Thinking**: Toggle for AI reasoning display (Gemini 2.0 only)
+- **Enable Streaming**: Toggle for real-time AI responses (disable for more stable responses)
 - **Model Selection**: Choose from available AI models
 - Settings apply to ALL conversations globally
 - Accessible via gear icon in header (always visible)
@@ -316,6 +318,9 @@ interface GlobalSettings {
   topK: number;
   modelId: string;
   enableThinking: boolean;
+  thinkingBudget: number;
+  useCustomSize: boolean;
+  enableStreaming: boolean;
   activeProvider: LLMProviderType;
 }
 
@@ -371,6 +376,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date | Changes |
 |------|---------|
+| 2026-02-24 | Added Enable Streaming toggle in global settings - allows users to disable streaming for more stable responses |
 | 2026-02-23 | Fixed VN tab back button and character generator Create Character button |
 | 2026-02-23 | Added custom size checkbox for context/output tokens, fixed Vertex AI to require Project ID for all requests |
 | 2026-02-23 | Updated VN generator instructions: asks questions first, only generates when user says "create now", merged changes to main branch |
