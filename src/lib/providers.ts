@@ -512,8 +512,8 @@ export const chatWithVertexAI: ChatFunction = async (
       topK: options.topK,
     };
 
-    // Add thinking config for Gemini 2.0 models if enabled
-    if (options.enableThinking && config.selectedModel?.includes("gemini-2")) {
+    // Add thinking config if enabled
+    if (options.enableThinking) {
       generationConfig.thinkingConfig = {
         thinkingBudget: options.thinkingBudget || 8192,
       };
@@ -782,8 +782,8 @@ export const streamWithVertexAI = async (
       topK: options.topK,
     };
 
-    // Add thinking config for Gemini 2.0 models if enabled
-    if (options.enableThinking && config.selectedModel?.includes("gemini-2")) {
+    // Add thinking config if enabled
+    if (options.enableThinking) {
       generationConfig.thinkingConfig = {
         thinkingBudget: options.thinkingBudget || 8192,
       };
