@@ -5675,11 +5675,11 @@ Write an engaging story segment. If this is a good point for player interaction,
         </div>
       </div>
 
-      {/* Error Message */}
+      {/* Error Message - Fixed above input area */}
       {error && (
-        <div className="flex-shrink-0 px-4 py-2 relative z-50">
+        <div className="fixed bottom-24 left-0 right-0 px-4 py-2 relative z-60">
           <div className="max-w-4xl mx-auto">
-            <div className="bg-red-900/50 border border-red-800 rounded-lg px-4 py-3 text-red-200 text-sm flex items-center justify-between gap-3">
+            <div className="bg-red-900/50 border border-red-800 rounded-lg px-4 py-3 text-red-200 text-sm flex items-center justify-between gap-3 shadow-xl">
               <span>{error}</span>
               <button
                 onClick={handleRetry}
