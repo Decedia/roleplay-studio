@@ -489,6 +489,10 @@ export const chatWithVertexAI: ChatFunction = async (
   if (!config.apiKey) {
     return { error: "Vertex AI requires an API key" };
   }
+
+  if (!config.projectId) {
+    return { error: "Vertex AI requires a Google Cloud Project ID. Please enter your project ID in the provider settings." };
+  }
   
   try {
     const formattedMessages = messages.map((m) => ({
@@ -500,13 +504,20 @@ export const chatWithVertexAI: ChatFunction = async (
       ? { parts: [{ text: options.systemPrompt }] }
       : undefined;
 
-    // Build generation config
+    // Build generation config with optional thinking
     const generationConfig: Record<string, unknown> = {
       temperature: options.temperature,
       maxOutputTokens: options.maxTokens,
       topP: options.topP,
       topK: options.topK,
     };
+
+    // Add thinking config if enabled
+    if (options.enableThinking) {
+      generationConfig.thinkingConfig = {
+        thinkingBudget: options.thinkingBudget || 8192,
+      };
+    }
 
     // Use server-side proxy to avoid CORS issues
     const response = await fetch("/api/vertex-ai", {
@@ -517,6 +528,7 @@ export const chatWithVertexAI: ChatFunction = async (
       body: JSON.stringify({
         endpoint: `${config.selectedModel}:generateContent`,
         apiKey: config.apiKey,
+        projectId: config.projectId,
         location: location,
         payload: {
           contents: formattedMessages,
@@ -747,6 +759,11 @@ export const streamWithVertexAI = async (
     return;
   }
 
+  if (!config.projectId) {
+    onChunk({ error: "Vertex AI requires a Google Cloud Project ID. Please enter your project ID in the provider settings." });
+    return;
+  }
+
   try {
     const formattedMessages = messages.map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
@@ -765,6 +782,13 @@ export const streamWithVertexAI = async (
       topK: options.topK,
     };
 
+    // Add thinking config if enabled
+    if (options.enableThinking) {
+      generationConfig.thinkingConfig = {
+        thinkingBudget: options.thinkingBudget || 8192,
+      };
+    }
+
     // Use server-side proxy to avoid CORS issues
     const response = await fetch("/api/vertex-ai", {
       method: "PATCH",
@@ -774,6 +798,7 @@ export const streamWithVertexAI = async (
       body: JSON.stringify({
         endpoint: `${config.selectedModel}:streamGenerateContent?alt=sse`,
         apiKey: config.apiKey,
+        projectId: config.projectId,
         location: location,
         payload: {
           contents: formattedMessages,
@@ -958,6 +983,9 @@ export const testProviderConnection = async (
       if (!config.apiKey) {
         return { success: false, message: "API key is required." };
       }
+      if (!config.projectId) {
+        return { success: false, message: "Project ID is required for Vertex AI. Please enter your Google Cloud project ID." };
+      }
       try {
         // Test with Vertex AI endpoint using server-side proxy to avoid CORS
         const response = await fetch("/api/vertex-ai", {
@@ -968,6 +996,7 @@ export const testProviderConnection = async (
           body: JSON.stringify({
             endpoint: "gemini-2.0-flash:generateContent",
             apiKey: config.apiKey,
+            projectId: config.projectId,
             location: location,
             payload: {
               contents: [{ role: "user", parts: [{ text: "test" }] }],
@@ -1076,35 +1105,211 @@ export const fetchModelsFromProvider = async (
       }
 
       case "google-ai-studio": {
-        if (!config.apiKey) {
-          return { models: [], error: "API key is required" };
-        }
+        // Return static popular Google AI Studio models instead of fetching from API
+        const staticModels: FetchedModel[] = [
+          {
+            id: "gemini-3.1-pro-preview",
+            name: "Gemini 3.1 Pro Preview",
+            provider: "google-ai-studio",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-3-flash-preview",
+            name: "Gemini 3 Flash Preview",
+            provider: "google-ai-studio",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-3-pro-preview",
+            name: "Gemini 3 Pro Preview",
+            provider: "google-ai-studio",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-3-pro-image-preview",
+            name: "Gemini 3 Pro Image Preview",
+            provider: "google-ai-studio",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: false,
+          },
+          {
+            id: "gemini-2.5-pro",
+            name: "Gemini 2.5 Pro",
+            provider: "google-ai-studio",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-2.5-flash-preview-09-2025",
+            name: "Gemini 2.5 Flash Preview",
+            provider: "google-ai-studio",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-2.5-flash-lite-preview-09-2025",
+            name: "Gemini 2.5 Flash-Lite Preview",
+            provider: "google-ai-studio",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-2.5-flash-image",
+            name: "Gemini 2.5 Flash Image",
+            provider: "google-ai-studio",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: false,
+          },
+          {
+            id: "gemini-2.5-flash",
+            name: "Gemini 2.5 Flash",
+            provider: "google-ai-studio",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-2.0-flash",
+            name: "Gemini 2.0 Flash",
+            provider: "google-ai-studio",
+            context: 1048576,
+            max_tokens: 8192,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-1.5-pro",
+            name: "Gemini 1.5 Pro",
+            provider: "google-ai-studio",
+            context: 2097152,
+            max_tokens: 8192,
+            supportsThinking: false,
+          },
+          {
+            id: "gemini-1.5-flash",
+            name: "Gemini 1.5 Flash",
+            provider: "google-ai-studio",
+            context: 1048576,
+            max_tokens: 8192,
+            supportsThinking: false,
+          },
+        ];
 
-        const response = await fetch(`/api/models?provider=google-ai-studio&apiKey=${encodeURIComponent(config.apiKey)}`);
-        const data = await response.json();
-
-        if (!response.ok) {
-          return { models: [], error: data.error || `HTTP ${response.status}` };
-        }
-
-        return { models: data.models || [] };
+        return { models: staticModels };
       }
 
       case "google-vertex": {
-        if (!config.apiKey) {
-          return { models: [], error: "API key is required" };
-        }
+        // Return static popular Google Vertex AI models instead of fetching from API
+        const staticModels: FetchedModel[] = [
+          {
+            id: "gemini-3.1-pro-preview",
+            name: "Gemini 3.1 Pro Preview",
+            provider: "google-vertex",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-3-flash-preview",
+            name: "Gemini 3 Flash Preview",
+            provider: "google-vertex",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-3-pro-preview",
+            name: "Gemini 3 Pro Preview",
+            provider: "google-vertex",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-3-pro-image-preview",
+            name: "Gemini 3 Pro Image Preview",
+            provider: "google-vertex",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: false,
+          },
+          {
+            id: "gemini-2.5-pro",
+            name: "Gemini 2.5 Pro",
+            provider: "google-vertex",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-2.5-flash-preview-09-2025",
+            name: "Gemini 2.5 Flash Preview",
+            provider: "google-vertex",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-2.5-flash-lite-preview-09-2025",
+            name: "Gemini 2.5 Flash-Lite Preview",
+            provider: "google-vertex",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-2.5-flash-image",
+            name: "Gemini 2.5 Flash Image",
+            provider: "google-vertex",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: false,
+          },
+          {
+            id: "gemini-2.5-flash",
+            name: "Gemini 2.5 Flash",
+            provider: "google-vertex",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-2.0-flash",
+            name: "Gemini 2.0 Flash",
+            provider: "google-vertex",
+            context: 1048576,
+            max_tokens: 8192,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-1.5-pro",
+            name: "Gemini 1.5 Pro",
+            provider: "google-vertex",
+            context: 2097152,
+            max_tokens: 8192,
+            supportsThinking: false,
+          },
+          {
+            id: "gemini-1.5-flash",
+            name: "Gemini 1.5 Flash",
+            provider: "google-vertex",
+            context: 1048576,
+            max_tokens: 8192,
+            supportsThinking: false,
+          },
+        ];
 
-        const location = config.vertexLocation || "global";
-        const vertexMode = config.vertexMode || "express";
-        const response = await fetch(`/api/models?provider=google-vertex&apiKey=${encodeURIComponent(config.apiKey)}&location=${encodeURIComponent(location)}&vertexMode=${encodeURIComponent(vertexMode)}`);
-        const data = await response.json();
-
-        if (!response.ok) {
-          return { models: [], error: data.error || `HTTP ${response.status}` };
-        }
-
-        return { models: data.models || [] };
+        return { models: staticModels };
       }
 
       case "puter": {

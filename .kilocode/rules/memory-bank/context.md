@@ -85,6 +85,14 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **Added "Create Character" button to immediately start a conversation with the generated character**
 - [x] **Added "Export JSON" button to download character as JSON file with character name as filename**
 - [x] **Improved generator instructions: allows skipping question phase if user provides enough details upfront**
+- [x] **Updated VN generator instructions: asks questions first, only generates when user says "create now"**
+- [x] **Added custom size checkbox for context/output tokens - when disabled, auto-uses model max sizes**
+- [x] **Fixed Vertex AI connection - now requires Google Cloud Project ID for all requests**
+- [x] **Fixed VN tab back button - now correctly navigates to personas view**
+- [x] **Fixed character generator Create Character button - now correctly imports character and starts conversation**
+- [x] **Enable Streaming toggle in global settings - allows users to disable streaming for more stable responses**
+- [x] **Fixed header to top and input to bottom for mobile views - better mobile UX with fixed positioning**
+- [x] **Added thinking config support for Vertex AI - applies to all models when enabled**
 - [x] **Thinking feature now available for all models when enabled - removed Gemini 2.0-only restriction**
 - [x] **Fixed error popup z-index to appear above input area**
 
@@ -174,6 +182,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - **Top P** (0-1): Controls word selection diversity
 - **Top K** (1-100): Limits token selection to top K choices
 - **Enable Thinking**: Toggle for AI reasoning display (Gemini 2.0 only)
+- **Enable Streaming**: Toggle for real-time AI responses (disable for more stable responses)
 - **Model Selection**: Choose from available AI models
 - Settings apply to ALL conversations globally
 - Accessible via gear icon in header (always visible)
@@ -313,6 +322,9 @@ interface GlobalSettings {
   topK: number;
   modelId: string;
   enableThinking: boolean;
+  thinkingBudget: number;
+  useCustomSize: boolean;
+  enableStreaming: boolean;
   activeProvider: LLMProviderType;
 }
 
@@ -370,6 +382,13 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 |------|---------|
 | 2026-02-24 | Fixed error popup z-index to appear above input area |
 | 2026-02-24 | Thinking feature now available for all models when enabled - removed Gemini 2.0-only restriction, thinking budget available for all providers |
+| 2026-02-24 | Updated Vertex AI thinking config to apply to all models when enabled (not just Gemini 2.0) |
+| 2026-02-24 | Added thinking config support for Vertex AI Gemini 2.0 models |
+| 2026-02-24 | Fixed header to top and input to bottom for mobile views - better mobile UX with fixed positioning |
+| 2026-02-24 | Added Enable Streaming toggle in global settings - allows users to disable streaming for more stable responses |
+| 2026-02-23 | Fixed VN tab back button and character generator Create Character button |
+| 2026-02-23 | Added custom size checkbox for context/output tokens, fixed Vertex AI to require Project ID for all requests |
+| 2026-02-23 | Updated VN generator instructions: asks questions first, only generates when user says "create now", merged changes to main branch |
 | 2026-02-23 | Improved generator instructions: allows skipping question phase if user provides enough details upfront, clarified "create now" trigger requirement |
 | 2026-02-23 | Enhanced AI character generator: asks for character details first, only generates JSON when user says "create now", added character JSON display with "Create Character" and "Export JSON" buttons |
 | 2026-02-18 | Improved Vertex AI integration - separate model fetching endpoint with location support for Express mode |

@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { endpoint, apiKey, payload, location = "global" } = body;
+    const { endpoint, apiKey, payload, location = "global", projectId } = body;
 
     if (!apiKey) {
       return NextResponse.json(
@@ -13,10 +13,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Build the Vertex AI endpoint URL
+    if (!projectId) {
+      return NextResponse.json(
+        { error: "Project ID is required for Vertex AI. Please enter your Google Cloud project ID in the provider settings." },
+        { status: 400 }
+      );
+    }
+
+    // Build the Vertex AI endpoint URL with actual project ID
     const vertexEndpoint = location === "global"
-      ? `https://aiplatform.googleapis.com/v1/projects/-/locations/global/publishers/google/models/${endpoint}`
-      : `https://${location}-aiplatform.googleapis.com/v1/projects/-/locations/${location}/publishers/google/models/${endpoint}`;
+      ? `https://aiplatform.googleapis.com/v1/projects/${projectId}/locations/global/publishers/google/models/${endpoint}`
+      : `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${endpoint}`;
 
     const response = await fetch(vertexEndpoint, {
       method: "POST",
@@ -50,7 +57,7 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { endpoint, apiKey, payload, location = "global" } = body;
+    const { endpoint, apiKey, payload, location = "global", projectId } = body;
 
     if (!apiKey) {
       return NextResponse.json(
@@ -59,10 +66,17 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Build the Vertex AI endpoint URL for streaming
+    if (!projectId) {
+      return NextResponse.json(
+        { error: "Project ID is required for Vertex AI. Please enter your Google Cloud project ID in the provider settings." },
+        { status: 400 }
+      );
+    }
+
+    // Build the Vertex AI endpoint URL for streaming with actual project ID
     const vertexEndpoint = location === "global"
-      ? `https://aiplatform.googleapis.com/v1/projects/-/locations/global/publishers/google/models/${endpoint}`
-      : `https://${location}-aiplatform.googleapis.com/v1/projects/-/locations/${location}/publishers/google/models/${endpoint}`;
+      ? `https://aiplatform.googleapis.com/v1/projects/${projectId}/locations/global/publishers/google/models/${endpoint}`
+      : `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${endpoint}`;
 
     const response = await fetch(vertexEndpoint, {
       method: "POST",

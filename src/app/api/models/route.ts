@@ -129,15 +129,22 @@ export async function GET(request: NextRequest) {
           );
         }
 
+        // Project ID is required for Vertex AI
+        const vertexProjectId = searchParams.get("projectId");
+        if (!vertexProjectId) {
+          return NextResponse.json(
+            { error: "Project ID is required for Google Vertex AI" },
+            { status: 400 }
+          );
+        }
+
         // Get location from query params (default to global)
         const location = searchParams.get("location") || "global";
-        const vertexMode = searchParams.get("vertexMode") || "express";
 
-        // For Express mode, use Vertex AI endpoint with x-goog-api-key header
-        // For global location, use the global endpoint without location prefix
+        // Build endpoint with actual project ID
         const endpoint = location === "global"
-          ? `https://aiplatform.googleapis.com/v1/projects/-/locations/global/publishers/google/models`
-          : `https://${location}-aiplatform.googleapis.com/v1/projects/-/locations/${location}/publishers/google/models`;
+          ? `https://aiplatform.googleapis.com/v1/projects/${vertexProjectId}/locations/global/publishers/google/models`
+          : `https://${location}-aiplatform.googleapis.com/v1/projects/${vertexProjectId}/locations/${location}/publishers/google/models`;
         
         const response = await fetch(
           endpoint,
@@ -178,7 +185,7 @@ export async function GET(request: NextRequest) {
         // Vertex AI returns models in a different format
         const models = (data.models || data.aiPlatformModels || [])
           .map((model: { name: string; displayName?: string; supportedGenerationMethods?: string[] }) => {
-            // Vertex AI model names are like "projects/-/locations/us-central1/publishers/google/models/gemini-2.0-flash"
+            // Vertex AI model names are like "projects/{project}/locations/{location}/publishers/google/models/gemini-2.0-flash"
             const modelId = model.name.split("/").pop() || model.name;
             const capabilities = modelCapabilities[modelId] || { context: 128000, max_tokens: 8192, supportsThinking: false };
             
@@ -192,7 +199,7 @@ export async function GET(request: NextRequest) {
             };
           });
 
-        return NextResponse.json({ models, location, vertexMode });
+        return NextResponse.json({ models, location });
       }
 
       case "puter": {

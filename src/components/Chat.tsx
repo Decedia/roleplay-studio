@@ -82,6 +82,8 @@ interface GlobalSettings {
   modelId: string;
   enableThinking: boolean;
   thinkingBudget: number; // Thinking budget for Gemini 2.0 models (in tokens)
+  useCustomSize: boolean; // Enable custom context/output sizes
+  enableStreaming: boolean; // Enable/disable streaming for all AI responses
 }
 
 // Global instructions with advanced fields
@@ -332,6 +334,8 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   modelId: "", // Empty initially - user must connect to a provider first
   enableThinking: false,
   thinkingBudget: 8192, // Default thinking budget for Gemini 2.0 models
+  useCustomSize: false, // By default, use model max sizes
+  enableStreaming: true, // Streaming enabled by default for better UX
 };
 
 // Estimate token count for text (rough approximation: ~4 chars per token)
@@ -775,8 +779,35 @@ function SettingsModal({
             </p>
           </div>
 
+          {/* Custom Size Toggle */}
+          <div className="flex items-center gap-3 mb-4">
+            <input
+              type="checkbox"
+              id="useCustomSize"
+              checked={globalSettings.useCustomSize}
+              onChange={(e) => {
+                const useCustom = e.target.checked;
+                if (!useCustom && selectedModel) {
+                  // Reset to model max when disabling custom size
+                  setGlobalSettings({ 
+                    ...globalSettings, 
+                    useCustomSize: false,
+                    maxTokens: selectedModel.max_tokens || 4000,
+                    maxContextTokens: selectedModel.context || 128000
+                  });
+                } else {
+                  setGlobalSettings({ ...globalSettings, useCustomSize: useCustom });
+                }
+              }}
+              className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-purple-600 focus:ring-purple-500 focus:ring-offset-zinc-900"
+            />
+            <label htmlFor="useCustomSize" className="text-sm text-zinc-300">
+              Use custom output/context sizes
+            </label>
+          </div>
+
           {/* Max Output Tokens */}
-          <div>
+          <div className={globalSettings.useCustomSize ? "" : "opacity-50 pointer-events-none"}>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
               Max Output Tokens
             </label>
@@ -789,6 +820,7 @@ function SettingsModal({
                 value={globalSettings.maxTokens}
                 onChange={(e) => setGlobalSettings({ ...globalSettings, maxTokens: parseInt(e.target.value) })}
                 className="flex-1"
+                disabled={!globalSettings.useCustomSize}
               />
               <input
                 type="number"
@@ -803,11 +835,13 @@ function SettingsModal({
                   }
                 }}
                 className="w-24 px-2 py-1 bg-zinc-800 border border-zinc-700 rounded text-white text-center text-sm focus:outline-none focus:border-purple-500"
+                disabled={!globalSettings.useCustomSize}
               />
               <button
                 onClick={() => setGlobalSettings({ ...globalSettings, maxTokens: selectedModel?.max_tokens || 4000 })}
                 className="px-2 py-1 bg-purple-600 hover:bg-purple-700 rounded text-xs text-white transition-colors"
                 title="Set to model maximum"
+                disabled={!globalSettings.useCustomSize}
               >
                 Max
               </button>
@@ -818,7 +852,7 @@ function SettingsModal({
           </div>
 
           {/* Max Context Tokens */}
-          <div>
+          <div className={globalSettings.useCustomSize ? "" : "opacity-50 pointer-events-none"}>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
               Max Context Tokens
             </label>
@@ -831,6 +865,7 @@ function SettingsModal({
                 value={globalSettings.maxContextTokens}
                 onChange={(e) => setGlobalSettings({ ...globalSettings, maxContextTokens: parseInt(e.target.value) })}
                 className="flex-1"
+                disabled={!globalSettings.useCustomSize}
               />
               <input
                 type="number"
@@ -845,11 +880,13 @@ function SettingsModal({
                   }
                 }}
                 className="w-24 px-2 py-1 bg-zinc-800 border border-zinc-700 rounded text-white text-center text-sm focus:outline-none focus:border-purple-500"
+                disabled={!globalSettings.useCustomSize}
               />
               <button
                 onClick={() => setGlobalSettings({ ...globalSettings, maxContextTokens: selectedModel?.context || 128000 })}
                 className="px-2 py-1 bg-purple-600 hover:bg-purple-700 rounded text-xs text-white transition-colors"
                 title="Set to model maximum"
+                disabled={!globalSettings.useCustomSize}
               >
                 Max
               </button>
@@ -917,6 +954,29 @@ function SettingsModal({
             </button>
             <p className="text-xs text-zinc-500 mt-1">
               Allow AI to show its reasoning process (Gemini 2.0 only)
+            </p>
+          </div>
+
+          {/* Enable Streaming */}
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">
+              Enable Streaming
+            </label>
+            <button
+              type="button"
+              onClick={() => setGlobalSettings({ ...globalSettings, enableStreaming: !globalSettings.enableStreaming })}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                globalSettings.enableStreaming ? "bg-blue-600" : "bg-zinc-700"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  globalSettings.enableStreaming ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+            <p className="text-xs text-zinc-500 mt-1">
+              Stream AI responses in real-time (disable for slower but more stable responses)
             </p>
           </div>
 
@@ -1204,13 +1264,28 @@ function SettingsModal({
                         }))}
                         className="w-full bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       >
-                        <option value="express">Express (API Key only)</option>
-                        <option value="full">Full (Project ID required)</option>
+                        <option value="express">Express (API Key + Project ID)</option>
+                        <option value="full">Full (Service Account)</option>
                       </select>
                       <p className="text-xs text-zinc-500 mt-1">
-                        {providerConfigs["google-vertex"]?.vertexMode === "full" 
-                          ? "Full mode requires GCP Project ID for enterprise features."
-                          : "Express mode uses API key only, similar to AI Studio."}
+                        Express mode uses API key authentication. Both modes require a Google Cloud Project ID.
+                      </p>
+                    </div>
+                    {/* Project ID - always required for Vertex AI */}
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-1">Google Cloud Project ID <span className="text-red-400">*</span></label>
+                      <input
+                        type="text"
+                        value={providerConfigs["google-vertex"]?.projectId || ""}
+                        onChange={(e) => setProviderConfigs(prev => ({
+                          ...prev,
+                          "google-vertex": { ...prev["google-vertex"], projectId: e.target.value }
+                        }))}
+                        placeholder="your-project-id"
+                        className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                      <p className="text-xs text-zinc-500 mt-1">
+                        Find your Project ID in the <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Google Cloud Console</a>
                       </p>
                     </div>
                     {/* Server Location */}
@@ -1251,27 +1326,11 @@ function SettingsModal({
                         className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
-                    {/* Project ID - only shown in Full mode */}
-                    {providerConfigs["google-vertex"]?.vertexMode === "full" && (
-                      <div>
-                        <label className="block text-xs text-zinc-400 mb-1">Project ID</label>
-                        <input
-                          type="text"
-                          value={providerConfigs["google-vertex"]?.projectId || ""}
-                          onChange={(e) => setProviderConfigs(prev => ({
-                            ...prev,
-                            "google-vertex": { ...prev["google-vertex"], projectId: e.target.value }
-                          }))}
-                          placeholder="Enter your GCP Project ID"
-                          className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
-                      </div>
-                    )}
                     <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={() => onTestConnection("google-vertex")}
-                        disabled={connectionStatus["google-vertex"]?.status === "testing" || !providerConfigs["google-vertex"]?.apiKey || (providerConfigs["google-vertex"]?.vertexMode === "full" && !providerConfigs["google-vertex"]?.projectId)}
+                        disabled={connectionStatus["google-vertex"]?.status === "testing" || !providerConfigs["google-vertex"]?.apiKey || !providerConfigs["google-vertex"]?.projectId}
                         className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {connectionStatus["google-vertex"]?.status === "testing" ? "Testing..." : "Test Connection"}
@@ -1279,7 +1338,7 @@ function SettingsModal({
                       <button
                         type="button"
                         onClick={() => onConnect("google-vertex")}
-                        disabled={!providerConfigs["google-vertex"]?.apiKey || (providerConfigs["google-vertex"]?.vertexMode === "full" && !providerConfigs["google-vertex"]?.projectId)}
+                        disabled={!providerConfigs["google-vertex"]?.apiKey || !providerConfigs["google-vertex"]?.projectId}
                         className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Connect
@@ -2496,21 +2555,50 @@ export default function Chat() {
           ...config,
           selectedModel: globalSettings.modelId || config.selectedModel,
         };
-        const response = await sendChatMessage(
-          messages,
-          configWithModel,
-          {
-            temperature: 0.8,
-            maxTokens: 2000,
-            topP: 0.9,
-            topK: 40,
-            enableThinking: false,
+        
+        if (globalSettings.enableStreaming) {
+          // Use streaming
+          let streamedContent = "";
+          await streamChatMessage(
+            messages,
+            configWithModel,
+            {
+              temperature: 0.8,
+              maxTokens: 2000,
+              topP: 0.9,
+              topK: 40,
+              enableThinking: false,
+            },
+            (chunk) => {
+              if (chunk.error) {
+                throw new Error(chunk.error);
+              }
+              if (chunk.content !== undefined) {
+                streamedContent = chunk.content;
+              }
+              if (chunk.done) {
+                responseText = chunk.content || "";
+              }
+            }
+          );
+        } else {
+          // Use non-streaming
+          const response = await sendChatMessage(
+            messages,
+            configWithModel,
+            {
+              temperature: 0.8,
+              maxTokens: 2000,
+              topP: 0.9,
+              topK: 40,
+              enableThinking: false,
+            }
+          );
+          if (response.error) {
+            throw new Error(response.error);
           }
-        );
-        if (response.error) {
-          throw new Error(response.error);
+          responseText = response.content || "";
         }
-        responseText = response.content || "";
       }
       
       setGeneratorMessages(prev => [...prev, { role: "assistant", content: responseText }]);
@@ -2590,30 +2678,32 @@ export default function Chat() {
   };
   
   // Import generated character to the character list
-  const importGeneratedCharacter = (transitionToChat: boolean = false) => {
-    if (!generatedCharacter) return;
+  const importGeneratedCharacter = (character: Character, transitionToChat: boolean = false) => {
+    setCharacters((prev) => [...prev, character]);
     
-    setCharacters((prev) => [...prev, generatedCharacter]);
-    const newCharacter = generatedCharacter;
-    setGeneratedCharacter(null);
-    
-    if (transitionToChat && selectedPersona) {
+    if (transitionToChat) {
+      // If no persona is selected, go to persona selection first
+      if (!selectedPersona) {
+        setView("personas");
+        return;
+      }
+      
       // Create a new conversation with the selected persona and new character
       const newConversation: Conversation = {
         id: crypto.randomUUID(),
         personaId: selectedPersona.id,
-        characterId: newCharacter.id,
+        characterId: character.id,
         messages: [
           {
             role: "assistant",
-            content: newCharacter.firstMessage,
+            content: character.firstMessage,
           },
         ],
         createdAt: Date.now(),
         updatedAt: Date.now(),
       };
       setConversations((prev) => [...prev, newConversation]);
-      setSelectedCharacter(newCharacter);
+      setSelectedCharacter(character);
       setCurrentConversation(newConversation);
       setView("chat");
     } else {
@@ -2663,21 +2753,50 @@ export default function Chat() {
           ...config,
           selectedModel: globalSettings.modelId || config.selectedModel,
         };
-        const response = await sendChatMessage(
-          messages,
-          configWithModel,
-          {
-            temperature: 0.8,
-            maxTokens: 2000,
-            topP: 0.9,
-            topK: 40,
-            enableThinking: false,
+        
+        if (globalSettings.enableStreaming) {
+          // Use streaming
+          let streamedContent = "";
+          await streamChatMessage(
+            messages,
+            configWithModel,
+            {
+              temperature: 0.8,
+              maxTokens: 2000,
+              topP: 0.9,
+              topK: 40,
+              enableThinking: false,
+            },
+            (chunk) => {
+              if (chunk.error) {
+                throw new Error(chunk.error);
+              }
+              if (chunk.content !== undefined) {
+                streamedContent = chunk.content;
+              }
+              if (chunk.done) {
+                responseText = chunk.content || "";
+              }
+            }
+          );
+        } else {
+          // Use non-streaming
+          const response = await sendChatMessage(
+            messages,
+            configWithModel,
+            {
+              temperature: 0.8,
+              maxTokens: 2000,
+              topP: 0.9,
+              topK: 40,
+              enableThinking: false,
+            }
+          );
+          if (response.error) {
+            throw new Error(response.error);
           }
-        );
-        if (response.error) {
-          throw new Error(response.error);
+          responseText = response.content || "";
         }
-        responseText = response.content || "";
       }
       
       setBrainstormMessages(prev => [...prev, { role: "assistant", content: responseText }]);
@@ -3163,44 +3282,72 @@ Write an engaging story segment. If this is a good point for player interaction,
         systemPromptTokens
       );
 
-      // Use streaming for better UX
-      await streamChatMessage(
-        truncatedMessages,
-        { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
-        {
-          temperature: globalSettings.temperature,
-          maxTokens: globalSettings.maxTokens,
-          topP: globalSettings.topP,
-          topK: globalSettings.topK,
-          systemPrompt,
-          enableThinking: globalSettings.enableThinking,
-          thinkingBudget: globalSettings.thinkingBudget,
-        },
-        (chunk) => {
-          if (chunk.error) {
-            setError(chunk.error);
-            return;
+      // Use streaming or non-streaming based on settings
+      if (globalSettings.enableStreaming) {
+        // Streaming mode for real-time responses
+        await streamChatMessage(
+          truncatedMessages,
+          { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
+          {
+            temperature: globalSettings.temperature,
+            maxTokens: globalSettings.maxTokens,
+            topP: globalSettings.topP,
+            topK: globalSettings.topK,
+            systemPrompt,
+            enableThinking: globalSettings.enableThinking,
+            thinkingBudget: globalSettings.thinkingBudget,
+          },
+          (chunk) => {
+            if (chunk.error) {
+              setError(chunk.error);
+              return;
+            }
+            
+            if (chunk.content !== undefined) {
+              setStreamingContent(chunk.content);
+            }
+            
+            if (chunk.thinking !== undefined) {
+              setStreamingThinking(chunk.thinking);
+            }
+            
+            if (chunk.done) {
+              const finalMessages: Message[] = [
+                ...updatedMessages,
+                { role: "assistant", content: chunk.content || "", thinking: chunk.thinking },
+              ];
+              updateConversationMessages(finalMessages);
+              setStreamingContent("");
+              setStreamingThinking("");
+            }
           }
-          
-          if (chunk.content !== undefined) {
-            setStreamingContent(chunk.content);
+        );
+      } else {
+        // Non-streaming mode for stable responses
+        const response = await sendChatMessage(
+          truncatedMessages,
+          { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
+          {
+            temperature: globalSettings.temperature,
+            maxTokens: globalSettings.maxTokens,
+            topP: globalSettings.topP,
+            topK: globalSettings.topK,
+            systemPrompt,
+            enableThinking: globalSettings.enableThinking,
+            thinkingBudget: globalSettings.thinkingBudget,
           }
-          
-          if (chunk.thinking !== undefined) {
-            setStreamingThinking(chunk.thinking);
-          }
-          
-          if (chunk.done) {
-            const finalMessages: Message[] = [
-              ...updatedMessages,
-              { role: "assistant", content: chunk.content || "", thinking: chunk.thinking },
-            ];
-            updateConversationMessages(finalMessages);
-            setStreamingContent("");
-            setStreamingThinking("");
-          }
+        );
+        
+        if (response.error) {
+          setError(response.error);
+        } else {
+          const finalMessages: Message[] = [
+            ...updatedMessages,
+            { role: "assistant", content: response.content || "", thinking: response.thinking },
+          ];
+          updateConversationMessages(finalMessages);
         }
-      );
+      }
     } catch (err) {
       console.error("Chat error:", err);
       setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
@@ -3274,44 +3421,72 @@ Write an engaging story segment. If this is a good point for player interaction,
         systemPromptTokens
       );
 
-      // Use streaming for better UX
-      await streamChatMessage(
-        truncatedMessages,
-        { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
-        {
-          temperature: globalSettings.temperature,
-          maxTokens: globalSettings.maxTokens,
-          topP: globalSettings.topP,
-          topK: globalSettings.topK,
-          systemPrompt,
-          enableThinking: globalSettings.enableThinking,
-          thinkingBudget: globalSettings.thinkingBudget,
-        },
-        (chunk) => {
-          if (chunk.error) {
-            setError(chunk.error);
-            return;
+      // Use streaming or non-streaming based on settings
+      if (globalSettings.enableStreaming) {
+        // Streaming mode for real-time responses
+        await streamChatMessage(
+          truncatedMessages,
+          { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
+          {
+            temperature: globalSettings.temperature,
+            maxTokens: globalSettings.maxTokens,
+            topP: globalSettings.topP,
+            topK: globalSettings.topK,
+            systemPrompt,
+            enableThinking: globalSettings.enableThinking,
+            thinkingBudget: globalSettings.thinkingBudget,
+          },
+          (chunk) => {
+            if (chunk.error) {
+              setError(chunk.error);
+              return;
+            }
+            
+            if (chunk.content !== undefined) {
+              setStreamingContent(chunk.content);
+            }
+            
+            if (chunk.thinking !== undefined) {
+              setStreamingThinking(chunk.thinking);
+            }
+            
+            if (chunk.done) {
+              const finalMessages: Message[] = [
+                ...messagesBeforeRetry,
+                { role: "assistant", content: chunk.content || "", thinking: chunk.thinking },
+              ];
+              updateConversationMessages(finalMessages);
+              setStreamingContent("");
+              setStreamingThinking("");
+            }
           }
-          
-          if (chunk.content !== undefined) {
-            setStreamingContent(chunk.content);
+        );
+      } else {
+        // Non-streaming mode for stable responses
+        const response = await sendChatMessage(
+          truncatedMessages,
+          { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
+          {
+            temperature: globalSettings.temperature,
+            maxTokens: globalSettings.maxTokens,
+            topP: globalSettings.topP,
+            topK: globalSettings.topK,
+            systemPrompt,
+            enableThinking: globalSettings.enableThinking,
+            thinkingBudget: globalSettings.thinkingBudget,
           }
-          
-          if (chunk.thinking !== undefined) {
-            setStreamingThinking(chunk.thinking);
-          }
-          
-          if (chunk.done) {
-            const finalMessages: Message[] = [
-              ...messagesBeforeRetry,
-              { role: "assistant", content: chunk.content || "", thinking: chunk.thinking },
-            ];
-            updateConversationMessages(finalMessages);
-            setStreamingContent("");
-            setStreamingThinking("");
-          }
+        );
+        
+        if (response.error) {
+          setError(response.error);
+        } else {
+          const finalMessages: Message[] = [
+            ...messagesBeforeRetry,
+            { role: "assistant", content: response.content || "", thinking: response.thinking },
+          ];
+          updateConversationMessages(finalMessages);
         }
-      );
+      }
     } catch (err) {
       console.error("Retry error:", err);
       setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
@@ -3388,43 +3563,70 @@ Write an engaging story segment. If this is a good point for player interaction,
           systemPromptTokens
         );
 
-        await streamChatMessage(
-          truncatedMessages,
-          { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
-          {
-            temperature: globalSettings.temperature,
-            maxTokens: globalSettings.maxTokens,
-            topP: globalSettings.topP,
-            topK: globalSettings.topK,
-            systemPrompt,
-            enableThinking: globalSettings.enableThinking,
-            thinkingBudget: globalSettings.thinkingBudget,
-          },
-          (chunk) => {
-            if (chunk.error) {
-              setError(chunk.error);
-              return;
+        // Use streaming or non-streaming based on settings
+        if (globalSettings.enableStreaming) {
+          await streamChatMessage(
+            truncatedMessages,
+            { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
+            {
+              temperature: globalSettings.temperature,
+              maxTokens: globalSettings.maxTokens,
+              topP: globalSettings.topP,
+              topK: globalSettings.topK,
+              systemPrompt,
+              enableThinking: globalSettings.enableThinking,
+              thinkingBudget: globalSettings.thinkingBudget,
+            },
+            (chunk) => {
+              if (chunk.error) {
+                setError(chunk.error);
+                return;
+              }
+              
+              if (chunk.content !== undefined) {
+                setStreamingContent(chunk.content);
+              }
+              
+              if (chunk.thinking !== undefined) {
+                setStreamingThinking(chunk.thinking);
+              }
+              
+              if (chunk.done) {
+                const finalMessages: Message[] = [
+                  ...messagesAfterEdit,
+                  { role: "assistant", content: chunk.content || "", thinking: chunk.thinking },
+                ];
+                updateConversationMessages(finalMessages);
+                setStreamingContent("");
+                setStreamingThinking("");
+              }
             }
-            
-            if (chunk.content !== undefined) {
-              setStreamingContent(chunk.content);
+          );
+        } else {
+          const response = await sendChatMessage(
+            truncatedMessages,
+            { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
+            {
+              temperature: globalSettings.temperature,
+              maxTokens: globalSettings.maxTokens,
+              topP: globalSettings.topP,
+              topK: globalSettings.topK,
+              systemPrompt,
+              enableThinking: globalSettings.enableThinking,
+              thinkingBudget: globalSettings.thinkingBudget,
             }
-            
-            if (chunk.thinking !== undefined) {
-              setStreamingThinking(chunk.thinking);
-            }
-            
-            if (chunk.done) {
-              const finalMessages: Message[] = [
-                ...messagesAfterEdit,
-                { role: "assistant", content: chunk.content || "", thinking: chunk.thinking },
-              ];
-              updateConversationMessages(finalMessages);
-              setStreamingContent("");
-              setStreamingThinking("");
-            }
+          );
+          
+          if (response.error) {
+            setError(response.error);
+          } else {
+            const finalMessages: Message[] = [
+              ...messagesAfterEdit,
+              { role: "assistant", content: response.content || "", thinking: response.thinking },
+            ];
+            updateConversationMessages(finalMessages);
           }
-        );
+        }
       } catch (err) {
         console.error("Edit regenerate error:", err);
         setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
@@ -3453,6 +3655,8 @@ Write an engaging story segment. If this is a good point for player interaction,
     } else if (view === "generator") {
       setView("personas");
     } else if (view === "brainstorm") {
+      setView("personas");
+    } else if (view === "vn-generator") {
       setView("personas");
     }
   };
@@ -3488,12 +3692,8 @@ Write an engaging story segment. If this is a good point for player interaction,
 
   return (
     <div className="flex flex-col h-screen bg-black">
-      {/* Header - Fixed floating bar in chat view */}
-      <header className={`flex-shrink-0 z-50 ${
-        view === "chat" 
-          ? "fixed top-0 left-0 right-0 bg-black/80 backdrop-blur-xl border-b border-zinc-800/50" 
-          : "border-b border-zinc-800 bg-black"
-      }`}>
+      {/* Header - Fixed on top for all views on mobile */}
+      <header className={`flex-shrink-0 z-50 fixed top-0 left-0 right-0 bg-black/80 backdrop-blur-xl border-b border-zinc-800/50`}>
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-3 min-w-0 overflow-hidden">
@@ -3817,8 +4017,8 @@ Write an engaging story segment. If this is a good point for player interaction,
         </div>
       </header>
 
-      {/* Main Content - Add top padding when in chat view for fixed header */}
-      <div className={`flex-1 overflow-y-auto ${view === "chat" ? "pt-20" : ""}`}>
+      {/* Main Content - Add top padding for fixed header */}
+      <div className="flex-1 overflow-y-auto pt-20">
         <div className="max-w-4xl mx-auto px-4 py-6">
           {/* Personas View */}
           {view === "personas" && (
@@ -4106,6 +4306,8 @@ Write an engaging story segment. If this is a good point for player interaction,
                     const contentWithoutJson = msg.role === "assistant" 
                       ? msg.content.replace(/```json\n[\s\S]*?```/g, "").trim()
                       : msg.content;
+                    const isLastMessage = idx === generatorMessages.length - 1;
+                    const isLastAssistantMessage = msg.role === "assistant" && isLastMessage;
                     
                     return (
                       <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
@@ -4117,6 +4319,66 @@ Write an engaging story segment. If this is a good point for player interaction,
                           }`}>
                             <FormattedText content={contentWithoutJson || (characterData.length > 0 ? "Here is the generated character:" : "")} />
                           </div>
+                          
+                          {/* Message actions - refresh, edit, delete on last assistant message */}
+                          {isLastAssistantMessage && (
+                            <div className="flex gap-1 mt-1 justify-start">
+                              {/* Refresh/Regenerate button */}
+                              <button
+                                onClick={() => {
+                                  // Find the last user message and resend
+                                  const lastUserIdx = generatorMessages.map((m, i) => m.role === "user" ? i : -1).filter(i => i >= 0).pop();
+                                  if (lastUserIdx !== undefined && lastUserIdx >= 0) {
+                                    const lastUserMsg = generatorMessages[lastUserIdx].content;
+                                    // Remove messages after last user message
+                                    setGeneratorMessages(prev => prev.slice(0, lastUserIdx));
+                                    // Resend the message
+                                    setTimeout(() => {
+                                      setGeneratorInput(lastUserMsg);
+                                      setTimeout(() => {
+                                        sendGeneratorMessage();
+                                      }, 50);
+                                    }, 50);
+                                  }
+                                }}
+                                disabled={isGenerating}
+                                className="p-1 text-zinc-500 hover:text-blue-400 hover:bg-zinc-800 rounded transition-colors disabled:opacity-50"
+                                title="Regenerate response"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                              </button>
+                              {/* Edit button */}
+                              <button
+                                onClick={() => {
+                                  // Edit the last assistant message content
+                                  const newContent = prompt("Edit message:", msg.content);
+                                  if (newContent !== null) {
+                                    setGeneratorMessages(prev => prev.map((m, i) => i === idx ? { ...m, content: newContent } : m));
+                                  }
+                                }}
+                                className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors"
+                                title="Edit message"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                              {/* Delete button */}
+                              <button
+                                onClick={() => {
+                                  setGeneratorMessages(prev => prev.filter((_, i) => i !== idx));
+                                }}
+                                className="p-1 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded transition-colors"
+                                title="Delete message"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                          )}
                           
                           {/* Generated Character Preview */}
                           {characterData.length > 0 && (
@@ -4141,7 +4403,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                                       <div className="flex gap-2">
                                         <button
                                           onClick={() => {
-                                            setGeneratedCharacter({
+                                            const newChar: Character = {
                                               id: crypto.randomUUID(),
                                               name: char.name,
                                               description: char.description,
@@ -4149,8 +4411,8 @@ Write an engaging story segment. If this is a good point for player interaction,
                                               scenario: char.scenario,
                                               mesExample: char.mesExample,
                                               createdAt: Date.now(),
-                                            });
-                                            importGeneratedCharacter(true);
+                                            };
+                                            importGeneratedCharacter(newChar, true);
                                             setAppliedCharacters(prev => new Set(prev).add(char.name));
                                           }}
                                           disabled={isApplied}
@@ -4244,8 +4506,7 @@ Write an engaging story segment. If this is a good point for player interaction,
               
               {/* Input area */}
               <div className="flex gap-2">
-                <input
-                  type="text"
+                <textarea
                   value={generatorInput}
                   onChange={(e) => setGeneratorInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -4255,8 +4516,14 @@ Write an engaging story segment. If this is a good point for player interaction,
                     }
                   }}
                   placeholder="Describe the character you want to create..."
-                  className="flex-1 bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700"
+                  className="flex-1 bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none min-h-[48px] max-h-[200px]"
                   disabled={isGenerating}
+                  rows={1}
+                  onInput={(e) => {
+                    const target = e.target as HTMLTextAreaElement;
+                    target.style.height = "auto";
+                    target.style.height = Math.min(target.scrollHeight, 200) + "px";
+                  }}
                 />
                 <button
                   onClick={sendGeneratorMessage}
@@ -4379,6 +4646,8 @@ Write an engaging story segment. If this is a good point for player interaction,
                     const contentWithoutInstructions = msg.role === "assistant" 
                       ? msg.content.replace(/```instructions\n[\s\S]*?```/g, "").trim()
                       : msg.content;
+                    const isLastMessage = idx === brainstormMessages.length - 1;
+                    const isLastAssistantMessage = msg.role === "assistant" && isLastMessage;
                     
                     return (
                       <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
@@ -4390,6 +4659,66 @@ Write an engaging story segment. If this is a good point for player interaction,
                           }`}>
                             <FormattedText content={contentWithoutInstructions} />
                           </div>
+                          
+                          {/* Message actions - refresh, edit, delete on last assistant message */}
+                          {isLastAssistantMessage && (
+                            <div className="flex gap-1 mt-1 justify-start">
+                              {/* Refresh/Regenerate button */}
+                              <button
+                                onClick={() => {
+                                  // Find the last user message and resend
+                                  const lastUserIdx = brainstormMessages.map((m, i) => m.role === "user" ? i : -1).filter(i => i >= 0).pop();
+                                  if (lastUserIdx !== undefined && lastUserIdx >= 0) {
+                                    const lastUserMsg = brainstormMessages[lastUserIdx].content;
+                                    // Remove messages after last user message
+                                    setBrainstormMessages(prev => prev.slice(0, lastUserIdx));
+                                    // Resend the message
+                                    setTimeout(() => {
+                                      setBrainstormInput(lastUserMsg);
+                                      setTimeout(() => {
+                                        sendBrainstormMessage();
+                                      }, 50);
+                                    }, 50);
+                                  }
+                                }}
+                                disabled={isBrainstorming}
+                                className="p-1 text-zinc-500 hover:text-blue-400 hover:bg-zinc-800 rounded transition-colors disabled:opacity-50"
+                                title="Regenerate response"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                              </button>
+                              {/* Edit button */}
+                              <button
+                                onClick={() => {
+                                  // Edit the last assistant message content
+                                  const newContent = prompt("Edit message:", msg.content);
+                                  if (newContent !== null) {
+                                    setBrainstormMessages(prev => prev.map((m, i) => i === idx ? { ...m, content: newContent } : m));
+                                  }
+                                }}
+                                className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors"
+                                title="Edit message"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                              {/* Delete button */}
+                              <button
+                                onClick={() => {
+                                  setBrainstormMessages(prev => prev.filter((_, i) => i !== idx));
+                                }}
+                                className="p-1 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded transition-colors"
+                                title="Delete message"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                          )}
                           
                           {/* Instruction blocks with apply buttons */}
                           {instructions.length > 0 && (
@@ -4459,8 +4788,7 @@ Write an engaging story segment. If this is a good point for player interaction,
               
               {/* Input area */}
               <div className="flex gap-2">
-                <input
-                  type="text"
+                <textarea
                   value={brainstormInput}
                   onChange={(e) => setBrainstormInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -4470,8 +4798,14 @@ Write an engaging story segment. If this is a good point for player interaction,
                     }
                   }}
                   placeholder="Describe the roleplay you want to play..."
-                  className="flex-1 bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500 border border-zinc-700"
+                  className="flex-1 bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500 border border-zinc-700 resize-none min-h-[48px] max-h-[200px]"
                   disabled={isBrainstorming}
+                  rows={1}
+                  onInput={(e) => {
+                    const target = e.target as HTMLTextAreaElement;
+                    target.style.height = "auto";
+                    target.style.height = Math.min(target.scrollHeight, 200) + "px";
+                  }}
                 />
                 <button
                   onClick={sendBrainstormMessage}
@@ -4752,34 +5086,95 @@ Write an engaging story segment. If this is a good point for player interaction,
                   
                   {/* Story segments */}
                   <div className="flex-1 overflow-y-auto space-y-4 bg-zinc-900/50 rounded-xl p-4 min-h-[400px] max-h-[500px]">
-                    {vnProject.story.map((segment) => (
-                      <div key={segment.id} className="space-y-2">
-                        <FormattedText content={segment.content} />
-                        
-                        {/* Choices */}
-                        {segment.choices && segment.choices.length > 0 && !segment.selectedChoice && (
-                          <div className="mt-4 space-y-2">
-                            {segment.choices.map((choice) => (
+                    {vnProject.story.map((segment, segIdx) => {
+                      const isLastSegment = segIdx === vnProject.story.length - 1;
+                      return (
+                        <div key={segment.id} className="space-y-2">
+                          <FormattedText content={segment.content} />
+                          
+                          {/* Actions for last segment */}
+                          {isLastSegment && !vnIsGenerating && (
+                            <div className="flex gap-1 mt-1 justify-start">
+                              {/* Refresh/Regenerate button */}
                               <button
-                                key={choice.id}
-                                onClick={() => continueVNStory(choice.id)}
-                                disabled={vnIsGenerating}
-                                className="w-full text-left px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg hover:border-purple-500 hover:bg-zinc-700 transition-colors text-zinc-200 disabled:opacity-50"
+                                onClick={() => {
+                                  // Remove last segment and regenerate
+                                  setVnProject(prev => prev ? {
+                                    ...prev,
+                                    story: prev.story.slice(0, -1)
+                                  } : null);
+                                  setTimeout(() => {
+                                    generateVNStorySegment();
+                                  }, 100);
+                                }}
+                                className="p-1 text-zinc-500 hover:text-blue-400 hover:bg-zinc-800 rounded transition-colors"
+                                title="Regenerate segment"
                               >
-                                → {choice.text}
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
                               </button>
-                            ))}
-                          </div>
-                        )}
-                        
-                        {/* Selected choice indicator */}
-                        {segment.selectedChoice && segment.choices && (
-                          <div className="mt-2 text-sm text-zinc-500 italic">
-                            You chose: {segment.choices.find(c => c.id === segment.selectedChoice)?.text}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                              {/* Edit button */}
+                              <button
+                                onClick={() => {
+                                  const newContent = prompt("Edit segment:", segment.content);
+                                  if (newContent !== null) {
+                                    setVnProject(prev => prev ? {
+                                      ...prev,
+                                      story: prev.story.map((s, i) => i === segIdx ? { ...s, content: newContent } : s)
+                                    } : null);
+                                  }
+                                }}
+                                className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors"
+                                title="Edit segment"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                              {/* Delete button */}
+                              <button
+                                onClick={() => {
+                                  setVnProject(prev => prev ? {
+                                    ...prev,
+                                    story: prev.story.filter((_, i) => i !== segIdx)
+                                  } : null);
+                                }}
+                                className="p-1 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded transition-colors"
+                                title="Delete segment"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                          )}
+                          
+                          {/* Choices */}
+                          {segment.choices && segment.choices.length > 0 && !segment.selectedChoice && (
+                            <div className="mt-4 space-y-2">
+                              {segment.choices.map((choice) => (
+                                <button
+                                  key={choice.id}
+                                  onClick={() => continueVNStory(choice.id)}
+                                  disabled={vnIsGenerating}
+                                  className="w-full text-left px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg hover:border-purple-500 hover:bg-zinc-700 transition-colors text-zinc-200 disabled:opacity-50"
+                                >
+                                  → {choice.text}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {/* Selected choice indicator */}
+                          {segment.selectedChoice && segment.choices && (
+                            <div className="mt-2 text-sm text-zinc-500 italic">
+                              You chose: {segment.choices.find(c => c.id === segment.selectedChoice)?.text}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                     
                     {vnIsGenerating && (
                       <div className="flex items-center gap-2 text-zinc-500">
@@ -5100,7 +5495,7 @@ Write an engaging story segment. If this is a good point for player interaction,
 
           {/* Chat View */}
           {view === "chat" && currentConversation && (
-            <>
+            <div className="pb-32">
               {currentConversation.messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center">
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mb-6">
@@ -5275,14 +5670,36 @@ Write an engaging story segment. If this is a good point for player interaction,
                   <div ref={messagesEndRef} />
                 </div>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Input Area - Only show in chat view */}
+<<<<<<< HEAD
+      {/* Error Message - Fixed above input area */}
+      {error && (
+        <div className="fixed bottom-24 left-0 right-0 px-4 py-2 relative z-60">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-red-900/50 border border-red-800 rounded-lg px-4 py-3 text-red-200 text-sm flex items-center justify-between gap-3 shadow-xl">
+              <span>{error}</span>
+              <button
+                onClick={handleRetry}
+                disabled={isLoading}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Retry
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Input Area - Fixed at bottom for chat view */}
       {view === "chat" && currentConversation && (
-        <div className="flex-shrink-0 border-t border-zinc-800 bg-black">
+        <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-800 bg-black/80 backdrop-blur-xl z-50">
           <div className="max-w-4xl mx-auto px-4 py-4">
             <form onSubmit={handleSubmit}>
               <div className="flex items-end gap-3 bg-zinc-900 rounded-2xl border border-zinc-800 p-2">
