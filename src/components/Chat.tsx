@@ -4144,6 +4144,8 @@ Write an engaging story segment. If this is a good point for player interaction,
                     const contentWithoutJson = msg.role === "assistant" 
                       ? msg.content.replace(/```json\n[\s\S]*?```/g, "").trim()
                       : msg.content;
+                    const isLastMessage = idx === generatorMessages.length - 1;
+                    const isLastAssistantMessage = msg.role === "assistant" && isLastMessage;
                     
                     return (
                       <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
@@ -4155,6 +4157,66 @@ Write an engaging story segment. If this is a good point for player interaction,
                           }`}>
                             <FormattedText content={contentWithoutJson || (characterData.length > 0 ? "Here is the generated character:" : "")} />
                           </div>
+                          
+                          {/* Message actions - refresh, edit, delete on last assistant message */}
+                          {isLastAssistantMessage && (
+                            <div className="flex gap-1 mt-1 justify-start">
+                              {/* Refresh/Regenerate button */}
+                              <button
+                                onClick={() => {
+                                  // Find the last user message and resend
+                                  const lastUserIdx = generatorMessages.map((m, i) => m.role === "user" ? i : -1).filter(i => i >= 0).pop();
+                                  if (lastUserIdx !== undefined && lastUserIdx >= 0) {
+                                    const lastUserMsg = generatorMessages[lastUserIdx].content;
+                                    // Remove messages after last user message
+                                    setGeneratorMessages(prev => prev.slice(0, lastUserIdx));
+                                    // Resend the message
+                                    setTimeout(() => {
+                                      setGeneratorInput(lastUserMsg);
+                                      setTimeout(() => {
+                                        sendGeneratorMessage();
+                                      }, 50);
+                                    }, 50);
+                                  }
+                                }}
+                                disabled={isGenerating}
+                                className="p-1 text-zinc-500 hover:text-blue-400 hover:bg-zinc-800 rounded transition-colors disabled:opacity-50"
+                                title="Regenerate response"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                              </button>
+                              {/* Edit button */}
+                              <button
+                                onClick={() => {
+                                  // Edit the last assistant message content
+                                  const newContent = prompt("Edit message:", msg.content);
+                                  if (newContent !== null) {
+                                    setGeneratorMessages(prev => prev.map((m, i) => i === idx ? { ...m, content: newContent } : m));
+                                  }
+                                }}
+                                className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors"
+                                title="Edit message"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                              {/* Delete button */}
+                              <button
+                                onClick={() => {
+                                  setGeneratorMessages(prev => prev.filter((_, i) => i !== idx));
+                                }}
+                                className="p-1 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded transition-colors"
+                                title="Delete message"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                          )}
                           
                           {/* Generated Character Preview */}
                           {characterData.length > 0 && (
@@ -4422,6 +4484,8 @@ Write an engaging story segment. If this is a good point for player interaction,
                     const contentWithoutInstructions = msg.role === "assistant" 
                       ? msg.content.replace(/```instructions\n[\s\S]*?```/g, "").trim()
                       : msg.content;
+                    const isLastMessage = idx === brainstormMessages.length - 1;
+                    const isLastAssistantMessage = msg.role === "assistant" && isLastMessage;
                     
                     return (
                       <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
@@ -4433,6 +4497,66 @@ Write an engaging story segment. If this is a good point for player interaction,
                           }`}>
                             <FormattedText content={contentWithoutInstructions} />
                           </div>
+                          
+                          {/* Message actions - refresh, edit, delete on last assistant message */}
+                          {isLastAssistantMessage && (
+                            <div className="flex gap-1 mt-1 justify-start">
+                              {/* Refresh/Regenerate button */}
+                              <button
+                                onClick={() => {
+                                  // Find the last user message and resend
+                                  const lastUserIdx = brainstormMessages.map((m, i) => m.role === "user" ? i : -1).filter(i => i >= 0).pop();
+                                  if (lastUserIdx !== undefined && lastUserIdx >= 0) {
+                                    const lastUserMsg = brainstormMessages[lastUserIdx].content;
+                                    // Remove messages after last user message
+                                    setBrainstormMessages(prev => prev.slice(0, lastUserIdx));
+                                    // Resend the message
+                                    setTimeout(() => {
+                                      setBrainstormInput(lastUserMsg);
+                                      setTimeout(() => {
+                                        sendBrainstormMessage();
+                                      }, 50);
+                                    }, 50);
+                                  }
+                                }}
+                                disabled={isBrainstorming}
+                                className="p-1 text-zinc-500 hover:text-blue-400 hover:bg-zinc-800 rounded transition-colors disabled:opacity-50"
+                                title="Regenerate response"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                              </button>
+                              {/* Edit button */}
+                              <button
+                                onClick={() => {
+                                  // Edit the last assistant message content
+                                  const newContent = prompt("Edit message:", msg.content);
+                                  if (newContent !== null) {
+                                    setBrainstormMessages(prev => prev.map((m, i) => i === idx ? { ...m, content: newContent } : m));
+                                  }
+                                }}
+                                className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors"
+                                title="Edit message"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                              {/* Delete button */}
+                              <button
+                                onClick={() => {
+                                  setBrainstormMessages(prev => prev.filter((_, i) => i !== idx));
+                                }}
+                                className="p-1 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded transition-colors"
+                                title="Delete message"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                          )}
                           
                           {/* Instruction blocks with apply buttons */}
                           {instructions.length > 0 && (
@@ -4800,34 +4924,95 @@ Write an engaging story segment. If this is a good point for player interaction,
                   
                   {/* Story segments */}
                   <div className="flex-1 overflow-y-auto space-y-4 bg-zinc-900/50 rounded-xl p-4 min-h-[400px] max-h-[500px]">
-                    {vnProject.story.map((segment) => (
-                      <div key={segment.id} className="space-y-2">
-                        <FormattedText content={segment.content} />
-                        
-                        {/* Choices */}
-                        {segment.choices && segment.choices.length > 0 && !segment.selectedChoice && (
-                          <div className="mt-4 space-y-2">
-                            {segment.choices.map((choice) => (
+                    {vnProject.story.map((segment, segIdx) => {
+                      const isLastSegment = segIdx === vnProject.story.length - 1;
+                      return (
+                        <div key={segment.id} className="space-y-2">
+                          <FormattedText content={segment.content} />
+                          
+                          {/* Actions for last segment */}
+                          {isLastSegment && !vnIsGenerating && (
+                            <div className="flex gap-1 mt-1 justify-start">
+                              {/* Refresh/Regenerate button */}
                               <button
-                                key={choice.id}
-                                onClick={() => continueVNStory(choice.id)}
-                                disabled={vnIsGenerating}
-                                className="w-full text-left px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg hover:border-purple-500 hover:bg-zinc-700 transition-colors text-zinc-200 disabled:opacity-50"
+                                onClick={() => {
+                                  // Remove last segment and regenerate
+                                  setVnProject(prev => prev ? {
+                                    ...prev,
+                                    story: prev.story.slice(0, -1)
+                                  } : null);
+                                  setTimeout(() => {
+                                    generateVNStorySegment();
+                                  }, 100);
+                                }}
+                                className="p-1 text-zinc-500 hover:text-blue-400 hover:bg-zinc-800 rounded transition-colors"
+                                title="Regenerate segment"
                               >
-                                → {choice.text}
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
                               </button>
-                            ))}
-                          </div>
-                        )}
-                        
-                        {/* Selected choice indicator */}
-                        {segment.selectedChoice && segment.choices && (
-                          <div className="mt-2 text-sm text-zinc-500 italic">
-                            You chose: {segment.choices.find(c => c.id === segment.selectedChoice)?.text}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                              {/* Edit button */}
+                              <button
+                                onClick={() => {
+                                  const newContent = prompt("Edit segment:", segment.content);
+                                  if (newContent !== null) {
+                                    setVnProject(prev => prev ? {
+                                      ...prev,
+                                      story: prev.story.map((s, i) => i === segIdx ? { ...s, content: newContent } : s)
+                                    } : null);
+                                  }
+                                }}
+                                className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors"
+                                title="Edit segment"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                              {/* Delete button */}
+                              <button
+                                onClick={() => {
+                                  setVnProject(prev => prev ? {
+                                    ...prev,
+                                    story: prev.story.filter((_, i) => i !== segIdx)
+                                  } : null);
+                                }}
+                                className="p-1 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded transition-colors"
+                                title="Delete segment"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                          )}
+                          
+                          {/* Choices */}
+                          {segment.choices && segment.choices.length > 0 && !segment.selectedChoice && (
+                            <div className="mt-4 space-y-2">
+                              {segment.choices.map((choice) => (
+                                <button
+                                  key={choice.id}
+                                  onClick={() => continueVNStory(choice.id)}
+                                  disabled={vnIsGenerating}
+                                  className="w-full text-left px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg hover:border-purple-500 hover:bg-zinc-700 transition-colors text-zinc-200 disabled:opacity-50"
+                                >
+                                  → {choice.text}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {/* Selected choice indicator */}
+                          {segment.selectedChoice && segment.choices && (
+                            <div className="mt-2 text-sm text-zinc-500 italic">
+                              You chose: {segment.choices.find(c => c.id === segment.selectedChoice)?.text}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                     
                     {vnIsGenerating && (
                       <div className="flex items-center gap-2 text-zinc-500">
