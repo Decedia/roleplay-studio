@@ -5280,27 +5280,6 @@ Write an engaging story segment. If this is a good point for player interaction,
         </div>
       </div>
 
-      {/* Error Message */}
-      {error && (
-        <div className="flex-shrink-0 px-4 py-2 relative z-50">
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-red-900/50 border border-red-800 rounded-lg px-4 py-3 text-red-200 text-sm flex items-center justify-between gap-3">
-              <span>{error}</span>
-              <button
-                onClick={handleRetry}
-                disabled={isLoading}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Retry
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Input Area - Only show in chat view */}
       {view === "chat" && currentConversation && (
         <div className="flex-shrink-0 border-t border-zinc-800 bg-black">
@@ -5352,6 +5331,27 @@ Write an engaging story segment. If this is a good point for player interaction,
             <p className="text-xs text-zinc-600 mt-2 text-center">
               Press Enter to send, Shift+Enter for new line. Empty message resends last.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Error Message - Positioned below input to ensure visibility */}
+      {error && (
+        <div className="flex-shrink-0 px-4 py-2 fixed bottom-0 left-0 right-0 bg-black/95 z-50 border-t border-red-800">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-red-900/50 border border-red-800 rounded-lg px-4 py-3 text-red-200 text-sm flex items-center justify-between gap-3">
+              <span>{error}</span>
+              <button
+                onClick={handleRetry}
+                disabled={isLoading}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Retry
+              </button>
+            </div>
           </div>
         </div>
       )}
