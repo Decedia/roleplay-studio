@@ -401,6 +401,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date       | Changes                                                                                                                                                                                            |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-02-25 | Added jailbreak support to exclusive instruction views (brainstorm, generator, VN) - jailbreak now applied after exclusive instructions when enabled in global settings                                                                             |
 | 2026-02-24 | Fixed error popup z-index to appear above input area                                                                                                                                               |
 | 2026-02-24 | Thinking feature now available for all models when enabled - removed Gemini 2.0-only restriction, thinking budget available for all providers                                                      |
 | 2026-02-24 | Updated Vertex AI thinking config to apply to all models when enabled (not just Gemini 2.0)                                                                                                        |
