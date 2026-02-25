@@ -4508,10 +4508,27 @@ Write an engaging story segment. If this is a good point for player interaction,
                             <FormattedText content={contentWithoutJson || (characterData.length > 0 ? "Here is the generated character:" : "")} />
                           </div>
                           
-                          {/* Message actions - refresh, edit, delete on all assistant messages */}
-                          {isAssistantMessage && (
+                          {/* Message actions - edit, delete, refresh on all messages */}
+                          {(isAssistantMessage || msg.role === "user") && (
                             <div className="flex gap-1 mt-1 justify-start">
-                              {/* Refresh/Regenerate button */}
+                              {/* Edit button - for all messages */}
+                              <button
+                                onClick={() => {
+                                  // Edit message content
+                                  const newContent = prompt("Edit message:", msg.content);
+                                  if (newContent !== null) {
+                                    setGeneratorMessages(prev => prev.map((m, i) => i === idx ? { ...m, content: newContent } : m));
+                                  }
+                                }}
+                                className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors"
+                                title="Edit message"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                              {/* Refresh/Regenerate button - only for assistant */}
+                              {isAssistantMessage && (
                               <button
                                 onClick={() => {
                                   // Find the last user message and resend
@@ -4537,22 +4554,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                 </svg>
                               </button>
-                              {/* Edit button */}
-                              <button
-                                onClick={() => {
-                                  // Edit the last assistant message content
-                                  const newContent = prompt("Edit message:", msg.content);
-                                  if (newContent !== null) {
-                                    setGeneratorMessages(prev => prev.map((m, i) => i === idx ? { ...m, content: newContent } : m));
-                                  }
-                                }}
-                                className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors"
-                                title="Edit message"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                              </button>
+                              )}
                               {/* Delete button */}
                               <button
                                 onClick={() => {
@@ -4849,10 +4851,39 @@ Write an engaging story segment. If this is a good point for player interaction,
                             <FormattedText content={contentWithoutInstructions} />
                           </div>
                           
-                          {/* Message actions - refresh, edit, delete on all assistant messages */}
-                          {isAssistantMessage && (
+                          {/* Message actions - edit, delete, refresh on all messages */}
+                          {(isAssistantMessage || msg.role === "user") && (
                             <div className="flex gap-1 mt-1 justify-start">
-                              {/* Refresh/Regenerate button */}
+                              {/* Edit button - for all messages */}
+                              <button
+                                onClick={() => {
+                                  // Edit message content
+                                  const newContent = prompt("Edit message:", msg.content);
+                                  if (newContent !== null) {
+                                    setBrainstormMessages(prev => prev.map((m, i) => i === idx ? { ...m, content: newContent } : m));
+                                  }
+                                }}
+                                className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors"
+                                title="Edit message"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                              {/* Delete button */}
+                              <button
+                                onClick={() => {
+                                  setBrainstormMessages(prev => prev.filter((_, i) => i !== idx));
+                                }}
+                                className="p-1 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded transition-colors"
+                                title="Delete message"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                              {/* Refresh/Regenerate button - only for assistant */}
+                              {isAssistantMessage && (
                               <button
                                 onClick={() => {
                                   // Find the last user message and resend
@@ -4878,37 +4909,10 @@ Write an engaging story segment. If this is a good point for player interaction,
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                 </svg>
                               </button>
-                              {/* Edit button */}
-                              <button
-                                onClick={() => {
-                                  // Edit the last assistant message content
-                                  const newContent = prompt("Edit message:", msg.content);
-                                  if (newContent !== null) {
-                                    setBrainstormMessages(prev => prev.map((m, i) => i === idx ? { ...m, content: newContent } : m));
-                                  }
-                                }}
-                                className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors"
-                                title="Edit message"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                              </button>
-                              {/* Delete button */}
-                              <button
-                                onClick={() => {
-                                  setBrainstormMessages(prev => prev.filter((_, i) => i !== idx));
-                                }}
-                                className="p-1 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded transition-colors"
-                                title="Delete message"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
+                              )}
                             </div>
                           )}
-                          
+
                           {/* Instruction blocks with apply buttons */}
                           {instructions.length > 0 && (
                             <div className="mt-2 space-y-2">
@@ -5774,8 +5778,8 @@ Write an engaging story segment. If this is a good point for player interaction,
                               </>
                             )}
                           </div>
-                          {/* Message actions - edit, delete, retry - only on last message */}
-                          {!isEditing && isLastMessage && (
+                          {/* Message actions - edit, delete for all messages, retry/continue only on last message */}
+                          {!isEditing && (message.role === "user" || isLastMessage) && (
                             <div className={`flex gap-1 mt-1 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
                               {/* Edit button */}
                               <button
