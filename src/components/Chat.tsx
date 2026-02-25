@@ -4494,7 +4494,8 @@ Write an engaging story segment. If this is a good point for player interaction,
                       ? msg.content.replace(/```json\n[\s\S]*?```/g, "").trim()
                       : msg.content;
                     const isLastMessage = idx === generatorMessages.length - 1;
-                    const isLastAssistantMessage = msg.role === "assistant" && isLastMessage;
+                    const isAssistantMessage = msg.role === "assistant";
+                    const isLastAssistantMessage = isAssistantMessage && isLastMessage;
                     
                     return (
                       <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
@@ -4507,8 +4508,8 @@ Write an engaging story segment. If this is a good point for player interaction,
                             <FormattedText content={contentWithoutJson || (characterData.length > 0 ? "Here is the generated character:" : "")} />
                           </div>
                           
-                          {/* Message actions - refresh, edit, delete on last assistant message */}
-                          {isLastAssistantMessage && (
+                          {/* Message actions - refresh, edit, delete on all assistant messages */}
+                          {isAssistantMessage && (
                             <div className="flex gap-1 mt-1 justify-start">
                               {/* Refresh/Regenerate button */}
                               <button
@@ -4834,7 +4835,8 @@ Write an engaging story segment. If this is a good point for player interaction,
                       ? msg.content.replace(/```instructions\n[\s\S]*?```/g, "").trim()
                       : msg.content;
                     const isLastMessage = idx === brainstormMessages.length - 1;
-                    const isLastAssistantMessage = msg.role === "assistant" && isLastMessage;
+                    const isAssistantMessage = msg.role === "assistant";
+                    const isLastAssistantMessage = isAssistantMessage && isLastMessage;
                     
                     return (
                       <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
@@ -4847,8 +4849,8 @@ Write an engaging story segment. If this is a good point for player interaction,
                             <FormattedText content={contentWithoutInstructions} />
                           </div>
                           
-                          {/* Message actions - refresh, edit, delete on last assistant message */}
-                          {isLastAssistantMessage && (
+                          {/* Message actions - refresh, edit, delete on all assistant messages */}
+                          {isAssistantMessage && (
                             <div className="flex gap-1 mt-1 justify-start">
                               {/* Refresh/Regenerate button */}
                               <button
@@ -5279,16 +5281,16 @@ Write an engaging story segment. If this is a good point for player interaction,
                         <div key={segment.id} className="space-y-2">
                           <FormattedText content={segment.content} />
                           
-                          {/* Actions for last segment */}
-                          {isLastSegment && !vnIsGenerating && (
+                          {/* Actions for all segments when not generating */}
+                          {!vnIsGenerating && (
                             <div className="flex gap-1 mt-1 justify-start">
                               {/* Refresh/Regenerate button */}
                               <button
                                 onClick={() => {
-                                  // Remove last segment and regenerate
+                                  // Remove this segment and all following segments, then regenerate
                                   setVnProject(prev => prev ? {
                                     ...prev,
-                                    story: prev.story.slice(0, -1)
+                                    story: prev.story.slice(0, segIdx)
                                   } : null);
                                   setTimeout(() => {
                                     generateVNStorySegment();
