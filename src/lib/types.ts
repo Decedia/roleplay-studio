@@ -156,6 +156,9 @@ export interface ProviderConfig {
   isEnabled: boolean;
 }
 
+// Thinking level for Gemini models
+export type ThinkingLevel = "LOW" | "MEDIUM" | "HIGH";
+
 // Global settings
 export interface GlobalSettings {
   temperature: number;
@@ -164,6 +167,7 @@ export interface GlobalSettings {
   topK: number;
   modelId: string;
   enableThinking: boolean;
+  thinkingLevel: ThinkingLevel; // Thinking level for Gemini models (LOW/MEDIUM/HIGH)
   activeProvider: LLMProviderType;
 }
 
@@ -176,6 +180,8 @@ export interface GlobalInstructions {
   postHistoryInstructions?: string;
   jailbreakInstructions?: string;
   enableJailbreak: boolean;
+  // Continue instruction for incomplete responses
+  continueInstruction?: string;
 }
 
 // Model cost structure

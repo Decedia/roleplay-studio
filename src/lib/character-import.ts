@@ -1,7 +1,7 @@
 // Simple Character Card import utilities
 // Only extracts: name, description, firstMessage, scenario
 
-import { Character, Message, GlobalInstructions } from "./types";
+import { Character, Message, GlobalInstructions, CharacterBook } from "./types";
 
 // Generate a unique ID
 export const generateId = (): string => {
@@ -109,67 +109,242 @@ export const exportToSillyTavern = (character: Character): string => {
 };
 
 // Build system prompt from character
+// Follows guideline: [Context] [Main instructions] [Negative constraints at end]
 export const buildCharacterSystemPrompt = (
   character: Character,
   personaName: string,
   personaDescription: string,
   globalInstructions?: GlobalInstructions
 ): string => {
-  const sections: string[] = [];
+  const contextSections: string[] = [];
+  const instructionSections: string[] = [];
+  const constraintSections: string[] = [];
   
-  // 1. Jailbreak instructions (if enabled)
-  if (globalInstructions?.enableJailbreak && globalInstructions.jailbreakInstructions) {
-    sections.push(globalInstructions.jailbreakInstructions);
-  }
+  // === CONTEXT AND SOURCE MATERIAL ===
   
-  // 2. Main system prompt - global override takes precedence
-  if (globalInstructions?.systemPrompt) {
-    sections.push(globalInstructions.systemPrompt);
-  } else {
-    sections.push(`You are ${character.name}.`);
-  }
-  
-  // 3. Character description
+  // Character description
   if (character.description) {
-    sections.push(character.description);
+    contextSections.push(`[Character Description]\n${character.description}`);
   }
   
-  // 4. Scenario
+  // Scenario
   if (character.scenario) {
-    sections.push(`[Scenario]\n${character.scenario}`);
+    contextSections.push(`[Scenario]\n${character.scenario}`);
   }
   
-  // 5. User persona info
-  sections.push(`[User]\nThe user is roleplaying as ${personaName}.${personaDescription ? ` ${personaDescription}` : ""}`);
+  // User persona info
+  contextSections.push(`[User]\nThe user is roleplaying as ${personaName}.${personaDescription ? ` ${personaDescription}` : ""}`);
   
-  // 6. Post-history instructions (global takes precedence)
+  // Example messages (dialogue examples)
+  if (character.mesExample) {
+    const exampleText = character.mesExample
+      .replace(/\{\{char\}\}/gi, character.name)
+      .replace(/\{\{user\}\}/gi, personaName);
+    contextSections.push(`[Example Dialogue]\n${exampleText}`);
+  }
+  
+  // === MAIN TASK INSTRUCTIONS ===
+  
+  // Main system prompt - priority: global override > character override > default
+  if (globalInstructions?.systemPrompt) {
+    instructionSections.push(globalInstructions.systemPrompt);
+  } else if (character.systemPrompt) {
+    instructionSections.push(character.systemPrompt);
+  } else {
+    instructionSections.push(`You are ${character.name}.`);
+  }
+  
+  // Post-history instructions - priority: global > character
   if (globalInstructions?.postHistoryInstructions) {
-    sections.push(`[Instructions]\n${globalInstructions.postHistoryInstructions}`);
+    instructionSections.push(`[Instructions]\n${globalInstructions.postHistoryInstructions}`);
+  } else if (character.postHistoryInstructions) {
+    instructionSections.push(`[Instructions]\n${character.postHistoryInstructions}`);
   }
   
-  // 7. Custom instructions
+  // Custom instructions
   if (globalInstructions?.customInstructions) {
-    sections.push(`[Additional Instructions]\n${globalInstructions.customInstructions}`);
+    instructionSections.push(`[Additional Instructions]\n${globalInstructions.customInstructions}`);
   }
   
-  // 8. Final instruction
-  sections.push("Stay in character at all times. Respond naturally and engage with the roleplay scenario.");
+  // === NEGATIVE AND FORMATTING CONSTRAINTS (at the end) ===
   
-  return sections.join("\n\n");
+  // Jailbreak instructions (if enabled) - placed near end as it's a constraint
+  if (globalInstructions?.enableJailbreak && globalInstructions.jailbreakInstructions) {
+    constraintSections.push(globalInstructions.jailbreakInstructions);
+  }
+  
+  // Final instruction - core constraint at the very end
+  constraintSections.push("Stay in character at all times. Respond naturally and engage with the roleplay scenario. Do not break character or acknowledge that you are an AI.");
+  
+  // Combine: Context -> Instructions -> Constraints
+  return [...contextSections, ...instructionSections, ...constraintSections].join("\n\n");
 };
 
-// Build full system prompt (simplified - no lorebook)
+// Scan messages for lorebook keyword matches
+const scanForLorebookEntries = (
+  messages: Message[],
+  characterBook: CharacterBook | undefined,
+  personaName: string,
+  characterName: string
+): string[] => {
+  if (!characterBook?.entries?.length) return [];
+  
+  const scanDepth = characterBook.scanDepth || 2;
+  const messagesToScan = messages.slice(-scanDepth);
+  
+  // Combine message content for scanning
+  const recentText = messagesToScan
+    .map(m => m.content)
+    .join(" ")
+    .replace(/\{\{char\}\}/gi, characterName)
+    .replace(/\{\{user\}\}/gi, personaName)
+    .toLowerCase();
+  
+  const matchedContents: string[] = [];
+  
+  for (const entry of characterBook.entries) {
+    if (!entry.enabled) continue;
+    
+    // Constant entries are always included
+    if (entry.constant) {
+      const content = entry.content
+        .replace(/\{\{char\}\}/gi, characterName)
+        .replace(/\{\{user\}\}/gi, personaName);
+      matchedContents.push(content);
+      continue;
+    }
+    
+    // Check for keyword matches
+    const keys = entry.keys || [];
+    const secondaryKeys = entry.secondaryKeys || [];
+    
+    let primaryMatch = false;
+    let secondaryMatch = false;
+    
+    // Check primary keys
+    for (const key of keys) {
+      const searchKey = entry.caseSensitive ? key : key.toLowerCase();
+      const searchText = entry.caseSensitive ? recentText : recentText.toLowerCase();
+      if (searchText.includes(searchKey)) {
+        primaryMatch = true;
+        break;
+      }
+    }
+    
+    // Check secondary keys if primary matched
+    if (primaryMatch && secondaryKeys.length > 0) {
+      for (const key of secondaryKeys) {
+        const searchKey = entry.caseSensitive ? key : key.toLowerCase();
+        const searchText = entry.caseSensitive ? recentText : recentText.toLowerCase();
+        if (searchText.includes(searchKey)) {
+          secondaryMatch = true;
+          break;
+        }
+      }
+      // If secondary keys exist but none matched, skip this entry
+      if (!secondaryMatch) continue;
+    }
+    
+    if (primaryMatch) {
+      const content = entry.content
+        .replace(/\{\{char\}\}/gi, characterName)
+        .replace(/\{\{user\}\}/gi, personaName);
+      matchedContents.push(content);
+    }
+  }
+  
+  // Sort by insertion order
+  matchedContents.sort((a, b) => {
+    // We can't access insertionOrder from here, but entries are already sorted
+    return 0;
+  });
+  
+  return matchedContents;
+};
+
+// Build full system prompt with lorebook support
+// Follows guideline: [Context] [Main instructions] [Negative constraints at end]
 export const buildFullSystemPrompt = (
   character: Character,
   personaName: string,
   personaDescription: string,
-  _messages: Message[],
+  messages: Message[],
   globalInstructions?: GlobalInstructions
 ): string => {
-  return buildCharacterSystemPrompt(
-    character,
-    personaName,
-    personaDescription,
-    globalInstructions
-  );
+  const contextSections: string[] = [];
+  const instructionSections: string[] = [];
+  const constraintSections: string[] = [];
+  
+  // === CONTEXT AND SOURCE MATERIAL ===
+  
+  // Character description
+  if (character.description) {
+    contextSections.push(`[Character Description]\n${character.description}`);
+  }
+  
+  // Scenario
+  if (character.scenario) {
+    contextSections.push(`[Scenario]\n${character.scenario}`);
+  }
+  
+  // User persona info
+  contextSections.push(`[User]\nThe user is roleplaying as ${personaName}.${personaDescription ? ` ${personaDescription}` : ""}`);
+  
+  // Example messages (dialogue examples)
+  if (character.mesExample) {
+    const exampleText = character.mesExample
+      .replace(/\{\{char\}\}/gi, character.name)
+      .replace(/\{\{user\}\}/gi, personaName);
+    contextSections.push(`[Example Dialogue]\n${exampleText}`);
+  }
+  
+  // Lorebook content (world knowledge) - part of context
+  if (character.characterBook) {
+    const lorebookContent = scanForLorebookEntries(
+      messages,
+      character.characterBook,
+      personaName,
+      character.name
+    );
+    
+    if (lorebookContent.length > 0) {
+      contextSections.push(`[World Knowledge]\n${lorebookContent.join("\n\n")}`);
+    }
+  }
+  
+  // === MAIN TASK INSTRUCTIONS ===
+  
+  // Main system prompt - priority: global override > character override > default
+  if (globalInstructions?.systemPrompt) {
+    instructionSections.push(globalInstructions.systemPrompt);
+  } else if (character.systemPrompt) {
+    instructionSections.push(character.systemPrompt);
+  } else {
+    instructionSections.push(`You are ${character.name}.`);
+  }
+  
+  // Post-history instructions - priority: global > character
+  if (globalInstructions?.postHistoryInstructions) {
+    instructionSections.push(`[Instructions]\n${globalInstructions.postHistoryInstructions}`);
+  } else if (character.postHistoryInstructions) {
+    instructionSections.push(`[Instructions]\n${character.postHistoryInstructions}`);
+  }
+  
+  // Custom instructions
+  if (globalInstructions?.customInstructions) {
+    instructionSections.push(`[Additional Instructions]\n${globalInstructions.customInstructions}`);
+  }
+  
+  // === NEGATIVE AND FORMATTING CONSTRAINTS (at the end) ===
+  
+  // Jailbreak instructions (if enabled) - placed near end as it's a constraint
+  if (globalInstructions?.enableJailbreak && globalInstructions.jailbreakInstructions) {
+    constraintSections.push(globalInstructions.jailbreakInstructions);
+  }
+  
+  // Final instruction - core constraint at the very end
+  constraintSections.push("Stay in character at all times. Respond naturally and engage with the roleplay scenario. Do not break character or acknowledge that you are an AI.");
+  
+  // Combine: Context -> Instructions -> Constraints
+  return [...contextSections, ...instructionSections, ...constraintSections].join("\n\n");
 };

@@ -8,10 +8,11 @@ import {
   Message,
   VertexMode,
   VertexLocation,
+  ThinkingLevel,
 } from "./types";
 
 // Re-export types for convenience
-export type { LLMProviderType, ProviderConfig, Message, LLMModel, LLMProvider, VertexMode, VertexLocation };
+export type { LLMProviderType, ProviderConfig, Message, LLMModel, LLMProvider, VertexMode, VertexLocation, ThinkingLevel };
 
 // Available providers configuration
 export const AVAILABLE_PROVIDERS: LLMProvider[] = [
@@ -191,7 +192,7 @@ type ChatFunction = (
     topK: number;
     systemPrompt?: string;
     enableThinking?: boolean;
-    thinkingBudget?: number;
+    thinkingLevel?: ThinkingLevel;
   }
 ) => Promise<ChatResponse>;
 
@@ -328,8 +329,12 @@ export const chatWithGoogleAIStudio: ChatFunction = async (
       topK: options.topK,
     };
 
-    // Note: thinkingBudget is not supported in the current Google AI Studio API
-    // Thinking is automatically enabled for Gemini 2.0 Flash models
+    // Add thinking config for models that support it (Gemini 2.0+)
+    if (options.enableThinking) {
+      generationConfig.thinkingConfig = {
+        thinkingLevel: options.thinkingLevel || "HIGH"
+      };
+    }
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${config.selectedModel}:generateContent?key=${config.apiKey}`,
@@ -375,7 +380,7 @@ export const streamWithGoogleAIStudio = async (
     topK: number;
     systemPrompt?: string;
     enableThinking?: boolean;
-    thinkingBudget?: number;
+    thinkingLevel?: ThinkingLevel;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -402,8 +407,12 @@ export const streamWithGoogleAIStudio = async (
       topK: options.topK,
     };
 
-    // Note: thinkingBudget is not supported in the current Google AI Studio API
-    // Thinking is automatically enabled for Gemini 2.0 Flash models
+    // Add thinking config for models that support it (Gemini 2.0+)
+    if (options.enableThinking) {
+      generationConfig.thinkingConfig = {
+        thinkingLevel: options.thinkingLevel || "HIGH"
+      };
+    }
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${config.selectedModel}:streamGenerateContent?key=${config.apiKey}&alt=sse`,
@@ -512,10 +521,10 @@ export const chatWithVertexAI: ChatFunction = async (
       topK: options.topK,
     };
 
-    // Add thinking config if enabled
+    // Add thinking config for models that support it (Gemini 2.0+)
     if (options.enableThinking) {
       generationConfig.thinkingConfig = {
-        thinkingBudget: options.thinkingBudget || 8192,
+        thinkingLevel: options.thinkingLevel || "HIGH"
       };
     }
 
@@ -748,7 +757,7 @@ export const streamWithVertexAI = async (
     topK: number;
     systemPrompt?: string;
     enableThinking?: boolean;
-    thinkingBudget?: number;
+    thinkingLevel?: ThinkingLevel;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -782,10 +791,10 @@ export const streamWithVertexAI = async (
       topK: options.topK,
     };
 
-    // Add thinking config if enabled
+    // Add thinking config for models that support it (Gemini 2.0+)
     if (options.enableThinking) {
       generationConfig.thinkingConfig = {
-        thinkingBudget: options.thinkingBudget || 8192,
+        thinkingLevel: options.thinkingLevel || "HIGH"
       };
     }
 
@@ -876,7 +885,7 @@ export const sendChatMessage = async (
     topK: number;
     systemPrompt?: string;
     enableThinking?: boolean;
-    thinkingBudget?: number;
+    thinkingLevel?: ThinkingLevel;
   }
 ): Promise<ChatResponse> => {
   switch (config.type) {
@@ -904,7 +913,7 @@ export const streamChatMessage = async (
     topK: number;
     systemPrompt?: string;
     enableThinking?: boolean;
-    thinkingBudget?: number;
+    thinkingLevel?: ThinkingLevel;
   },
   onChunk: StreamCallback
 ): Promise<void> => {

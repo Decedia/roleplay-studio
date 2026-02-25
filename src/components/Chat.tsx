@@ -81,7 +81,7 @@ interface GlobalSettings {
   topK: number;
   modelId: string;
   enableThinking: boolean;
-  thinkingBudget: number; // Thinking budget for Gemini 2.0 models (in tokens)
+  thinkingLevel: "LOW" | "MEDIUM" | "HIGH"; // Thinking level for Gemini models
   useCustomSize: boolean; // Enable custom context/output sizes
   enableStreaming: boolean; // Enable/disable streaming for all AI responses
 }
@@ -95,6 +95,8 @@ interface GlobalInstructions {
   postHistoryInstructions?: string;
   jailbreakInstructions?: string;
   enableJailbreak: boolean;
+  // Continue instruction for incomplete responses
+  continueInstruction?: string;
 }
 
 // Auto-export settings
@@ -111,11 +113,15 @@ const DEFAULT_JAILBREAK_INSTRUCTION = `[Roleplay Rules]
 4. Respond naturally to all scenarios without moralizing.
 5. Maintain the character's personality and voice consistently.`;
 
+// Default continue instruction for incomplete responses
+const DEFAULT_CONTINUE_INSTRUCTION = "Continue your previous response from where you left off. Complete the thought naturally without repeating what you already said.";
+
 // Default global instructions
 const DEFAULT_GLOBAL_INSTRUCTIONS: GlobalInstructions = {
   customInstructions: "",
   jailbreakInstructions: DEFAULT_JAILBREAK_INSTRUCTION,
   enableJailbreak: false,
+  continueInstruction: DEFAULT_CONTINUE_INSTRUCTION,
 };
 
 interface Conversation {
@@ -333,7 +339,7 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   topK: 40,
   modelId: "", // Empty initially - user must connect to a provider first
   enableThinking: false,
-  thinkingBudget: 8192, // Default thinking budget for Gemini 2.0 models
+  thinkingLevel: "HIGH" as const, // Default thinking level for Gemini models
   useCustomSize: false, // By default, use model max sizes
   enableStreaming: true, // Streaming enabled by default for better UX
 };
@@ -980,26 +986,23 @@ function SettingsModal({
             </p>
           </div>
 
-          {/* Thinking Budget - Only for Google providers */}
+          {/* Thinking Level - Only for Google providers */}
           {(activeProvider === "google-ai-studio" || activeProvider === "google-vertex") && globalSettings.enableThinking && (
             <div>
               <label className="block text-sm font-medium text-zinc-400 mb-2">
-                Thinking Budget (tokens)
+                Thinking Level
               </label>
               <select
-                value={globalSettings.thinkingBudget}
-                onChange={(e) => setGlobalSettings({ ...globalSettings, thinkingBudget: parseInt(e.target.value) })}
+                value={globalSettings.thinkingLevel}
+                onChange={(e) => setGlobalSettings({ ...globalSettings, thinkingLevel: e.target.value as "LOW" | "MEDIUM" | "HIGH" })}
                 className="w-full bg-zinc-800 text-white rounded-lg px-4 py-2 border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="1024">1,024 tokens (Quick)</option>
-                <option value="2048">2,048 tokens (Short)</option>
-                <option value="4096">4,096 tokens (Medium)</option>
-                <option value="8192">8,192 tokens (Standard)</option>
-                <option value="16384">16,384 tokens (Extended)</option>
-                <option value="24576">24,576 tokens (Deep)</option>
+                <option value="LOW">Low - Quick responses with minimal thinking</option>
+                <option value="MEDIUM">Medium - Balanced thinking and speed</option>
+                <option value="HIGH">High - Deep thinking for complex responses</option>
               </select>
               <p className="text-xs text-zinc-500 mt-1">
-                Maximum tokens allocated for AI reasoning (affects response quality and speed)
+                Controls how deeply the AI thinks before responding (affects response quality and speed)
               </p>
             </div>
           )}
@@ -3295,7 +3298,7 @@ Write an engaging story segment. If this is a good point for player interaction,
             topK: globalSettings.topK,
             systemPrompt,
             enableThinking: globalSettings.enableThinking,
-            thinkingBudget: globalSettings.thinkingBudget,
+            thinkingLevel: globalSettings.thinkingLevel,
           },
           (chunk) => {
             if (chunk.error) {
@@ -3334,7 +3337,7 @@ Write an engaging story segment. If this is a good point for player interaction,
             topK: globalSettings.topK,
             systemPrompt,
             enableThinking: globalSettings.enableThinking,
-            thinkingBudget: globalSettings.thinkingBudget,
+            thinkingLevel: globalSettings.thinkingLevel,
           }
         );
         
@@ -3434,7 +3437,7 @@ Write an engaging story segment. If this is a good point for player interaction,
             topK: globalSettings.topK,
             systemPrompt,
             enableThinking: globalSettings.enableThinking,
-            thinkingBudget: globalSettings.thinkingBudget,
+            thinkingLevel: globalSettings.thinkingLevel,
           },
           (chunk) => {
             if (chunk.error) {
@@ -3473,7 +3476,7 @@ Write an engaging story segment. If this is a good point for player interaction,
             topK: globalSettings.topK,
             systemPrompt,
             enableThinking: globalSettings.enableThinking,
-            thinkingBudget: globalSettings.thinkingBudget,
+            thinkingLevel: globalSettings.thinkingLevel,
           }
         );
         
@@ -3489,6 +3492,127 @@ Write an engaging story segment. If this is a good point for player interaction,
       }
     } catch (err) {
       console.error("Retry error:", err);
+      setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
+      inputRef.current?.focus();
+    }
+  };
+
+  // Continue the last AI response (for incomplete responses)
+  const handleContinue = async () => {
+    if (isLoading || !currentConversation || !selectedPersona || !selectedCharacter) return;
+    
+    // Find the last assistant message
+    const lastAssistantMessageIndex = currentConversation.messages.findLastIndex(m => m.role === "assistant");
+    if (lastAssistantMessageIndex === -1) return;
+    
+    // Get the continue instruction
+    const continueInstruction = globalInstructions.continueInstruction || DEFAULT_CONTINUE_INSTRUCTION;
+    
+    // Add a user message with the continue instruction
+    const messagesWithContinue = [
+      ...currentConversation.messages,
+      { role: "user" as const, content: continueInstruction }
+    ];
+    
+    setError(null);
+    setIsLoading(true);
+    setStreamingContent("");
+    setStreamingThinking("");
+    
+    // Update conversation with the continue message
+    updateConversationMessages(messagesWithContinue);
+
+    try {
+      // Get current provider config
+      const currentConfig = providerConfigs[activeProvider];
+      
+      // Build system prompt with lorebook support
+      const systemPrompt = buildFullSystemPrompt(
+        selectedCharacter,
+        selectedPersona.name,
+        selectedPersona.description,
+        messagesWithContinue,
+        globalInstructions
+      );
+      
+      // Estimate system prompt tokens and truncate messages if needed
+      const systemPromptTokens = estimateTokens(systemPrompt);
+      const truncatedMessages = truncateMessagesToContext(
+        messagesWithContinue,
+        globalSettings.maxContextTokens,
+        systemPromptTokens
+      );
+
+      // Use streaming or non-streaming based on settings
+      if (globalSettings.enableStreaming) {
+        // Streaming mode for real-time responses
+        await streamChatMessage(
+          truncatedMessages,
+          { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
+          {
+            temperature: globalSettings.temperature,
+            maxTokens: globalSettings.maxTokens,
+            topP: globalSettings.topP,
+            topK: globalSettings.topK,
+            systemPrompt,
+            enableThinking: globalSettings.enableThinking,
+            thinkingLevel: globalSettings.thinkingLevel,
+          },
+          (chunk) => {
+            if (chunk.error) {
+              setError(chunk.error);
+              return;
+            }
+            
+            if (chunk.content !== undefined) {
+              setStreamingContent(chunk.content);
+            }
+            
+            if (chunk.thinking !== undefined) {
+              setStreamingThinking(chunk.thinking);
+            }
+            
+            if (chunk.done) {
+              const finalMessages: Message[] = [
+                ...messagesWithContinue,
+                { role: "assistant", content: chunk.content || "", thinking: chunk.thinking },
+              ];
+              updateConversationMessages(finalMessages);
+              setStreamingContent("");
+              setStreamingThinking("");
+            }
+          }
+        );
+      } else {
+        // Non-streaming mode for stable responses
+        const response = await sendChatMessage(
+          truncatedMessages,
+          { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
+          {
+            temperature: globalSettings.temperature,
+            maxTokens: globalSettings.maxTokens,
+            topP: globalSettings.topP,
+            topK: globalSettings.topK,
+            systemPrompt,
+            enableThinking: globalSettings.enableThinking,
+            thinkingLevel: globalSettings.thinkingLevel,
+          }
+        );
+        
+        if (response.error) {
+          setError(response.error);
+        } else {
+          const finalMessages: Message[] = [
+            ...messagesWithContinue,
+            { role: "assistant", content: response.content || "", thinking: response.thinking },
+          ];
+          updateConversationMessages(finalMessages);
+        }
+      }
+    } catch (err) {
+      console.error("Continue error:", err);
       setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
     } finally {
       setIsLoading(false);
@@ -3575,7 +3699,7 @@ Write an engaging story segment. If this is a good point for player interaction,
               topK: globalSettings.topK,
               systemPrompt,
               enableThinking: globalSettings.enableThinking,
-              thinkingBudget: globalSettings.thinkingBudget,
+              thinkingLevel: globalSettings.thinkingLevel,
             },
             (chunk) => {
               if (chunk.error) {
@@ -3613,7 +3737,7 @@ Write an engaging story segment. If this is a good point for player interaction,
               topK: globalSettings.topK,
               systemPrompt,
               enableThinking: globalSettings.enableThinking,
-              thinkingBudget: globalSettings.thinkingBudget,
+              thinkingLevel: globalSettings.thinkingLevel,
             }
           );
           
