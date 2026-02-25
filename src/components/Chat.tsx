@@ -2526,7 +2526,12 @@ export default function Chat() {
     setGeneratorError(null);
     
     // Use the exclusive generator instructions (not global instructions)
-    const systemPrompt = generatorInstructions;
+    let systemPrompt = generatorInstructions;
+    
+    // Add jailbreak after exclusive instructions (following order: instructions -> jailbreak)
+    if (globalInstructions.enableJailbreak && globalInstructions.jailbreakInstructions) {
+      systemPrompt = `${systemPrompt}\n\n${globalInstructions.jailbreakInstructions}`;
+    }
 
     try {
       const config = providerConfigs[activeProvider];
@@ -2724,7 +2729,12 @@ export default function Chat() {
     setIsBrainstorming(true);
     
     // Use the exclusive brainstorm instructions (not global instructions)
-    const systemPrompt = brainstormInstructions;
+    let systemPrompt = brainstormInstructions;
+    
+    // Add jailbreak after exclusive instructions (following order: instructions -> jailbreak)
+    if (globalInstructions.enableJailbreak && globalInstructions.jailbreakInstructions) {
+      systemPrompt = `${systemPrompt}\n\n${globalInstructions.jailbreakInstructions}`;
+    }
 
     try {
       const config = providerConfigs[activeProvider];
@@ -2852,7 +2862,13 @@ export default function Chat() {
     setVnIsGenerating(true);
     setVnError(null);
     
-    const systemPrompt = vnInstructions;
+    let systemPrompt = vnInstructions;
+    
+    // Add jailbreak after exclusive instructions (following order: instructions -> jailbreak)
+    if (globalInstructions.enableJailbreak && globalInstructions.jailbreakInstructions) {
+      systemPrompt = `${systemPrompt}\n\n${globalInstructions.jailbreakInstructions}`;
+    }
+    
     const userPrompt = `Based on this premise, create the main characters for the visual novel:
 
 Premise: ${vnPremise}
@@ -2949,7 +2965,13 @@ Generate 3-5 main characters. Respond with ONLY a JSON array of characters in th
     setVnIsGenerating(true);
     setVnError(null);
     
-    const systemPrompt = vnInstructions;
+    let systemPrompt = vnInstructions;
+    
+    // Add jailbreak after exclusive instructions (following order: instructions -> jailbreak)
+    if (globalInstructions.enableJailbreak && globalInstructions.jailbreakInstructions) {
+      systemPrompt = `${systemPrompt}\n\n${globalInstructions.jailbreakInstructions}`;
+    }
+    
     const charactersDesc = vnProject.characters.map(c => 
       `- ${c.name} (${c.role}): ${c.description}`
     ).join("\n");
@@ -3043,7 +3065,13 @@ Generate 5-10 plot points that tell a complete story. Respond with ONLY a JSON a
     setVnIsGenerating(true);
     setVnError(null);
     
-    const systemPrompt = vnInstructions;
+    let systemPrompt = vnInstructions;
+    
+    // Add jailbreak after exclusive instructions (following order: instructions -> jailbreak)
+    if (globalInstructions.enableJailbreak && globalInstructions.jailbreakInstructions) {
+      systemPrompt = `${systemPrompt}\n\n${globalInstructions.jailbreakInstructions}`;
+    }
+    
     const charactersDesc = vnProject.characters.map(c => 
       `- ${c.name} (${c.role}): ${c.description}. Personality: ${c.personality}`
     ).join("\n");
