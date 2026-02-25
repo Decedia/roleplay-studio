@@ -98,6 +98,8 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **System prompt restructured to follow context-instructions-constraints order for better AI compliance**
 - [x] **Lorebook keyword scanning for dynamic context injection - keyword-triggered content from Character Book**
 - [x] **Updated Gemini thinking config to use thinkingLevel (LOW/MEDIUM/HIGH) instead of thinkingBudget**
+- [x] **Fixed regenerate buttons in all views** - now appear for ALL assistant messages (not just last)
+- [x] **Added edit button for user messages in all views** - chat, generator, and brainstorm modes now support editing any user message
 
 ## Current Structure
 
@@ -402,6 +404,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 | Date       | Changes                                                                                                                                                                                            |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-02-25 | Added jailbreak support to exclusive instruction views (brainstorm, generator, VN) - jailbreak now applied after exclusive instructions when enabled in global settings                                                                             |
+| 2026-02-25 | Added edit button for user messages in all views - chat, generator, and brainstorm modes now support editing any user message with edit and delete buttons |
 | 2026-02-24 | Fixed error popup z-index to appear above input area                                                                                                                                               |
 | 2026-02-24 | Thinking feature now available for all models when enabled - removed Gemini 2.0-only restriction, thinking budget available for all providers                                                      |
 | 2026-02-24 | Updated Vertex AI thinking config to apply to all models when enabled (not just Gemini 2.0)                                                                                                        |
