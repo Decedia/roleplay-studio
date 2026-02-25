@@ -5745,6 +5745,19 @@ Write an engaging story segment. If this is a good point for player interaction,
                                   </svg>
                                 </button>
                               )}
+                              {/* Continue button - for continuing incomplete responses */}
+                              {isLastAssistantMessage && (
+                                <button
+                                  onClick={handleContinue}
+                                  disabled={isLoading}
+                                  className="p-1 text-zinc-500 hover:text-green-400 hover:bg-zinc-800 rounded transition-colors disabled:opacity-50"
+                                  title="Continue response"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                                  </svg>
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
