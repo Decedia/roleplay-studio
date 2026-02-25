@@ -4168,38 +4168,36 @@ Write an engaging story segment. If this is a good point for player interaction,
         <div className="fixed top-[73px] left-0 right-0 z-40 px-4 py-3">
           <div className="max-w-4xl mx-auto">
             <div className="bg-red-900/80 border border-red-700 rounded-lg px-4 py-3 text-red-200 shadow-xl backdrop-blur-sm">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 overflow-y-auto" style={{ maxHeight: '120px' }}>
-                  <p className="whitespace-pre-wrap">{error || generatorError || brainstormError || vnError}</p>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {error && (
-                    <button
-                      onClick={handleRetry}
-                      disabled={isLoading}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap text-sm"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                      Retry
-                    </button>
-                  )}
+              <div className="overflow-y-auto" style={{ maxHeight: '120px' }}>
+                <p className="whitespace-pre-wrap">{error || generatorError || brainstormError || vnError}</p>
+              </div>
+              <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-red-700/50">
+                {error && (
                   <button
-                    onClick={() => {
-                      setError(null);
-                      setGeneratorError(null);
-                      setBrainstormError(null);
-                      setVnError(null);
-                    }}
-                    className="p-1.5 hover:bg-red-800 rounded-lg transition-colors"
-                    title="Close"
+                    onClick={handleRetry}
+                    disabled={isLoading}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 text-sm"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
+                    Retry
                   </button>
-                </div>
+                )}
+                <button
+                  onClick={() => {
+                    setError(null);
+                    setGeneratorError(null);
+                    setBrainstormError(null);
+                    setVnError(null);
+                  }}
+                  className="p-1.5 hover:bg-red-800 rounded-lg transition-colors"
+                  title="Close"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
