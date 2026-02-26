@@ -1735,6 +1735,17 @@ export default function Chat() {
   const [editingMessageContent, setEditingMessageContent] = useState<string>("");
   const [showMessageMenu, setShowMessageMenu] = useState<number | null>(null);
 
+  // Generator message editing state
+  const [editingGeneratorIndex, setEditingGeneratorIndex] = useState<number | null>(null);
+  const [editingGeneratorContent, setEditingGeneratorContent] = useState<string>("");
+
+  // Brainstorm message editing state
+  const [editingBrainstormIndex, setEditingBrainstormIndex] = useState<number | null>(null);
+  const [editingBrainstormContent, setEditingBrainstormContent] = useState<string>("");
+
+  // VN segment editing state
+  const [editingVnIndex, setEditingVnIndex] = useState<{segIdx: number, content: string} | null>(null);
+
   // Load data from localStorage on mount
   useEffect(() => {
     const storedPersonas = localStorage.getItem(PERSONAS_KEY);
@@ -4781,20 +4792,50 @@ Write an engaging story segment. If this is a good point for player interaction,
                               ? "bg-zinc-700 text-white" 
                               : "bg-zinc-800 text-zinc-200"
                           }`}>
-                            <FormattedText content={contentWithoutJson || (characterData.length > 0 ? "Here is the generated character:" : "")} />
+                            {editingGeneratorIndex === idx ? (
+                              <div className="space-y-2">
+                                <textarea
+                                  value={editingGeneratorContent}
+                                  onChange={(e) => setEditingGeneratorContent(e.target.value)}
+                                  className="w-full bg-zinc-900 text-white rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700"
+                                  rows={3}
+                                  autoFocus
+                                />
+                                <div className="flex gap-2 justify-end">
+                                  <button
+                                    onClick={() => {
+                                      setEditingGeneratorIndex(null);
+                                      setEditingGeneratorContent("");
+                                    }}
+                                    className="px-3 py-1 text-sm bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setGeneratorMessages(prev => prev.map((m, i) => i === idx ? { ...m, content: editingGeneratorContent } : m));
+                                      setEditingGeneratorIndex(null);
+                                      setEditingGeneratorContent("");
+                                    }}
+                                    className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                  >
+                                    Save
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <FormattedText content={contentWithoutJson || (characterData.length > 0 ? "Here is the generated character:" : "")} />
+                            )}
                           </div>
                           
                           {/* Message actions - edit, delete, refresh on all messages */}
-                          {(isAssistantMessage || msg.role === "user") && (
+                          {editingGeneratorIndex !== idx && (isAssistantMessage || msg.role === "user") && (
                             <div className="flex gap-1 mt-1 justify-start">
                               {/* Edit button - for all messages */}
                               <button
                                 onClick={() => {
-                                  // Edit message content
-                                  const newContent = prompt("Edit message:", msg.content);
-                                  if (newContent !== null) {
-                                    setGeneratorMessages(prev => prev.map((m, i) => i === idx ? { ...m, content: newContent } : m));
-                                  }
+                                  setEditingGeneratorIndex(idx);
+                                  setEditingGeneratorContent(msg.content);
                                 }}
                                 className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors"
                                 title="Edit message"
@@ -5137,20 +5178,50 @@ Write an engaging story segment. If this is a good point for player interaction,
                               ? "bg-zinc-700 text-white" 
                               : "bg-zinc-800 text-zinc-200"
                           }`}>
-                            <FormattedText content={contentWithoutInstructions} />
+                            {editingBrainstormIndex === idx ? (
+                              <div className="space-y-2">
+                                <textarea
+                                  value={editingBrainstormContent}
+                                  onChange={(e) => setEditingBrainstormContent(e.target.value)}
+                                  className="w-full bg-zinc-900 text-white rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700"
+                                  rows={3}
+                                  autoFocus
+                                />
+                                <div className="flex gap-2 justify-end">
+                                  <button
+                                    onClick={() => {
+                                      setEditingBrainstormIndex(null);
+                                      setEditingBrainstormContent("");
+                                    }}
+                                    className="px-3 py-1 text-sm bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setBrainstormMessages(prev => prev.map((m, i) => i === idx ? { ...m, content: editingBrainstormContent } : m));
+                                      setEditingBrainstormIndex(null);
+                                      setEditingBrainstormContent("");
+                                    }}
+                                    className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                  >
+                                    Save
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <FormattedText content={contentWithoutInstructions} />
+                            )}
                           </div>
                           
                           {/* Message actions - edit, delete, refresh on all messages */}
-                          {(isAssistantMessage || msg.role === "user") && (
+                          {editingBrainstormIndex !== idx && (isAssistantMessage || msg.role === "user") && (
                             <div className="flex gap-1 mt-1 justify-start">
                               {/* Edit button - for all messages */}
                               <button
                                 onClick={() => {
-                                  // Edit message content
-                                  const newContent = prompt("Edit message:", msg.content);
-                                  if (newContent !== null) {
-                                    setBrainstormMessages(prev => prev.map((m, i) => i === idx ? { ...m, content: newContent } : m));
-                                  }
+                                  setEditingBrainstormIndex(idx);
+                                  setEditingBrainstormContent(msg.content);
                                 }}
                                 className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors"
                                 title="Edit message"
@@ -5583,12 +5654,45 @@ Write an engaging story segment. If this is a good point for player interaction,
                   <div className="flex-1 overflow-y-auto space-y-4 bg-zinc-900/50 rounded-xl p-4 min-h-[400px] max-h-[500px]">
                     {vnProject.story.map((segment, segIdx) => {
                       const isLastSegment = segIdx === vnProject.story.length - 1;
+                      const isEditing = editingVnIndex?.segIdx === segIdx;
                       return (
                         <div key={segment.id} className="space-y-2">
-                          <FormattedText content={segment.content} />
+                          {isEditing ? (
+                            <div className="space-y-2">
+                              <textarea
+                                value={editingVnIndex.content}
+                                onChange={(e) => setEditingVnIndex({ segIdx, content: e.target.value })}
+                                className="w-full bg-zinc-900 text-white rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700"
+                                rows={3}
+                                autoFocus
+                              />
+                              <div className="flex gap-2 justify-end">
+                                <button
+                                  onClick={() => setEditingVnIndex(null)}
+                                  className="px-3 py-1 text-sm bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setVnProject(prev => prev ? {
+                                      ...prev,
+                                      story: prev.story.map((s, i) => i === segIdx ? { ...s, content: editingVnIndex.content } : s)
+                                    } : null);
+                                    setEditingVnIndex(null);
+                                  }}
+                                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                >
+                                  Save
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <FormattedText content={segment.content} />
+                          )}
                           
                           {/* Actions for all segments when not generating */}
-                          {!vnIsGenerating && (
+                          {!vnIsGenerating && !isEditing && (
                             <div className="flex gap-1 mt-1 justify-start">
                               {/* Refresh/Regenerate button */}
                               <button
@@ -5612,13 +5716,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                               {/* Edit button */}
                               <button
                                 onClick={() => {
-                                  const newContent = prompt("Edit segment:", segment.content);
-                                  if (newContent !== null) {
-                                    setVnProject(prev => prev ? {
-                                      ...prev,
-                                      story: prev.story.map((s, i) => i === segIdx ? { ...s, content: newContent } : s)
-                                    } : null);
-                                  }
+                                  setEditingVnIndex({ segIdx, content: segment.content });
                                 }}
                                 className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors"
                                 title="Edit segment"
