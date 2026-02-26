@@ -1640,9 +1640,9 @@ export default function Chat() {
   // Play notification sound function
   const playNotificationSound = useCallback(() => {
     if (!globalSettings.dingWhenUnfocused) return;
-    if (windowFocused) return; // Only play when unfocused
     
-    // Create a simple beep sound using Web Audio API
+    // Play sound when AI finishes generating
+    // (browser throttles generation when unfocused, so it completes when focused)
     try {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       const oscillator = audioContext.createOscillator();
@@ -1663,7 +1663,7 @@ export default function Chat() {
     } catch (e) {
       console.warn('Could not play notification sound:', e);
     }
-  }, [globalSettings.dingWhenUnfocused, windowFocused]);
+  }, [globalSettings.dingWhenUnfocused]);
   
   // Provider configuration state
   const [providerConfigs, setProviderConfigs] = useState<Record<LLMProviderType, ProviderConfig>>({
