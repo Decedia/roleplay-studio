@@ -6813,10 +6813,33 @@ Write an engaging story segment. If this is a good point for player interaction,
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto">
             <div className="p-6">
-              <h2 className="text-xl font-semibold text-white mb-2">Choose a Greeting</h2>
+              <h2 className="text-xl font-semibold text-white mb-2">Start a New Chat</h2>
               <p className="text-zinc-400 text-sm mb-6">
-                {pendingConversationCharacter.name} has multiple greetings. Choose which one to start with:
+                {pendingConversationCharacter.name} has multiple greetings. Choose how to start:
               </p>
+              
+              {/* Option to continue existing conversation if available */}
+              {filteredConversations.length > 0 && (
+                <button
+                  onClick={() => {
+                    // Find the most recent conversation and continue it
+                    const sortedConversations = [...filteredConversations].sort((a, b) => b.updatedAt - a.updatedAt);
+                    const latestConversation = sortedConversations[0];
+                    continueConversation(latestConversation);
+                    setShowGreetingSelection(false);
+                    setPendingConversationCharacter(null);
+                  }}
+                  className="w-full text-left p-4 bg-zinc-800 border border-zinc-700 rounded-xl hover:border-green-500 transition-colors group mb-4"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-green-400 group-hover:text-green-300">Continue from where we left off</span>
+                    <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                  <p className="text-zinc-400 text-sm">Continue your most recent conversation with {pendingConversationCharacter.name}</p>
+                </button>
+              )}
               
               <div className="space-y-3">
                 {/* Default first message */}
@@ -6825,7 +6848,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                   className="w-full text-left p-4 bg-zinc-800 border border-zinc-700 rounded-xl hover:border-purple-500 transition-colors group"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-purple-400 group-hover:text-purple-300">Default</span>
+                    <span className="text-sm font-medium text-purple-400 group-hover:text-purple-300">Start with Default</span>
                   </div>
                   <p className="text-zinc-300 italic line-clamp-2">&ldquo;{pendingConversationCharacter.firstMessage}&rdquo;</p>
                 </button>
