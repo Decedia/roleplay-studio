@@ -258,8 +258,18 @@ When generating the character, respond with a brief introduction followed by ONL
 }
 \`\`\`
 
+## Required Fields
+The following fields are REQUIRED and must be included in the JSON:
+- **name**: Character's name (required)
+- **description**: Character's detailed description (required)
+- **firstMessage**: The primary greeting (required)
+- **alternateGreetings**: An array of 2-4 ALTERNATIVE greetings (REQUIRED - this gives users variety when starting roleplays)
+- **scenario**: The setting/scenario (optional but recommended)
+- **mesExample**: Example dialogue (optional but recommended)
+
 ## Guidelines
 - Generate 2-4 alternateGreetings that give users variety when starting roleplays. Each alternate greeting should have a different tone, context, or situation but still feel in-character and natural.
+- **You MUST include the alternateGreetings field in every character JSON you generate**
 - Ask follow-up questions to understand the user's needs (unless they already provided details)
 - Make characters interesting, well-rounded, and suitable for roleplay
 - Include flaws and quirks to make them feel real
