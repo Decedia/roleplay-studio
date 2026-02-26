@@ -252,12 +252,14 @@ When generating the character, respond with a brief introduction followed by ONL
   "name": "Character Name",
   "description": "Detailed character description including personality, appearance, background, and traits. Be creative and detailed.",
   "firstMessage": "A greeting or opening message the character would say when first meeting someone. Should be in character and engaging.",
+  "alternateGreetings": ["Alternative greeting 1 - different tone or context", "Alternative greeting 2 - another variation", "Alternative greeting 3 - yet another option"],
   "scenario": "The setting or scenario where this character exists",
   "mesExample": "Example dialogue showing how the character speaks and behaves. Use {{char}} for character name and {{user}} for user."
 }
 \`\`\`
 
 ## Guidelines
+- Generate 2-4 alternateGreetings that give users variety when starting roleplays. Each alternate greeting should have a different tone, context, or situation but still feel in-character and natural.
 - Ask follow-up questions to understand the user's needs (unless they already provided details)
 - Make characters interesting, well-rounded, and suitable for roleplay
 - Include flaws and quirks to make them feel real
@@ -2728,8 +2730,8 @@ export default function Chat() {
   };
   
   // Extract character JSON from code blocks
-  const extractCharacterJson = (content: string): Array<{name: string, description: string, firstMessage: string, scenario?: string, mesExample?: string}> => {
-    const results: Array<{name: string, description: string, firstMessage: string, scenario?: string, mesExample?: string}> = [];
+  const extractCharacterJson = (content: string): Array<{name: string, description: string, firstMessage: string, alternateGreetings?: string[], scenario?: string, mesExample?: string}> => {
+    const results: Array<{name: string, description: string, firstMessage: string, alternateGreetings?: string[], scenario?: string, mesExample?: string}> = [];
     
     // Try to find JSON code blocks
     const jsonRegex = /```json\n([\s\S]*?)```/g;
@@ -2743,6 +2745,7 @@ export default function Chat() {
             name: parsed.name,
             description: parsed.description,
             firstMessage: parsed.firstMessage || "*nods in greeting*",
+            alternateGreetings: parsed.alternateGreetings,
             scenario: parsed.scenario,
             mesExample: parsed.mesExample,
           });
@@ -2762,6 +2765,7 @@ export default function Chat() {
             name: parsed.name,
             description: parsed.description,
             firstMessage: parsed.firstMessage || "*nods in greeting*",
+            alternateGreetings: parsed.alternateGreetings,
             scenario: parsed.scenario,
             mesExample: parsed.mesExample,
           });
@@ -2775,12 +2779,13 @@ export default function Chat() {
   };
   
   // Import a character from extracted JSON
-  const importCharacterFromJson = (charData: {name: string, description: string, firstMessage: string, scenario?: string, mesExample?: string}) => {
+  const importCharacterFromJson = (charData: {name: string, description: string, firstMessage: string, alternateGreetings?: string[], scenario?: string, mesExample?: string}) => {
     const newCharacter: Character = {
       id: crypto.randomUUID(),
       name: charData.name,
       description: charData.description,
       firstMessage: charData.firstMessage,
+      alternateGreetings: charData.alternateGreetings,
       scenario: charData.scenario,
       mesExample: charData.mesExample,
       createdAt: Date.now(),
@@ -5102,6 +5107,9 @@ Write an engaging story segment. If this is a good point for player interaction,
                                         {char.scenario && (
                                           <p className="text-xs text-zinc-500 line-clamp-1">{char.scenario}</p>
                                         )}
+                                        {char.alternateGreetings && char.alternateGreetings.length > 0 && (
+                                          <p className="text-xs text-amber-400 mt-1">+ {char.alternateGreetings.length} alternate greeting(s)</p>
+                                        )}
                                       </div>
                                       <div className="flex gap-2">
                                         <button
@@ -5111,6 +5119,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                                               name: char.name,
                                               description: char.description,
                                               firstMessage: char.firstMessage,
+                                              alternateGreetings: char.alternateGreetings,
                                               scenario: char.scenario,
                                               mesExample: char.mesExample,
                                               createdAt: Date.now(),
