@@ -1630,6 +1630,9 @@ export default function Chat() {
   const [characterSystemPrompt, setCharacterSystemPrompt] = useState("");
   const [characterPostHistoryInstructions, setCharacterPostHistoryInstructions] = useState("");
   const [characterMesExample, setCharacterMesExample] = useState("");
+  const [characterAlternateGreetings, setCharacterAlternateGreetings] = useState<string[]>([]);
+  const [showGreetingSelection, setShowGreetingSelection] = useState(false);
+  const [pendingConversationCharacter, setPendingConversationCharacter] = useState<Character | null>(null);
   
   // Global settings state
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings>(DEFAULT_GLOBAL_SETTINGS);
@@ -2523,6 +2526,7 @@ export default function Chat() {
       systemPrompt: characterSystemPrompt.trim() || undefined,
       postHistoryInstructions: characterPostHistoryInstructions.trim() || undefined,
       mesExample: characterMesExample.trim() || undefined,
+      alternateGreetings: characterAlternateGreetings.length > 0 ? characterAlternateGreetings : undefined,
       createdAt: Date.now(),
     };
     
@@ -2554,6 +2558,7 @@ export default function Chat() {
               systemPrompt: characterSystemPrompt.trim() || undefined,
               postHistoryInstructions: characterPostHistoryInstructions.trim() || undefined,
               mesExample: characterMesExample.trim() || undefined,
+              alternateGreetings: characterAlternateGreetings.length > 0 ? characterAlternateGreetings : undefined,
             }
           : c
       )
@@ -2590,6 +2595,7 @@ export default function Chat() {
     setCharacterSystemPrompt(character.systemPrompt || "");
     setCharacterPostHistoryInstructions(character.postHistoryInstructions || "");
     setCharacterMesExample(character.mesExample || "");
+    setCharacterAlternateGreetings(character.alternateGreetings || []);
     setShowCharacterModal(true);
   };
   
@@ -3641,19 +3647,27 @@ Write an engaging story segment. If this is a good point for player interaction,
 
   const selectCharacter = (character: Character) => {
     setSelectedCharacter(character);
-    setView("conversations");
+    // If character has alternate greetings, show selection UI
+    if (character.alternateGreetings && character.alternateGreetings.length > 0) {
+      setPendingConversationCharacter(character);
+      setShowGreetingSelection(true);
+    } else {
+      setView("conversations");
+    }
   };
 
   // Conversation functions
-  const createConversation = () => {
+  const createConversation = (greeting?: string) => {
     if (!selectedPersona || !selectedCharacter) return;
+    
+    const greetingMessage = greeting || selectedCharacter.firstMessage;
     
     const newConversation: Conversation = {
       id: crypto.randomUUID(),
       personaId: selectedPersona.id,
       characterId: selectedCharacter.id,
       messages: [
-        { role: "assistant", content: selectedCharacter.firstMessage }
+        { role: "assistant", content: greetingMessage }
       ],
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -3662,6 +3676,8 @@ Write an engaging story segment. If this is a good point for player interaction,
     setConversations((prev) => [...prev, newConversation]);
     setCurrentConversation(newConversation);
     setView("chat");
+    setShowGreetingSelection(false);
+    setPendingConversationCharacter(null);
   };
 
   const continueConversation = (conversation: Conversation) => {
@@ -6119,7 +6135,10 @@ Write an engaging story segment. If this is a good point for player interaction,
                       </div>
                       <h3 className="text-lg font-medium text-white mb-1 truncate">{character.name}</h3>
                       <p className="text-sm text-zinc-400 line-clamp-2 mb-2">{character.description}</p>
-                      <p className="text-xs text-zinc-500 italic line-clamp-2 mb-4">&ldquo;{character.firstMessage}&rdquo;</p>
+                      <p className="text-xs text-zinc-500 italic line-clamp-2 mb-2">&ldquo;{character.firstMessage}&rdquo;</p>
+                      {character.alternateGreetings && character.alternateGreetings.length > 0 && (
+                        <p className="text-xs text-purple-400 mb-4">+ {character.alternateGreetings.length} alternate greeting(s)</p>
+                      )}
                       <button
                         onClick={() => selectCharacter(character)}
                         className="w-full py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
@@ -6142,7 +6161,15 @@ Write an engaging story segment. If this is a good point for player interaction,
                 {/* Desktop button - hidden on mobile */}
                 <div className="hidden md:flex gap-2">
                   <button
-                    onClick={createConversation}
+                    onClick={() => {
+                      // If character has alternate greetings, show selection UI
+                      if (selectedCharacter?.alternateGreetings && selectedCharacter.alternateGreetings.length > 0) {
+                        setPendingConversationCharacter(selectedCharacter);
+                        setShowGreetingSelection(true);
+                      } else {
+                        createConversation();
+                      }
+                    }}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -6172,7 +6199,13 @@ Write an engaging story segment. If this is a good point for player interaction,
                 <div className="md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3">
                   <button
                     onClick={() => {
-                      createConversation();
+                      // If character has alternate greetings, show selection UI
+                      if (selectedCharacter?.alternateGreetings && selectedCharacter.alternateGreetings.length > 0) {
+                        setPendingConversationCharacter(selectedCharacter);
+                        setShowGreetingSelection(true);
+                      } else {
+                        createConversation();
+                      }
                       setShowMobileMenu(false);
                     }}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -6197,7 +6230,15 @@ Write an engaging story segment. If this is a good point for player interaction,
                     Start a new conversation between {selectedPersona.name} and {selectedCharacter.name}.
                   </p>
                   <button
-                    onClick={createConversation}
+                    onClick={() => {
+                      // If character has alternate greetings, show selection UI
+                      if (selectedCharacter?.alternateGreetings && selectedCharacter.alternateGreetings.length > 0) {
+                        setPendingConversationCharacter(selectedCharacter);
+                        setShowGreetingSelection(true);
+                      } else {
+                        createConversation();
+                      }
+                    }}
                     className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     Start Chatting
@@ -6604,6 +6645,56 @@ Write an engaging story segment. If this is a good point for player interaction,
                 />
               </div>
 
+              {/* Alternate Greetings Section */}
+              <div className="border-t border-zinc-700 pt-4 mt-4">
+                <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
+                  <span>💬</span> Alternate Greetings (Optional)
+                </h3>
+                <p className="text-xs text-zinc-500 mb-3">
+                  Add alternative first messages. Users can choose which greeting to start the roleplay with.
+                </p>
+                
+                <div className="space-y-2">
+                  {characterAlternateGreetings.map((greeting, idx) => (
+                    <div key={idx} className="flex gap-2 items-start">
+                      <textarea
+                        value={greeting}
+                        onChange={(e) => {
+                          const newGreetings = [...characterAlternateGreetings];
+                          newGreetings[idx] = e.target.value;
+                          setCharacterAlternateGreetings(newGreetings);
+                        }}
+                        placeholder="Alternative greeting message..."
+                        rows={2}
+                        className="flex-1 bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none text-sm"
+                      />
+                      <button
+                        onClick={() => {
+                          const newGreetings = characterAlternateGreetings.filter((_, i) => i !== idx);
+                          setCharacterAlternateGreetings(newGreetings);
+                        }}
+                        className="p-2 text-red-400 hover:text-red-300 hover:bg-zinc-800 rounded-lg transition-colors"
+                        title="Remove greeting"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                  
+                  <button
+                    onClick={() => setCharacterAlternateGreetings([...characterAlternateGreetings, ""])}
+                    className="text-sm text-purple-400 hover:text-purple-300 flex items-center gap-1"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add Alternate Greeting
+                  </button>
+                </div>
+              </div>
+
               {/* Advanced Instructions Section */}
               <div className="border-t border-zinc-700 pt-4 mt-4">
                 <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
@@ -6680,6 +6771,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                   setCharacterSystemPrompt("");
                   setCharacterPostHistoryInstructions("");
                   setCharacterMesExample("");
+                  setCharacterAlternateGreetings([]);
                 }}
                 className="flex-1 py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
               >
@@ -6692,6 +6784,60 @@ Write an engaging story segment. If this is a good point for player interaction,
               >
                 {editingCharacter ? "Save Changes" : "Create Character"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Greeting Selection Modal */}
+      {showGreetingSelection && pendingConversationCharacter && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto">
+            <div className="p-6">
+              <h2 className="text-xl font-semibold text-white mb-2">Choose a Greeting</h2>
+              <p className="text-zinc-400 text-sm mb-6">
+                {pendingConversationCharacter.name} has multiple greetings. Choose which one to start with:
+              </p>
+              
+              <div className="space-y-3">
+                {/* Default first message */}
+                <button
+                  onClick={() => createConversation(pendingConversationCharacter.firstMessage)}
+                  className="w-full text-left p-4 bg-zinc-800 border border-zinc-700 rounded-xl hover:border-purple-500 transition-colors group"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-purple-400 group-hover:text-purple-300">Default</span>
+                  </div>
+                  <p className="text-zinc-300 italic line-clamp-2">&ldquo;{pendingConversationCharacter.firstMessage}&rdquo;</p>
+                </button>
+                
+                {/* Alternate greetings */}
+                {pendingConversationCharacter.alternateGreetings?.map((greeting, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => createConversation(greeting)}
+                    className="w-full text-left p-4 bg-zinc-800 border border-zinc-700 rounded-xl hover:border-purple-500 transition-colors group"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-amber-400 group-hover:text-amber-300">Alternative {idx + 1}</span>
+                    </div>
+                    <p className="text-zinc-300 italic line-clamp-2">&ldquo;{greeting}&rdquo;</p>
+                  </button>
+                ))}
+              </div>
+              
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowGreetingSelection(false);
+                    setPendingConversationCharacter(null);
+                    setView("characters");
+                  }}
+                  className="flex-1 py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>

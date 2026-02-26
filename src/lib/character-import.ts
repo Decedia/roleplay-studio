@@ -22,6 +22,10 @@ export const parseSillyTavernCard = (json: unknown): Character | null => {
         description: typeof data.description === "string" ? data.description : "",
         firstMessage: typeof data.first_mes === "string" ? data.first_mes : "Hello!",
         scenario: typeof data.scenario === "string" ? data.scenario : undefined,
+        systemPrompt: typeof data.system_prompt === "string" ? data.system_prompt : undefined,
+        postHistoryInstructions: typeof data.post_history_instructions === "string" ? data.post_history_instructions : undefined,
+        mesExample: typeof data.mes_example === "string" ? data.mes_example : undefined,
+        alternateGreetings: Array.isArray(data.alternate_greetings) ? data.alternate_greetings.filter((g): g is string => typeof g === "string") : undefined,
         createdAt: Date.now(),
       };
     }
@@ -34,6 +38,10 @@ export const parseSillyTavernCard = (json: unknown): Character | null => {
         description: typeof card.description === "string" ? card.description : "",
         firstMessage: typeof card.first_mes === "string" ? card.first_mes : "Hello!",
         scenario: typeof card.scenario === "string" ? card.scenario : undefined,
+        systemPrompt: typeof card.system_prompt === "string" ? card.system_prompt : undefined,
+        postHistoryInstructions: typeof card.post_history_instructions === "string" ? card.post_history_instructions : undefined,
+        mesExample: typeof card.mes_example === "string" ? card.mes_example : undefined,
+        alternateGreetings: Array.isArray(card.alternate_greetings) ? card.alternate_greetings.filter((g): g is string => typeof g === "string") : undefined,
         createdAt: Date.now(),
       };
     }
