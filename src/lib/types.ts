@@ -104,6 +104,7 @@ export interface Message {
   role: "system" | "user" | "assistant";
   content: string;
   thinking?: string; // For AI reasoning display
+  isContinue?: boolean; // Flag for continue instruction messages (hidden in UI)
 }
 
 // Conversation between a persona and character

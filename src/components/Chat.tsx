@@ -1149,6 +1149,26 @@ function SettingsModal({
                     Added after the conversation history
                   </p>
                 </div>
+
+                {/* Continue Instruction */}
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-zinc-400 mb-2">
+                    Continue Instruction
+                  </label>
+                  <textarea
+                    value={globalInstructions.continueInstruction || DEFAULT_CONTINUE_INSTRUCTION}
+                    onChange={(e) => setGlobalInstructions({ 
+                      ...globalInstructions, 
+                      continueInstruction: e.target.value 
+                    })}
+                    placeholder="Continue your previous response..."
+                    rows={2}
+                    className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none text-sm"
+                  />
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Used when clicking continue button to complete incomplete responses
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -1560,7 +1580,7 @@ export default function Chat() {
   const [showPersonaModal, setShowPersonaModal] = useState(false);
   
   // Brainstorm state
-  const [brainstormMessages, setBrainstormMessages] = useState<Array<{role: "user" | "assistant", content: string}>>([]);
+  const [brainstormMessages, setBrainstormMessages] = useState<Array<{role: "user" | "assistant", content: string, isContinue?: boolean}>>([]);
   const [brainstormInput, setBrainstormInput] = useState("");
   const [isBrainstorming, setIsBrainstorming] = useState(false);
   const [appliedInstructions, setAppliedInstructions] = useState<Set<string>>(new Set());
@@ -1660,7 +1680,7 @@ export default function Chat() {
   const autoExportTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Character generator state
-  const [generatorMessages, setGeneratorMessages] = useState<Array<{role: "user" | "assistant", content: string}>>([]);
+  const [generatorMessages, setGeneratorMessages] = useState<Array<{role: "user" | "assistant", content: string, isContinue?: boolean}>>([]);
   const [generatorInput, setGeneratorInput] = useState("");
   const [generatedCharacter, setGeneratedCharacter] = useState<Character | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -2829,10 +2849,10 @@ export default function Chat() {
     // Get the continue instruction
     const continueInstruction = globalInstructions.continueInstruction || DEFAULT_CONTINUE_INSTRUCTION;
     
-    // Add a user message with the continue instruction
+    // Add a user message with the continue instruction (marked to hide in UI)
     const messagesWithContinue = [
       ...generatorMessages,
-      { role: "user" as const, content: continueInstruction }
+      { role: "user" as const, content: continueInstruction, isContinue: true }
     ];
     
     setIsGenerating(true);
@@ -2913,8 +2933,21 @@ export default function Chat() {
           responseText = response.content || "";
         }
       }
-      
-      setGeneratorMessages(prev => [...prev, { role: "assistant", content: responseText }]);
+
+      // Append to existing assistant message instead of creating new one
+      setGeneratorMessages(prev => {
+        const updated = [...prev];
+        const lastAssistantIdx = updated.findLastIndex(m => m.role === 'assistant');
+        if (lastAssistantIdx !== -1) {
+          updated[lastAssistantIdx] = {
+            ...updated[lastAssistantIdx],
+            content: updated[lastAssistantIdx].content + responseText
+          };
+        } else {
+          updated.push({ role: 'assistant', content: responseText });
+        }
+        return updated;
+      });
     } catch (error) {
       console.error("Generator continue error:", error);
       setGeneratorError(error instanceof Error ? error.message : "An error occurred. Please try again.");
@@ -2934,10 +2967,10 @@ export default function Chat() {
     // Get the continue instruction
     const continueInstruction = globalInstructions.continueInstruction || DEFAULT_CONTINUE_INSTRUCTION;
     
-    // Add a user message with the continue instruction
+    // Add a user message with the continue instruction (marked to hide in UI)
     const messagesWithContinue = [
       ...brainstormMessages,
-      { role: "user" as const, content: continueInstruction }
+      { role: "user" as const, content: continueInstruction, isContinue: true }
     ];
     
     setIsBrainstorming(true);
@@ -3018,8 +3051,21 @@ export default function Chat() {
           responseText = response.content || "";
         }
       }
-      
-      setBrainstormMessages(prev => [...prev, { role: "assistant", content: responseText }]);
+
+      // Append to existing assistant message instead of creating new one
+      setBrainstormMessages(prev => {
+        const updated = [...prev];
+        const lastAssistantIdx = updated.findLastIndex(m => m.role === 'assistant');
+        if (lastAssistantIdx !== -1) {
+          updated[lastAssistantIdx] = {
+            ...updated[lastAssistantIdx],
+            content: updated[lastAssistantIdx].content + responseText
+          };
+        } else {
+          updated.push({ role: 'assistant', content: responseText });
+        }
+        return updated;
+      });
     } catch (error) {
       console.error("Brainstorm continue error:", error);
       setBrainstormError(error instanceof Error ? error.message : "An error occurred. Please try again.");
@@ -3742,10 +3788,10 @@ Write an engaging story segment. If this is a good point for player interaction,
     // Get the continue instruction
     const continueInstruction = globalInstructions.continueInstruction || DEFAULT_CONTINUE_INSTRUCTION;
     
-    // Add a user message with the continue instruction
+    // Add a user message with the continue instruction (marked as isContinue to hide in UI)
     const messagesWithContinue = [
       ...currentConversation.messages,
-      { role: "user" as const, content: continueInstruction }
+      { role: "user" as const, content: continueInstruction, isContinue: true }
     ];
     
     setError(null);
@@ -3807,11 +3853,21 @@ Write an engaging story segment. If this is a good point for player interaction,
             }
             
             if (chunk.done) {
-              const finalMessages: Message[] = [
-                ...messagesWithContinue,
-                { role: "assistant", content: chunk.content || "", thinking: chunk.thinking },
-              ];
-              updateConversationMessages(finalMessages);
+              // Append to existing assistant message instead of creating new one
+              const existingMessages = [...messagesWithContinue];
+              const lastAssistantIdx = existingMessages.findLastIndex(m => m.role === 'assistant');
+              if (lastAssistantIdx !== -1) {
+                // Append to existing message
+                existingMessages[lastAssistantIdx] = {
+                  ...existingMessages[lastAssistantIdx],
+                  content: existingMessages[lastAssistantIdx].content + (chunk.content || ''),
+                  thinking: chunk.thinking || existingMessages[lastAssistantIdx].thinking
+                };
+              } else {
+                // Fallback: add new message if no existing assistant message
+                existingMessages.push({ role: 'assistant', content: chunk.content || '', thinking: chunk.thinking });
+              }
+              updateConversationMessages(existingMessages);
               setStreamingContent("");
               setStreamingThinking("");
             }
@@ -3836,11 +3892,21 @@ Write an engaging story segment. If this is a good point for player interaction,
         if (response.error) {
           setError(response.error);
         } else {
-          const finalMessages: Message[] = [
-            ...messagesWithContinue,
-            { role: "assistant", content: response.content || "", thinking: response.thinking },
-          ];
-          updateConversationMessages(finalMessages);
+          // Append to existing assistant message instead of creating new one
+          const existingMessages = [...messagesWithContinue];
+          const lastAssistantIdx = existingMessages.findLastIndex(m => m.role === 'assistant');
+          if (lastAssistantIdx !== -1) {
+            // Append to existing message
+            existingMessages[lastAssistantIdx] = {
+              ...existingMessages[lastAssistantIdx],
+              content: existingMessages[lastAssistantIdx].content + (response.content || ''),
+              thinking: response.thinking || existingMessages[lastAssistantIdx].thinking
+            };
+          } else {
+            // Fallback: add new message if no existing assistant message
+            existingMessages.push({ role: 'assistant', content: response.content || '', thinking: response.thinking });
+          }
+          updateConversationMessages(existingMessages);
         }
       }
     } catch (err) {
@@ -4697,7 +4763,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                     </p>
                   </div>
                 ) : (
-                  generatorMessages.map((msg, idx) => {
+                  generatorMessages.filter(m => !m.isContinue).map((msg, idx) => {
                     // Check if message contains character JSON
                     const characterData = msg.role === "assistant" ? extractCharacterJson(msg.content) : [];
                     const contentWithoutJson = msg.role === "assistant" 
@@ -5054,7 +5120,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                     </p>
                   </div>
                 ) : (
-                  brainstormMessages.map((msg, idx) => {
+                  brainstormMessages.filter(m => !m.isContinue).map((msg, idx) => {
                     const instructions = msg.role === "assistant" ? extractInstructions(msg.content) : [];
                     const contentWithoutInstructions = msg.role === "assistant" 
                       ? msg.content.replace(/```instructions\n[\s\S]*?```/g, "").trim()
@@ -5941,7 +6007,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {currentConversation.messages.map((message, index) => {
+                  {currentConversation.messages.filter(m => !m.isContinue).map((message, index) => {
                     // Get thinking content from message.thinking property or extract from content
                     const thinkContent = message.role === "assistant" 
                       ? (message.thinking || extractThinkContent(message.content))
