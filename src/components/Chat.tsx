@@ -5214,8 +5214,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                 />
                 <button
                   onClick={sendGeneratorMessage}
-                  disabled={!generatorInput.trim() || isGenerating}
-                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors"
                 >
                   Send
                 </button>
@@ -5542,8 +5541,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                 />
                 <button
                   onClick={sendBrainstormMessage}
-                  disabled={isBrainstorming}
-                  className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-colors"
                 >
                   Send
                 </button>
@@ -5692,8 +5690,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                   />
                   <button
                     onClick={generateVNCharacters}
-                    disabled={!vnPremise.trim() || vnIsGenerating}
-                    className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors"
                   >
                     {vnIsGenerating ? (
                       <span className="flex items-center justify-center gap-2">
@@ -5747,8 +5744,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                   </div>
                   <button
                     onClick={generateVNPlot}
-                    disabled={vnIsGenerating}
-                    className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors"
                   >
                     {vnIsGenerating ? (
                       <span className="flex items-center justify-center gap-2">
@@ -5788,8 +5784,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                       setVnStep("story");
                       generateVNStorySegment();
                     }}
-                    disabled={vnIsGenerating}
-                    className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors"
                   >
                     {vnIsGenerating ? (
                       <span className="flex items-center justify-center gap-2">
@@ -5917,8 +5912,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                                 <button
                                   key={choice.id}
                                   onClick={() => continueVNStory(choice.id)}
-                                  disabled={vnIsGenerating}
-                                  className="w-full text-left px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg hover:border-purple-500 hover:bg-zinc-700 transition-colors text-zinc-200 disabled:opacity-50"
+                                  className="w-full text-left px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg hover:border-purple-500 hover:bg-zinc-700 transition-colors text-zinc-200"
                                 >
                                   → {choice.text}
                                 </button>
@@ -6469,8 +6463,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                 </div>
                 <button
                   type="submit"
-                  disabled={isLoading}
-                  className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl hover:from-blue-500 hover:to-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-600/20"
+                  className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl hover:from-blue-500 hover:to-cyan-500 transition-all shadow-lg shadow-blue-600/20"
                   title={input.trim() ? "Send message" : "Resend last message"}
                 >
                   {isLoading ? (
