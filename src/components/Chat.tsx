@@ -2820,7 +2820,98 @@ export default function Chat() {
   
   // Brainstorm function - AI helps user create roleplay instructions
   const sendBrainstormMessage = async () => {
-    if (!brainstormInput.trim() || isBrainstorming) return;
+    if (isBrainstorming) return;
+    
+    // If input is empty, resend the last user message
+    if (!brainstormInput.trim()) {
+      // Find the last user message
+      const lastUserIdx = brainstormMessages.map((m, i) => m.role === "user" ? i : -1).filter(i => i >= 0).pop();
+      if (lastUserIdx === undefined || lastUserIdx < 0) return; // No user message to resend
+      
+      const lastUserMessage = brainstormMessages[lastUserIdx].content;
+      setBrainstormMessages(prev => [...prev, { role: "user", content: lastUserMessage }]);
+      setIsBrainstorming(true);
+      
+      // Use the exclusive brainstorm instructions
+      let systemPrompt = brainstormInstructions;
+      
+      // Add jailbreak after exclusive instructions
+      if (globalInstructions.enableJailbreak && globalInstructions.jailbreakInstructions) {
+        systemPrompt = `${systemPrompt}\n\n${globalInstructions.jailbreakInstructions}`;
+      }
+      
+      try {
+        const config = providerConfigs[activeProvider];
+        
+        // Build messages for resend
+        const messages: Message[] = [
+          { role: "system", content: systemPrompt },
+          ...brainstormMessages.map(msg => ({
+            role: msg.role as "user" | "assistant",
+            content: msg.content
+          })),
+          { role: "user", content: lastUserMessage }
+        ];
+        
+        let responseText: string;
+        const configWithModel = {
+          ...config,
+          selectedModel: globalSettings.modelId || config.selectedModel,
+        };
+        
+        if (globalSettings.enableStreaming) {
+          // Use streaming
+          let streamedContent = "";
+          await streamChatMessage(
+            messages,
+            configWithModel,
+            {
+              temperature: 0.8,
+              maxTokens: 2000,
+              topP: 0.9,
+              topK: 40,
+              enableThinking: false,
+            },
+            (chunk) => {
+              if (chunk.error) {
+                throw new Error(chunk.error);
+              }
+              if (chunk.content !== undefined) {
+                streamedContent = chunk.content;
+              }
+              if (chunk.done) {
+                responseText = chunk.content || "";
+              }
+            }
+          );
+        } else {
+          // Use non-streaming
+          const response = await sendChatMessage(
+            messages,
+            configWithModel,
+            {
+              temperature: 0.8,
+              maxTokens: 2000,
+              topP: 0.9,
+              topK: 40,
+              enableThinking: false,
+            }
+          );
+          if (response.error) {
+            throw new Error(response.error);
+          }
+          responseText = response.content || "";
+        }
+        
+        setBrainstormMessages(prev => [...prev, { role: "assistant", content: responseText }]);
+      } catch (error) {
+        console.error("Brainstorm error:", error);
+        setBrainstormError(error instanceof Error ? error.message : "An error occurred. Please try again.");
+      } finally {
+        setIsBrainstorming(false);
+      }
+      return;
+    }
     
     const userMessage = brainstormInput.trim();
     setBrainstormInput("");
@@ -5451,7 +5542,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                 />
                 <button
                   onClick={sendBrainstormMessage}
-                  disabled={!brainstormInput.trim() || isBrainstorming}
+                  disabled={isBrainstorming}
                   className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Send
