@@ -2817,6 +2817,216 @@ export default function Chat() {
       setIsBrainstorming(false);
     }
   };
+
+  // Continue the last AI response in generator (for incomplete responses)
+  const handleGeneratorContinue = async () => {
+    if (isGenerating) return;
+    
+    // Find the last assistant message
+    const lastAssistantIdx = generatorMessages.findLastIndex(m => m.role === "assistant");
+    if (lastAssistantIdx === -1) return;
+    
+    // Get the continue instruction
+    const continueInstruction = globalInstructions.continueInstruction || DEFAULT_CONTINUE_INSTRUCTION;
+    
+    // Add a user message with the continue instruction
+    const messagesWithContinue = [
+      ...generatorMessages,
+      { role: "user" as const, content: continueInstruction }
+    ];
+    
+    setIsGenerating(true);
+    setGeneratorError(null);
+    
+    try {
+      const config = providerConfigs[activeProvider];
+      
+      let systemPrompt = generatorInstructions;
+      
+      // Add jailbreak after exclusive instructions
+      if (globalInstructions.enableJailbreak && globalInstructions.jailbreakInstructions) {
+        systemPrompt = `${systemPrompt}\n\n${globalInstructions.jailbreakInstructions}`;
+      }
+      
+      const messages: Message[] = [
+        { role: "system", content: systemPrompt },
+        ...messagesWithContinue.map(msg => ({
+          role: msg.role as "user" | "assistant",
+          content: msg.content
+        }))
+      ];
+      
+      let responseText: string;
+      
+      if (activeProvider === "puter") {
+        const response = await window.puter.ai.chat(messages, {
+          model: globalSettings.modelId,
+          temperature: 0.8,
+          max_tokens: 2000,
+        });
+        responseText = response.message.content;
+      } else {
+        const configWithModel = {
+          ...config,
+          selectedModel: globalSettings.modelId || config.selectedModel,
+        };
+        
+        if (globalSettings.enableStreaming) {
+          let streamedContent = "";
+          await streamChatMessage(
+            messages,
+            configWithModel,
+            {
+              temperature: 0.8,
+              maxTokens: 2000,
+              topP: 0.9,
+              topK: 40,
+              enableThinking: false,
+            },
+            (chunk) => {
+              if (chunk.error) {
+                throw new Error(chunk.error);
+              }
+              if (chunk.content !== undefined) {
+                streamedContent = chunk.content;
+              }
+              if (chunk.done) {
+                responseText = chunk.content || "";
+              }
+            }
+          );
+        } else {
+          const response = await sendChatMessage(
+            messages,
+            configWithModel,
+            {
+              temperature: 0.8,
+              maxTokens: 2000,
+              topP: 0.9,
+              topK: 40,
+              enableThinking: false,
+            }
+          );
+          if (response.error) {
+            throw new Error(response.error);
+          }
+          responseText = response.content || "";
+        }
+      }
+      
+      setGeneratorMessages(prev => [...prev, { role: "assistant", content: responseText }]);
+    } catch (error) {
+      console.error("Generator continue error:", error);
+      setGeneratorError(error instanceof Error ? error.message : "An error occurred. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Continue the last AI response in brainstorm (for incomplete responses)
+  const handleBrainstormContinue = async () => {
+    if (isBrainstorming) return;
+    
+    // Find the last assistant message
+    const lastAssistantIdx = brainstormMessages.findLastIndex(m => m.role === "assistant");
+    if (lastAssistantIdx === -1) return;
+    
+    // Get the continue instruction
+    const continueInstruction = globalInstructions.continueInstruction || DEFAULT_CONTINUE_INSTRUCTION;
+    
+    // Add a user message with the continue instruction
+    const messagesWithContinue = [
+      ...brainstormMessages,
+      { role: "user" as const, content: continueInstruction }
+    ];
+    
+    setIsBrainstorming(true);
+    setBrainstormError(null);
+    
+    try {
+      const config = providerConfigs[activeProvider];
+      
+      let systemPrompt = brainstormInstructions;
+      
+      // Add jailbreak after exclusive instructions
+      if (globalInstructions.enableJailbreak && globalInstructions.jailbreakInstructions) {
+        systemPrompt = `${systemPrompt}\n\n${globalInstructions.jailbreakInstructions}`;
+      }
+      
+      const messages: Message[] = [
+        { role: "system", content: systemPrompt },
+        ...messagesWithContinue.map(msg => ({
+          role: msg.role as "user" | "assistant",
+          content: msg.content
+        }))
+      ];
+      
+      let responseText: string;
+      
+      if (activeProvider === "puter") {
+        const response = await window.puter.ai.chat(messages, {
+          model: globalSettings.modelId,
+          temperature: 0.8,
+          max_tokens: 2000,
+        });
+        responseText = response.message.content;
+      } else {
+        const configWithModel = {
+          ...config,
+          selectedModel: globalSettings.modelId || config.selectedModel,
+        };
+        
+        if (globalSettings.enableStreaming) {
+          let streamedContent = "";
+          await streamChatMessage(
+            messages,
+            configWithModel,
+            {
+              temperature: 0.8,
+              maxTokens: 2000,
+              topP: 0.9,
+              topK: 40,
+              enableThinking: false,
+            },
+            (chunk) => {
+              if (chunk.error) {
+                throw new Error(chunk.error);
+              }
+              if (chunk.content !== undefined) {
+                streamedContent = chunk.content;
+              }
+              if (chunk.done) {
+                responseText = chunk.content || "";
+              }
+            }
+          );
+        } else {
+          const response = await sendChatMessage(
+            messages,
+            configWithModel,
+            {
+              temperature: 0.8,
+              maxTokens: 2000,
+              topP: 0.9,
+              topK: 40,
+              enableThinking: false,
+            }
+          );
+          if (response.error) {
+            throw new Error(response.error);
+          }
+          responseText = response.content || "";
+        }
+      }
+      
+      setBrainstormMessages(prev => [...prev, { role: "assistant", content: responseText }]);
+    } catch (error) {
+      console.error("Brainstorm continue error:", error);
+      setBrainstormError(error instanceof Error ? error.message : "An error occurred. Please try again.");
+    } finally {
+      setIsBrainstorming(false);
+    }
+  };
   
   // Extract instructions from code blocks
   const extractInstructions = (content: string): string[] => {
@@ -4555,6 +4765,19 @@ Write an engaging story segment. If this is a good point for player interaction,
                                 </svg>
                               </button>
                               )}
+                              {/* Continue button - for continuing incomplete responses */}
+                              {isAssistantMessage && (
+                                <button
+                                  onClick={handleGeneratorContinue}
+                                  disabled={isGenerating}
+                                  className="p-1 text-zinc-500 hover:text-green-400 hover:bg-zinc-800 rounded transition-colors disabled:opacity-50"
+                                  title="Continue response"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                                  </svg>
+                                </button>
+                              )}
                               {/* Delete button */}
                               <button
                                 onClick={() => {
@@ -4909,6 +5132,19 @@ Write an engaging story segment. If this is a good point for player interaction,
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                 </svg>
                               </button>
+                              )}
+                              {/* Continue button - for continuing incomplete responses */}
+                              {isAssistantMessage && (
+                                <button
+                                  onClick={handleBrainstormContinue}
+                                  disabled={isBrainstorming}
+                                  className="p-1 text-zinc-500 hover:text-green-400 hover:bg-zinc-800 rounded transition-colors disabled:opacity-50"
+                                  title="Continue response"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                                  </svg>
+                                </button>
                               )}
                             </div>
                           )}
