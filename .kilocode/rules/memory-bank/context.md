@@ -100,6 +100,12 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **Updated Gemini thinking config to use thinkingLevel (LOW/MEDIUM/HIGH) instead of thinkingBudget**
 - [x] **Fixed regenerate buttons in all views** - now appear for ALL assistant messages (not just last)
 - [x] **Added edit button for user messages in all views** - chat, generator, and brainstorm modes now support editing any user message
+- [x] **Added continue button to generator and brainstorm views** - allows continuing incomplete AI responses
+- [x] **Continue instruction support in settings modal** - customizable instructions for continuing responses
+- [x] **AI continue response appears in same bubble** - appends to existing assistant message
+- [x] **Added "Ding when unfocused" global setting** - plays notification sound when AI finishes generating
+- [x] **Fixed notification sound logic** - removed window focus check (browsers throttle background tabs anyway)
+- [x] **Enable send button in brainstorm when last message is from user** - allows resending last message
 
 ## Current Structure
 
@@ -403,6 +409,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date       | Changes                                                                                                                                                                                            |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-02-26 | Enable send button in brainstorm view when last message is from user - allows resending last message when input is empty                                                                                                                                             |
 | 2026-02-25 | Added jailbreak support to exclusive instruction views (brainstorm, generator, VN) - jailbreak now applied after exclusive instructions when enabled in global settings                                                                             |
 | 2026-02-25 | Added edit button for user messages in all views - chat, generator, and brainstorm modes now support editing any user message with edit and delete buttons |
 | 2026-02-24 | Fixed error popup z-index to appear above input area                                                                                                                                               |
