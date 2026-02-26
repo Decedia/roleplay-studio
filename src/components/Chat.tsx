@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 
 // Import our custom types and utilities
 import {
@@ -84,6 +84,7 @@ interface GlobalSettings {
   thinkingLevel: "LOW" | "MEDIUM" | "HIGH"; // Thinking level for Gemini models
   useCustomSize: boolean; // Enable custom context/output sizes
   enableStreaming: boolean; // Enable/disable streaming for all AI responses
+  dingWhenUnfocused: boolean; // Play notification sound when AI finishes and window is unfocused
 }
 
 // Global instructions with advanced fields
@@ -342,6 +343,7 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   thinkingLevel: "HIGH" as const, // Default thinking level for Gemini models
   useCustomSize: false, // By default, use model max sizes
   enableStreaming: true, // Streaming enabled by default for better UX
+  dingWhenUnfocused: false, // Disabled by default
 };
 
 // Estimate token count for text (rough approximation: ~4 chars per token)
@@ -986,6 +988,29 @@ function SettingsModal({
             </p>
           </div>
 
+          {/* Ding When Unfocused */}
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">
+              Ding When Unfocused
+            </label>
+            <button
+              type="button"
+              onClick={() => setGlobalSettings({ ...globalSettings, dingWhenUnfocused: !globalSettings.dingWhenUnfocused })}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                globalSettings.dingWhenUnfocused ? "bg-blue-600" : "bg-zinc-700"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  globalSettings.dingWhenUnfocused ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+            <p className="text-xs text-zinc-500 mt-1">
+              Play a notification sound when AI finishes and window is not focused
+            </p>
+          </div>
+
           {/* Thinking Level - Only for Google providers */}
           {(activeProvider === "google-ai-studio" || activeProvider === "google-vertex") && globalSettings.enableThinking && (
             <div>
@@ -1609,6 +1634,37 @@ export default function Chat() {
   // Global settings state
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings>(DEFAULT_GLOBAL_SETTINGS);
   
+  // Window focus state for notification sound
+  const [windowFocused, setWindowFocused] = useState(true);
+  
+  // Play notification sound function
+  const playNotificationSound = useCallback(() => {
+    if (!globalSettings.dingWhenUnfocused) return;
+    if (windowFocused) return; // Only play when unfocused
+    
+    // Create a simple beep sound using Web Audio API
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 800; // 800Hz tone
+      oscillator.type = 'sine';
+      
+      // Play a short beep
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (e) {
+      console.warn('Could not play notification sound:', e);
+    }
+  }, [globalSettings.dingWhenUnfocused, windowFocused]);
+  
   // Provider configuration state
   const [providerConfigs, setProviderConfigs] = useState<Record<LLMProviderType, ProviderConfig>>({
     "puter": { type: "puter", isEnabled: true, selectedModel: "" },
@@ -1953,6 +2009,20 @@ export default function Chat() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoExport.enabled, autoExport.intervalMinutes]);
+
+  // Track window focus for notification sound
+  useEffect(() => {
+    const handleFocus = () => setWindowFocused(true);
+    const handleBlur = () => setWindowFocused(false);
+    
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, []);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -2647,6 +2717,7 @@ export default function Chat() {
       setGeneratorError(error instanceof Error ? error.message : "An error occurred. Please try again.");
     } finally {
       setIsGenerating(false);
+      playNotificationSound();
     }
   };
   
@@ -2964,6 +3035,7 @@ export default function Chat() {
       setGeneratorError(error instanceof Error ? error.message : "An error occurred. Please try again.");
     } finally {
       setIsGenerating(false);
+      playNotificationSound();
     }
   };
 
@@ -3645,6 +3717,7 @@ Write an engaging story segment. If this is a good point for player interaction,
       setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
     } finally {
       setIsLoading(false);
+      playNotificationSound();
       inputRef.current?.focus();
     }
   };
@@ -3784,6 +3857,7 @@ Write an engaging story segment. If this is a good point for player interaction,
       setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
     } finally {
       setIsLoading(false);
+      playNotificationSound();
       inputRef.current?.focus();
     }
   };
@@ -3925,6 +3999,7 @@ Write an engaging story segment. If this is a good point for player interaction,
       setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
     } finally {
       setIsLoading(false);
+      playNotificationSound();
       inputRef.current?.focus();
     }
   };
@@ -4065,6 +4140,7 @@ Write an engaging story segment. If this is a good point for player interaction,
         setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
       } finally {
         setIsLoading(false);
+        playNotificationSound();
         inputRef.current?.focus();
       }
     } else {
