@@ -8,7 +8,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
-- [x] Add alternate greetings to character generator instructions - AI generates 2-4 alternate greetings with different tones/contexts when creating characters
+- [x] Improve character generator instructions - added Required Fields section emphasizing alternateGreetings is required
 - [x] Add alternate greetings feature - characters can have multiple greetings, users can choose which one to start chat with
 - [x] Remove disabled state from all send buttons in all modes - send buttons are now always enabled
 - [x] Enable send button in brainstorm when last message is from user - allows resending last message when input is empty
