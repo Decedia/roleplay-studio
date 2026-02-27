@@ -8,6 +8,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
+- [x] Fix brainstorm empty input duplicating user message - removed duplicate message addition to state
 - [x] Add {{char}} macro replacement - replaces {{char}} with character name in AI responses and greetings
 - [x] Improve character generator instructions - added Required Fields section emphasizing alternateGreetings is required
 - [x] Add alternate greetings feature - characters can have multiple greetings, users can choose which one to start chat with
