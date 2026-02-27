@@ -5599,7 +5599,9 @@ Write an engaging story segment. If this is a good point for player interaction,
                     </p>
                   </div>
                 ) : (
-                  generatorMessages.filter(m => !m.isContinue).map((msg, idx) => {
+                  generatorMessages.map((msg, idx) => {
+                    if (msg.isContinue) return null;
+                    
                     // Check if message contains character JSON
                     const characterData = msg.role === "assistant" ? extractCharacterJson(msg.content) : [];
                     const contentWithoutJson = msg.role === "assistant" 
@@ -6031,7 +6033,9 @@ Write an engaging story segment. If this is a good point for player interaction,
                     </p>
                   </div>
                 ) : (
-                  brainstormMessages.filter(m => !m.isContinue).map((msg, idx) => {
+                  brainstormMessages.map((msg, idx) => {
+                    if (msg.isContinue) return null;
+                    
                     const instructions = msg.role === "assistant" ? extractInstructions(msg.content) : [];
                     const contentWithoutInstructions = msg.role === "assistant" 
                       ? msg.content.replace(/```instructions\n[\s\S]*?```/g, "").trim()
