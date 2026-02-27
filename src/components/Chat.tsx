@@ -20,7 +20,7 @@ import {
   FetchedModel,
 } from "@/lib/providers";
 import { readCharacterFile, buildFullSystemPrompt } from "@/lib/character-import";
-import { Character as CharacterType, CharacterBook, CharacterBookEntry } from "@/lib/types";
+import { Character as CharacterType, CharacterBook, CharacterBookEntry, ProviderProfile } from "@/lib/types";
 import { parseRoleplayText, getSegmentClasses, TextSegment } from "@/lib/text-formatter";
 
 // Types - using imported Message interface
@@ -583,6 +583,10 @@ function SettingsModal({
   onImportData,
   autoExport,
   setAutoExport,
+  createProfile,
+  selectProfile,
+  deleteProfile,
+  getActiveProfile,
 }: {
   show: boolean;
   onClose: () => void;
@@ -607,6 +611,10 @@ function SettingsModal({
   onImportData: (file: File) => void;
   autoExport: AutoExportSettings;
   setAutoExport: React.Dispatch<React.SetStateAction<AutoExportSettings>>;
+  createProfile: (providerType: LLMProviderType, profileData: Omit<ProviderProfile, "id" | "createdAt">) => ProviderProfile;
+  selectProfile: (providerType: LLMProviderType, profileId: string) => void;
+  deleteProfile: (providerType: LLMProviderType, profileId: string) => void;
+  getActiveProfile: (providerType: LLMProviderType) => ProviderProfile | undefined;
 }) {
   const [expandedProviders, setExpandedProviders] = useState<Record<string, boolean>>({});
   const [showModelDropdown, setShowModelDropdown] = useState(false);
@@ -1248,37 +1256,94 @@ function SettingsModal({
                 )}
                 {editingProvider === 'google-ai-studio' && (
                   <div className="mt-3 space-y-3">
+                    {/* Profile Selection */}
                     <div>
-                      <label className="block text-xs text-zinc-400 mb-1">API Key</label>
-                      <input
-                        type="password"
-                        value={providerConfigs["google-ai-studio"]?.apiKey || ""}
-                        onChange={(e) => setProviderConfigs(prev => ({
-                          ...prev,
-                          "google-ai-studio": { ...prev["google-ai-studio"], apiKey: e.target.value }
-                        }))}
-                        placeholder="Enter your Google AI Studio API key"
-                        className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
+                      <label className="block text-xs text-zinc-400 mb-1">Profile</label>
+                      <div className="flex gap-2">
+                        <select
+                          value={providerConfigs["google-ai-studio"]?.activeProfileId || ""}
+                          onChange={(e) => {
+                            if (e.target.value === "__new__") {
+                              const name = prompt("Enter profile name (or leave empty for date/time):");
+                              if (name !== null) {
+                                createProfile("google-ai-studio", {
+                                  name: name.trim() || new Date().toLocaleString(),
+                                  apiKey: ""
+                                });
+                              }
+                            } else {
+                              selectProfile("google-ai-studio", e.target.value);
+                            }
+                          }}
+                          className="flex-1 bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                          <option value="">Select a profile...</option>
+                          {providerConfigs["google-ai-studio"]?.profiles.map(profile => (
+                            <option key={profile.id} value={profile.id}>{profile.name}</option>
+                          ))}
+                          <option value="__new__">+ Add New Profile</option>
+                        </select>
+                        {providerConfigs["google-ai-studio"]?.activeProfileId && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm("Delete this profile?")) {
+                                deleteProfile("google-ai-studio", providerConfigs["google-ai-studio"].activeProfileId!);
+                              }
+                            }}
+                            className="px-3 py-2 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => onTestConnection("google-ai-studio")}
-                        disabled={connectionStatus["google-ai-studio"]?.status === "testing" || !providerConfigs["google-ai-studio"]?.apiKey}
-                        className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {connectionStatus["google-ai-studio"]?.status === "testing" ? "Testing..." : "Test Connection"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onConnect("google-ai-studio")}
-                        disabled={connectionStatus["google-ai-studio"]?.status !== "connected"}
-                        className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Connect
-                      </button>
-                    </div>
+                    
+                    {/* API Key - only show if profile is selected */}
+                    {providerConfigs["google-ai-studio"]?.activeProfileId && (
+                      <>
+                        <div>
+                          <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                          <input
+                            type="password"
+                            value={getActiveProfile("google-ai-studio")?.apiKey || ""}
+                            onChange={(e) => {
+                              const profileId = providerConfigs["google-ai-studio"].activeProfileId;
+                              if (!profileId) return;
+                              setProviderConfigs(prev => ({
+                                ...prev,
+                                "google-ai-studio": {
+                                  ...prev["google-ai-studio"],
+                                  profiles: prev["google-ai-studio"].profiles.map(p =>
+                                    p.id === profileId ? { ...p, apiKey: e.target.value } : p
+                                  )
+                                }
+                              }));
+                            }}
+                            placeholder="Enter your Google AI Studio API key"
+                            className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onTestConnection("google-ai-studio")}
+                            disabled={connectionStatus["google-ai-studio"]?.status === "testing" || !getActiveProfile("google-ai-studio")?.apiKey}
+                            className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {connectionStatus["google-ai-studio"]?.status === "testing" ? "Testing..." : "Test Connection"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onConnect("google-ai-studio")}
+                            disabled={connectionStatus["google-ai-studio"]?.status !== "connected"}
+                            className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Connect
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -1315,97 +1380,184 @@ function SettingsModal({
                 )}
                 {editingProvider === 'google-vertex' && (
                   <div className="mt-3 space-y-3">
-                    {/* Mode Selector */}
+                    {/* Profile Selection */}
                     <div>
-                      <label className="block text-xs text-zinc-400 mb-1">Mode</label>
-                      <select
-                        value={providerConfigs["google-vertex"]?.vertexMode || "express"}
-                        onChange={(e) => setProviderConfigs(prev => ({
-                          ...prev,
-                          "google-vertex": { ...prev["google-vertex"], vertexMode: e.target.value as VertexMode }
-                        }))}
-                        className="w-full bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      >
-                        <option value="express">Express (API Key + Project ID)</option>
-                        <option value="full">Full (Service Account)</option>
-                      </select>
-                      <p className="text-xs text-zinc-500 mt-1">
-                        Express mode uses API key authentication. Both modes require a Google Cloud Project ID.
-                      </p>
+                      <label className="block text-xs text-zinc-400 mb-1">Profile</label>
+                      <div className="flex gap-2">
+                        <select
+                          value={providerConfigs["google-vertex"]?.activeProfileId || ""}
+                          onChange={(e) => {
+                            if (e.target.value === "__new__") {
+                              const name = prompt("Enter profile name (use project name or leave empty for date/time):");
+                              if (name !== null) {
+                                createProfile("google-vertex", {
+                                  name: name.trim() || new Date().toLocaleString(),
+                                  apiKey: "",
+                                  projectId: "",
+                                  vertexMode: "express",
+                                  vertexLocation: "global"
+                                });
+                              }
+                            } else {
+                              selectProfile("google-vertex", e.target.value);
+                            }
+                          }}
+                          className="flex-1 bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                          <option value="">Select a profile...</option>
+                          {providerConfigs["google-vertex"]?.profiles.map(profile => (
+                            <option key={profile.id} value={profile.id}>{profile.name}</option>
+                          ))}
+                          <option value="__new__">+ Add New Profile</option>
+                        </select>
+                        {providerConfigs["google-vertex"]?.activeProfileId && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm("Delete this profile?")) {
+                                deleteProfile("google-vertex", providerConfigs["google-vertex"].activeProfileId!);
+                              }
+                            }}
+                            className="px-3 py-2 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    {/* Project ID - always required for Vertex AI */}
-                    <div>
-                      <label className="block text-xs text-zinc-400 mb-1">Google Cloud Project ID <span className="text-red-400">*</span></label>
-                      <input
-                        type="text"
-                        value={providerConfigs["google-vertex"]?.projectId || ""}
-                        onChange={(e) => setProviderConfigs(prev => ({
-                          ...prev,
-                          "google-vertex": { ...prev["google-vertex"], projectId: e.target.value }
-                        }))}
-                        placeholder="your-project-id"
-                        className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
-                      <p className="text-xs text-zinc-500 mt-1">
-                        Find your Project ID in the <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Google Cloud Console</a>
-                      </p>
-                    </div>
-                    {/* Server Location */}
-                    <div>
-                      <label className="block text-xs text-zinc-400 mb-1">Server Location</label>
-                      <select
-                        value={providerConfigs["google-vertex"]?.vertexLocation || "global"}
-                        onChange={(e) => setProviderConfigs(prev => ({
-                          ...prev,
-                          "google-vertex": { ...prev["google-vertex"], vertexLocation: e.target.value as VertexLocation }
-                        }))}
-                        className="w-full bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      >
-                        <option value="global">Global (Auto-routing)</option>
-                        <option value="us-central1">US Central (Iowa)</option>
-                        <option value="us-east1">US East (South Carolina)</option>
-                        <option value="us-west1">US West (Oregon)</option>
-                        <option value="europe-west1">Europe West (Belgium)</option>
-                        <option value="europe-west4">Europe West (Netherlands)</option>
-                        <option value="asia-east1">Asia East (Taiwan)</option>
-                        <option value="asia-northeast1">Asia Northeast (Tokyo)</option>
-                        <option value="asia-southeast1">Asia Southeast (Singapore)</option>
-                      </select>
-                      <p className="text-xs text-zinc-500 mt-1">
-                        Choose the closest region for lower latency
-                      </p>
-                    </div>
-                    <div>
-                      <label className="block text-xs text-zinc-400 mb-1">API Key</label>
-                      <input
-                        type="password"
-                        value={providerConfigs["google-vertex"]?.apiKey || ""}
-                        onChange={(e) => setProviderConfigs(prev => ({
-                          ...prev,
-                          "google-vertex": { ...prev["google-vertex"], apiKey: e.target.value }
-                        }))}
-                        placeholder="Enter your Google API key"
-                        className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => onTestConnection("google-vertex")}
-                        disabled={connectionStatus["google-vertex"]?.status === "testing" || !providerConfigs["google-vertex"]?.apiKey || !providerConfigs["google-vertex"]?.projectId}
-                        className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {connectionStatus["google-vertex"]?.status === "testing" ? "Testing..." : "Test Connection"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onConnect("google-vertex")}
-                        disabled={!providerConfigs["google-vertex"]?.apiKey || !providerConfigs["google-vertex"]?.projectId}
-                        className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Connect
-                      </button>
-                    </div>
+                    
+                    {/* Only show config if profile is selected */}
+                    {providerConfigs["google-vertex"]?.activeProfileId && (
+                      <>
+                        {/* Mode Selector */}
+                        <div>
+                          <label className="block text-xs text-zinc-400 mb-1">Mode</label>
+                          <select
+                            value={getActiveProfile("google-vertex")?.vertexMode || "express"}
+                            onChange={(e) => {
+                              const profileId = providerConfigs["google-vertex"].activeProfileId;
+                              if (!profileId) return;
+                              setProviderConfigs(prev => ({
+                                ...prev,
+                                "google-vertex": {
+                                  ...prev["google-vertex"],
+                                  profiles: prev["google-vertex"].profiles.map(p =>
+                                    p.id === profileId ? { ...p, vertexMode: e.target.value as VertexMode } : p
+                                  )
+                                }
+                              }));
+                            }}
+                            className="w-full bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          >
+                            <option value="express">Express (API Key + Project ID)</option>
+                            <option value="full">Full (Service Account)</option>
+                          </select>
+                          <p className="text-xs text-zinc-500 mt-1">
+                            Express mode uses API key authentication. Both modes require a Google Cloud Project ID.
+                          </p>
+                        </div>
+                        {/* Project ID */}
+                        <div>
+                          <label className="block text-xs text-zinc-400 mb-1">Google Cloud Project ID <span className="text-red-400">*</span></label>
+                          <input
+                            type="text"
+                            value={getActiveProfile("google-vertex")?.projectId || ""}
+                            onChange={(e) => {
+                              const profileId = providerConfigs["google-vertex"].activeProfileId;
+                              if (!profileId) return;
+                              setProviderConfigs(prev => ({
+                                ...prev,
+                                "google-vertex": {
+                                  ...prev["google-vertex"],
+                                  profiles: prev["google-vertex"].profiles.map(p =>
+                                    p.id === profileId ? { ...p, projectId: e.target.value } : p
+                                  )
+                                }
+                              }));
+                            }}
+                            placeholder="your-project-id"
+                            className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          />
+                          <p className="text-xs text-zinc-500 mt-1">
+                            Find your Project ID in the <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Google Cloud Console</a>
+                          </p>
+                        </div>
+                        {/* Server Location */}
+                        <div>
+                          <label className="block text-xs text-zinc-400 mb-1">Server Location</label>
+                          <select
+                            value={getActiveProfile("google-vertex")?.vertexLocation || "global"}
+                            onChange={(e) => {
+                              const profileId = providerConfigs["google-vertex"].activeProfileId;
+                              if (!profileId) return;
+                              setProviderConfigs(prev => ({
+                                ...prev,
+                                "google-vertex": {
+                                  ...prev["google-vertex"],
+                                  profiles: prev["google-vertex"].profiles.map(p =>
+                                    p.id === profileId ? { ...p, vertexLocation: e.target.value as VertexLocation } : p
+                                  )
+                                }
+                              }));
+                            }}
+                            className="w-full bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          >
+                            <option value="global">Global (Auto-routing)</option>
+                            <option value="us-central1">US Central (Iowa)</option>
+                            <option value="us-east1">US East (South Carolina)</option>
+                            <option value="us-west1">US West (Oregon)</option>
+                            <option value="europe-west1">Europe West (Belgium)</option>
+                            <option value="europe-west4">Europe West (Netherlands)</option>
+                            <option value="asia-east1">Asia East (Taiwan)</option>
+                            <option value="asia-northeast1">Asia Northeast (Tokyo)</option>
+                            <option value="asia-southeast1">Asia Southeast (Singapore)</option>
+                          </select>
+                          <p className="text-xs text-zinc-500 mt-1">
+                            Choose the closest region for lower latency
+                          </p>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                          <input
+                            type="password"
+                            value={getActiveProfile("google-vertex")?.apiKey || ""}
+                            onChange={(e) => {
+                              const profileId = providerConfigs["google-vertex"].activeProfileId;
+                              if (!profileId) return;
+                              setProviderConfigs(prev => ({
+                                ...prev,
+                                "google-vertex": {
+                                  ...prev["google-vertex"],
+                                  profiles: prev["google-vertex"].profiles.map(p =>
+                                    p.id === profileId ? { ...p, apiKey: e.target.value } : p
+                                  )
+                                }
+                              }));
+                            }}
+                            placeholder="Enter your Google API key"
+                            className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onTestConnection("google-vertex")}
+                            disabled={connectionStatus["google-vertex"]?.status === "testing" || !getActiveProfile("google-vertex")?.apiKey || !getActiveProfile("google-vertex")?.projectId}
+                            className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {connectionStatus["google-vertex"]?.status === "testing" ? "Testing..." : "Test Connection"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onConnect("google-vertex")}
+                            disabled={!getActiveProfile("google-vertex")?.apiKey || !getActiveProfile("google-vertex")?.projectId}
+                            className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Connect
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -1442,37 +1594,94 @@ function SettingsModal({
                 )}
                 {editingProvider === 'nvidia-nim' && (
                   <div className="mt-3 space-y-3">
+                    {/* Profile Selection */}
                     <div>
-                      <label className="block text-xs text-zinc-400 mb-1">API Key</label>
-                      <input
-                        type="password"
-                        value={providerConfigs["nvidia-nim"]?.apiKey || ""}
-                        onChange={(e) => setProviderConfigs(prev => ({
-                          ...prev,
-                          "nvidia-nim": { ...prev["nvidia-nim"], apiKey: e.target.value }
-                        }))}
-                        placeholder="Enter your NVIDIA NIM API key"
-                        className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
+                      <label className="block text-xs text-zinc-400 mb-1">Profile</label>
+                      <div className="flex gap-2">
+                        <select
+                          value={providerConfigs["nvidia-nim"]?.activeProfileId || ""}
+                          onChange={(e) => {
+                            if (e.target.value === "__new__") {
+                              const name = prompt("Enter profile name (or leave empty for date/time):");
+                              if (name !== null) {
+                                createProfile("nvidia-nim", {
+                                  name: name.trim() || new Date().toLocaleString(),
+                                  apiKey: ""
+                                });
+                              }
+                            } else {
+                              selectProfile("nvidia-nim", e.target.value);
+                            }
+                          }}
+                          className="flex-1 bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                          <option value="">Select a profile...</option>
+                          {providerConfigs["nvidia-nim"]?.profiles.map(profile => (
+                            <option key={profile.id} value={profile.id}>{profile.name}</option>
+                          ))}
+                          <option value="__new__">+ Add New Profile</option>
+                        </select>
+                        {providerConfigs["nvidia-nim"]?.activeProfileId && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm("Delete this profile?")) {
+                                deleteProfile("nvidia-nim", providerConfigs["nvidia-nim"].activeProfileId!);
+                              }
+                            }}
+                            className="px-3 py-2 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => onTestConnection("nvidia-nim")}
-                        disabled={connectionStatus["nvidia-nim"]?.status === "testing" || !providerConfigs["nvidia-nim"]?.apiKey}
-                        className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {connectionStatus["nvidia-nim"]?.status === "testing" ? "Testing..." : "Test Connection"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onConnect("nvidia-nim")}
-                        disabled={connectionStatus["nvidia-nim"]?.status !== "connected"}
-                        className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Connect
-                      </button>
-                    </div>
+                    
+                    {/* API Key - only show if profile is selected */}
+                    {providerConfigs["nvidia-nim"]?.activeProfileId && (
+                      <>
+                        <div>
+                          <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                          <input
+                            type="password"
+                            value={getActiveProfile("nvidia-nim")?.apiKey || ""}
+                            onChange={(e) => {
+                              const profileId = providerConfigs["nvidia-nim"].activeProfileId;
+                              if (!profileId) return;
+                              setProviderConfigs(prev => ({
+                                ...prev,
+                                "nvidia-nim": {
+                                  ...prev["nvidia-nim"],
+                                  profiles: prev["nvidia-nim"].profiles.map(p =>
+                                    p.id === profileId ? { ...p, apiKey: e.target.value } : p
+                                  )
+                                }
+                              }));
+                            }}
+                            placeholder="Enter your NVIDIA NIM API key"
+                            className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onTestConnection("nvidia-nim")}
+                            disabled={connectionStatus["nvidia-nim"]?.status === "testing" || !getActiveProfile("nvidia-nim")?.apiKey}
+                            className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {connectionStatus["nvidia-nim"]?.status === "testing" ? "Testing..." : "Test Connection"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onConnect("nvidia-nim")}
+                            disabled={connectionStatus["nvidia-nim"]?.status !== "connected"}
+                            className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Connect
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -1684,10 +1893,10 @@ export default function Chat() {
   
   // Provider configuration state
   const [providerConfigs, setProviderConfigs] = useState<Record<LLMProviderType, ProviderConfig>>({
-    "puter": { type: "puter", isEnabled: true, selectedModel: "" },
-    "google-ai-studio": { type: "google-ai-studio", isEnabled: false, apiKey: "", selectedModel: "" },
-    "google-vertex": { type: "google-vertex", isEnabled: false, apiKey: "", projectId: "", vertexMode: "express" as VertexMode, selectedModel: "" },
-    "nvidia-nim": { type: "nvidia-nim", isEnabled: false, apiKey: "", selectedModel: "" },
+    "puter": { type: "puter", isEnabled: true, profiles: [], activeProfileId: null },
+    "google-ai-studio": { type: "google-ai-studio", isEnabled: false, profiles: [], activeProfileId: null },
+    "google-vertex": { type: "google-vertex", isEnabled: false, profiles: [], activeProfileId: null },
+    "nvidia-nim": { type: "nvidia-nim", isEnabled: false, profiles: [], activeProfileId: null },
   });
   
   // Provider-specific models (fetched from API after connection)
@@ -1747,7 +1956,68 @@ export default function Chat() {
     "google-vertex": { status: "disconnected" },
     "nvidia-nim": { status: "disconnected" },
   });
-  
+
+  // Profile management functions - defined early so they're available throughout the component
+  const createProfile = useCallback((providerType: LLMProviderType, profileData: Omit<ProviderProfile, "id" | "createdAt">) => {
+    const newProfile: ProviderProfile = {
+      ...profileData,
+      id: `${providerType}-${Date.now()}`,
+      createdAt: Date.now()
+    };
+    
+    setProviderConfigs(prev => ({
+      ...prev,
+      [providerType]: {
+        ...prev[providerType],
+        profiles: [...prev[providerType].profiles, newProfile],
+        activeProfileId: newProfile.id
+      }
+    }));
+    
+    return newProfile;
+  }, []);
+
+  const selectProfile = useCallback((providerType: LLMProviderType, profileId: string) => {
+    setProviderConfigs(prev => ({
+      ...prev,
+      [providerType]: {
+        ...prev[providerType],
+        activeProfileId: profileId
+      }
+    }));
+    
+    // Clear models so they can be re-fetched for the new profile
+    setProviderModels(prev => ({
+      ...prev,
+      [providerType]: []
+    }));
+  }, []);
+
+  const deleteProfile = useCallback((providerType: LLMProviderType, profileId: string) => {
+    const config = providerConfigs[providerType];
+    const newProfiles = config.profiles.filter(p => p.id !== profileId);
+    
+    // If we deleted the active profile, select the first available one or null
+    let newActiveProfileId = config.activeProfileId;
+    if (config.activeProfileId === profileId) {
+      newActiveProfileId = newProfiles.length > 0 ? newProfiles[0].id : null;
+    }
+    
+    setProviderConfigs(prev => ({
+      ...prev,
+      [providerType]: {
+        ...prev[providerType],
+        profiles: newProfiles,
+        activeProfileId: newActiveProfileId
+      }
+    }));
+  }, [providerConfigs]);
+
+  const getActiveProfile = useCallback((providerType: LLMProviderType): ProviderProfile | undefined => {
+    const config = providerConfigs[providerType];
+    return config.profiles.find(p => p.id === config.activeProfileId);
+  }, [providerConfigs]);
+
   // Auto-export state
   const [autoExport, setAutoExport] = useState<AutoExportSettings>(DEFAULT_AUTO_EXPORT);
   const autoExportTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -2410,7 +2680,20 @@ export default function Chat() {
     }));
 
     const config = providerConfigs[providerType];
-    const result = await testProviderConnection(providerType, config);
+    const activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
+    
+    // Build config from active profile
+    const profileConfig = {
+      ...config,
+      apiKey: activeProfile?.apiKey || "",
+      projectId: activeProfile?.projectId || "",
+      serviceAccountJson: activeProfile?.serviceAccountJson,
+      vertexMode: activeProfile?.vertexMode,
+      vertexLocation: activeProfile?.vertexLocation,
+      selectedModel: activeProfile?.selectedModel
+    };
+    
+    const result = await testProviderConnection(providerType, profileConfig);
 
     setConnectionStatus(prev => ({
       ...prev,
@@ -2424,7 +2707,7 @@ export default function Chat() {
     // If connection successful, fetch models from the provider
     if (result.success && providerType !== "puter") {
       setModelsFetching(prev => ({ ...prev, [providerType]: true }));
-      const modelsResult = await fetchModelsFromProvider(providerType, config);
+      const modelsResult = await fetchModelsFromProvider(providerType, profileConfig);
       setModelsFetching(prev => ({ ...prev, [providerType]: false }));
       
       if (modelsResult.models.length > 0) {
@@ -2433,13 +2716,22 @@ export default function Chat() {
           [providerType]: modelsResult.models
         }));
         
-        // Auto-select first model if no model is currently selected for this provider
-        if (!config.selectedModel && modelsResult.models[0]) {
+        // Auto-select first model if no model is currently selected for this profile
+        if (!activeProfile?.selectedModel && modelsResult.models[0]) {
           const firstModel = modelsResult.models[0];
-          setProviderConfigs(prev => ({
-            ...prev,
-            [providerType]: { ...prev[providerType], selectedModel: firstModel.id }
-          }));
+          
+          // Update the profile with the selected model
+          if (activeProfile) {
+            setProviderConfigs(prev => ({
+              ...prev,
+              [providerType]: {
+                ...prev[providerType],
+                profiles: prev[providerType].profiles.map(p =>
+                  p.id === activeProfile.id ? { ...p, selectedModel: firstModel.id } : p
+                )
+              }
+            }));
+          }
           
           // Also update global settings with the model's capabilities
           const maxOutput = firstModel.max_tokens || 4000;
@@ -2459,9 +2751,10 @@ export default function Chat() {
     // Set as active provider
     setActiveProvider(providerType);
     
-    // Get the selected model for this provider
+    // Get the active profile for this provider
     const config = providerConfigs[providerType];
-    const selectedModelId = config.selectedModel;
+    const activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
+    const selectedModelId = activeProfile?.selectedModel;
     
     // Find the model in providerModels to get context and max_tokens
     const models = providerModels[providerType] || [];
@@ -2491,10 +2784,21 @@ export default function Chat() {
       }));
     }
     
+    // Build profile config for API calls
+    const profileConfig = {
+      ...config,
+      apiKey: activeProfile?.apiKey || "",
+      projectId: activeProfile?.projectId || "",
+      serviceAccountJson: activeProfile?.serviceAccountJson,
+      vertexMode: activeProfile?.vertexMode,
+      vertexLocation: activeProfile?.vertexLocation,
+      selectedModel: activeProfile?.selectedModel
+    };
+    
     // Fetch models for Vertex AI if not already fetched
-    if (providerType === "google-vertex" && models.length === 0 && config.apiKey) {
+    if (providerType === "google-vertex" && models.length === 0 && activeProfile?.apiKey) {
       setModelsFetching(prev => ({ ...prev, [providerType]: true }));
-      const modelsResult = await fetchModelsFromProvider(providerType, config);
+      const modelsResult = await fetchModelsFromProvider(providerType, profileConfig);
       setModelsFetching(prev => ({ ...prev, [providerType]: false }));
       
       if (modelsResult.models.length > 0) {
@@ -2503,12 +2807,17 @@ export default function Chat() {
           [providerType]: modelsResult.models
         }));
         
-        // Auto-select first model if no model is currently selected for this provider
-        if (!config.selectedModel && modelsResult.models[0]) {
+        // Auto-select first model if no model is currently selected for this profile
+        if (!activeProfile?.selectedModel && modelsResult.models[0]) {
           const firstModel = modelsResult.models[0];
           setProviderConfigs(prev => ({
             ...prev,
-            [providerType]: { ...prev[providerType], selectedModel: firstModel.id }
+            [providerType]: {
+              ...prev[providerType],
+              profiles: prev[providerType].profiles.map(p =>
+                p.id === activeProfile.id ? { ...p, selectedModel: firstModel.id } : p
+              )
+            }
           }));
           
           // Also update global settings with the model's capabilities
@@ -7059,6 +7368,10 @@ Write an engaging story segment. If this is a good point for player interaction,
           onImportData={handleImportData}
           autoExport={autoExport}
           setAutoExport={setAutoExport}
+          createProfile={createProfile}
+          selectProfile={selectProfile}
+          deleteProfile={deleteProfile}
+          getActiveProfile={getActiveProfile}
         />
       )}
     </div>

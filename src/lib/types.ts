@@ -145,15 +145,33 @@ export type VertexMode = "express" | "full";
 // Vertex AI locations
 export type VertexLocation = "global" | "us-central1" | "us-east1" | "us-west1" | "europe-west1" | "europe-west4" | "asia-east1" | "asia-northeast1" | "asia-southeast1";
 
+// Provider profile for storing multiple API keys
+// Each profile represents a different API key/project combination
+export interface ProviderProfile {
+  id: string;
+  name: string; // Profile name (project name or date/time)
+  apiKey?: string;
+  projectId?: string; // For Vertex AI
+  serviceAccountJson?: string; // For Vertex AI
+  vertexMode?: VertexMode; // For Vertex AI
+  vertexLocation?: VertexLocation; // For Vertex AI
+  selectedModel?: string;
+  createdAt: number;
+}
+
 // Provider configurations (stored in localStorage)
 export interface ProviderConfig {
   type: LLMProviderType;
+  // Legacy properties for backward compatibility
   apiKey?: string;
   projectId?: string; // For Vertex AI
   serviceAccountJson?: string; // For Vertex AI
   vertexMode?: VertexMode; // For Vertex AI: express (API key only) or full (project ID + service account)
   vertexLocation?: VertexLocation; // For Vertex AI: server location
   selectedModel?: string;
+  // New profile-based storage
+  profiles: ProviderProfile[];
+  activeProfileId: string | null;
   isEnabled: boolean;
 }
 
