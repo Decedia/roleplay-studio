@@ -8,6 +8,14 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
+- [x] Sync UI/UX between conversation, generator, and brainstorm views:
+  - Added loading spinner to send buttons in generator and brainstorm
+  - Added "Press Enter to send" hint to generator and brainstorm
+  - Added message avatars (AI and user) to generator and brainstorm
+  - Added AI avatar to loading animations
+  - Added empty message resends last message functionality to generator/brainstorm
+  - Added thinking/collapsible display (💭) to generator and brainstorm
+- [x] Fix edit message showing continue instruction in generator/brainstorm views
 - [x] Fix brainstorm empty input duplicating user message - removed duplicate message addition to state
 - [x] Add {{char}} macro replacement - replaces {{char}} with character name in AI responses and greetings
 - [x] Improve character generator instructions - added Required Fields section emphasizing alternateGreetings is required
