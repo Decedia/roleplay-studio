@@ -409,9 +409,11 @@ function removeThinkTags(content: string): string {
   return content.replace(/<think\s*>[\s\S]*?<\/think>/gi, "").trim();
 }
 
-// Macro replacement function - replaces {{user}} with persona name
-function replaceMacros(content: string, personaName: string): string {
-  return content.replace(/\{\{user\}\}/gi, personaName);
+// Macro replacement function - replaces {{user}} with persona name and {{char}} with character name
+function replaceMacros(content: string, personaName: string, characterName: string): string {
+  return content
+    .replace(/\{\{user\}\}/gi, personaName)
+    .replace(/\{\{char\}\}/gi, characterName);
 }
 
 // Thinking Section Component
@@ -2817,6 +2819,8 @@ export default function Chat() {
       }
       
       // Create a new conversation with the selected persona and new character
+      // Apply macro replacement for {{user}} -> persona name and {{char}} -> character name
+      const replacedFirstMessage = replaceMacros(character.firstMessage, selectedPersona.name, character.name);
       const newConversation: Conversation = {
         id: crypto.randomUUID(),
         personaId: selectedPersona.id,
@@ -2824,7 +2828,7 @@ export default function Chat() {
         messages: [
           {
             role: "assistant",
-            content: character.firstMessage,
+            content: replacedFirstMessage,
           },
         ],
         createdAt: Date.now(),
@@ -3675,7 +3679,9 @@ Write an engaging story segment. If this is a good point for player interaction,
   const createConversation = (greeting?: string) => {
     if (!selectedPersona || !selectedCharacter) return;
     
-    const greetingMessage = greeting || selectedCharacter.firstMessage;
+    const rawGreeting = greeting || selectedCharacter.firstMessage;
+    // Apply macro replacement for {{user}} -> persona name and {{char}} -> character name
+    const greetingMessage = replaceMacros(rawGreeting, selectedPersona.name, selectedCharacter.name);
     
     const newConversation: Conversation = {
       id: crypto.randomUUID(),
@@ -6335,8 +6341,8 @@ Write an engaging story segment. If this is a good point for player interaction,
                     const rawContent = message.role === "assistant"
                       ? removeThinkTags(message.content)
                       : message.content;
-                    const displayContent = selectedPersona 
-                      ? replaceMacros(rawContent, selectedPersona.name)
+                    const displayContent = selectedPersona && selectedCharacter
+                      ? replaceMacros(rawContent, selectedPersona.name, selectedCharacter.name)
                       : rawContent;
                     
                     const isEditing = editingMessageIndex === index;
@@ -6392,8 +6398,8 @@ Write an engaging story segment. If this is a good point for player interaction,
                             ) : (
                               <>
                                 {/* Thinking section - collapsible */}
-                                {thinkContent && selectedPersona && (
-                                  <ThinkingSection content={replaceMacros(thinkContent, selectedPersona.name)} />
+                                {thinkContent && selectedPersona && selectedCharacter && (
+                                  <ThinkingSection content={replaceMacros(thinkContent, selectedPersona.name, selectedCharacter.name)} />
                                 )}
                                 <FormattedText content={displayContent} />
                               </>
@@ -6486,10 +6492,10 @@ Write an engaging story segment. If this is a good point for player interaction,
                         </span>
                       </div>
                       <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-zinc-800 text-zinc-100">
-                        {streamingThinking && selectedPersona && (
-                          <ThinkingSection content={replaceMacros(streamingThinking, selectedPersona.name)} />
+                        {streamingThinking && selectedPersona && selectedCharacter && (
+                          <ThinkingSection content={replaceMacros(streamingThinking, selectedPersona.name, selectedCharacter.name)} />
                         )}
-                        <FormattedText content={selectedPersona ? replaceMacros(streamingContent, selectedPersona.name) : streamingContent} />
+                        <FormattedText content={selectedPersona && selectedCharacter ? replaceMacros(streamingContent, selectedPersona.name, selectedCharacter.name) : streamingContent} />
                         <span className="inline-block w-2 h-4 ml-1 bg-zinc-400 animate-pulse" />
                       </div>
                     </div>
