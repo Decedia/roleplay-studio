@@ -8,6 +8,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
+- [x] Add {{char}} macro replacement - replaces {{char}} with character name in AI responses and greetings
 - [x] Improve character generator instructions - added Required Fields section emphasizing alternateGreetings is required
 - [x] Add alternate greetings feature - characters can have multiple greetings, users can choose which one to start chat with
 - [x] Remove disabled state from all send buttons in all modes - send buttons are now always enabled
