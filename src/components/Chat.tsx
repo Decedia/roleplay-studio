@@ -1761,6 +1761,14 @@ export default function Chat() {
   const [brainstormError, setBrainstormError] = useState<string | null>(null);
   const [appliedCharacters, setAppliedCharacters] = useState<Set<string>>(new Set());
   
+  // Undo state for deleted items
+  const [deletedItem, setDeletedItem] = useState<{
+    type: "persona" | "character" | "conversation";
+    item: Persona | Character | Conversation;
+    timestamp: number;
+  } | null>(null);
+  const [showUndoToast, setShowUndoToast] = useState(false);
+  
   // VN Generator state
   type VNStep = "premise" | "characters" | "plot" | "story" | "play";
   interface VNCharacter {
@@ -2231,6 +2239,23 @@ export default function Chat() {
   };
 
   const deletePersona = (id: string) => {
+    // Store for potential undo
+    const deleted = personas.find(p => p.id === id);
+    if (deleted) {
+      setDeletedItem({
+        type: "persona",
+        item: deleted,
+        timestamp: Date.now()
+      });
+      setShowUndoToast(true);
+      
+      // Clear undo after 5 seconds
+      setTimeout(() => {
+        setShowUndoToast(false);
+        setDeletedItem(null);
+      }, 5000);
+    }
+    
     setPersonas((prev) => prev.filter((p) => p.id !== id));
     // Also delete related conversations
     setConversations((prev) => prev.filter((c) => c.personaId !== id));
@@ -2590,6 +2615,23 @@ export default function Chat() {
   };
 
   const deleteCharacter = (id: string) => {
+    // Store for potential undo
+    const deleted = characters.find(c => c.id === id);
+    if (deleted) {
+      setDeletedItem({
+        type: "character",
+        item: deleted,
+        timestamp: Date.now()
+      });
+      setShowUndoToast(true);
+      
+      // Clear undo after 5 seconds
+      setTimeout(() => {
+        setShowUndoToast(false);
+        setDeletedItem(null);
+      }, 5000);
+    }
+    
     setCharacters((prev) => prev.filter((c) => c.id !== id));
     // Also delete related conversations
     setConversations((prev) => prev.filter((c) => c.characterId !== id));
@@ -3706,10 +3748,43 @@ Write an engaging story segment. If this is a good point for player interaction,
   };
 
   const deleteConversation = (id: string) => {
+    // Store for potential undo
+    const deleted = conversations.find(c => c.id === id);
+    if (deleted) {
+      setDeletedItem({
+        type: "conversation",
+        item: deleted,
+        timestamp: Date.now()
+      });
+      setShowUndoToast(true);
+      
+      // Clear undo after 5 seconds
+      setTimeout(() => {
+        setShowUndoToast(false);
+        setDeletedItem(null);
+      }, 5000);
+    }
+    
     setConversations((prev) => prev.filter((c) => c.id !== id));
     if (currentConversation?.id === id) {
       setCurrentConversation(null);
     }
+  };
+
+  // Undo delete function
+  const handleUndoDelete = () => {
+    if (!deletedItem) return;
+    
+    if (deletedItem.type === "persona") {
+      setPersonas(prev => [...prev, deletedItem.item as Persona]);
+    } else if (deletedItem.type === "character") {
+      setCharacters(prev => [...prev, deletedItem.item as Character]);
+    } else if (deletedItem.type === "conversation") {
+      setConversations(prev => [...prev, deletedItem.item as Conversation]);
+    }
+    
+    setShowUndoToast(false);
+    setDeletedItem(null);
   };
 
   const openSettings = () => {
@@ -4694,6 +4769,32 @@ Write an engaging story segment. If this is a good point for player interaction,
         </div>
       )}
 
+      {/* Undo Toast */}
+      {showUndoToast && deletedItem && (
+        <div className="fixed bottom-20 left-0 right-0 z-40 px-4 py-3">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white shadow-xl backdrop-blur-sm flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span className="text-sm">
+                  {deletedItem.type === "persona" && `Deleted "${(deletedItem.item as Persona).name}"`}
+                  {deletedItem.type === "character" && `Deleted "${(deletedItem.item as Character).name}"`}
+                  {deletedItem.type === "conversation" && `Deleted conversation`}
+                </span>
+              </div>
+              <button
+                onClick={handleUndoDelete}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 rounded-lg transition-colors text-sm"
+              >
+                Undo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content - Add top padding for fixed header */}
       <div className="flex-1 overflow-y-auto pt-20">
         <div className="max-w-4xl mx-auto px-4 py-6">
@@ -5279,6 +5380,26 @@ Write an engaging story segment. If this is a good point for player interaction,
                   >
                     Clear Chat
                   </button>
+                  <button
+                    onClick={() => {
+                      // Extract instructions from the last assistant message
+                      const lastAssistantMsg = brainstormMessages.filter(m => m.role === "assistant" && !m.isContinue).pop();
+                      if (lastAssistantMsg) {
+                        const instructions = extractInstructions(lastAssistantMsg.content);
+                        if (instructions.length > 0) {
+                          // Apply all instructions
+                          instructions.forEach(instr => applyInstructions(instr));
+                        }
+                      }
+                      setBrainstormMessages([]);
+                      setBrainstormInput("");
+                    }}
+                    disabled={brainstormMessages.filter(m => m.role === "assistant" && !m.isContinue).length === 0}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Clear chat and apply instructions from last AI response"
+                  >
+                    Clear & Apply
+                  </button>
                 </div>
                 
                 {/* Mobile hamburger menu button */}
@@ -5298,7 +5419,7 @@ Write an engaging story segment. If this is a good point for player interaction,
               
               {/* Mobile menu dropdown for brainstorm */}
               {showMobileMenu && view === "brainstorm" && (
-                <div className="md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3">
+                <div className="md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2">
                   <button
                     onClick={() => {
                       setBrainstormMessages([]);
@@ -5311,6 +5432,28 @@ Write an engaging story segment. If this is a good point for player interaction,
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                     <span>Clear Chat</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      // Extract instructions from the last assistant message
+                      const lastAssistantMsg = brainstormMessages.filter(m => m.role === "assistant" && !m.isContinue).pop();
+                      if (lastAssistantMsg) {
+                        const instructions = extractInstructions(lastAssistantMsg.content);
+                        if (instructions.length > 0) {
+                          instructions.forEach(instr => applyInstructions(instr));
+                        }
+                      }
+                      setBrainstormMessages([]);
+                      setBrainstormInput("");
+                      setShowMobileMenu(false);
+                    }}
+                    disabled={brainstormMessages.filter(m => m.role === "assistant" && !m.isContinue).length === 0}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>Clear & Apply</span>
                   </button>
                 </div>
               )}
