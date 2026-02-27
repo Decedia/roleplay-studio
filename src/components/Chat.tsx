@@ -2854,7 +2854,6 @@ export default function Chat() {
       if (lastUserIdx === undefined || lastUserIdx < 0) return; // No user message to resend
       
       const lastUserMessage = brainstormMessages[lastUserIdx].content;
-      setBrainstormMessages(prev => [...prev, { role: "user", content: lastUserMessage }]);
       setIsBrainstorming(true);
       
       // Use the exclusive brainstorm instructions
