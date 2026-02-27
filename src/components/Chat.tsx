@@ -3115,11 +3115,22 @@ export default function Chat() {
   
   // Character Generator function - chat-based like brainstorm
   const sendGeneratorMessage = async () => {
-    if (!generatorInput.trim() || isGenerating) return;
+    if (isGenerating) return;
     
     const userMessage = generatorInput.trim();
-    setGeneratorInput("");
-    setGeneratorMessages(prev => [...prev, { role: "user", content: userMessage }]);
+    let messageToSend: string;
+    
+    // If empty, resend the last user message
+    if (!userMessage) {
+      const lastUserMsg = generatorMessages.filter(m => m.role === "user").pop();
+      if (!lastUserMsg) return;
+      messageToSend = lastUserMsg.content;
+      setGeneratorMessages(prev => [...prev, { role: "user", content: messageToSend }]);
+    } else {
+      messageToSend = userMessage;
+      setGeneratorInput("");
+      setGeneratorMessages(prev => [...prev, { role: "user", content: userMessage }]);
+    }
     setIsGenerating(true);
     setGeneratorError(null);
     
@@ -3156,7 +3167,7 @@ export default function Chat() {
           content: msg.content
         })),
         // Add the current user message
-        { role: "user" as const, content: userMessage }
+        { role: "user" as const, content: messageToSend }
       ];
       
       let responseText: string;
@@ -3332,14 +3343,22 @@ export default function Chat() {
   const sendBrainstormMessage = async () => {
     if (isBrainstorming) return;
     
+    let messageToSend: string;
+    
     // If input is empty, resend the last user message
     if (!brainstormInput.trim()) {
       // Find the last user message
-      const lastUserIdx = brainstormMessages.map((m, i) => m.role === "user" ? i : -1).filter(i => i >= 0).pop();
-      if (lastUserIdx === undefined || lastUserIdx < 0) return; // No user message to resend
+      const lastUserMsg = brainstormMessages.filter(m => m.role === "user").pop();
+      if (!lastUserMsg) return; // No user message to resend
       
-      const lastUserMessage = brainstormMessages[lastUserIdx].content;
-      setIsBrainstorming(true);
+      messageToSend = lastUserMsg.content;
+      setBrainstormMessages(prev => [...prev, { role: "user", content: messageToSend }]);
+    } else {
+      messageToSend = brainstormInput.trim();
+      setBrainstormInput("");
+      setBrainstormMessages(prev => [...prev, { role: "user", content: messageToSend }]);
+    }
+    setIsBrainstorming(true);
       
       // Use the exclusive brainstorm instructions
       let systemPrompt = brainstormInstructions;
@@ -3371,7 +3390,7 @@ export default function Chat() {
             role: msg.role as "user" | "assistant",
             content: msg.content
           })),
-          { role: "user", content: lastUserMessage }
+          { role: "user", content: messageToSend }
         ];
         
         let responseText: string;
@@ -3428,114 +3447,6 @@ export default function Chat() {
       } finally {
         setIsBrainstorming(false);
       }
-      return;
-    }
-    
-    const userMessage = brainstormInput.trim();
-    setBrainstormInput("");
-    setBrainstormMessages(prev => [...prev, { role: "user", content: userMessage }]);
-    setIsBrainstorming(true);
-    
-    // Use the exclusive brainstorm instructions (not global instructions)
-    let systemPrompt = brainstormInstructions;
-    
-    // Add jailbreak after exclusive instructions (following order: instructions -> jailbreak)
-    if (globalInstructions.enableJailbreak && globalInstructions.jailbreakInstructions) {
-      systemPrompt = `${systemPrompt}\n\n${globalInstructions.jailbreakInstructions}`;
-    }
-
-    try {
-      const config = providerConfigs[activeProvider];
-      const activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
-      
-      // Build config from active profile
-      const profileConfig = {
-        ...config,
-        apiKey: activeProfile?.apiKey || "",
-        projectId: activeProfile?.projectId || "",
-        serviceAccountJson: activeProfile?.serviceAccountJson,
-        vertexMode: activeProfile?.vertexMode,
-        vertexLocation: activeProfile?.vertexLocation,
-        selectedModel: globalSettings.modelId || activeProfile?.selectedModel
-      };
-      
-      // Build messages array with conversation history
-      const messages: Message[] = [
-        // System prompt as a system message
-        { role: "system", content: systemPrompt },
-        // Include all previous brainstorm messages for context
-        ...brainstormMessages.map(msg => ({
-          role: msg.role as "user" | "assistant",
-          content: msg.content
-        })),
-        // Add the current user message
-        { role: "user" as const, content: userMessage }
-      ];
-      
-      let responseText: string;
-      
-      if (activeProvider === "puter") {
-        const response = await window.puter.ai.chat(messages, {
-          model: globalSettings.modelId,
-          temperature: 0.8,
-          max_tokens: 2000,
-        });
-        responseText = response.message.content;
-      } else {
-        const configWithModel = profileConfig;
-        
-        if (globalSettings.enableStreaming) {
-          // Use streaming
-          let streamedContent = "";
-          await streamChatMessage(
-            messages,
-            configWithModel,
-            {
-              temperature: 0.8,
-              maxTokens: 2000,
-              topP: 0.9,
-              topK: 40,
-              enableThinking: false,
-            },
-            (chunk) => {
-              if (chunk.error) {
-                throw new Error(chunk.error);
-              }
-              if (chunk.content !== undefined) {
-                streamedContent = chunk.content;
-              }
-              if (chunk.done) {
-                responseText = chunk.content || "";
-              }
-            }
-          );
-        } else {
-          // Use non-streaming
-          const response = await sendChatMessage(
-            messages,
-            configWithModel,
-            {
-              temperature: 0.8,
-              maxTokens: 2000,
-              topP: 0.9,
-              topK: 40,
-              enableThinking: false,
-            }
-          );
-          if (response.error) {
-            throw new Error(response.error);
-          }
-          responseText = response.content || "";
-        }
-      }
-      
-      setBrainstormMessages(prev => [...prev, { role: "assistant", content: responseText }]);
-    } catch (error) {
-      console.error("Brainstorm error:", error);
-      setBrainstormError(error instanceof Error ? error.message : "An error occurred. Please try again.");
-    } finally {
-      setIsBrainstorming(false);
-    }
   };
 
   // Continue the last AI response in generator (for incomplete responses)
@@ -5607,13 +5518,27 @@ Write an engaging story segment. If this is a good point for player interaction,
                     const contentWithoutJson = msg.role === "assistant" 
                       ? msg.content.replace(/```json\n[\s\S]*?```/g, "").trim()
                       : msg.content;
+                    
+                    // Extract thinking content for assistant messages
+                    const thinkContent = msg.role === "assistant" 
+                      ? extractThinkContent(msg.content)
+                      : null;
+                    const displayContent = thinkContent 
+                      ? msg.content.replace(/<think\s*>[\s\S]*?<\/think>/gi, "").trim()
+                      : contentWithoutJson;
+                    
                     const isLastMessage = idx === generatorMessages.length - 1;
                     const isAssistantMessage = msg.role === "assistant";
                     const isLastAssistantMessage = isAssistantMessage && isLastMessage;
                     
                     return (
-                      <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                        <div className={`max-w-[90%] ${msg.role === "user" ? "order-2" : "order-1"}`}>
+                      <div key={idx} className={`flex gap-4 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                        {msg.role === "assistant" && (
+                          <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                            <span className="text-sm text-white font-semibold">AI</span>
+                          </div>
+                        )}
+                        <div className={`max-w-[80%] ${msg.role === "user" ? "order-first" : ""}`}>
                           <div className={`rounded-2xl px-4 py-3 ${
                             msg.role === "user" 
                               ? "bg-zinc-700 text-white" 
@@ -5651,7 +5576,13 @@ Write an engaging story segment. If this is a good point for player interaction,
                                 </div>
                               </div>
                             ) : (
-                              <FormattedText content={contentWithoutJson || (characterData.length > 0 ? "Here is the generated character:" : "")} />
+                              <>
+                                {/* Thinking section - collapsible */}
+                                {thinkContent && (
+                                  <ThinkingSection content={thinkContent} />
+                                )}
+                                <FormattedText content={displayContent || (characterData.length > 0 ? "Here is the generated character:" : "")} />
+                              </>
                             )}
                           </div>
                           
@@ -5837,15 +5768,23 @@ Write an engaging story segment. If this is a good point for player interaction,
                             </div>
                           )}
                         </div>
+                        {msg.role === "user" && (
+                          <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                            <span className="text-sm text-white font-semibold">You</span>
+                          </div>
+                        )}
                       </div>
                     );
                   })
                 )}
                 
                 {isGenerating && (
-                  <div className="flex justify-start">
+                  <div className="flex gap-4 justify-start">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                      <span className="text-sm text-white font-semibold">AI</span>
+                    </div>
                     <div className="bg-zinc-800 rounded-2xl px-4 py-3">
-                      <div className="flex items-center gap-2">
+                      <div className="flex gap-1">
                         <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
                         <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
                         <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
@@ -5878,11 +5817,24 @@ Write an engaging story segment. If this is a good point for player interaction,
                 />
                 <button
                   onClick={sendGeneratorMessage}
-                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors"
+                  disabled={isGenerating}
+                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors disabled:opacity-50"
                 >
-                  Send
+                  {isGenerating ? (
+                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                  )}
                 </button>
               </div>
+              <p className="text-xs text-zinc-600 mt-2 text-center">
+                Press Enter to send, Shift+Enter for new line. Empty message resends last.
+              </p>
             </div>
           )}
 
@@ -6040,13 +5992,27 @@ Write an engaging story segment. If this is a good point for player interaction,
                     const contentWithoutInstructions = msg.role === "assistant" 
                       ? msg.content.replace(/```instructions\n[\s\S]*?```/g, "").trim()
                       : msg.content;
+                    
+                    // Extract thinking content for assistant messages
+                    const thinkContent = msg.role === "assistant" 
+                      ? extractThinkContent(msg.content)
+                      : null;
+                    const displayContent = thinkContent 
+                      ? msg.content.replace(/<think\s*>[\s\S]*?<\/think>/gi, "").trim()
+                      : contentWithoutInstructions;
+                    
                     const isLastMessage = idx === brainstormMessages.length - 1;
                     const isAssistantMessage = msg.role === "assistant";
                     const isLastAssistantMessage = isAssistantMessage && isLastMessage;
                     
                     return (
-                      <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                        <div className={`max-w-[80%] ${msg.role === "user" ? "order-2" : "order-1"}`}>
+                      <div key={idx} className={`flex gap-4 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                        {msg.role === "assistant" && (
+                          <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                            <span className="text-sm text-white font-semibold">AI</span>
+                          </div>
+                        )}
+                        <div className={`max-w-[80%] ${msg.role === "user" ? "order-first" : ""}`}>
                           <div className={`rounded-2xl px-4 py-3 ${
                             msg.role === "user" 
                               ? "bg-zinc-700 text-white" 
@@ -6084,7 +6050,13 @@ Write an engaging story segment. If this is a good point for player interaction,
                                 </div>
                               </div>
                             ) : (
-                              <FormattedText content={contentWithoutInstructions} />
+                              <>
+                                {/* Thinking section - collapsible */}
+                                {thinkContent && (
+                                  <ThinkingSection content={thinkContent} />
+                                )}
+                                <FormattedText content={displayContent} />
+                              </>
                             )}
                           </div>
                           
@@ -6208,15 +6180,23 @@ Write an engaging story segment. If this is a good point for player interaction,
                             </div>
                           )}
                         </div>
+                        {msg.role === "user" && (
+                          <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                            <span className="text-sm text-white font-semibold">You</span>
+                          </div>
+                        )}
                       </div>
                     );
                   })
                 )}
                 
                 {isBrainstorming && (
-                  <div className="flex justify-start">
+                  <div className="flex gap-4 justify-start">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                      <span className="text-sm text-white font-semibold">AI</span>
+                    </div>
                     <div className="bg-zinc-800 rounded-2xl px-4 py-3">
-                      <div className="flex items-center gap-2">
+                      <div className="flex gap-1">
                         <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
                         <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
                         <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
@@ -6249,11 +6229,24 @@ Write an engaging story segment. If this is a good point for player interaction,
                 />
                 <button
                   onClick={sendBrainstormMessage}
-                  className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-colors"
+                  disabled={isBrainstorming}
+                  className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-colors disabled:opacity-50"
                 >
-                  Send
+                  {isBrainstorming ? (
+                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                  )}
                 </button>
               </div>
+              <p className="text-xs text-zinc-600 mt-2 text-center">
+                Press Enter to send, Shift+Enter for new line. Empty message resends last.
+              </p>
             </div>
           )}
 
