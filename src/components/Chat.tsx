@@ -1453,9 +1453,37 @@ function SettingsModal({
                             <option value="full">Full (Service Account)</option>
                           </select>
                           <p className="text-xs text-zinc-500 mt-1">
-                            Express mode uses API key authentication. Both modes require a Google Cloud Project ID.
+                            Express mode uses API key authentication. Full mode requires a Google Cloud Service Account JSON.
                           </p>
                         </div>
+                        {/* Show Service Account JSON input only in Full mode */}
+                        {getActiveProfile("google-vertex")?.vertexMode === "full" && (
+                          <div>
+                            <label className="block text-xs text-zinc-400 mb-1">Service Account JSON <span className="text-red-400">*</span></label>
+                            <textarea
+                              value={getActiveProfile("google-vertex")?.serviceAccountJson || ""}
+                              onChange={(e) => {
+                                const profileId = providerConfigs["google-vertex"].activeProfileId;
+                                if (!profileId) return;
+                                setProviderConfigs(prev => ({
+                                  ...prev,
+                                  "google-vertex": {
+                                    ...prev["google-vertex"],
+                                    profiles: prev["google-vertex"].profiles.map(p =>
+                                      p.id === profileId ? { ...p, serviceAccountJson: e.target.value } : p
+                                    )
+                                  }
+                                }));
+                              }}
+                              placeholder='{"type": "service_account", "project_id": "..."}'
+                              rows={4}
+                              className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono text-xs"
+                            />
+                            <p className="text-xs text-zinc-500 mt-1">
+                              Paste your service account JSON key from the Google Cloud Console
+                            </p>
+                          </div>
+                        )}
                         {/* Project ID */}
                         <div>
                           <label className="block text-xs text-zinc-400 mb-1">Google Cloud Project ID <span className="text-red-400">*</span></label>
@@ -1542,7 +1570,13 @@ function SettingsModal({
                           <button
                             type="button"
                             onClick={() => onTestConnection("google-vertex")}
-                            disabled={connectionStatus["google-vertex"]?.status === "testing" || !getActiveProfile("google-vertex")?.apiKey || !getActiveProfile("google-vertex")?.projectId}
+                            disabled={
+                              connectionStatus["google-vertex"]?.status === "testing" ||
+                              !getActiveProfile("google-vertex")?.projectId ||
+                              (getActiveProfile("google-vertex")?.vertexMode === "full" 
+                                ? !getActiveProfile("google-vertex")?.serviceAccountJson 
+                                : !getActiveProfile("google-vertex")?.apiKey)
+                            }
                             className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {connectionStatus["google-vertex"]?.status === "testing" ? "Testing..." : "Test Connection"}
@@ -1550,7 +1584,12 @@ function SettingsModal({
                           <button
                             type="button"
                             onClick={() => onConnect("google-vertex")}
-                            disabled={!getActiveProfile("google-vertex")?.apiKey || !getActiveProfile("google-vertex")?.projectId}
+                            disabled={
+                              !getActiveProfile("google-vertex")?.projectId ||
+                              (getActiveProfile("google-vertex")?.vertexMode === "full" 
+                                ? !getActiveProfile("google-vertex")?.serviceAccountJson 
+                                : !getActiveProfile("google-vertex")?.apiKey)
+                            }
                             className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             Connect
