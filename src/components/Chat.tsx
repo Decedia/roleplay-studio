@@ -2287,11 +2287,97 @@ export default function Chat() {
       const stored = localStorage.getItem(PROVIDER_CONFIGS_KEY);
       if (stored) {
         try {
-          const configs = JSON.parse(stored) as Record<LLMProviderType, ProviderConfig>;
+          let configs = JSON.parse(stored) as Record<LLMProviderType, ProviderConfig>;
+          
+          // Migration: Convert old single-config format to new profiles system
+          // Check if configs have the new profiles structure
+          const needsMigration = Object.values(configs).some(
+            config => !Array.isArray(config.profiles) || config.profiles.length === 0
+          );
+          
+          if (needsMigration) {
+            console.log("Migrating provider configs to new profiles system");
+            configs = Object.keys(configs).reduce((acc, key) => {
+              const providerType = key as LLMProviderType;
+              const oldConfig = configs[providerType];
+              
+              // Create a default profile from old single-config values
+              const defaultProfile: ProviderProfile = {
+                id: `default-${Date.now()}`,
+                name: "Default Profile",
+                apiKey: oldConfig.apiKey,
+                projectId: oldConfig.projectId,
+                serviceAccountJson: oldConfig.serviceAccountJson,
+                vertexMode: oldConfig.vertexMode,
+                vertexLocation: oldConfig.vertexLocation,
+                selectedModel: oldConfig.selectedModel,
+                createdAt: Date.now()
+              };
+              
+              acc[providerType] = {
+                ...oldConfig,
+                profiles: [defaultProfile],
+                activeProfileId: defaultProfile.id,
+                isEnabled: oldConfig.isEnabled
+              };
+              
+              return acc;
+            }, {} as Record<LLMProviderType, ProviderConfig>);
+            
+            // Save migrated configs
+            localStorage.setItem(PROVIDER_CONFIGS_KEY, JSON.stringify(configs));
+            console.log("Migration completed successfully");
+          }
+          
           setProviderConfigs(configs);
         } catch (e) {
           console.error("Failed to parse provider configs:", e);
         }
+      } else {
+        // Check for old per-provider storage (for users upgrading from older versions)
+        const providers: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim"];
+        const migratedConfigs: Record<LLMProviderType, ProviderConfig> = {
+          "puter": { type: "puter", isEnabled: true, profiles: [], activeProfileId: null },
+          "google-ai-studio": { type: "google-ai-studio", isEnabled: false, profiles: [], activeProfileId: null },
+          "google-vertex": { type: "google-vertex", isEnabled: false, profiles: [], activeProfileId: null },
+          "nvidia-nim": { type: "nvidia-nim", isEnabled: false, profiles: [], activeProfileId: null },
+        };
+        
+        providers.forEach(providerType => {
+          const oldKey = getProviderConfigKey(providerType);
+          const oldConfigStr = localStorage.getItem(oldKey);
+          if (oldConfigStr) {
+            try {
+              const oldConfig = JSON.parse(oldConfigStr);
+              
+              // Create a default profile from old config
+              const defaultProfile: ProviderProfile = {
+                id: `default-${Date.now()}`,
+                name: "Default Profile",
+                apiKey: oldConfig.apiKey,
+                projectId: oldConfig.projectId,
+                serviceAccountJson: oldConfig.serviceAccountJson,
+                vertexMode: oldConfig.vertexMode,
+                vertexLocation: oldConfig.vertexLocation,
+                selectedModel: oldConfig.selectedModel,
+                createdAt: Date.now()
+              };
+              
+              migratedConfigs[providerType] = {
+                ...migratedConfigs[providerType],
+                isEnabled: oldConfig.isEnabled || false,
+                profiles: [defaultProfile],
+                activeProfileId: defaultProfile.id
+              };
+              
+              console.log(`Migrated ${providerType} config from old storage`);
+            } catch (e) {
+              console.error(`Failed to parse old config for ${providerType}:`, e);
+            }
+          }
+        });
+        
+        setProviderConfigs(migratedConfigs);
       }
     };
     loadProviderConfigs();
@@ -3047,6 +3133,18 @@ export default function Chat() {
 
     try {
       const config = providerConfigs[activeProvider];
+      const activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
+      
+      // Build config from active profile
+      const profileConfig = {
+        ...config,
+        apiKey: activeProfile?.apiKey || "",
+        projectId: activeProfile?.projectId || "",
+        serviceAccountJson: activeProfile?.serviceAccountJson,
+        vertexMode: activeProfile?.vertexMode,
+        vertexLocation: activeProfile?.vertexLocation,
+        selectedModel: globalSettings.modelId || activeProfile?.selectedModel
+      };
       
       // Build messages array with conversation history
       const messages: Message[] = [
@@ -3071,10 +3169,7 @@ export default function Chat() {
         });
         responseText = response.message.content;
       } else {
-        const configWithModel = {
-          ...config,
-          selectedModel: globalSettings.modelId || config.selectedModel,
-        };
+        const configWithModel = profileConfig;
         
         if (globalSettings.enableStreaming) {
           // Use streaming
@@ -3256,6 +3351,18 @@ export default function Chat() {
       
       try {
         const config = providerConfigs[activeProvider];
+        const activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
+        
+        // Build config from active profile
+        const profileConfig = {
+          ...config,
+          apiKey: activeProfile?.apiKey || "",
+          projectId: activeProfile?.projectId || "",
+          serviceAccountJson: activeProfile?.serviceAccountJson,
+          vertexMode: activeProfile?.vertexMode,
+          vertexLocation: activeProfile?.vertexLocation,
+          selectedModel: globalSettings.modelId || activeProfile?.selectedModel
+        };
         
         // Build messages for resend
         const messages: Message[] = [
@@ -3268,10 +3375,7 @@ export default function Chat() {
         ];
         
         let responseText: string;
-        const configWithModel = {
-          ...config,
-          selectedModel: globalSettings.modelId || config.selectedModel,
-        };
+        const configWithModel = profileConfig;
         
         if (globalSettings.enableStreaming) {
           // Use streaming
@@ -3342,6 +3446,18 @@ export default function Chat() {
 
     try {
       const config = providerConfigs[activeProvider];
+      const activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
+      
+      // Build config from active profile
+      const profileConfig = {
+        ...config,
+        apiKey: activeProfile?.apiKey || "",
+        projectId: activeProfile?.projectId || "",
+        serviceAccountJson: activeProfile?.serviceAccountJson,
+        vertexMode: activeProfile?.vertexMode,
+        vertexLocation: activeProfile?.vertexLocation,
+        selectedModel: globalSettings.modelId || activeProfile?.selectedModel
+      };
       
       // Build messages array with conversation history
       const messages: Message[] = [
@@ -3366,10 +3482,7 @@ export default function Chat() {
         });
         responseText = response.message.content;
       } else {
-        const configWithModel = {
-          ...config,
-          selectedModel: globalSettings.modelId || config.selectedModel,
-        };
+        const configWithModel = profileConfig;
         
         if (globalSettings.enableStreaming) {
           // Use streaming
@@ -3447,6 +3560,18 @@ export default function Chat() {
     
     try {
       const config = providerConfigs[activeProvider];
+      const activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
+      
+      // Build config from active profile
+      const profileConfig = {
+        ...config,
+        apiKey: activeProfile?.apiKey || "",
+        projectId: activeProfile?.projectId || "",
+        serviceAccountJson: activeProfile?.serviceAccountJson,
+        vertexMode: activeProfile?.vertexMode,
+        vertexLocation: activeProfile?.vertexLocation,
+        selectedModel: globalSettings.modelId || activeProfile?.selectedModel
+      };
       
       let systemPrompt = generatorInstructions;
       
@@ -3473,10 +3598,7 @@ export default function Chat() {
         });
         responseText = response.message.content;
       } else {
-        const configWithModel = {
-          ...config,
-          selectedModel: globalSettings.modelId || config.selectedModel,
-        };
+        const configWithModel = profileConfig;
         
         if (globalSettings.enableStreaming) {
           let streamedContent = "";
@@ -3566,6 +3688,18 @@ export default function Chat() {
     
     try {
       const config = providerConfigs[activeProvider];
+      const activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
+      
+      // Build config from active profile
+      const profileConfig = {
+        ...config,
+        apiKey: activeProfile?.apiKey || "",
+        projectId: activeProfile?.projectId || "",
+        serviceAccountJson: activeProfile?.serviceAccountJson,
+        vertexMode: activeProfile?.vertexMode,
+        vertexLocation: activeProfile?.vertexLocation,
+        selectedModel: globalSettings.modelId || activeProfile?.selectedModel
+      };
       
       let systemPrompt = brainstormInstructions;
       
@@ -3592,10 +3726,7 @@ export default function Chat() {
         });
         responseText = response.message.content;
       } else {
-        const configWithModel = {
-          ...config,
-          selectedModel: globalSettings.modelId || config.selectedModel,
-        };
+        const configWithModel = profileConfig;
         
         if (globalSettings.enableStreaming) {
           let streamedContent = "";
@@ -3724,6 +3855,19 @@ Generate 3-5 main characters. Respond with ONLY a JSON array of characters in th
 
     try {
       const config = providerConfigs[activeProvider];
+      const activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
+      
+      // Build config from active profile
+      const profileConfig = {
+        ...config,
+        apiKey: activeProfile?.apiKey || "",
+        projectId: activeProfile?.projectId || "",
+        serviceAccountJson: activeProfile?.serviceAccountJson,
+        vertexMode: activeProfile?.vertexMode,
+        vertexLocation: activeProfile?.vertexLocation,
+        selectedModel: globalSettings.modelId || activeProfile?.selectedModel
+      };
+      
       const messages: Message[] = [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }
@@ -3739,10 +3883,7 @@ Generate 3-5 main characters. Respond with ONLY a JSON array of characters in th
         });
         responseText = response.message.content;
       } else {
-        const configWithModel = {
-          ...config,
-          selectedModel: globalSettings.modelId || config.selectedModel,
-        };
+        const configWithModel = profileConfig;
         const response = await sendChatMessage(
           messages,
           configWithModel,
@@ -3833,6 +3974,19 @@ Generate 5-10 plot points that tell a complete story. Respond with ONLY a JSON a
 
     try {
       const config = providerConfigs[activeProvider];
+      const activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
+      
+      // Build config from active profile
+      const profileConfig = {
+        ...config,
+        apiKey: activeProfile?.apiKey || "",
+        projectId: activeProfile?.projectId || "",
+        serviceAccountJson: activeProfile?.serviceAccountJson,
+        vertexMode: activeProfile?.vertexMode,
+        vertexLocation: activeProfile?.vertexLocation,
+        selectedModel: globalSettings.modelId || activeProfile?.selectedModel
+      };
+      
       const messages: Message[] = [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }
@@ -3848,10 +4002,7 @@ Generate 5-10 plot points that tell a complete story. Respond with ONLY a JSON a
         });
         responseText = response.message.content;
       } else {
-        const configWithModel = {
-          ...config,
-          selectedModel: globalSettings.modelId || config.selectedModel,
-        };
+        const configWithModel = profileConfig;
         const response = await sendChatMessage(
           messages,
           configWithModel,
@@ -3938,6 +4089,19 @@ Write an engaging story segment. If this is a good point for player interaction,
 
     try {
       const config = providerConfigs[activeProvider];
+      const activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
+      
+      // Build config from active profile
+      const profileConfig = {
+        ...config,
+        apiKey: activeProfile?.apiKey || "",
+        projectId: activeProfile?.projectId || "",
+        serviceAccountJson: activeProfile?.serviceAccountJson,
+        vertexMode: activeProfile?.vertexMode,
+        vertexLocation: activeProfile?.vertexLocation,
+        selectedModel: globalSettings.modelId || activeProfile?.selectedModel
+      };
+      
       const messages: Message[] = [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }
@@ -3953,10 +4117,7 @@ Write an engaging story segment. If this is a good point for player interaction,
         });
         responseText = response.message.content;
       } else {
-        const configWithModel = {
-          ...config,
-          selectedModel: globalSettings.modelId || config.selectedModel,
-        };
+        const configWithModel = profileConfig;
         const response = await sendChatMessage(
           messages,
           configWithModel,
@@ -4178,6 +4339,18 @@ Write an engaging story segment. If this is a good point for player interaction,
     try {
       // Get current provider config
       const currentConfig = providerConfigs[activeProvider];
+      const activeProfile = currentConfig.profiles.find(p => p.id === currentConfig.activeProfileId);
+      
+      // Build config from active profile
+      const profileConfig = {
+        ...currentConfig,
+        apiKey: activeProfile?.apiKey || "",
+        projectId: activeProfile?.projectId || "",
+        serviceAccountJson: activeProfile?.serviceAccountJson,
+        vertexMode: activeProfile?.vertexMode,
+        vertexLocation: activeProfile?.vertexLocation,
+        selectedModel: globalSettings.modelId || activeProfile?.selectedModel
+      };
       
       // Build system prompt with lorebook support
       const systemPrompt = buildFullSystemPrompt(
@@ -4201,7 +4374,7 @@ Write an engaging story segment. If this is a good point for player interaction,
         // Streaming mode for real-time responses
         await streamChatMessage(
           truncatedMessages,
-          { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
+          profileConfig,
           {
             temperature: globalSettings.temperature,
             maxTokens: globalSettings.maxTokens,
