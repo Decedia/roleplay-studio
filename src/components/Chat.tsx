@@ -1865,7 +1865,7 @@ export default function Chat() {
   const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
-  const [view, setView] = useState<"personas" | "characters" | "conversations" | "chat" | "generator" | "brainstorm" | "vn-generator">("personas");
+  const [view, setView] = useState<"home" | "personas" | "characters" | "conversations" | "chat" | "generator" | "brainstorm" | "vn-generator">("home");
   const [showPersonaModal, setShowPersonaModal] = useState(false);
   
   // Brainstorm state
@@ -5010,7 +5010,9 @@ Write an engaging story segment. If this is a good point for player interaction,
               </div>
               <div className="min-w-0 flex-1 overflow-hidden">
                 <h1 className="text-xl font-semibold text-white truncate">
-                  {view === "chat" && selectedPersona && selectedCharacter
+                  {view === "home"
+                    ? "Roleplay Studio"
+                    : view === "chat" && selectedPersona && selectedCharacter
                     ? `${selectedPersona.name} × ${selectedCharacter.name}`
                     : view === "conversations" && selectedPersona && selectedCharacter
                     ? `${selectedPersona.name} × ${selectedCharacter.name}`
@@ -5023,7 +5025,9 @@ Write an engaging story segment. If this is a good point for player interaction,
                     : "Roleplay Studio"}
                 </h1>
                 <p className="text-sm text-zinc-500 truncate">
-                  {view === "personas"
+                  {view === "home"
+                    ? "Choose what you want to do"
+                    : view === "personas"
                     ? "Roleplay with AI"
                     : view === "characters"
                     ? "Select AI character"
@@ -5363,85 +5367,93 @@ Write an engaging story segment. If this is a good point for player interaction,
       {/* Main Content - Add top padding for fixed header */}
       <div className="flex-1 overflow-y-auto pt-20">
         <div className="max-w-4xl mx-auto px-4 py-6">
+          {/* Home View - Landing page with 4 big buttons */}
+          {view === "home" && (
+            <div className="space-y-6">
+              <div className="text-center py-8">
+                <h2 className="text-2xl font-bold text-white mb-2">Welcome to Roleplay Studio</h2>
+                <p className="text-zinc-400">Choose what you want to do</p>
+              </div>
+              
+              <div className="grid gap-4">
+                {/* Roleplay with AI - Main feature */}
+                <button
+                  onClick={() => setView("personas")}
+                  className="w-full flex items-center gap-4 p-6 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-2xl hover:from-blue-700 hover:to-cyan-700 transition-all transform hover:scale-[1.02] shadow-lg"
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
+                    <span className="text-3xl">💬</span>
+                  </div>
+                  <div className="text-left">
+                    <h3 className="text-xl font-bold">Roleplay with AI</h3>
+                    <p className="text-blue-100 text-sm">Chat with AI characters using custom personas</p>
+                  </div>
+                  <svg className="w-6 h-6 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+                
+                {/* Character Generator */}
+                <button
+                  onClick={() => setView("generator")}
+                  className="w-full flex items-center gap-4 p-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-[1.02] shadow-lg"
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
+                    <span className="text-3xl">🎭</span>
+                  </div>
+                  <div className="text-left">
+                    <h3 className="text-xl font-bold">Character Generator</h3>
+                    <p className="text-purple-100 text-sm">Create AI characters from descriptions</p>
+                  </div>
+                  <svg className="w-6 h-6 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+                
+                {/* Instructions Generator */}
+                <button
+                  onClick={() => setView("brainstorm")}
+                  className="w-full flex items-center gap-4 p-6 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl hover:from-amber-600 hover:to-orange-600 transition-all transform hover:scale-[1.02] shadow-lg"
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
+                    <span className="text-3xl">✨</span>
+                  </div>
+                  <div className="text-left">
+                    <h3 className="text-xl font-bold">Instructions Generator</h3>
+                    <p className="text-amber-100 text-sm">Brainstorm roleplay instructions and scenarios</p>
+                  </div>
+                  <svg className="w-6 h-6 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+                
+                {/* VN Generator */}
+                <button
+                  onClick={() => setView("vn-generator")}
+                  className="w-full flex items-center gap-4 p-6 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl hover:from-indigo-700 hover:to-purple-700 transition-all transform hover:scale-[1.02] shadow-lg"
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
+                    <span className="text-3xl">📖</span>
+                  </div>
+                  <div className="text-left">
+                    <h3 className="text-xl font-bold">VN Generator</h3>
+                    <p className="text-indigo-100 text-sm">Create visual novel stories with choices</p>
+                  </div>
+                  <svg className="w-6 h-6 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Personas View */}
           {view === "personas" && (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-medium text-white">Roleplay with AI</h2>
-                
-                {/* Desktop buttons - hidden on mobile */}
-                <div className="hidden md:flex gap-2">
-                  <button
-                    onClick={() => setView("brainstorm")}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-colors text-sm"
-                  >
-                    <span className="text-lg">🎭</span>
-                    Instructions Generator
-                  </button>
-                  <button
-                    onClick={() => setView("generator")}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors text-sm"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    Character Generator
-                  </button>
-                </div>
-                
-                {/* Mobile hamburger menu button */}
-                <button
-                  onClick={() => setShowMobileMenu(!showMobileMenu)}
-                  className="md:hidden p-2 hover:bg-zinc-800 rounded-lg transition-colors"
-                >
-                  <svg className="w-6 h-6 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    {showMobileMenu ? (
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    ) : (
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                    )}
-                  </svg>
-                </button>
               </div>
               
-              {/* Mobile menu dropdown */}
-              {showMobileMenu && view === "personas" && (
-                <div className="md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2">
-                  <button
-                    onClick={() => {
-                      setView("brainstorm");
-                      setShowMobileMenu(false);
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-colors"
-                  >
-                    <span className="text-xl">🎭</span>
-                    <span>Instructions Generator</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setView("generator");
-                      setShowMobileMenu(false);
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    <span>Character Generator</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setView("vn-generator");
-                      setShowMobileMenu(false);
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-colors"
-                  >
-                    <span className="text-xl">📖</span>
-                    <span>VN Generator</span>
-                  </button>
-                </div>
-              )}
-
               {personas.length === 0 ? (
                 <div className="text-center py-16">
                   <div className="w-16 h-16 rounded-2xl bg-zinc-800 flex items-center justify-center mx-auto mb-4">
@@ -5461,48 +5473,62 @@ Write an engaging story segment. If this is a good point for player interaction,
                   </button>
                 </div>
               ) : (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {personas.map((persona) => (
-                    <div
-                      key={persona.id}
-                      className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition-colors"
-                    >
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-                          <span className="text-xl text-white font-semibold">
-                            {persona.name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                        <div className="flex gap-1">
-                          <button
-                            onClick={() => openEditPersona(persona)}
-                            className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
-                          >
-                            <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => deletePersona(persona.id)}
-                            className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
-                          >
-                            <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
-                      <h3 className="text-lg font-medium text-white mb-1 truncate">{persona.name}</h3>
-                      <p className="text-sm text-zinc-400 line-clamp-2 mb-4">{persona.description}</p>
-                      <button
-                        onClick={() => selectPersona(persona)}
-                        className="w-full py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
+                <>
+                  {/* Create button - same level as personas */}
+                  <button
+                    onClick={() => setShowPersonaModal(true)}
+                    className="flex items-center justify-center gap-2 p-4 bg-zinc-900 border-2 border-dashed border-zinc-700 text-zinc-400 rounded-xl hover:border-zinc-600 hover:text-zinc-300 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span className="font-medium">Create New Persona</span>
+                  </button>
+                  
+                  {/* Available personas */}
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {personas.map((persona) => (
+                      <div
+                        key={persona.id}
+                        className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition-colors"
                       >
-                        Select Persona
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                            <span className="text-xl text-white font-semibold">
+                              {persona.name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => openEditPersona(persona)}
+                              className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                            >
+                              <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => deletePersona(persona.id)}
+                              className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                            >
+                              <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                        <h3 className="text-lg font-medium text-white mb-1 truncate">{persona.name}</h3>
+                        <p className="text-sm text-zinc-400 line-clamp-2 mb-4">{persona.description}</p>
+                        <button
+                          onClick={() => selectPersona(persona)}
+                          className="w-full py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
+                        >
+                          Select Persona
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -5513,9 +5539,9 @@ Write an engaging story segment. If this is a good point for player interaction,
               <div className="flex justify-between items-center gap-2">
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setView("personas")}
+                    onClick={() => setView("home")}
                     className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
-                    title="Back to Personas"
+                    title="Back to Home"
                   >
                     <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -5633,15 +5659,15 @@ Write an engaging story segment. If this is a good point for player interaction,
                 <div className="md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2">
                   <button
                     onClick={() => {
-                      setView("personas");
+                      setView("home");
                       setShowMobileMenu(false);
                     }}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                     </svg>
-                    <span>Roleplay with AI</span>
+                    <span>Home</span>
                   </button>
                   <button
                     onClick={() => {
@@ -6084,9 +6110,9 @@ Write an engaging story segment. If this is a good point for player interaction,
               <div className="flex justify-between items-center gap-2">
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setView("personas")}
+                    onClick={() => setView("home")}
                     className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
-                    title="Back to Personas"
+                    title="Back to Home"
                   >
                     <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -6204,15 +6230,15 @@ Write an engaging story segment. If this is a good point for player interaction,
                 <div className="md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2">
                   <button
                     onClick={() => {
-                      setView("personas");
+                      setView("home");
                       setShowMobileMenu(false);
                     }}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                     </svg>
-                    <span>Roleplay with AI</span>
+                    <span>Home</span>
                   </button>
                   <button
                     onClick={() => {
@@ -6580,7 +6606,18 @@ Write an engaging story segment. If this is a good point for player interaction,
           {view === "vn-generator" && (
             <div className="space-y-6 h-full flex flex-col">
               <div className="flex justify-between items-center">
-                <h2 className="text-lg font-medium text-white">📖 Visual Novel Generator</h2>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setView("home")}
+                    className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                    title="Back to Home"
+                  >
+                    <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <h2 className="text-lg font-medium text-white">📖 Visual Novel Generator</h2>
+                </div>
                 
                 {/* Desktop buttons - hidden on mobile */}
                 <div className="hidden md:flex gap-2">
@@ -6614,15 +6651,15 @@ Write an engaging story segment. If this is a good point for player interaction,
                 <div className="md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2">
                   <button
                     onClick={() => {
-                      setView("personas");
+                      setView("home");
                       setShowMobileMenu(false);
                     }}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                     </svg>
-                    <span>Roleplay with AI</span>
+                    <span>Home</span>
                   </button>
                   <button
                     onClick={() => {
