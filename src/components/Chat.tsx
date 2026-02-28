@@ -5820,7 +5820,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                           </div>
                           
                           {/* Message actions - edit, delete, refresh on all messages */}
-                          {editingGeneratorIndex !== idx && (isAssistantMessage || msg.role === "user") && (
+                          {editingGeneratorIndex !== idx && (
                             <div className="flex gap-1 mt-1 justify-start">
                               {/* Edit button - for all messages */}
                               <button
@@ -6357,8 +6357,8 @@ Write an engaging story segment. If this is a good point for player interaction,
                             )}
                           </div>
                           
-                          {/* Message actions - edit, delete, refresh on all messages */}
-                          {editingBrainstormIndex !== idx && (isAssistantMessage || msg.role === "user") && (
+                          {/* Message actions - edit, delete on all messages */}
+                          {editingBrainstormIndex !== idx && (
                             <div className="flex gap-1 mt-1 justify-start">
                               {/* Edit button - for all messages */}
                               <button
@@ -7366,8 +7366,8 @@ Write an engaging story segment. If this is a good point for player interaction,
                               </>
                             )}
                           </div>
-                          {/* Message actions - edit, delete for all messages, retry/continue only on last message */}
-                          {!isEditing && (message.role === "user" || isLastMessage) && (
+                          {/* Message actions - edit, delete for all messages, retry/continue only on last assistant message */}
+                          {!isEditing && (message.role === "user" || isLastMessage || (message.role === "assistant")) && (
                             <div className={`flex gap-1 mt-1 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
                               {/* Edit button */}
                               <button
