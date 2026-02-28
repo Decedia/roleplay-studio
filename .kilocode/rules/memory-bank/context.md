@@ -8,6 +8,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
+- [x] Fix navigation back button: home no longer has back button, personas now has back button (goes to home), characters/generator/brainstorm/vn-generator now go back to main menu (home)
 - [x] Fix message duplication bug in generator/brainstorm when resending same message - removed duplicate message addition to state (only add new messages, not resends)
 - [x] Fix refresh/continue button showing on all assistant messages - now only shows on last assistant message
 - [x] Fix generator regenerate to keep last user message - changed slice to lastUserIdx + 1 to include the user message
