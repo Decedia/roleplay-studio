@@ -8,6 +8,11 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
+- [x] Add "Continue Last Session" button to home menu:
+  - Stores last session state (view, persona, character, conversation) in localStorage
+  - Shows "Continue Last Session" button on home page when valid session exists
+  - Resumes chat, generator, brainstorm, and VN generator views
+  - Automatically saves session when switching views or starting conversations
 - [x] Sync UI/UX between conversation, generator, and brainstorm views:
   - Added loading spinner to send buttons in generator and brainstorm
   - Added "Press Enter to send" hint to generator and brainstorm
@@ -429,6 +434,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date       | Changes                                                                                                                                                                                            |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-02-28 | Add "Continue Last Session" button to home menu - stores last view, persona, character, conversation in localStorage, allows resuming chat, generator, brainstorm, and VN generator views |
 | 2026-02-26 | Add alternate greetings feature - characters can have multiple greetings stored, users can choose which greeting to start roleplay with when creating new conversation |
 | 2026-02-26 | Remove disabled state from all send buttons in all modes - send buttons are now always enabled in chat, generator, brainstorm, and VN views                                                                                         |
 | 2026-02-26 | Enable send button in brainstorm view when last message is from user - allows resending last message when input is empty                                                                                                                                             |
