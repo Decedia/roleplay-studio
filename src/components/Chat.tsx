@@ -204,6 +204,20 @@ const GENERATOR_INSTRUCTIONS_KEY = "chat_generator_instructions";
 const GENERATOR_MESSAGES_KEY = "chat_generator_messages";
 const GENERATOR_SESSIONS_KEY = "chat_generator_sessions";
 const BRAINSTORM_SESSIONS_KEY = "chat_brainstorm_sessions";
+const LAST_SESSION_KEY = "chat_last_session";
+
+// Type for last session data (stores view and conversation state)
+type ViewType = "home" | "personas" | "characters" | "conversations" | "chat" | "generator" | "brainstorm" | "vn-generator";
+
+interface LastSession {
+  view: ViewType;
+  personaId?: string;
+  characterId?: string;
+  conversationId?: string;
+  generatorMessages?: Array<{role: "user" | "assistant", content: string}>;
+  brainstormMessages?: Array<{role: "user" | "assistant", content: string}>;
+  timestamp: number;
+}
 
 // Default brainstorm instructions - exclusive to the brainstorm tab
 const DEFAULT_BRAINSTORM_INSTRUCTIONS = `You are a creative roleplay instruction brainstorming assistant. Your purpose is to help users create detailed, immersive roleplay instructions.
@@ -1865,7 +1879,11 @@ export default function Chat() {
   const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
-  const [view, setView] = useState<"home" | "personas" | "characters" | "conversations" | "chat" | "generator" | "brainstorm" | "vn-generator">("home");
+  const [view, setView] = useState<ViewType>("home");
+  
+  // Ref to store last session for continue functionality
+  const lastSessionRef = useRef<LastSession | null>(null);
+  const hasRestoredSession = useRef(false);
   const [showPersonaModal, setShowPersonaModal] = useState(false);
   
   // Brainstorm state
@@ -2262,7 +2280,38 @@ export default function Chat() {
         console.error("Failed to parse brainstorm sessions:", e);
       }
     }
+    
+    // Load last session (but don't restore automatically - user must click continue)
+    const storedLastSession = localStorage.getItem(LAST_SESSION_KEY);
+    if (storedLastSession) {
+      try {
+        const lastSession = JSON.parse(storedLastSession) as LastSession;
+        // Store in a ref to be used by the continue button
+        lastSessionRef.current = lastSession;
+      } catch (e) {
+        console.error("Failed to parse last session:", e);
+      }
+    }
   }, []);
+
+  // Save last session when view or related state changes
+  useEffect(() => {
+    // Don't save on initial render
+    if (!hasRestoredSession.current) return;
+    
+    const session: LastSession = {
+      view,
+      personaId: selectedPersona?.id,
+      characterId: selectedCharacter?.id,
+      conversationId: currentConversation?.id,
+      generatorMessages: generatorMessages,
+      brainstormMessages: brainstormMessages,
+      timestamp: Date.now(),
+    };
+    
+    localStorage.setItem(LAST_SESSION_KEY, JSON.stringify(session));
+    lastSessionRef.current = session;
+  }, [view, selectedPersona, selectedCharacter, currentConversation, generatorMessages, brainstormMessages]);
 
   // Save personas to localStorage
   useEffect(() => {
@@ -4937,6 +4986,76 @@ Write an engaging story segment. If this is a good point for player interaction,
     }
   };
 
+  // Continue last session - restores the previous view and conversation
+  const continueLastSession = () => {
+    const lastSession = lastSessionRef.current;
+    if (!lastSession) return;
+    
+    // Mark as restored to prevent saving during restore
+    hasRestoredSession.current = true;
+    
+    // Restore based on the saved view
+    if (lastSession.view === "chat" && lastSession.personaId && lastSession.characterId && lastSession.conversationId) {
+      // Find the persona
+      const persona = personas.find(p => p.id === lastSession.personaId);
+      const character = characters.find(c => c.id === lastSession.characterId);
+      const conversation = conversations.find(c => c.id === lastSession.conversationId);
+      
+      if (persona && character && conversation) {
+        setSelectedPersona(persona);
+        setSelectedCharacter(character);
+        setCurrentConversation(conversation);
+        setView("chat");
+      } else {
+        // If any not found, go to personas
+        setView("personas");
+      }
+    } else if (lastSession.view === "generator") {
+      // Restore generator messages if available
+      if (lastSession.generatorMessages) {
+        setGeneratorMessages(lastSession.generatorMessages);
+      }
+      setView("generator");
+    } else if (lastSession.view === "brainstorm") {
+      // Restore brainstorm messages if available
+      if (lastSession.brainstormMessages) {
+        setBrainstormMessages(lastSession.brainstormMessages);
+      }
+      setView("brainstorm");
+    } else if (lastSession.view === "vn-generator") {
+      setView("vn-generator");
+    } else if (lastSession.view === "conversations" && lastSession.personaId && lastSession.characterId) {
+      const persona = personas.find(p => p.id === lastSession.personaId);
+      const character = characters.find(c => c.id === lastSession.characterId);
+      
+      if (persona && character) {
+        setSelectedPersona(persona);
+        setSelectedCharacter(character);
+        setView("conversations");
+      } else {
+        setView("personas");
+      }
+    } else if (lastSession.view === "characters" && lastSession.personaId) {
+      const persona = personas.find(p => p.id === lastSession.personaId);
+      
+      if (persona) {
+        setSelectedPersona(persona);
+        setView("characters");
+      } else {
+        setView("personas");
+      }
+    } else if (lastSession.view === "personas") {
+      setView("personas");
+    } else {
+      setView("home");
+    }
+    
+    // Reset the flag after a short delay
+    setTimeout(() => {
+      hasRestoredSession.current = false;
+    }, 100);
+  };
+
   // Get conversations for selected persona and character
   const filteredConversations = conversations.filter(
     (c) => c.personaId === selectedPersona?.id && c.characterId === selectedCharacter?.id
@@ -5374,6 +5493,25 @@ Write an engaging story segment. If this is a good point for player interaction,
                 <h2 className="text-2xl font-bold text-white mb-2">Welcome to Roleplay Studio</h2>
                 <p className="text-zinc-400">Choose what you want to do</p>
               </div>
+              
+              {/* Continue Last Conversation - shown when there's a valid session */}
+              {lastSessionRef.current && lastSessionRef.current.view !== "home" && (
+                <button
+                  onClick={continueLastSession}
+                  className="w-full flex items-center gap-4 p-6 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-2xl hover:from-emerald-700 hover:to-teal-700 transition-all transform hover:scale-[1.02] shadow-lg"
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
+                    <span className="text-3xl">↩️</span>
+                  </div>
+                  <div className="text-left">
+                    <h3 className="text-xl font-bold">Continue Last Session</h3>
+                    <p className="text-emerald-100 text-sm">Resume where you left off</p>
+                  </div>
+                  <svg className="w-6 h-6 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              )}
               
               <div className="grid gap-4">
                 {/* Roleplay with AI - Main feature */}
