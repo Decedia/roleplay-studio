@@ -5498,7 +5498,7 @@ Write an engaging story segment. If this is a good point for player interaction,
               </div>
               
               {/* Chat messages */}
-              <div className="flex-1 overflow-y-auto space-y-4 bg-zinc-900/50 rounded-xl p-4 min-h-[400px] max-h-[500px]">
+              <div className="flex-1 overflow-y-auto space-y-4 bg-zinc-900/50 rounded-xl p-4 pb-32" style={{ maxHeight: 'calc(100vh - 200px)' }}>
                 {generatorMessages.length === 0 ? (
                   <div className="text-center py-12">
                     <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mx-auto mb-4">
@@ -5794,47 +5794,51 @@ Write an engaging story segment. If this is a good point for player interaction,
                 )}
               </div>
               
-              {/* Input area */}
-              <div className="flex gap-2">
-                <textarea
-                  value={generatorInput}
-                  onChange={(e) => setGeneratorInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      sendGeneratorMessage();
-                    }
-                  }}
-                  placeholder="Describe the character you want to create..."
-                  className="flex-1 bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none min-h-[48px] max-h-[200px]"
-                  disabled={isGenerating}
-                  rows={1}
-                  onInput={(e) => {
-                    const target = e.target as HTMLTextAreaElement;
-                    target.style.height = "auto";
-                    target.style.height = Math.min(target.scrollHeight, 200) + "px";
-                  }}
-                />
-                <button
-                  onClick={sendGeneratorMessage}
-                  disabled={isGenerating}
-                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors disabled:opacity-50"
-                >
-                  {isGenerating ? (
-                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                    </svg>
-                  )}
-                </button>
+              {/* Input area - fixed at bottom */}
+              <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-800 bg-black/80 backdrop-blur-xl z-50">
+                <div className="max-w-4xl mx-auto px-4 py-4">
+                  <div className="flex gap-2">
+                    <textarea
+                      value={generatorInput}
+                      onChange={(e) => setGeneratorInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          sendGeneratorMessage();
+                        }
+                      }}
+                      placeholder="Describe the character you want to create..."
+                      className="flex-1 bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none min-h-[48px] max-h-[200px]"
+                      disabled={isGenerating}
+                      rows={1}
+                      onInput={(e) => {
+                        const target = e.target as HTMLTextAreaElement;
+                        target.style.height = "auto";
+                        target.style.height = Math.min(target.scrollHeight, 200) + "px";
+                      }}
+                    />
+                    <button
+                      onClick={sendGeneratorMessage}
+                      disabled={isGenerating}
+                      className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors disabled:opacity-50"
+                    >
+                      {isGenerating ? (
+                        <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-xs text-zinc-600 mt-2 text-center">
+                    Press Enter to send, Shift+Enter for new line. Empty message resends last.
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-zinc-600 mt-2 text-center">
-                Press Enter to send, Shift+Enter for new line. Empty message resends last.
-              </p>
             </div>
           )}
 
@@ -5973,7 +5977,7 @@ Write an engaging story segment. If this is a good point for player interaction,
               </div>
               
               {/* Chat messages */}
-              <div className="flex-1 overflow-y-auto space-y-4 bg-zinc-900/50 rounded-xl p-4 min-h-[400px] max-h-[500px]">
+              <div className="flex-1 overflow-y-auto space-y-4 bg-zinc-900/50 rounded-xl p-4 pb-32" style={{ maxHeight: 'calc(100vh - 200px)' }}>
                 {brainstormMessages.length === 0 ? (
                   <div className="text-center py-12">
                     <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center mx-auto mb-4">
@@ -6206,47 +6210,51 @@ Write an engaging story segment. If this is a good point for player interaction,
                 )}
               </div>
               
-              {/* Input area */}
-              <div className="flex gap-2">
-                <textarea
-                  value={brainstormInput}
-                  onChange={(e) => setBrainstormInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      sendBrainstormMessage();
-                    }
-                  }}
-                  placeholder="Describe the roleplay you want to play..."
-                  className="flex-1 bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500 border border-zinc-700 resize-none min-h-[48px] max-h-[200px]"
-                  disabled={isBrainstorming}
-                  rows={1}
-                  onInput={(e) => {
-                    const target = e.target as HTMLTextAreaElement;
-                    target.style.height = "auto";
-                    target.style.height = Math.min(target.scrollHeight, 200) + "px";
-                  }}
-                />
-                <button
-                  onClick={sendBrainstormMessage}
-                  disabled={isBrainstorming}
-                  className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-colors disabled:opacity-50"
-                >
-                  {isBrainstorming ? (
-                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                    </svg>
-                  )}
-                </button>
+              {/* Input area - fixed at bottom */}
+              <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-800 bg-black/80 backdrop-blur-xl z-50">
+                <div className="max-w-4xl mx-auto px-4 py-4">
+                  <div className="flex gap-2">
+                    <textarea
+                      value={brainstormInput}
+                      onChange={(e) => setBrainstormInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          sendBrainstormMessage();
+                        }
+                      }}
+                      placeholder="Describe the roleplay you want to play..."
+                      className="flex-1 bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500 border border-zinc-700 resize-none min-h-[48px] max-h-[200px]"
+                      disabled={isBrainstorming}
+                      rows={1}
+                      onInput={(e) => {
+                        const target = e.target as HTMLTextAreaElement;
+                        target.style.height = "auto";
+                        target.style.height = Math.min(target.scrollHeight, 200) + "px";
+                      }}
+                    />
+                    <button
+                      onClick={sendBrainstormMessage}
+                      disabled={isBrainstorming}
+                      className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-colors disabled:opacity-50"
+                    >
+                      {isBrainstorming ? (
+                        <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-xs text-zinc-600 mt-2 text-center">
+                    Press Enter to send, Shift+Enter for new line. Empty message resends last.
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-zinc-600 mt-2 text-center">
-                Press Enter to send, Shift+Enter for new line. Empty message resends last.
-              </p>
             </div>
           )}
 
