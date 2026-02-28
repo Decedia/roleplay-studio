@@ -4971,7 +4971,9 @@ Write an engaging story segment. If this is a good point for player interaction,
 
   const goBack = () => {
     if (view === "home") {
-      setView("personas");
+      // No back action from home
+    } else if (view === "personas") {
+      setView("home");
     } else if (view === "chat") {
       setView("conversations");
       setCurrentConversation(null);
@@ -4979,14 +4981,14 @@ Write an engaging story segment. If this is a good point for player interaction,
       setView("characters");
       setSelectedCharacter(null);
     } else if (view === "characters") {
-      setView("personas");
+      setView("home");
       setSelectedPersona(null);
     } else if (view === "generator") {
-      setView("personas");
+      setView("home");
     } else if (view === "brainstorm") {
-      setView("personas");
+      setView("home");
     } else if (view === "vn-generator") {
-      setView("personas");
+      setView("home");
     }
   };
 
@@ -5096,7 +5098,7 @@ Write an engaging story segment. If this is a good point for player interaction,
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-3 min-w-0 overflow-hidden">
-              {view !== "personas" && (
+              {view !== "home" && (
                 <button
                   onClick={goBack}
                   className="p-2 hover:bg-zinc-800 rounded-lg transition-colors flex-shrink-0"
