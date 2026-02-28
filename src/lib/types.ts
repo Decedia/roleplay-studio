@@ -117,6 +117,22 @@ export interface Conversation {
   updatedAt: number;
 }
 
+// Generator conversation (standalone session for character generation)
+export interface GeneratorConversation {
+  id: string;
+  messages: Array<{role: "user" | "assistant", content: string, isContinue?: boolean}>;
+  createdAt: number;
+  updatedAt: number;
+}
+
+// Brainstorm conversation (standalone session for instruction brainstorming)
+export interface BrainstormConversation {
+  id: string;
+  messages: Array<{role: "user" | "assistant", content: string, isContinue?: boolean}>;
+  createdAt: number;
+  updatedAt: number;
+}
+
 // LLM Provider types
 export type LLMProviderType = "puter" | "google-ai-studio" | "google-vertex" | "nvidia-nim";
 

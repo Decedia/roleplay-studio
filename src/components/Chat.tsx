@@ -20,7 +20,7 @@ import {
   FetchedModel,
 } from "@/lib/providers";
 import { readCharacterFile, buildFullSystemPrompt } from "@/lib/character-import";
-import { Character as CharacterType, CharacterBook, CharacterBookEntry, ProviderProfile } from "@/lib/types";
+import { Character as CharacterType, CharacterBook, CharacterBookEntry, ProviderProfile, GeneratorConversation, BrainstormConversation } from "@/lib/types";
 import { parseRoleplayText, getSegmentClasses, TextSegment } from "@/lib/text-formatter";
 
 // Types - using imported Message interface
@@ -202,6 +202,8 @@ const BRAINSTORM_INSTRUCTIONS_KEY = "chat_brainstorm_instructions";
 const BRAINSTORM_MESSAGES_KEY = "chat_brainstorm_messages";
 const GENERATOR_INSTRUCTIONS_KEY = "chat_generator_instructions";
 const GENERATOR_MESSAGES_KEY = "chat_generator_messages";
+const GENERATOR_SESSIONS_KEY = "chat_generator_sessions";
+const BRAINSTORM_SESSIONS_KEY = "chat_brainstorm_sessions";
 
 // Default brainstorm instructions - exclusive to the brainstorm tab
 const DEFAULT_BRAINSTORM_INSTRUCTIONS = `You are a creative roleplay instruction brainstorming assistant. Your purpose is to help users create detailed, immersive roleplay instructions.
@@ -1869,6 +1871,11 @@ export default function Chat() {
   // Brainstorm state
   const [brainstormMessages, setBrainstormMessages] = useState<Array<{role: "user" | "assistant", content: string, isContinue?: boolean}>>([]);
   const [brainstormInput, setBrainstormInput] = useState("");
+  
+  // Brainstorm sessions (list of conversations)
+  const [brainstormSessions, setBrainstormSessions] = useState<BrainstormConversation[]>([]);
+  const [currentBrainstormSession, setCurrentBrainstormSession] = useState<BrainstormConversation | null>(null);
+  const [showBrainstormSessions, setShowBrainstormSessions] = useState(false);
   const [isBrainstorming, setIsBrainstorming] = useState(false);
   const [appliedInstructions, setAppliedInstructions] = useState<Set<string>>(new Set());
   const [brainstormInstructions, setBrainstormInstructions] = useState<string>(DEFAULT_BRAINSTORM_INSTRUCTIONS);
@@ -2064,6 +2071,11 @@ export default function Chat() {
   // Character generator state
   const [generatorMessages, setGeneratorMessages] = useState<Array<{role: "user" | "assistant", content: string, isContinue?: boolean}>>([]);
   const [generatorInput, setGeneratorInput] = useState("");
+  
+  // Generator sessions (list of conversations)
+  const [generatorSessions, setGeneratorSessions] = useState<GeneratorConversation[]>([]);
+  const [currentGeneratorSession, setCurrentGeneratorSession] = useState<GeneratorConversation | null>(null);
+  const [showGeneratorSessions, setShowGeneratorSessions] = useState(false);
   const [generatedCharacter, setGeneratedCharacter] = useState<Character | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatorError, setGeneratorError] = useState<string | null>(null);
@@ -2228,6 +2240,28 @@ export default function Chat() {
         console.error("Failed to parse generator messages:", e);
       }
     }
+    
+    // Load generator sessions
+    const storedGeneratorSessions = localStorage.getItem(GENERATOR_SESSIONS_KEY);
+    if (storedGeneratorSessions) {
+      try {
+        const sessions = JSON.parse(storedGeneratorSessions) as GeneratorConversation[];
+        setGeneratorSessions(sessions);
+      } catch (e) {
+        console.error("Failed to parse generator sessions:", e);
+      }
+    }
+    
+    // Load brainstorm sessions
+    const storedBrainstormSessions = localStorage.getItem(BRAINSTORM_SESSIONS_KEY);
+    if (storedBrainstormSessions) {
+      try {
+        const sessions = JSON.parse(storedBrainstormSessions) as BrainstormConversation[];
+        setBrainstormSessions(sessions);
+      } catch (e) {
+        console.error("Failed to parse brainstorm sessions:", e);
+      }
+    }
   }, []);
 
   // Save personas to localStorage
@@ -2280,6 +2314,25 @@ export default function Chat() {
   useEffect(() => {
     localStorage.setItem(GENERATOR_MESSAGES_KEY, JSON.stringify(generatorMessages));
   }, [generatorMessages]);
+  
+  // Save generator sessions
+  useEffect(() => {
+    if (generatorSessions.length > 0 || localStorage.getItem(GENERATOR_SESSIONS_KEY)) {
+      localStorage.setItem(GENERATOR_SESSIONS_KEY, JSON.stringify(generatorSessions));
+    }
+  }, [generatorSessions]);
+  
+  // Save brainstorm messages
+  useEffect(() => {
+    localStorage.setItem(BRAINSTORM_MESSAGES_KEY, JSON.stringify(brainstormMessages));
+  }, [brainstormMessages]);
+  
+  // Save brainstorm sessions
+  useEffect(() => {
+    if (brainstormSessions.length > 0 || localStorage.getItem(BRAINSTORM_SESSIONS_KEY)) {
+      localStorage.setItem(BRAINSTORM_SESSIONS_KEY, JSON.stringify(brainstormSessions));
+    }
+  }, [brainstormSessions]);
   
   // Load provider configs from localStorage
   useEffect(() => {
@@ -4191,6 +4244,86 @@ Write an engaging story segment. If this is a good point for player interaction,
     }
   };
 
+  // Generator session management
+  const createGeneratorSession = () => {
+    const newSession: GeneratorConversation = {
+      id: `gen_${Date.now()}`,
+      messages: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+    setGeneratorSessions(prev => [...prev, newSession]);
+    setCurrentGeneratorSession(newSession);
+    setGeneratorMessages([]);
+    setShowGeneratorSessions(false);
+  };
+
+  const selectGeneratorSession = (session: GeneratorConversation) => {
+    setCurrentGeneratorSession(session);
+    setGeneratorMessages(session.messages);
+    setShowGeneratorSessions(false);
+  };
+
+  const deleteGeneratorSession = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setGeneratorSessions(prev => prev.filter(s => s.id !== id));
+    if (currentGeneratorSession?.id === id) {
+      setCurrentGeneratorSession(null);
+      setGeneratorMessages([]);
+    }
+  };
+
+  // Save generator session when messages change
+  const saveGeneratorSession = () => {
+    if (currentGeneratorSession) {
+      setGeneratorSessions(prev => prev.map(s =>
+        s.id === currentGeneratorSession.id
+          ? { ...s, messages: generatorMessages, updatedAt: Date.now() }
+          : s
+      ));
+    }
+  };
+
+  // Brainstorm session management
+  const createBrainstormSession = () => {
+    const newSession: BrainstormConversation = {
+      id: `brain_${Date.now()}`,
+      messages: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+    setBrainstormSessions(prev => [...prev, newSession]);
+    setCurrentBrainstormSession(newSession);
+    setBrainstormMessages([]);
+    setShowBrainstormSessions(false);
+  };
+
+  const selectBrainstormSession = (session: BrainstormConversation) => {
+    setCurrentBrainstormSession(session);
+    setBrainstormMessages(session.messages);
+    setShowBrainstormSessions(false);
+  };
+
+  const deleteBrainstormSession = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setBrainstormSessions(prev => prev.filter(s => s.id !== id));
+    if (currentBrainstormSession?.id === id) {
+      setCurrentBrainstormSession(null);
+      setBrainstormMessages([]);
+    }
+  };
+
+  // Save brainstorm session when messages change
+  const saveBrainstormSession = () => {
+    if (currentBrainstormSession) {
+      setBrainstormSessions(prev => prev.map(s =>
+        s.id === currentBrainstormSession.id
+          ? { ...s, messages: brainstormMessages, updatedAt: Date.now() }
+          : s
+      ));
+    }
+  };
+
   // Undo delete function
   const handleUndoDelete = () => {
     if (!deletedItem) return;
@@ -5418,6 +5551,73 @@ Write an engaging story segment. If this is a good point for player interaction,
                     </svg>
                   </button>
                   <h2 className="text-lg font-medium text-white">AI Character Generator</h2>
+                  
+                  {/* Sessions dropdown */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowGeneratorSessions(!showGeneratorSessions)}
+                      className="ml-2 px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm flex items-center gap-1"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                      </svg>
+                      Sessions
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    
+                    {/* Sessions dropdown menu */}
+                    {showGeneratorSessions && (
+                      <div className="absolute right-0 top-full mt-2 w-72 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50 max-h-80 overflow-y-auto">
+                        <div className="p-2">
+                          <button
+                            onClick={() => createGeneratorSession()}
+                            className="w-full flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            New Session
+                          </button>
+                        </div>
+                        
+                        {generatorSessions.length > 0 && (
+                          <div className="border-t border-zinc-800">
+                            {generatorSessions
+                              .sort((a, b) => b.updatedAt - a.updatedAt)
+                              .map((session) => (
+                                <div
+                                  key={session.id}
+                                  onClick={() => selectGeneratorSession(session)}
+                                  className={`flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-zinc-800 transition-colors ${
+                                    currentGeneratorSession?.id === session.id ? 'bg-zinc-800' : ''
+                                  }`}
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm text-white truncate">
+                                      Session ({session.messages.length} msgs)
+                                    </p>
+                                    <p className="text-xs text-zinc-500">
+                                      {new Date(session.updatedAt).toLocaleDateString()}
+                                    </p>
+                                  </div>
+                                  <button
+                                    onClick={(e) => deleteGeneratorSession(session.id, e)}
+                                    className="p-1 hover:bg-zinc-700 rounded transition-colors"
+                                    title="Delete"
+                                  >
+                                    <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 
                 {/* Navigation buttons - hidden on mobile */}
@@ -5890,6 +6090,73 @@ Write an engaging story segment. If this is a good point for player interaction,
                     </svg>
                   </button>
                   <h2 className="text-lg font-medium text-white">🎭 Roleplay Brainstorm</h2>
+                  
+                  {/* Sessions dropdown */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowBrainstormSessions(!showBrainstormSessions)}
+                      className="ml-2 px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm flex items-center gap-1"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                      </svg>
+                      Sessions
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    
+                    {/* Sessions dropdown menu */}
+                    {showBrainstormSessions && (
+                      <div className="absolute right-0 top-full mt-2 w-72 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50 max-h-80 overflow-y-auto">
+                        <div className="p-2">
+                          <button
+                            onClick={() => createBrainstormSession()}
+                            className="w-full flex items-center gap-2 px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            New Session
+                          </button>
+                        </div>
+                        
+                        {brainstormSessions.length > 0 && (
+                          <div className="border-t border-zinc-800">
+                            {brainstormSessions
+                              .sort((a, b) => b.updatedAt - a.updatedAt)
+                              .map((session) => (
+                                <div
+                                  key={session.id}
+                                  onClick={() => selectBrainstormSession(session)}
+                                  className={`flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-zinc-800 transition-colors ${
+                                    currentBrainstormSession?.id === session.id ? 'bg-zinc-800' : ''
+                                  }`}
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm text-white truncate">
+                                      Session ({session.messages.length} msgs)
+                                    </p>
+                                    <p className="text-xs text-zinc-500">
+                                      {new Date(session.updatedAt).toLocaleDateString()}
+                                    </p>
+                                  </div>
+                                  <button
+                                    onClick={(e) => deleteBrainstormSession(session.id, e)}
+                                    className="p-1 hover:bg-zinc-700 rounded transition-colors"
+                                    title="Delete"
+                                  >
+                                    <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 
                 {/* Navigation buttons - hidden on mobile */}
