@@ -4970,7 +4970,9 @@ Write an engaging story segment. If this is a good point for player interaction,
   };
 
   const goBack = () => {
-    if (view === "chat") {
+    if (view === "home") {
+      setView("personas");
+    } else if (view === "chat") {
       setView("conversations");
       setCurrentConversation(null);
     } else if (view === "conversations") {
