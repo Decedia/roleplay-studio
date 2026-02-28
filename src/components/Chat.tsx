@@ -5405,21 +5405,40 @@ Write an engaging story segment. If this is a good point for player interaction,
 
           {/* Character Generator View */}
           {view === "generator" && (
-            <div className="space-y-6 h-full flex flex-col">
-              <div className="flex justify-between items-center">
-                <h2 className="text-lg font-medium text-white">AI Character Generator</h2>
+            <div className="pb-32">
+              <div className="flex justify-between items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setView("personas")}
+                    className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                    title="Back to Personas"
+                  >
+                    <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <h2 className="text-lg font-medium text-white">AI Character Generator</h2>
+                </div>
                 
-                {/* Desktop button - hidden on mobile */}
+                {/* Navigation buttons - hidden on mobile */}
                 <div className="hidden md:flex gap-2">
                   <button
-                    onClick={() => {
-                      setGeneratorMessages([]);
-                      setGeneratorInput("");
-                      setGeneratedCharacter(null);
-                    }}
-                    className="px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors text-sm"
+                    onClick={() => setView("characters")}
+                    className="px-3 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors text-sm"
                   >
-                    Clear Chat
+                    Characters
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (selectedPersona && selectedCharacter) {
+                        setView("conversations");
+                      } else {
+                        setView("characters");
+                      }
+                    }}
+                    className="px-3 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors text-sm"
+                  >
+                    Chats
                   </button>
                 </div>
                 
@@ -5440,20 +5459,34 @@ Write an engaging story segment. If this is a good point for player interaction,
               
               {/* Mobile menu dropdown for generator */}
               {showMobileMenu && view === "generator" && (
-                <div className="md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3">
+                <div className="md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2">
                   <button
                     onClick={() => {
-                      setGeneratorMessages([]);
-                      setGeneratorInput("");
-                      setGeneratedCharacter(null);
+                      setView("characters");
                       setShowMobileMenu(false);
                     }}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
-                    <span>Clear Chat</span>
+                    <span>Characters</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (selectedPersona && selectedCharacter) {
+                        setView("conversations");
+                      } else {
+                        setView("characters");
+                      }
+                      setShowMobileMenu(false);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    <span>Chats</span>
                   </button>
                 </div>
               )}
@@ -5462,27 +5495,27 @@ Write an engaging story segment. If this is a good point for player interaction,
                 Chat with AI to create a character. Describe what you want, and the AI will generate a character profile for you.
               </div>
               
-              {/* Generator Instructions Editor */}
+              {/* Generator Instructions - always visible */}
               <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
-                <button
-                  onClick={() => setShowGeneratorInstructionsEditor(!showGeneratorInstructionsEditor)}
-                  className="flex items-center justify-between w-full text-left"
-                >
+                <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-zinc-300">📝 Generator Instructions</span>
-                  <svg className={`w-5 h-5 text-zinc-500 transition-transform ${showGeneratorInstructionsEditor ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
+                  <button
+                    onClick={() => setShowGeneratorInstructionsEditor(!showGeneratorInstructionsEditor)}
+                    className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                  >
+                    {showGeneratorInstructionsEditor ? "Hide" : "Edit"}
+                  </button>
+                </div>
+                <p className="text-xs text-zinc-500 mb-3">
+                  These instructions tell the AI how to create characters.
+                </p>
                 
                 {showGeneratorInstructionsEditor && (
-                  <div className="mt-4 space-y-3">
-                    <p className="text-xs text-zinc-500">
-                      These instructions are exclusive to the character generator and tell the AI how to create characters.
-                    </p>
+                  <div className="space-y-3">
                     <textarea
                       value={generatorInstructions}
                       onChange={(e) => setGeneratorInstructions(e.target.value)}
-                      className="w-full h-64 bg-zinc-800 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-200 font-mono resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                      className="w-full h-32 bg-zinc-800 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-200 font-mono resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/50"
                       placeholder="Enter instructions for the character generator AI..."
                     />
                     <div className="flex gap-2">
@@ -5498,7 +5531,7 @@ Write an engaging story segment. If this is a good point for player interaction,
               </div>
               
               {/* Chat messages */}
-              <div className="flex-1 overflow-y-auto space-y-4 bg-zinc-900/50 rounded-xl p-4 pb-32" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+              <div className="space-y-4 bg-zinc-900/50 rounded-xl p-4">
                 {generatorMessages.length === 0 ? (
                   <div className="text-center py-12">
                     <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mx-auto mb-4">
@@ -5844,40 +5877,40 @@ Write an engaging story segment. If this is a good point for player interaction,
 
           {/* Brainstorm View */}
           {view === "brainstorm" && (
-            <div className="space-y-6 h-full flex flex-col">
-              <div className="flex justify-between items-center">
-                <h2 className="text-lg font-medium text-white">🎭 Roleplay Brainstorm</h2>
+            <div className="pb-32">
+              <div className="flex justify-between items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setView("personas")}
+                    className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                    title="Back to Personas"
+                  >
+                    <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <h2 className="text-lg font-medium text-white">🎭 Roleplay Brainstorm</h2>
+                </div>
                 
-                {/* Desktop button - hidden on mobile */}
+                {/* Navigation buttons - hidden on mobile */}
                 <div className="hidden md:flex gap-2">
                   <button
-                    onClick={() => {
-                      setBrainstormMessages([]);
-                      setBrainstormInput("");
-                    }}
-                    className="px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors text-sm"
+                    onClick={() => setView("generator")}
+                    className="px-3 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors text-sm"
                   >
-                    Clear Chat
+                    Generator
                   </button>
                   <button
                     onClick={() => {
-                      // Extract instructions from the last assistant message
-                      const lastAssistantMsg = brainstormMessages.filter(m => m.role === "assistant" && !m.isContinue).pop();
-                      if (lastAssistantMsg) {
-                        const instructions = extractInstructions(lastAssistantMsg.content);
-                        if (instructions.length > 0) {
-                          // Apply all instructions
-                          instructions.forEach(instr => applyInstructions(instr));
-                        }
+                      if (selectedPersona && selectedCharacter) {
+                        setView("conversations");
+                      } else {
+                        setView("characters");
                       }
-                      setBrainstormMessages([]);
-                      setBrainstormInput("");
                     }}
-                    disabled={brainstormMessages.filter(m => m.role === "assistant" && !m.isContinue).length === 0}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Clear chat and apply instructions from last AI response"
+                    className="px-3 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors text-sm"
                   >
-                    Clear & Apply
+                    Chats
                   </button>
                 </div>
                 
@@ -5901,38 +5934,31 @@ Write an engaging story segment. If this is a good point for player interaction,
                 <div className="md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2">
                   <button
                     onClick={() => {
-                      setBrainstormMessages([]);
-                      setBrainstormInput("");
+                      setView("generator");
+                      setShowMobileMenu(false);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    <span>AI Generator</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (selectedPersona && selectedCharacter) {
+                        setView("conversations");
+                      } else {
+                        setView("characters");
+                      }
                       setShowMobileMenu(false);
                     }}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                     </svg>
-                    <span>Clear Chat</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      // Extract instructions from the last assistant message
-                      const lastAssistantMsg = brainstormMessages.filter(m => m.role === "assistant" && !m.isContinue).pop();
-                      if (lastAssistantMsg) {
-                        const instructions = extractInstructions(lastAssistantMsg.content);
-                        if (instructions.length > 0) {
-                          instructions.forEach(instr => applyInstructions(instr));
-                        }
-                      }
-                      setBrainstormMessages([]);
-                      setBrainstormInput("");
-                      setShowMobileMenu(false);
-                    }}
-                    disabled={brainstormMessages.filter(m => m.role === "assistant" && !m.isContinue).length === 0}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span>Clear & Apply</span>
+                    <span>Chats</span>
                   </button>
                 </div>
               )}
@@ -5941,27 +5967,27 @@ Write an engaging story segment. If this is a good point for player interaction,
                 Chat with AI to brainstorm roleplay ideas. When ready, apply the generated instructions to your global settings.
               </div>
               
-              {/* Brainstorm Instructions Editor */}
+              {/* Brainstorm Instructions - always visible */}
               <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
-                <button
-                  onClick={() => setShowBrainstormInstructionsEditor(!showBrainstormInstructionsEditor)}
-                  className="flex items-center justify-between w-full text-left"
-                >
+                <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-zinc-300">📝 Brainstorm Instructions</span>
-                  <svg className={`w-5 h-5 text-zinc-500 transition-transform ${showBrainstormInstructionsEditor ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
+                  <button
+                    onClick={() => setShowBrainstormInstructionsEditor(!showBrainstormInstructionsEditor)}
+                    className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                  >
+                    {showBrainstormInstructionsEditor ? "Hide" : "Edit"}
+                  </button>
+                </div>
+                <p className="text-xs text-zinc-500 mb-3">
+                  These instructions tell the AI how to help you brainstorm roleplay ideas.
+                </p>
                 
                 {showBrainstormInstructionsEditor && (
-                  <div className="mt-4 space-y-3">
-                    <p className="text-xs text-zinc-500">
-                      These instructions are exclusive to the brainstorm tab and tell the AI how to help you brainstorm roleplay ideas.
-                    </p>
+                  <div className="space-y-3">
                     <textarea
                       value={brainstormInstructions}
                       onChange={(e) => setBrainstormInstructions(e.target.value)}
-                      className="w-full h-64 bg-zinc-800 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-200 font-mono resize-none focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                      className="w-full h-32 bg-zinc-800 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-200 font-mono resize-none focus:outline-none focus:ring-2 focus:ring-amber-500/50"
                       placeholder="Enter instructions for the brainstorm AI..."
                     />
                     <div className="flex gap-2">
@@ -5977,7 +6003,7 @@ Write an engaging story segment. If this is a good point for player interaction,
               </div>
               
               {/* Chat messages */}
-              <div className="flex-1 overflow-y-auto space-y-4 bg-zinc-900/50 rounded-xl p-4 pb-32" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+              <div className="space-y-4 bg-zinc-900/50 rounded-xl p-4">
                 {brainstormMessages.length === 0 ? (
                   <div className="text-center py-12">
                     <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center mx-auto mb-4">
