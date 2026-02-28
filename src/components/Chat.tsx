@@ -3222,12 +3222,13 @@ export default function Chat() {
     const userMessage = generatorInput.trim();
     let messageToSend: string;
     
-    // If empty, resend the last user message
+    // If empty, resend the last user message - don't add duplicate to state
     if (!userMessage) {
       const lastUserMsg = generatorMessages.filter(m => m.role === "user").pop();
       if (!lastUserMsg) return;
       messageToSend = lastUserMsg.content;
-      setGeneratorMessages(prev => [...prev, { role: "user", content: messageToSend }]);
+      // Don't add to state - the message is already in generatorMessages
+      // Just use it for the API call below
     } else {
       messageToSend = userMessage;
       setGeneratorInput("");
@@ -3447,14 +3448,15 @@ export default function Chat() {
     
     let messageToSend: string;
     
-    // If input is empty, resend the last user message
+    // If input is empty, resend the last user message - don't add duplicate to state
     if (!brainstormInput.trim()) {
       // Find the last user message
       const lastUserMsg = brainstormMessages.filter(m => m.role === "user").pop();
       if (!lastUserMsg) return; // No user message to resend
       
       messageToSend = lastUserMsg.content;
-      setBrainstormMessages(prev => [...prev, { role: "user", content: messageToSend }]);
+      // Don't add to state - the message is already in brainstormMessages
+      // Just use it for the API call below
     } else {
       messageToSend = brainstormInput.trim();
       setBrainstormInput("");
@@ -6002,8 +6004,8 @@ Write an engaging story segment. If this is a good point for player interaction,
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                 </svg>
                               </button>
-                              {/* Refresh/Regenerate button - only for assistant */}
-                              {isAssistantMessage && (
+                              {/* Refresh/Regenerate button - only for last assistant message */}
+                              {isLastAssistantMessage && (
                               <button
                                 onClick={() => {
                                   // Find the last user message and resend
@@ -6011,7 +6013,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                                   if (lastUserIdx !== undefined && lastUserIdx >= 0) {
                                     const lastUserMsg = generatorMessages[lastUserIdx].content;
                                     // Remove messages after last user message
-                                    setGeneratorMessages(prev => prev.slice(0, lastUserIdx));
+                                    setGeneratorMessages(prev => prev.slice(0, lastUserIdx + 1));
                                     // Resend the message
                                     setTimeout(() => {
                                       setGeneratorInput(lastUserMsg);
@@ -6030,8 +6032,8 @@ Write an engaging story segment. If this is a good point for player interaction,
                                 </svg>
                               </button>
                               )}
-                              {/* Continue button - for continuing incomplete responses */}
-                              {isAssistantMessage && (
+                              {/* Continue button - for continuing incomplete responses, only for last assistant */}
+                              {isLastAssistantMessage && (
                                 <button
                                   onClick={handleGeneratorContinue}
                                   disabled={isGenerating}
@@ -6574,8 +6576,8 @@ Write an engaging story segment. If this is a good point for player interaction,
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
                               </button>
-                              {/* Refresh/Regenerate button - only for assistant */}
-                              {isAssistantMessage && (
+                              {/* Refresh/Regenerate button - only for last assistant message */}
+                              {isLastAssistantMessage && (
                               <button
                                 onClick={() => {
                                   // Find the last user message and resend
@@ -6583,7 +6585,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                                   if (lastUserIdx !== undefined && lastUserIdx >= 0) {
                                     const lastUserMsg = brainstormMessages[lastUserIdx].content;
                                     // Remove messages after last user message
-                                    setBrainstormMessages(prev => prev.slice(0, lastUserIdx));
+                                    setBrainstormMessages(prev => prev.slice(0, lastUserIdx + 1));
                                     // Resend the message
                                     setTimeout(() => {
                                       setBrainstormInput(lastUserMsg);
@@ -6602,8 +6604,8 @@ Write an engaging story segment. If this is a good point for player interaction,
                                 </svg>
                               </button>
                               )}
-                              {/* Continue button - for continuing incomplete responses */}
-                              {isAssistantMessage && (
+                              {/* Continue button - for continuing incomplete responses, only for last assistant */}
+                              {isLastAssistantMessage && (
                                 <button
                                   onClick={handleBrainstormContinue}
                                   disabled={isBrainstorming}

@@ -8,6 +8,9 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
+- [x] Fix message duplication bug in generator/brainstorm when resending same message - removed duplicate message addition to state (only add new messages, not resends)
+- [x] Fix refresh/continue button showing on all assistant messages - now only shows on last assistant message
+- [x] Fix generator regenerate to keep last user message - changed slice to lastUserIdx + 1 to include the user message
 - [x] Add "Continue Last Session" button to home menu:
   - Stores last session state (view, persona, character, conversation) in localStorage
   - Shows "Continue Last Session" button on home page when valid session exists
@@ -432,8 +435,9 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 ## Session History
 
-| Date       | Changes                                                                                                                                                                                            |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Date       | Changes                                                                                                                                                                                                                                                                     |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-02-28 | Fix message duplication bug in generator/brainstorm when resending same message - removed duplicate message addition to state, fixed refresh/continue buttons to only show on last assistant message, fixed regenerate to keep last user message |
 | 2026-02-28 | Add "Continue Last Session" button to home menu - stores last view, persona, character, conversation in localStorage, allows resuming chat, generator, brainstorm, and VN generator views |
 | 2026-02-26 | Add alternate greetings feature - characters can have multiple greetings stored, users can choose which greeting to start roleplay with when creating new conversation |
 | 2026-02-26 | Remove disabled state from all send buttons in all modes - send buttons are now always enabled in chat, generator, brainstorm, and VN views                                                                                         |
