@@ -223,14 +223,6 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
         maxTokens: 16384,
         supportsThinking: false,
       },
-      {
-        id: "flux",
-        name: "Flux (Image Gen)",
-        provider: "pollinations",
-        contextWindow: 1,
-        maxTokens: 1,
-        supportsThinking: false,
-      },
     ],
   },
 ];
@@ -630,6 +622,7 @@ export const chatWithVertexAI: ChatFunction = async (
 };
 
 // NVIDIA NIM chat implementation - uses server-side proxy to avoid CORS
+// Uses Gemini-style structured prompting for context, instructions, and limitations
 export const chatWithNvidiaNIM: ChatFunction = async (
   messages,
   config,
@@ -645,9 +638,19 @@ export const chatWithNvidiaNIM: ChatFunction = async (
       content: m.content,
     }));
 
-    // Add system prompt if provided
-    const messagesWithSystem = options.systemPrompt
-      ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
+    // Build structured system prompt following Gemini-style hierarchy:
+    // 1. Instructions (system prompt)
+    // 2. Context (conversation history handled in messages)
+    // 3. Limitations (included in system prompt)
+    let systemContent = "";
+    if (options.systemPrompt) {
+      // Format system prompt with clear sections
+      systemContent = options.systemPrompt;
+    }
+
+    // Add system message if we have system content
+    const messagesWithSystem = systemContent
+      ? [{ role: "system", content: systemContent }, ...formattedMessages]
       : formattedMessages;
 
     // Use server-side proxy to avoid CORS issues
@@ -691,6 +694,7 @@ export const chatWithNvidiaNIM: ChatFunction = async (
 };
 
 // NVIDIA NIM streaming implementation
+// Uses Gemini-style structured prompting for context, instructions, and limitations
 export const streamWithNvidiaNIM = async (
   messages: Message[],
   config: ProviderConfig,
@@ -715,8 +719,18 @@ export const streamWithNvidiaNIM = async (
       content: m.content,
     }));
 
-    const messagesWithSystem = options.systemPrompt
-      ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
+    // Build structured system prompt following Gemini-style hierarchy:
+    // 1. Instructions (system prompt)
+    // 2. Context (conversation history handled in messages)
+    // 3. Limitations (included in system prompt)
+    let systemContent = "";
+    if (options.systemPrompt) {
+      systemContent = options.systemPrompt;
+    }
+
+    // Add system message if we have system content
+    const messagesWithSystem = systemContent
+      ? [{ role: "system", content: systemContent }, ...formattedMessages]
       : formattedMessages;
 
     // Use server-side proxy with streaming
