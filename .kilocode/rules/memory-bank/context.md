@@ -8,7 +8,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
-- [x] Add model selection dropdown to Pollinations AI configuration - users can now select models from the Pollinations provider when configuring
+- [x] Update Pollinations default test model to z.ai/glm5 - uses this model for testing connection when no model is selected
 - [x] Remove Groq provider completely - was causing errors, removed from providers, API routes, and UI
 - [x] Update Pollinations AI models endpoint - now fetches from `https://gen.pollinations.ai/v1/models` when user clicks Configure in the configuration modal
 - [x] Add top_k parameter to NVIDIA NIM - for better response control similar to other providers
