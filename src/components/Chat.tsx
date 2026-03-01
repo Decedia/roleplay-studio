@@ -2604,6 +2604,14 @@ export default function Chat() {
             console.log("Migration completed successfully");
           }
           
+          // Ensure all providers exist in loaded configs (including newly added ones like groq)
+          const allProviders: LLMProviderType[] = ["puter", "google-ai-studio", "google-vertex", "nvidia-nim", "groq"];
+          allProviders.forEach(key => {
+            if (!configs[key]) {
+              configs[key] = { type: key, isEnabled: false, profiles: [], activeProfileId: null };
+            }
+          });
+          
           setProviderConfigs(configs);
         } catch (e) {
           console.error("Failed to parse provider configs:", e);
