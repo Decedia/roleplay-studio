@@ -98,6 +98,8 @@ interface GlobalInstructions {
   enableJailbreak: boolean;
   // Continue instruction for incomplete responses
   continueInstruction?: string;
+  // Image generation instructions for character avatars
+  imageGenerationInstructions?: string;
 }
 
 // Auto-export settings
@@ -117,12 +119,16 @@ const DEFAULT_JAILBREAK_INSTRUCTION = `[Roleplay Rules]
 // Default continue instruction for incomplete responses
 const DEFAULT_CONTINUE_INSTRUCTION = "Continue your previous response from where you left off. Complete the thought naturally without repeating what you already said.";
 
+// Default image generation instructions for character avatars
+const DEFAULT_IMAGE_GENERATION_INSTRUCTIONS = "You are an expert portrait artist. Generate a high-quality portrait image of a character based on the description. The image should be: realistic style, centered face, neutral or slight expression, good lighting, clean background (solid color or simple gradient). The character should look like they could appear in a story or game.";
+
 // Default global instructions
 const DEFAULT_GLOBAL_INSTRUCTIONS: GlobalInstructions = {
   customInstructions: "",
   jailbreakInstructions: DEFAULT_JAILBREAK_INSTRUCTION,
   enableJailbreak: false,
   continueInstruction: DEFAULT_CONTINUE_INSTRUCTION,
+  imageGenerationInstructions: DEFAULT_IMAGE_GENERATION_INSTRUCTIONS,
 };
 
 interface Conversation {
@@ -378,6 +384,12 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
 const estimateTokens = (text: string): number => {
   if (!text) return 0;
   return Math.ceil(text.length / 4);
+};
+
+// Check if a provider supports image generation
+// Puter.js and Google AI Studio/Vertex AI support image generation, NVIDIA NIM does not
+const providerSupportsImageGeneration = (provider: LLMProviderType): boolean => {
+  return ["puter", "google-ai-studio", "google-vertex"].includes(provider);
 };
 
 // Truncate messages to fit within max context tokens
@@ -1232,6 +1244,26 @@ function SettingsModal({
                     Used when clicking continue button to complete incomplete responses
                   </p>
                 </div>
+
+                {/* Image Generation Instructions */}
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-zinc-400 mb-2">
+                    Image Generation Instructions
+                  </label>
+                  <textarea
+                    value={globalInstructions.imageGenerationInstructions || DEFAULT_IMAGE_GENERATION_INSTRUCTIONS}
+                    onChange={(e) => setGlobalInstructions({ 
+                      ...globalInstructions, 
+                      imageGenerationInstructions: e.target.value 
+                    })}
+                    placeholder="Instructions for generating character images..."
+                    rows={3}
+                    className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none text-sm"
+                  />
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Used when generating character avatar images. Describe the style, quality, and composition you want.
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -1921,6 +1953,10 @@ export default function Chat() {
   const [characterAlternateGreetings, setCharacterAlternateGreetings] = useState<string[]>([]);
   const [showGreetingSelection, setShowGreetingSelection] = useState(false);
   const [pendingConversationCharacter, setPendingConversationCharacter] = useState<Character | null>(null);
+  
+  // Image generation state
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [imageGenerationError, setImageGenerationError] = useState<string | null>(null);
   
   // Global settings state
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings>(DEFAULT_GLOBAL_SETTINGS);
@@ -3154,6 +3190,141 @@ export default function Chat() {
     setCharacterMesExample("");
     setCharacterAvatar("");
     setShowCharacterModal(false);
+  };
+
+  // Generate character avatar image using AI
+  const generateCharacterImage = async () => {
+    if (!characterDescription.trim() || isGeneratingImage) return;
+    
+    // Check if provider supports image generation
+    if (!providerSupportsImageGeneration(activeProvider)) {
+      setImageGenerationError("Image generation is not supported by the current provider. Please switch to Puter.js, Google AI Studio, or Vertex AI.");
+      return;
+    }
+    
+    setIsGeneratingImage(true);
+    setImageGenerationError(null);
+    
+    try {
+      // Get image generation instructions from global settings
+      const imageInstructions = globalInstructions.imageGenerationInstructions || DEFAULT_IMAGE_GENERATION_INSTRUCTIONS;
+      
+      // Build the prompt for image generation
+      const userPrompt = `Generate a portrait image of a character with the following description:\n\n${characterDescription.trim()}\n\nCharacter name: ${characterName.trim() || "Unnamed"}`;
+      
+      const messages: Message[] = [
+        { role: "system", content: imageInstructions },
+        { role: "user", content: userPrompt }
+      ];
+      
+      let imageUrl: string | null = null;
+      
+      if (activeProvider === "puter") {
+        // Use Puter.js image generation
+        // Cast to any to access the img function which may not be in the type definitions
+        const puterAI = window.puter?.ai as any;
+        if (puterAI?.img) {
+          const response = await puterAI.img(userPrompt, {
+            model: "flux",
+            size: "1:1",
+            quality: "standard",
+          });
+          imageUrl = response.image_url;
+        } else {
+          throw new Error("Puter.js image generation is not available");
+        }
+      } else if (activeProvider === "google-ai-studio" || activeProvider === "google-vertex") {
+        // Use Google AI Studio/Vertex AI for image generation
+        const config = providerConfigs[activeProvider];
+        const activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
+        
+        // Build config from active profile
+        const profileConfig = {
+          ...config,
+          apiKey: activeProfile?.apiKey || "",
+          projectId: activeProfile?.projectId || "",
+          serviceAccountJson: activeProfile?.serviceAccountJson,
+          vertexMode: activeProfile?.vertexMode,
+          vertexLocation: activeProfile?.vertexLocation,
+          selectedModel: "gemini-2.0-flash" // Use gemini-2.0-flash for image generation
+        };
+        
+        // For Google AI Studio, use the generateContent API with vision
+        // Note: Gemini 1.5 Pro/Flash can generate images
+        const modelId = activeProvider === "google-ai-studio" ? "gemini-2.0-flash-exp" : "gemini-2.0-flash";
+        
+        // Build request for image generation
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${profileConfig.apiKey}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              contents: [{
+                parts: [{ text: userPrompt }]
+              }],
+              generationConfig: {
+                temperature: 0.9,
+                maxOutputTokens: 2048,
+                topP: 0.95,
+                topK: 40,
+                responseModalities: ["image", "text"]
+              },
+              systemInstruction: {
+                parts: [{ text: imageInstructions }]
+              }
+            }),
+          }
+        );
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error?.message || `HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Extract image from response
+        // Google returns images as base64 in the response
+        const candidates = data.candidates?.[0]?.content?.parts;
+        if (candidates) {
+          for (const part of candidates) {
+            if (part.inlineData?.data) {
+              // Convert base64 to data URL
+              const mimeType = part.inlineData.mimeType || "image/png";
+              imageUrl = `data:${mimeType};base64,${part.inlineData.data}`;
+              break;
+            }
+          }
+        }
+        
+        if (!imageUrl) {
+          // Try alternative: check for image URLs in the response
+          const textContent = candidates?.find((p: any) => p.text)?.text;
+          if (textContent) {
+            // The model might have returned text describing the image
+            // For now, throw an error
+            throw new Error("No image was generated. The model may not support image generation.");
+          }
+        }
+      } else {
+        throw new Error("Image generation is not supported by this provider.");
+      }
+      
+      if (imageUrl) {
+        setCharacterAvatar(imageUrl);
+      } else {
+        throw new Error("Failed to generate image. Please try again.");
+      }
+      
+    } catch (error) {
+      console.error("Image generation error:", error);
+      setImageGenerationError(error instanceof Error ? error.message : "Failed to generate image. Please try again.");
+    } finally {
+      setIsGeneratingImage(false);
+    }
   };
 
   const deleteCharacter = (id: string) => {
@@ -8007,16 +8178,44 @@ Write an engaging story segment. If this is a good point for player interaction,
                       className="hidden"
                       id="avatar-upload"
                     />
-                    <label
-                      htmlFor="avatar-upload"
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors cursor-pointer text-sm"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      {characterAvatar ? "Change Image" : "Upload Image"}
-                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      <label
+                        htmlFor="avatar-upload"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors cursor-pointer text-sm"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        {characterAvatar ? "Change" : "Upload"}
+                      </label>
+                      <button
+                        type="button"
+                        onClick={generateCharacterImage}
+                        disabled={!characterDescription.trim() || isGeneratingImage || !providerSupportsImageGeneration(activeProvider)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={!providerSupportsImageGeneration(activeProvider) ? "Current provider does not support image generation. Switch to Puter.js, Google AI Studio, or Vertex AI." : !characterDescription.trim() ? "Enter a character description first" : "Generate avatar image from description"}
+                      >
+                        {isGeneratingImage ? (
+                          <>
+                            <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                            </svg>
+                            Generate Image
+                          </>
+                        )}
+                      </button>
+                    </div>
                     <p className="text-xs text-zinc-500 mt-1">PNG, JPG, GIF up to 5MB</p>
+                    {imageGenerationError && (
+                      <p className="text-xs text-red-400 mt-1">{imageGenerationError}</p>
+                    )}
                   </div>
                 </div>
               </div>
