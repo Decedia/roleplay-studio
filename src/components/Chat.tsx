@@ -1895,6 +1895,87 @@ function SettingsModal({
                 )}
               </div>
 
+              {/* Pollinations AI - Free, no API key needed */}
+              <div className="p-3 bg-zinc-800/50 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${
+                      connectionStatus["pollinations"]?.status === "connected" ? "bg-green-500" :
+                      connectionStatus["pollinations"]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
+                      connectionStatus["pollinations"]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
+                    }`} />
+                    <span className="text-sm font-medium text-white">Pollinations AI</span>
+                    {activeProvider === "pollinations" && (
+                      <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
+                    )}
+                    <span className="text-xs text-zinc-500">(Free, no API key required)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingProvider(editingProvider === 'pollinations' ? null : 'pollinations')}
+                    className="text-xs text-blue-400 hover:text-blue-300"
+                  >
+                    {editingProvider === 'pollinations' ? 'Hide' : 'Configure'}
+                  </button>
+                </div>
+                {connectionStatus["pollinations"]?.message && (
+                  <p className={`text-xs mb-2 ${
+                    connectionStatus["pollinations"]?.status === "connected" ? "text-green-400" :
+                    connectionStatus["pollinations"]?.status === "error" ? "text-red-400" : "text-zinc-400"
+                  }`}>
+                    {connectionStatus["pollinations"].message}
+                  </p>
+                )}
+                {editingProvider === 'pollinations' && (
+                  <div className="mt-3 space-y-3">
+                    {/* Profile selector */}
+                    <div>
+                      <label className="text-xs text-zinc-400 block mb-1">Model</label>
+                      <select
+                        value={getActiveProfile("pollinations")?.selectedModel || providerModels["pollinations"]?.[0]?.id || ""}
+                        onChange={(e) => {
+                          const profileId = providerConfigs["pollinations"]?.activeProfileId;
+                          if (profileId) {
+                            setProviderConfigs(prev => ({
+                              ...prev,
+                              "pollinations": {
+                                ...prev["pollinations"],
+                                profiles: prev["pollinations"].profiles.map(p =>
+                                  p.id === profileId ? { ...p, selectedModel: e.target.value } : p
+                                )
+                              }
+                            }));
+                          }
+                        }}
+                        className="w-full px-3 py-1.5 text-sm bg-zinc-700 text-white rounded border border-zinc-600 focus:border-blue-500 focus:outline-none"
+                      >
+                        {(providerModels["pollinations"] || []).map(model => (
+                          <option key={model.id} value={model.id}>{model.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                      <button
+                        type="button"
+                        onClick={() => onTestConnection("pollinations")}
+                        disabled={connectionStatus["pollinations"]?.status === "testing"}
+                        className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {connectionStatus["pollinations"]?.status === "testing" ? "Testing..." : "Test Connection"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onConnect("pollinations")}
+                        disabled={connectionStatus["pollinations"]?.status !== "connected"}
+                        className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Connect
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Puter.js - No API key needed */}
               <div className="p-3 bg-zinc-800/50 rounded-lg">
                 <div className="flex items-center justify-between mb-2">
@@ -2121,6 +2202,7 @@ export default function Chat() {
     "google-vertex": { type: "google-vertex", isEnabled: false, profiles: [], activeProfileId: null },
     "nvidia-nim": { type: "nvidia-nim", isEnabled: false, profiles: [], activeProfileId: null },
     "groq": { type: "groq", isEnabled: false, profiles: [], activeProfileId: null },
+    "pollinations": { type: "pollinations", isEnabled: false, profiles: [], activeProfileId: null },
   });
   
   // Provider-specific models (fetched from API after connection)
@@ -2130,6 +2212,7 @@ export default function Chat() {
     "google-vertex": [],
     "nvidia-nim": [],
     "groq": [],
+    "pollinations": [],
   });
   const [modelsFetching, setModelsFetching] = useState<Record<LLMProviderType, boolean>>({
     "puter": false,
@@ -2137,6 +2220,7 @@ export default function Chat() {
     "google-vertex": false,
     "nvidia-nim": false,
     "groq": false,
+    "pollinations": false,
   });
   
   // Active provider state - default to Google AI Studio (not Puter)
@@ -2182,6 +2266,7 @@ export default function Chat() {
     "google-vertex": { status: "disconnected" },
     "nvidia-nim": { status: "disconnected" },
     "groq": { status: "disconnected" },
+    "pollinations": { status: "disconnected" },
   });
 
   // Profile management functions - defined early so they're available throughout the component
@@ -2595,7 +2680,7 @@ export default function Chat() {
           }
           
           // Ensure all providers exist in loaded configs
-          const allProviders: LLMProviderType[] = ["puter", "google-ai-studio", "google-vertex", "nvidia-nim", "groq"];
+          const allProviders: LLMProviderType[] = ["puter", "google-ai-studio", "google-vertex", "nvidia-nim", "groq", "pollinations"];
           allProviders.forEach(key => {
             if (!configs[key]) {
               configs[key] = { type: key, isEnabled: false, profiles: [], activeProfileId: null };
@@ -2615,6 +2700,7 @@ export default function Chat() {
           "google-vertex": { type: "google-vertex", isEnabled: false, profiles: [], activeProfileId: null },
           "nvidia-nim": { type: "nvidia-nim", isEnabled: false, profiles: [], activeProfileId: null },
           "groq": { type: "groq", isEnabled: false, profiles: [], activeProfileId: null },
+          "pollinations": { type: "pollinations", isEnabled: false, profiles: [], activeProfileId: null },
         };
         
         providers.forEach(providerType => {

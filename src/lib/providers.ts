@@ -217,6 +217,70 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
       },
     ],
   },
+  {
+    id: "pollinations",
+    name: "Pollinations AI",
+    description: "Free AI models via Pollinations AI - no API key required",
+    requiresApiKey: false,
+    models: [
+      {
+        id: "llama-3.1-70b-instruct",
+        name: "Llama 3.1 70B",
+        provider: "pollinations",
+        contextWindow: 131072,
+        maxTokens: 4096,
+        supportsThinking: false,
+      },
+      {
+        id: "llama-3.1-8b-instruct",
+        name: "Llama 3.1 8B",
+        provider: "pollinations",
+        contextWindow: 131072,
+        maxTokens: 4096,
+        supportsThinking: false,
+      },
+      {
+        id: "qwen-2.5-72b-instruct",
+        name: "Qwen 2.5 72B",
+        provider: "pollinations",
+        contextWindow: 32768,
+        maxTokens: 8192,
+        supportsThinking: false,
+      },
+      {
+        id: "qwen-2.5-14b-instruct",
+        name: "Qwen 2.5 14B",
+        provider: "pollinations",
+        contextWindow: 32768,
+        maxTokens: 8192,
+        supportsThinking: false,
+      },
+      {
+        id: "mistral-nemo-instruct",
+        name: "Mistral Nemo",
+        provider: "pollinations",
+        contextWindow: 131072,
+        maxTokens: 4096,
+        supportsThinking: false,
+      },
+      {
+        id: "deepseek-coder-v2-instruct",
+        name: "DeepSeek Coder V2",
+        provider: "pollinations",
+        contextWindow: 163840,
+        maxTokens: 16384,
+        supportsThinking: false,
+      },
+      {
+        id: "flux",
+        name: "Flux (Image Gen)",
+        provider: "pollinations",
+        contextWindow: 1,
+        maxTokens: 1,
+        supportsThinking: false,
+      },
+    ],
+  },
 ];
 
 // Chat response interface
@@ -959,6 +1023,149 @@ export const streamWithGroq = async (
   }
 };
 
+// Pollinations AI chat implementation - uses direct API call (no API key required)
+export const chatWithPollinations: ChatFunction = async (
+  messages: Message[],
+  config: ProviderConfig,
+  options: {
+    temperature: number;
+    maxTokens: number;
+    topP: number;
+    topK: number;
+    systemPrompt?: string;
+    enableThinking?: boolean;
+  }
+): Promise<ChatResponse> => {
+  try {
+    const formattedMessages = messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    const messagesWithSystem = options.systemPrompt
+      ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
+      : formattedMessages;
+
+    // Pollinations AI uses a direct URL with query parameters
+    const model = config.selectedModel || "llama-3.1-70b-instruct";
+    const url = `https://text.pollinations.ai/`;
+    
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messages: messagesWithSystem,
+        model: model,
+        temperature: options.temperature,
+        max_tokens: options.maxTokens,
+        top_p: options.topP,
+        seed: Math.floor(Math.random() * 1000000),
+        secure: false,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return { error: `HTTP ${response.status}: ${errorText}` };
+    }
+
+    const content = await response.text();
+    return { content };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Unknown error occurred" };
+  }
+};
+
+// Pollinations AI streaming implementation
+export const streamWithPollinations = async (
+  messages: Message[],
+  config: ProviderConfig,
+  options: {
+    temperature: number;
+    maxTokens: number;
+    topP: number;
+    topK: number;
+    systemPrompt?: string;
+    enableThinking?: boolean;
+  },
+  onChunk: StreamCallback
+): Promise<void> => {
+  try {
+    const formattedMessages = messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    const messagesWithSystem = options.systemPrompt
+      ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
+      : formattedMessages;
+
+    // Pollinations AI uses a direct URL with query parameters
+    const model = config.selectedModel || "llama-3.1-70b-instruct";
+    const url = `https://text.pollinations.ai/`;
+    
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "text/event-stream",
+      },
+      body: JSON.stringify({
+        messages: messagesWithSystem,
+        model: model,
+        temperature: options.temperature,
+        max_tokens: options.maxTokens,
+        top_p: options.topP,
+        seed: Math.floor(Math.random() * 1000000),
+        secure: false,
+        stream: true,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      onChunk({ error: `HTTP ${response.status}: ${errorText}` });
+      return;
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      onChunk({ error: "Failed to get response stream" });
+      return;
+    }
+
+    const decoder = new TextDecoder();
+    let fullContent = "";
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr) continue;
+
+          // Pollinations returns plain text, not JSON for streaming
+          fullContent += jsonStr;
+          onChunk({ content: fullContent });
+        }
+      }
+    }
+
+    onChunk({ content: fullContent, done: true });
+  } catch (error) {
+    onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
+  }
+};
+
 // Vertex AI streaming implementation - uses server-side proxy to avoid CORS
 export const streamWithVertexAI = async (
   messages: Message[],
@@ -1112,6 +1319,8 @@ export const sendChatMessage = async (
       return chatWithNvidiaNIM(messages, config, options);
     case "groq":
       return chatWithGroq(messages, config, options);
+    case "pollinations":
+      return chatWithPollinations(messages, config, options);
     default:
       return { error: `Unknown provider: ${config.type}` };
   }
@@ -1143,6 +1352,8 @@ export const streamChatMessage = async (
       return streamWithNvidiaNIM(messages, config, options, onChunk);
     case "groq":
       return streamWithGroq(messages, config, options, onChunk);
+    case "pollinations":
+      return streamWithPollinations(messages, config, options, onChunk);
     default:
       onChunk({ error: `Unknown provider: ${config.type}` });
       return;
@@ -1291,6 +1502,10 @@ export const testProviderConnection = async (
       }
       try {
         // Test with a minimal chat request using server-side proxy to avoid CORS
+        // Add timeout to prevent getting stuck
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+        
         const response = await fetch("/api/groq", {
           method: "POST",
           headers: {
@@ -1305,7 +1520,10 @@ export const testProviderConnection = async (
               max_tokens: 5,
             },
           }),
+          signal: controller.signal,
         });
+        
+        clearTimeout(timeoutId);
         
         // 200 is success code
         if (response.ok) {
@@ -1313,17 +1531,56 @@ export const testProviderConnection = async (
         }
         
         // Parse error response
-        const errorData = await response.json();
+        const contentType = response.headers.get("content-type");
+        if (contentType?.includes("application/json")) {
+          const errorData = await response.json();
+          
+          if (response.status === 422) {
+            return { success: false, message: errorData.error || "Validation error (422)" };
+          }
+          
+          if (response.status === 500) {
+            return { success: false, message: "Server error (500) - please try again later" };
+          }
+          
+          return { success: false, message: errorData.error || `HTTP ${response.status}` };
+        } else {
+          const textResponse = await response.text();
+          return { success: false, message: textResponse || `HTTP ${response.status}` };
+        }
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          return { success: false, message: "Connection timed out after 30 seconds" };
+        }
+        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
+      }
+    }
+    
+    case "pollinations": {
+      // Pollinations AI doesn't require an API key - it's free
+      try {
+        // Test with a minimal chat request
+        const model = config.selectedModel || "llama-3.1-70b-instruct";
+        const response = await fetch("https://text.pollinations.ai/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            messages: [{ role: "user", content: "Hi" }],
+            model: model,
+            max_tokens: 5,
+            seed: Math.floor(Math.random() * 1000000),
+            secure: false,
+          }),
+        });
         
-        if (response.status === 422) {
-          return { success: false, message: errorData.error || "Validation error (422)" };
+        if (response.ok) {
+          return { success: true, message: "Pollinations AI connection successful!" };
         }
         
-        if (response.status === 500) {
-          return { success: false, message: "Server error (500) - please try again later" };
-        }
-        
-        return { success: false, message: errorData.error || `HTTP ${response.status}` };
+        const errorText = await response.text();
+        return { success: false, message: `HTTP ${response.status}: ${errorText}` };
       } catch (error) {
         return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
       }
@@ -1628,6 +1885,62 @@ export const fetchModelsFromProvider = async (
             provider: "groq",
             context: 8192,
             max_tokens: 8192,
+            supportsThinking: false,
+          },
+        ];
+
+        return { models: staticModels };
+      }
+
+      case "pollinations": {
+        // Return static Pollinations AI models from AVAILABLE_PROVIDERS
+        const staticModels: FetchedModel[] = [
+          {
+            id: "llama-3.1-70b-instruct",
+            name: "Llama 3.1 70B",
+            provider: "pollinations",
+            context: 131072,
+            max_tokens: 4096,
+            supportsThinking: false,
+          },
+          {
+            id: "llama-3.1-8b-instruct",
+            name: "Llama 3.1 8B",
+            provider: "pollinations",
+            context: 131072,
+            max_tokens: 4096,
+            supportsThinking: false,
+          },
+          {
+            id: "qwen-2.5-72b-instruct",
+            name: "Qwen 2.5 72B",
+            provider: "pollinations",
+            context: 32768,
+            max_tokens: 8192,
+            supportsThinking: false,
+          },
+          {
+            id: "qwen-2.5-14b-instruct",
+            name: "Qwen 2.5 14B",
+            provider: "pollinations",
+            context: 32768,
+            max_tokens: 8192,
+            supportsThinking: false,
+          },
+          {
+            id: "mistral-nemo-instruct",
+            name: "Mistral Nemo",
+            provider: "pollinations",
+            context: 131072,
+            max_tokens: 4096,
+            supportsThinking: false,
+          },
+          {
+            id: "deepseek-coder-v2-instruct",
+            name: "DeepSeek Coder V2",
+            provider: "pollinations",
+            context: 163840,
+            max_tokens: 16384,
             supportsThinking: false,
           },
         ];
