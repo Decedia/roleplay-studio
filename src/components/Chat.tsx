@@ -2372,7 +2372,17 @@ export default function Chat() {
     }
     if (storedConnectionStatus) {
       try {
-        setConnectionStatus(JSON.parse(storedConnectionStatus));
+        const parsed = JSON.parse(storedConnectionStatus);
+        // Reset any stale "testing" status to "disconnected" to prevent stuck states
+        const cleanedStatus: Record<LLMProviderType, ConnectionStatus> = {} as Record<LLMProviderType, ConnectionStatus>;
+        (Object.keys(parsed) as LLMProviderType[]).forEach(key => {
+          cleanedStatus[key] = parsed[key];
+          if (parsed[key].status === 'testing') {
+            cleanedStatus[key].status = 'disconnected';
+            cleanedStatus[key].message = '';
+          }
+        });
+        setConnectionStatus(cleanedStatus);
       } catch (e) {
         console.error("Failed to parse connection status:", e);
       }
