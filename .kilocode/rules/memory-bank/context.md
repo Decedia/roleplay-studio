@@ -8,6 +8,9 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
+- [x] Remove Groq provider completely - was causing errors, removed from providers, API routes, and UI
+- [x] Fix Pollinations AI dropdown - models now fetched dynamically from API before testing connection
+- [x] Add top_k parameter to NVIDIA NIM - for better response control similar to other providers
 - [x] Fix Groq provider error when pressing Configure - added migration code to ensure groq is added to providerConfigs when loading from old localStorage data
 - [x] Add Groq as a free AI provider - fast inference with free tier, supports Llama 3.3, Llama 3.1, Mixtral, and Gemma models. API key required but has generous free credits.
 - [x] Fix NVIDIA NIM API key not being passed to chat requests - properly extracts API key from active profile
