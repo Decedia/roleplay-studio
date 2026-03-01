@@ -172,7 +172,7 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
   {
     id: "pollinations",
     name: "Pollinations AI",
-    description: "Free AI models via Pollinations AI - no API key required",
+    description: "AI models via Pollinations AI - supports optional API key for more requests",
     requiresApiKey: false,
     models: [], // Loaded dynamically via API
   },
@@ -803,11 +803,17 @@ export const chatWithPollinations: ChatFunction = async (
     const model = config.selectedModel || "llama-3.1-70b-instruct";
     const url = `https://text.pollinations.ai/`;
     
+    // Build headers - API key is optional
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (config.apiKey) {
+      headers["Authorization"] = `Bearer ${config.apiKey}`;
+    }
+    
     const response = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify({
         messages: messagesWithSystem,
         model: model,
@@ -859,12 +865,18 @@ export const streamWithPollinations = async (
     const model = config.selectedModel || "llama-3.1-70b-instruct";
     const url = `https://text.pollinations.ai/`;
     
+    // Build headers - API key is optional
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      "Accept": "text/event-stream",
+    };
+    if (config.apiKey) {
+      headers["Authorization"] = `Bearer ${config.apiKey}`;
+    }
+    
     const response = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "text/event-stream",
-      },
+      headers,
       body: JSON.stringify({
         messages: messagesWithSystem,
         model: model,
@@ -1535,8 +1547,15 @@ export const fetchModelsFromProvider = async (
 
       case "pollinations": {
         // Fetch models from Pollinations AI API
+        // Supports optional API key for authenticated requests
         try {
-          const response = await fetch("/api/models?provider=pollinations");
+          // Build URL with optional API key
+          let url = "/api/models?provider=pollinations";
+          if (config.apiKey) {
+            url += `&apiKey=${encodeURIComponent(config.apiKey)}`;
+          }
+          
+          const response = await fetch(url);
           const data = await response.json();
           
           if (data.models && data.models.length > 0) {

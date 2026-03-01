@@ -212,62 +212,89 @@ export async function GET(request: NextRequest) {
 
       case "pollinations": {
         // Fetch models from Pollinations AI API
-        // Using the new OpenAI-compatible endpoint
+        // Supports optional API key for authenticated requests
         try {
-          const response = await fetch("https://gen.pollinations.ai/v1/models", {
-            method: "GET",
-            headers: {
-              "Accept": "application/json",
-            },
-          });
+          // Build headers - API key is optional
+          const headers: Record<string, string> = {
+            "Accept": "application/json",
+          };
+          if (apiKey) {
+            headers["Authorization"] = `Bearer ${apiKey}`;
+          }
 
-          if (!response.ok) {
-            // If API fails, return fallback models
+          // Fetch from multiple endpoints and combine results
+          const endpoints = [
+            "https://text.pollinations.ai/text/models",
+            "https://text.pollinations.ai/v1/models",
+            "https://text.pollinations.ai/image/models",
+            "https://text.pollinations.ai/audio/models",
+          ];
+
+          const allModels: Record<string, { id: string; provider: string; name: string; contextWindow: number; maxTokens: number; supportsThinking: boolean; type?: string }> = {};
+
+          for (const endpoint of endpoints) {
+            try {
+              const response = await fetch(endpoint, {
+                method: "GET",
+                headers,
+              });
+
+              if (response.ok) {
+                const data = await response.json();
+                const models = data.data || data.models || [];
+                
+                for (const model of models) {
+                  const modelId = model.id || model.name || model.model;
+                  if (!modelId || allModels[modelId]) continue;
+
+                  // Determine model type from endpoint
+                  let modelType = 'text';
+                  if (endpoint.includes('/image/')) modelType = 'image';
+                  else if (endpoint.includes('/audio/')) modelType = 'audio';
+                  else if (endpoint.includes('/v1/') && !endpoint.includes('/text/')) modelType = 'text';
+
+                  allModels[modelId] = {
+                    id: modelId,
+                    provider: "pollinations",
+                    name: modelId,
+                    contextWindow: model.contextWindow || model.context || 131072,
+                    maxTokens: model.maxTokens || model.max_tokens || 8192,
+                    supportsThinking: modelId.includes('reasoning') || modelId.includes('r1') || modelId.includes('deepseek'),
+                    type: modelType,
+                  };
+                }
+              }
+            } catch {
+              // Continue to next endpoint if one fails
+            }
+          }
+
+          // If no models found from API, use fallback models
+          const models = Object.values(allModels);
+          if (models.length === 0) {
             const fallbackModels = [
-              { id: "openai", name: "GPT-5 Mini", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
-              { id: "openai-fast", name: "GPT-5 Nano", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
-              { id: "qwen-coder", name: "Qwen3 Coder 30B", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
-              { id: "mistral", name: "Mistral Small 3.2", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
-              { id: "gemini", name: "Gemini 3 Flash", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
-              { id: "deepseek", name: "DeepSeek V3.2", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
-              { id: "claude-fast", name: "Claude Haiku 4.5", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
-              { id: "glm", name: "GLM-5", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
+              { id: "llama-3.1-70b-instruct", name: "Llama 3.1 70B", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false, type: "text" },
+              { id: "llama-3.1-8b-instruct", name: "Llama 3.1 8B", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false, type: "text" },
+              { id: "qwen-2.5-72b-instruct", name: "Qwen 2.5 72B", provider: "pollinations", contextWindow: 32768, maxTokens: 8192, supportsThinking: false, type: "text" },
+              { id: "qwen-2.5-14b-instruct", name: "Qwen 2.5 14B", provider: "pollinations", contextWindow: 32768, maxTokens: 8192, supportsThinking: false, type: "text" },
+              { id: "mistral-nemo-instruct", name: "Mistral Nemo", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false, type: "text" },
+              { id: "deepseek-coder-v2-instruct", name: "DeepSeek Coder V2", provider: "pollinations", contextWindow: 163840, maxTokens: 16384, supportsThinking: false, type: "text" },
+              { id: "flux", name: "Flux (Image Gen)", provider: "pollinations", contextWindow: 1, maxTokens: 1, supportsThinking: false, type: "image" },
             ];
             return NextResponse.json({ models: fallbackModels });
           }
-
-          const data = await response.json();
-          
-          // Transform Pollinations models to our format
-          // The response is OpenAI-style with data array
-          const models = (data.data || []).map((model: { id: string; object?: string }) => {
-            // Skip non-text models (image, video, audio models)
-            const excludedTypes = ['image', 'video', 'audio'];
-            if (excludedTypes.some(type => model.id.includes(type) || model.object?.includes(type))) {
-              return null;
-            }
-            return {
-              id: model.id,
-              provider: "pollinations",
-              name: model.id,
-              contextWindow: 131072,
-              maxTokens: 8192,
-              supportsThinking: model.id.includes('reasoning'),
-            };
-          }).filter(Boolean);
 
           return NextResponse.json({ models });
         } catch (error) {
           // Return fallback models on error
           const fallbackModels = [
-            { id: "openai", name: "GPT-5 Mini", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
-            { id: "openai-fast", name: "GPT-5 Nano", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
-            { id: "qwen-coder", name: "Qwen3 Coder 30B", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
-            { id: "mistral", name: "Mistral Small 3.2", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
-            { id: "gemini", name: "Gemini 3 Flash", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
-            { id: "deepseek", name: "DeepSeek V3.2", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
-            { id: "claude-fast", name: "Claude Haiku 4.5", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
-            { id: "glm", name: "GLM-5", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
+            { id: "llama-3.1-70b-instruct", name: "Llama 3.1 70B", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false, type: "text" },
+            { id: "llama-3.1-8b-instruct", name: "Llama 3.1 8B", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false, type: "text" },
+            { id: "qwen-2.5-72b-instruct", name: "Qwen 2.5 72B", provider: "pollinations", contextWindow: 32768, maxTokens: 8192, supportsThinking: false, type: "text" },
+            { id: "qwen-2.5-14b-instruct", name: "Qwen 2.5 14B", provider: "pollinations", contextWindow: 32768, maxTokens: 8192, supportsThinking: false, type: "text" },
+            { id: "mistral-nemo-instruct", name: "Mistral Nemo", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false, type: "text" },
+            { id: "deepseek-coder-v2-instruct", name: "DeepSeek Coder V2", provider: "pollinations", contextWindow: 163840, maxTokens: 16384, supportsThinking: false, type: "text" },
+            { id: "flux", name: "Flux (Image Gen)", provider: "pollinations", contextWindow: 1, maxTokens: 1, supportsThinking: false, type: "image" },
           ];
           return NextResponse.json({ models: fallbackModels });
         }

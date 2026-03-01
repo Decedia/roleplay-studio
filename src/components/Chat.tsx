@@ -1806,6 +1806,32 @@ function SettingsModal({
                 )}
                 {editingProvider === 'pollinations' && (
                   <div className="mt-3 space-y-3">
+                    {/* API Key input - optional for Pollinations */}
+                    <div>
+                      <label className="text-xs text-zinc-400 block mb-1">
+                        API Key (optional)
+                      </label>
+                      <input
+                        type="password"
+                        value={getActiveProfile("pollinations")?.apiKey || ""}
+                        onChange={(e) => {
+                          const profileId = providerConfigs["pollinations"]?.activeProfileId;
+                          if (profileId) {
+                            setProviderConfigs(prev => ({
+                              ...prev,
+                              "pollinations": {
+                                ...prev["pollinations"],
+                                profiles: prev["pollinations"].profiles.map(p =>
+                                  p.id === profileId ? { ...p, apiKey: e.target.value } : p
+                                )
+                              }
+                            }));
+                          }
+                        }}
+                        placeholder="Enter API key for more requests"
+                        className="w-full px-3 py-1.5 text-sm bg-zinc-700 text-white rounded border border-zinc-600 focus:border-blue-500 focus:outline-none"
+                      />
+                    </div>
                     {/* Profile selector */}
                     <div>
                       <label className="text-xs text-zinc-400 block mb-1">Model</label>
