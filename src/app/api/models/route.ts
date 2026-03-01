@@ -212,8 +212,9 @@ export async function GET(request: NextRequest) {
 
       case "pollinations": {
         // Fetch models from Pollinations AI API
+        // Using the new OpenAI-compatible endpoint
         try {
-          const response = await fetch("https://text.pollinations.ai/models", {
+          const response = await fetch("https://gen.pollinations.ai/v1/models", {
             method: "GET",
             headers: {
               "Accept": "application/json",
@@ -223,12 +224,14 @@ export async function GET(request: NextRequest) {
           if (!response.ok) {
             // If API fails, return fallback models
             const fallbackModels = [
-              { id: "llama-3.1-70b-instruct", name: "Llama 3.1 70B", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
-              { id: "llama-3.1-8b-instruct", name: "Llama 3.1 8B", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
-              { id: "qwen-2.5-72b-instruct", name: "Qwen 2.5 72B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
-              { id: "qwen-2.5-14b-instruct", name: "Qwen 2.5 14B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
-              { id: "mistral-nemo-instruct", name: "Mistral Nemo", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
-              { id: "deepseek-coder-v2-instruct", name: "DeepSeek Coder V2", provider: "pollinations", context: 163840, max_tokens: 16384, supportsThinking: false },
+              { id: "openai", name: "GPT-5 Mini", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
+              { id: "openai-fast", name: "GPT-5 Nano", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
+              { id: "qwen-coder", name: "Qwen3 Coder 30B", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
+              { id: "mistral", name: "Mistral Small 3.2", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
+              { id: "gemini", name: "Gemini 3 Flash", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
+              { id: "deepseek", name: "DeepSeek V3.2", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
+              { id: "claude-fast", name: "Claude Haiku 4.5", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
+              { id: "glm", name: "GLM-5", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
             ];
             return NextResponse.json({ models: fallbackModels });
           }
@@ -236,25 +239,35 @@ export async function GET(request: NextRequest) {
           const data = await response.json();
           
           // Transform Pollinations models to our format
-          const models = (data.models || data || []).map((model: { id: string; name?: string }) => ({
-            id: model.id,
-            provider: "pollinations",
-            name: model.name || model.id,
-            context: 131072, // Default context
-            max_tokens: 4096, // Default max tokens
-            supportsThinking: false,
-          }));
+          // The response is OpenAI-style with data array
+          const models = (data.data || []).map((model: { id: string; object?: string }) => {
+            // Skip non-text models (image, video, audio models)
+            const excludedTypes = ['image', 'video', 'audio'];
+            if (excludedTypes.some(type => model.id.includes(type) || model.object?.includes(type))) {
+              return null;
+            }
+            return {
+              id: model.id,
+              provider: "pollinations",
+              name: model.id,
+              contextWindow: 131072,
+              maxTokens: 8192,
+              supportsThinking: model.id.includes('reasoning'),
+            };
+          }).filter(Boolean);
 
           return NextResponse.json({ models });
         } catch (error) {
           // Return fallback models on error
           const fallbackModels = [
-            { id: "llama-3.1-70b-instruct", name: "Llama 3.1 70B", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
-            { id: "llama-3.1-8b-instruct", name: "Llama 3.1 8B", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
-            { id: "qwen-2.5-72b-instruct", name: "Qwen 2.5 72B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
-            { id: "qwen-2.5-14b-instruct", name: "Qwen 2.5 14B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
-            { id: "mistral-nemo-instruct", name: "Mistral Nemo", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
-            { id: "deepseek-coder-v2-instruct", name: "DeepSeek Coder V2", provider: "pollinations", context: 163840, max_tokens: 16384, supportsThinking: false },
+            { id: "openai", name: "GPT-5 Mini", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
+            { id: "openai-fast", name: "GPT-5 Nano", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
+            { id: "qwen-coder", name: "Qwen3 Coder 30B", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
+            { id: "mistral", name: "Mistral Small 3.2", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
+            { id: "gemini", name: "Gemini 3 Flash", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
+            { id: "deepseek", name: "DeepSeek V3.2", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
+            { id: "claude-fast", name: "Claude Haiku 4.5", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
+            { id: "glm", name: "GLM-5", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: false },
           ];
           return NextResponse.json({ models: fallbackModels });
         }
