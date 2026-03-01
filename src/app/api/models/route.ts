@@ -250,25 +250,13 @@ export async function GET(request: NextRequest) {
 
           // Fallback to static models if API fails or returns empty
           const fallbackModels = [
-            { id: "llama-3.1-70b-instruct", name: "Llama 3.1 70B", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
-            { id: "llama-3.1-8b-instruct", name: "Llama 3.1 8B", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
-            { id: "qwen-2.5-72b-instruct", name: "Qwen 2.5 72B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
-            { id: "qwen-2.5-14b-instruct", name: "Qwen 2.5 14B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
-            { id: "mistral-nemo-instruct", name: "Mistral Nemo", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
-            { id: "deepseek-coder-v2-instruct", name: "DeepSeek Coder V2", provider: "pollinations", context: 163840, max_tokens: 16384, supportsThinking: false },
-            { id: "flux", name: "Flux (Image Gen)", provider: "pollinations", context: 1, max_tokens: 1, supportsThinking: false },
+            { id: "z.ai/glm5", name: "Z.ai GLM 5", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
           ];
           return NextResponse.json({ models: fallbackModels });
         } catch (error) {
           // Return fallback models on error
           const fallbackModels = [
-            { id: "llama-3.1-70b-instruct", name: "Llama 3.1 70B", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
-            { id: "llama-3.1-8b-instruct", name: "Llama 3.1 8B", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
-            { id: "qwen-2.5-72b-instruct", name: "Qwen 2.5 72B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
-            { id: "qwen-2.5-14b-instruct", name: "Qwen 2.5 14B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
-            { id: "mistral-nemo-instruct", name: "Mistral Nemo", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
-            { id: "deepseek-coder-v2-instruct", name: "DeepSeek Coder V2", provider: "pollinations", context: 163840, max_tokens: 16384, supportsThinking: false },
-            { id: "flux", name: "Flux (Image Gen)", provider: "pollinations", context: 1, max_tokens: 1, supportsThinking: false },
+            { id: "z.ai/glm5", name: "Z.ai GLM 5", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
           ];
           return NextResponse.json({ models: fallbackModels });
         }
