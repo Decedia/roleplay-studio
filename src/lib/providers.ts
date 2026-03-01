@@ -1318,7 +1318,7 @@ export const testProviderConnection = async (
       // Pollinations AI doesn't require an API key - it's free
       try {
         // Test with a minimal chat request
-        const model = config.selectedModel || "llama-3.1-70b-instruct";
+        const model = config.selectedModel || "z.ai/glm5";
         const response = await fetch("https://text.pollinations.ai/", {
           method: "POST",
           headers: {
