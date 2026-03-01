@@ -8,6 +8,8 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
+- [x] Add Groq as a free AI provider - fast inference with free tier, supports Llama 3.3, Llama 3.1, Mixtral, and Gemma models. API key required but has generous free credits.
+- [x] Fix NVIDIA NIM API key not being passed to chat requests - properly extracts API key from active profile
 - [x] Add character avatar feature - users can now upload character images (PNG, JPG, GIF up to 5MB) that display in character list and chat messages. Falls back to initial if no image uploaded.
 - [x] Add AI image generation for character avatars - users can generate character images using AI. Button in character modal uses Puter.js image generation. Disabled when using providers that don't support image generation (NVIDIA NIM). Instructions configurable in global settings.
 - [x] Fix navigation back button: home no longer has back button, personas now has back button (goes to home), characters/generator/brainstorm/vn-generator now go back to main menu (home)
