@@ -1842,37 +1842,6 @@ function SettingsModal({
                         className="w-full px-3 py-1.5 text-sm bg-zinc-700 text-white rounded border border-zinc-600 focus:border-blue-500 focus:outline-none"
                       />
                     </div>
-                    {/* Profile selector */}
-                    <div>
-                      <label className="text-xs text-zinc-400 block mb-1">Model</label>
-                      <select
-                        value={getActiveProfile("pollinations")?.selectedModel || providerModels["pollinations"]?.[0]?.id || AVAILABLE_PROVIDERS.find(p => p.id === "pollinations")?.models?.[0]?.id || ""}
-                        onChange={(e) => {
-                          const profileId = providerConfigs["pollinations"]?.activeProfileId;
-                          if (profileId) {
-                            setProviderConfigs(prev => ({
-                              ...prev,
-                              "pollinations": {
-                                ...prev["pollinations"],
-                                profiles: prev["pollinations"].profiles.map(p =>
-                                  p.id === profileId ? { ...p, selectedModel: e.target.value } : p
-                                )
-                              }
-                            }));
-                          }
-                        }}
-                        className="w-full px-3 py-1.5 text-sm bg-zinc-700 text-white rounded border border-zinc-600 focus:border-blue-500 focus:outline-none"
-                      >
-                        {/* Show API-fetched models if available, otherwise use fallback models from AVAILABLE_PROVIDERS */}
-                        {(
-                          providerModels["pollinations"]?.length > 0 
-                            ? providerModels["pollinations"] 
-                            : AVAILABLE_PROVIDERS.find(p => p.id === "pollinations")?.models || []
-                        ).map(model => (
-                          <option key={model.id} value={model.id}>{model.name}</option>
-                        ))}
-                      </select>
-                    </div>
                     <div className="flex gap-2 mt-3">
                       <button
                         type="button"
