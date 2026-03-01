@@ -1854,7 +1854,7 @@ function SettingsModal({
                         </div>
                       ) : providerModels["pollinations"]?.length === 0 ? (
                         <div className="w-full px-3 py-1.5 text-sm bg-zinc-700 text-zinc-400 rounded border border-zinc-600">
-                          Click Test Connection to load models
+                          No models available
                         </div>
                       ) : (
                         <select
@@ -2900,17 +2900,11 @@ export default function Chat() {
   useEffect(() => {
     const fetchPollinationsModels = async () => {
       if (editingProvider === 'pollinations') {
-        // Only fetch if we don't have models yet
-        const existingModels = providerModels['pollinations'];
-        if (existingModels && existingModels.length > 0) {
-          return; // Already have models
-        }
-        
         // Get the active profile for Pollinations
         const pollinationsConfig = providerConfigs['pollinations'];
         const activeProfile = pollinationsConfig?.profiles.find(p => p.id === pollinationsConfig.activeProfileId);
         
-        // Fetch models from API
+        // Fetch models from API (always fetch when opening config to get latest)
         setModelsFetching(prev => ({ ...prev, ['pollinations']: true }));
         const result = await fetchModelsFromProvider('pollinations', {
           type: 'pollinations',
@@ -2931,7 +2925,7 @@ export default function Chat() {
     };
     
     fetchPollinationsModels();
-  }, [editingProvider, providerConfigs, providerModels]);
+  }, [editingProvider]);
 
   // Persona functions
   const createPersona = () => {
