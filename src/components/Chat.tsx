@@ -3246,12 +3246,12 @@ export default function Chat() {
           serviceAccountJson: activeProfile?.serviceAccountJson,
           vertexMode: activeProfile?.vertexMode,
           vertexLocation: activeProfile?.vertexLocation,
-          selectedModel: "gemini-2.0-flash" // Use gemini-2.0-flash for image generation
+          selectedModel: globalSettings.modelId || "gemini-2.0-flash" // Use selected model for image generation
         };
         
-        // For Google AI Studio, use the generateContent API with vision
-        // Note: Gemini 1.5 Pro/Flash can generate images
-        const modelId = activeProvider === "google-ai-studio" ? "gemini-2.0-flash-exp" : "gemini-2.0-flash";
+        // For Google AI Studio/Vertex AI, use the currently selected model
+        // Note: Not all models support image generation - use what the user has selected
+        const modelId = globalSettings.modelId || "gemini-2.0-flash";
         
         // Build request for image generation
         const response = await fetch(
