@@ -1790,7 +1790,17 @@ function SettingsModal({
                   </div>
                   <button
                     type="button"
-                    onClick={() => setEditingProvider(editingProvider === 'pollinations' ? null : 'pollinations')}
+                    onClick={() => {
+                      // Create default profile if none exists for Pollinations
+                      if (!providerConfigs["pollinations"]?.activeProfileId) {
+                        createProfile("pollinations", {
+                          name: "Default Profile",
+                          apiKey: "",
+                          selectedModel: "llama-3.1-70b-instruct",
+                        });
+                      }
+                      setEditingProvider(editingProvider === 'pollinations' ? null : 'pollinations');
+                    }}
                     className="text-xs text-blue-400 hover:text-blue-300"
                   >
                     {editingProvider === 'pollinations' ? 'Hide' : 'Configure'}
