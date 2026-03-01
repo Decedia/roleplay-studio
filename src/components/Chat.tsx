@@ -4686,7 +4686,7 @@ Write an engaging story segment. If this is a good point for player interaction,
         // Non-streaming mode for stable responses
         const response = await sendChatMessage(
           truncatedMessages,
-          { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
+          profileConfig,
           {
             temperature: globalSettings.temperature,
             maxTokens: globalSettings.maxTokens,
@@ -4764,6 +4764,18 @@ Write an engaging story segment. If this is a good point for player interaction,
     try {
       // Get current provider config
       const currentConfig = providerConfigs[activeProvider];
+      const activeProfile = currentConfig.profiles.find(p => p.id === currentConfig.activeProfileId);
+      
+      // Build config from active profile
+      const profileConfig = {
+        ...currentConfig,
+        apiKey: activeProfile?.apiKey || "",
+        projectId: activeProfile?.projectId || "",
+        serviceAccountJson: activeProfile?.serviceAccountJson,
+        vertexMode: activeProfile?.vertexMode,
+        vertexLocation: activeProfile?.vertexLocation,
+        selectedModel: globalSettings.modelId || activeProfile?.selectedModel
+      };
       
       // Build system prompt with lorebook support
       const systemPrompt = buildFullSystemPrompt(
@@ -4787,7 +4799,7 @@ Write an engaging story segment. If this is a good point for player interaction,
         // Streaming mode for real-time responses
         await streamChatMessage(
           truncatedMessages,
-          { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
+          profileConfig,
           {
             temperature: globalSettings.temperature,
             maxTokens: globalSettings.maxTokens,
@@ -4826,7 +4838,7 @@ Write an engaging story segment. If this is a good point for player interaction,
         // Non-streaming mode for stable responses
         const response = await sendChatMessage(
           truncatedMessages,
-          { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
+          profileConfig,
           {
             temperature: globalSettings.temperature,
             maxTokens: globalSettings.maxTokens,
@@ -4887,6 +4899,18 @@ Write an engaging story segment. If this is a good point for player interaction,
       // Get current provider config
       const currentConfig = providerConfigs[activeProvider];
       
+      const activeProfile = currentConfig.profiles.find(p => p.id === currentConfig.activeProfileId);
+      
+      // Build config from active profile
+      const profileConfig = {
+        ...currentConfig,
+        apiKey: activeProfile?.apiKey || "",
+        projectId: activeProfile?.projectId || "",
+        serviceAccountJson: activeProfile?.serviceAccountJson,
+        vertexMode: activeProfile?.vertexMode,
+        vertexLocation: activeProfile?.vertexLocation,
+        selectedModel: globalSettings.modelId || activeProfile?.selectedModel
+      };
       // Build system prompt with lorebook support
       const systemPrompt = buildFullSystemPrompt(
         selectedCharacter,
@@ -4909,7 +4933,7 @@ Write an engaging story segment. If this is a good point for player interaction,
         // Streaming mode for real-time responses
         await streamChatMessage(
           truncatedMessages,
-          { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
+          profileConfig,
           {
             temperature: globalSettings.temperature,
             maxTokens: globalSettings.maxTokens,
@@ -4958,7 +4982,7 @@ Write an engaging story segment. If this is a good point for player interaction,
         // Non-streaming mode for stable responses
         const response = await sendChatMessage(
           truncatedMessages,
-          { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
+          profileConfig,
           {
             temperature: globalSettings.temperature,
             maxTokens: globalSettings.maxTokens,
@@ -5050,7 +5074,20 @@ Write an engaging story segment. If this is a good point for player interaction,
       setStreamingThinking("");
       
       try {
+        // Get current provider config
         const currentConfig = providerConfigs[activeProvider];
+        const activeProfile = currentConfig.profiles.find(p => p.id === currentConfig.activeProfileId);
+        
+        // Build config from active profile
+        const profileConfig = {
+          ...currentConfig,
+          apiKey: activeProfile?.apiKey || "",
+          projectId: activeProfile?.projectId || "",
+          serviceAccountJson: activeProfile?.serviceAccountJson,
+          vertexMode: activeProfile?.vertexMode,
+          vertexLocation: activeProfile?.vertexLocation,
+          selectedModel: globalSettings.modelId || activeProfile?.selectedModel
+        };
         
         const systemPrompt = buildFullSystemPrompt(
           selectedCharacter,
@@ -5071,7 +5108,7 @@ Write an engaging story segment. If this is a good point for player interaction,
         if (globalSettings.enableStreaming) {
           await streamChatMessage(
             truncatedMessages,
-            { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
+            profileConfig,
             {
               temperature: globalSettings.temperature,
               maxTokens: globalSettings.maxTokens,
@@ -5109,7 +5146,7 @@ Write an engaging story segment. If this is a good point for player interaction,
         } else {
           const response = await sendChatMessage(
             truncatedMessages,
-            { ...currentConfig, selectedModel: globalSettings.modelId || currentConfig.selectedModel },
+            profileConfig,
             {
               temperature: globalSettings.temperature,
               maxTokens: globalSettings.maxTokens,
