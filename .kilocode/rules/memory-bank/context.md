@@ -8,6 +8,19 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
+- [x] Add Groq as a free AI provider - fast inference with free tier, supports Llama 3.3, Llama 3.1, Mixtral, and Gemma models. API key required but has generous free credits.
+- [x] Fix NVIDIA NIM API key not being passed to chat requests - properly extracts API key from active profile
+- [x] Add character avatar feature - users can now upload character images (PNG, JPG, GIF up to 5MB) that display in character list and chat messages. Falls back to initial if no image uploaded.
+- [x] Add AI image generation for character avatars - users can generate character images using AI. Button in character modal uses Puter.js image generation. Disabled when using providers that don't support image generation (NVIDIA NIM). Instructions configurable in global settings.
+- [x] Fix navigation back button: home no longer has back button, personas now has back button (goes to home), characters/generator/brainstorm/vn-generator now go back to main menu (home)
+- [x] Fix message duplication bug in generator/brainstorm when resending same message - removed duplicate message addition to state (only add new messages, not resends)
+- [x] Fix refresh/continue button showing on all assistant messages - now only shows on last assistant message
+- [x] Fix generator regenerate to keep last user message - changed slice to lastUserIdx + 1 to include the user message
+- [x] Add "Continue Last Session" button to home menu:
+  - Stores last session state (view, persona, character, conversation) in localStorage
+  - Shows "Continue Last Session" button on home page when valid session exists
+  - Resumes chat, generator, brainstorm, and VN generator views
+  - Automatically saves session when switching views or starting conversations
 - [x] Sync UI/UX between conversation, generator, and brainstorm views:
   - Added loading spinner to send buttons in generator and brainstorm
   - Added "Press Enter to send" hint to generator and brainstorm
@@ -427,8 +440,10 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 ## Session History
 
-| Date       | Changes                                                                                                                                                                                            |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Date       | Changes                                                                                                                                                                                                                                                                     |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-02-28 | Fix message duplication bug in generator/brainstorm when resending same message - removed duplicate message addition to state, fixed refresh/continue buttons to only show on last assistant message, fixed regenerate to keep last user message |
+| 2026-02-28 | Add "Continue Last Session" button to home menu - stores last view, persona, character, conversation in localStorage, allows resuming chat, generator, brainstorm, and VN generator views |
 | 2026-02-26 | Add alternate greetings feature - characters can have multiple greetings stored, users can choose which greeting to start roleplay with when creating new conversation |
 | 2026-02-26 | Remove disabled state from all send buttons in all modes - send buttons are now always enabled in chat, generator, brainstorm, and VN views                                                                                         |
 | 2026-02-26 | Enable send button in brainstorm view when last message is from user - allows resending last message when input is empty                                                                                                                                             |
