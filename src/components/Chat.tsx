@@ -1773,6 +1773,135 @@ function SettingsModal({
                 )}
               </div>
 
+              {/* Groq */}
+              <div className="p-3 bg-zinc-800/50 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${
+                      connectionStatus["groq"]?.status === "connected" ? "bg-green-500" :
+                      connectionStatus["groq"]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
+                      connectionStatus["groq"]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
+                    }`} />
+                    <span className="text-sm font-medium text-white">Groq</span>
+                    {activeProvider === "groq" && (
+                      <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
+                    )}
+                    <span className="text-xs text-zinc-500">(Fast inference, free tier)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingProvider(editingProvider === 'groq' ? null : 'groq')}
+                    className="text-xs text-blue-400 hover:text-blue-300"
+                  >
+                    {editingProvider === 'groq' ? 'Hide' : 'Configure'}
+                  </button>
+                </div>
+                {connectionStatus["groq"]?.message && (
+                  <p className={`text-xs mb-2 ${
+                    connectionStatus["groq"]?.status === "connected" ? "text-green-400" :
+                    connectionStatus["groq"]?.status === "error" ? "text-red-400" : "text-zinc-400"
+                  }`}>
+                    {connectionStatus["groq"].message}
+                  </p>
+                )}
+                {editingProvider === 'groq' && (
+                  <div className="mt-3 space-y-3">
+                    {/* Profile Selection */}
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-1">Profile</label>
+                      <div className="flex gap-2">
+                        <select
+                          value={providerConfigs["groq"]?.activeProfileId || ""}
+                          onChange={(e) => {
+                            if (e.target.value === "__new__") {
+                              const name = prompt("Enter profile name (or leave empty for date/time):");
+                              if (name !== null) {
+                                createProfile("groq", {
+                                  name: name.trim() || new Date().toLocaleString(),
+                                  apiKey: ""
+                                });
+                              }
+                            } else {
+                              selectProfile("groq", e.target.value);
+                            }
+                          }}
+                          className="flex-1 bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                          <option value="">Select a profile...</option>
+                          {providerConfigs["groq"]?.profiles.map(profile => (
+                            <option key={profile.id} value={profile.id}>{profile.name}</option>
+                          ))}
+                          <option value="__new__">+ Add New Profile</option>
+                        </select>
+                        {providerConfigs["groq"]?.activeProfileId && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm("Delete this profile?")) {
+                                deleteProfile("groq", providerConfigs["groq"].activeProfileId!);
+                              }
+                            }}
+                            className="px-3 py-2 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* API Key - only show if profile is selected */}
+                    {providerConfigs["groq"]?.activeProfileId && (
+                      <div>
+                        <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                        <input
+                          type="password"
+                          value={getActiveProfile("groq")?.apiKey || ""}
+                          onChange={(e) => {
+                            const activeProfile = getActiveProfile("groq");
+                            if (activeProfile) {
+                              selectProfile("groq", activeProfile.id); // Ensure profile is selected
+                              // Update the profile's API key
+                              const updatedProfiles = providerConfigs["groq"]?.profiles.map(p => 
+                                p.id === activeProfile.id ? { ...p, apiKey: e.target.value } : p
+                              ) || [];
+                              setProviderConfigs({
+                                ...providerConfigs,
+                                "groq": { ...providerConfigs["groq"], profiles: updatedProfiles }
+                              });
+                            }
+                          }}
+                          placeholder="Enter your Groq API key"
+                          className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <p className="text-xs text-zinc-500 mt-1">
+                          Get a free API key from <a href="https://console.groq.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">console.groq.com</a>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {!editingProvider && (
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => onTestConnection("groq")}
+                      disabled={connectionStatus["groq"]?.status === "testing"}
+                      className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {connectionStatus["groq"]?.status === "testing" ? "Testing..." : "Test Connection"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onConnect("groq")}
+                      disabled={connectionStatus["groq"]?.status === "error"}
+                      className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Connect
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {/* Puter.js - No API key needed */}
               <div className="p-3 bg-zinc-800/50 rounded-lg">
                 <div className="flex items-center justify-between mb-2">
