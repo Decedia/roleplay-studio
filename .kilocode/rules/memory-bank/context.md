@@ -8,6 +8,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
+- [x] Fix Groq provider error when pressing Configure - added migration code to ensure groq is added to providerConfigs when loading from old localStorage data
 - [x] Add Groq as a free AI provider - fast inference with free tier, supports Llama 3.3, Llama 3.1, Mixtral, and Gemma models. API key required but has generous free credits.
 - [x] Fix NVIDIA NIM API key not being passed to chat requests - properly extracts API key from active profile
 - [x] Add character avatar feature - users can now upload character images (PNG, JPG, GIF up to 5MB) that display in character list and chat messages. Falls back to initial if no image uploaded.
