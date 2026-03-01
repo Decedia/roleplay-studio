@@ -1847,6 +1847,9 @@ function SettingsModal({
                           </button>
                         )}
                       </div>
+                      {!providerConfigs["groq"]?.activeProfileId && (
+                        <p className="text-xs text-zinc-500 mt-1">Select or create a profile, then enter your API key below</p>
+                      )}
                     </div>
                     
                     {/* API Key - only show if profile is selected */}
@@ -1885,7 +1888,7 @@ function SettingsModal({
                     <button
                       type="button"
                       onClick={() => onTestConnection("groq")}
-                      disabled={connectionStatus["groq"]?.status === "testing"}
+                      disabled={connectionStatus["groq"]?.status === "testing" || !getActiveProfile("groq")?.apiKey}
                       className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {connectionStatus["groq"]?.status === "testing" ? "Testing..." : "Test Connection"}
@@ -1893,7 +1896,7 @@ function SettingsModal({
                     <button
                       type="button"
                       onClick={() => onConnect("groq")}
-                      disabled={connectionStatus["groq"]?.status === "error"}
+                      disabled={connectionStatus["groq"]?.status === "error" || !getActiveProfile("groq")?.apiKey}
                       className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Connect
