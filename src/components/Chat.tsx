@@ -1842,6 +1842,49 @@ function SettingsModal({
                         className="w-full px-3 py-1.5 text-sm bg-zinc-700 text-white rounded border border-zinc-600 focus:border-blue-500 focus:outline-none"
                       />
                     </div>
+
+                    {/* Model Selection */}
+                    <div>
+                      <label className="text-xs text-zinc-400 block mb-1">
+                        Model
+                      </label>
+                      {modelsFetching["pollinations"] ? (
+                        <div className="w-full px-3 py-1.5 text-sm bg-zinc-700 text-zinc-400 rounded border border-zinc-600">
+                          Loading models...
+                        </div>
+                      ) : providerModels["pollinations"]?.length === 0 ? (
+                        <div className="w-full px-3 py-1.5 text-sm bg-zinc-700 text-zinc-400 rounded border border-zinc-600">
+                          Click Test Connection to load models
+                        </div>
+                      ) : (
+                        <select
+                          value={getActiveProfile("pollinations")?.selectedModel || ""}
+                          onChange={(e) => {
+                            const profileId = providerConfigs["pollinations"]?.activeProfileId;
+                            if (profileId) {
+                              setProviderConfigs(prev => ({
+                                ...prev,
+                                "pollinations": {
+                                  ...prev["pollinations"],
+                                  profiles: prev["pollinations"].profiles.map(p =>
+                                    p.id === profileId ? { ...p, selectedModel: e.target.value } : p
+                                  )
+                                }
+                              }));
+                            }
+                          }}
+                          className="w-full px-3 py-1.5 text-sm bg-zinc-700 text-white rounded border border-zinc-600 focus:border-blue-500 focus:outline-none"
+                        >
+                          <option value="">Select a model...</option>
+                          {providerModels["pollinations"]?.map(model => (
+                            <option key={model.id} value={model.id}>
+                              {model.name || model.id}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+
                     <div className="flex gap-2 mt-3">
                       <button
                         type="button"
@@ -1854,7 +1897,7 @@ function SettingsModal({
                       <button
                         type="button"
                         onClick={() => onConnect("pollinations")}
-                        disabled={connectionStatus["pollinations"]?.status !== "connected"}
+                        disabled={connectionStatus["pollinations"]?.status !== "connected" || !getActiveProfile("pollinations")?.selectedModel}
                         className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Connect
