@@ -169,6 +169,54 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
       },
     ],
   },
+  {
+    id: "groq",
+    name: "Groq",
+    description: "Fast AI inference with free tier - no credit card required",
+    requiresApiKey: true,
+    models: [
+      {
+        id: "llama-3.3-70b-versatile",
+        name: "Llama 3.3 70B Versatile",
+        provider: "groq",
+        contextWindow: 8192,
+        maxTokens: 8192,
+        supportsThinking: false,
+      },
+      {
+        id: "llama-3.1-70b-versatile",
+        name: "Llama 3.1 70B Versatile",
+        provider: "groq",
+        contextWindow: 8192,
+        maxTokens: 8192,
+        supportsThinking: false,
+      },
+      {
+        id: "llama-3.1-8b-instant",
+        name: "Llama 3.1 8B Instant",
+        provider: "groq",
+        contextWindow: 8192,
+        maxTokens: 8192,
+        supportsThinking: false,
+      },
+      {
+        id: "mixtral-8x7b-32768",
+        name: "Mixtral 8x7B",
+        provider: "groq",
+        contextWindow: 32768,
+        maxTokens: 32768,
+        supportsThinking: false,
+      },
+      {
+        id: "gemma2-9b-it",
+        name: "Gemma 2 9B",
+        provider: "groq",
+        contextWindow: 8192,
+        maxTokens: 8192,
+        supportsThinking: false,
+      },
+    ],
+  },
 ];
 
 // Chat response interface
@@ -746,6 +794,161 @@ export const streamWithNvidiaNIM = async (
   }
 };
 
+// Groq chat implementation - uses server-side proxy to avoid CORS
+export const chatWithGroq: ChatFunction = async (
+  messages,
+  config,
+  options
+) => {
+  if (!config.apiKey) {
+    return { error: "Groq API key is required" };
+  }
+
+  try {
+    const formattedMessages = messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    // Add system prompt if provided
+    const messagesWithSystem = options.systemPrompt
+      ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
+      : formattedMessages;
+
+    // Use server-side proxy to avoid CORS issues
+    const response = await fetch("/api/groq", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        apiKey: config.apiKey,
+        payload: {
+          model: config.selectedModel,
+          messages: messagesWithSystem,
+          temperature: options.temperature,
+          max_tokens: options.maxTokens,
+          top_p: options.topP,
+        },
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        error: data.error?.message || `HTTP ${response.status}`,
+      };
+    }
+
+    const content = data.choices?.[0]?.message?.content || "";
+
+    return { content };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+};
+
+// Groq streaming implementation
+export const streamWithGroq = async (
+  messages: Message[],
+  config: ProviderConfig,
+  options: {
+    temperature: number;
+    maxTokens: number;
+    topP: number;
+    topK: number;
+    systemPrompt?: string;
+    enableThinking?: boolean;
+  },
+  onChunk: StreamCallback
+): Promise<void> => {
+  if (!config.apiKey) {
+    onChunk({ error: "Groq API key is required" });
+    return;
+  }
+
+  try {
+    const formattedMessages = messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    const messagesWithSystem = options.systemPrompt
+      ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
+      : formattedMessages;
+
+    // Use server-side proxy with streaming
+    const response = await fetch("/api/groq", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        apiKey: config.apiKey,
+        payload: {
+          model: config.selectedModel,
+          messages: messagesWithSystem,
+          temperature: options.temperature,
+          max_tokens: options.maxTokens,
+          top_p: options.topP,
+          stream: true,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      onChunk({ error: errorData.error?.message || `HTTP ${response.status}` });
+      return;
+    }
+
+    if (!response.body) {
+      onChunk({ error: "No response body" });
+      return;
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let fullContent = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split("\n");
+
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          const data = line.slice(6);
+          if (data === "[DONE]") {
+            onChunk({ content: fullContent, done: true });
+            return;
+          }
+
+          try {
+            const parsed = JSON.parse(data);
+            const delta = parsed.choices?.[0]?.delta?.content;
+            if (delta) {
+              fullContent += delta;
+              onChunk({ content: fullContent });
+            }
+          } catch {
+            // Skip invalid JSON
+          }
+        }
+      }
+    }
+
+    onChunk({ content: fullContent, done: true });
+  } catch (error) {
+    onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
+  }
+};
+
 // Vertex AI streaming implementation - uses server-side proxy to avoid CORS
 export const streamWithVertexAI = async (
   messages: Message[],
@@ -897,6 +1100,8 @@ export const sendChatMessage = async (
       return chatWithVertexAI(messages, config, options);
     case "nvidia-nim":
       return chatWithNvidiaNIM(messages, config, options);
+    case "groq":
+      return chatWithGroq(messages, config, options);
     default:
       return { error: `Unknown provider: ${config.type}` };
   }
@@ -926,6 +1131,8 @@ export const streamChatMessage = async (
       return streamWithVertexAI(messages, config, options, onChunk);
     case "nvidia-nim":
       return streamWithNvidiaNIM(messages, config, options, onChunk);
+    case "groq":
+      return streamWithGroq(messages, config, options, onChunk);
     default:
       onChunk({ error: `Unknown provider: ${config.type}` });
       return;
@@ -1049,6 +1256,49 @@ export const testProviderConnection = async (
         // 200 and 202 are success codes
         if (response.status === 200 || response.status === 202) {
           return { success: true, message: "NVIDIA NIM connection successful!" };
+        }
+        
+        // Parse error response
+        const errorData = await response.json();
+        
+        if (response.status === 422) {
+          return { success: false, message: errorData.error || "Validation error (422)" };
+        }
+        
+        if (response.status === 500) {
+          return { success: false, message: "Server error (500) - please try again later" };
+        }
+        
+        return { success: false, message: errorData.error || `HTTP ${response.status}` };
+      } catch (error) {
+        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
+      }
+    }
+
+    case "groq": {
+      if (!config.apiKey) {
+        return { success: false, message: "API key is required." };
+      }
+      try {
+        // Test with a minimal chat request using server-side proxy to avoid CORS
+        const response = await fetch("/api/groq", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            apiKey: config.apiKey,
+            payload: {
+              model: "llama-3.1-8b-instant",
+              messages: [{ role: "user", content: "Hi" }],
+              max_tokens: 5,
+            },
+          }),
+        });
+        
+        // 200 is success code
+        if (response.status === 200) {
+          return { success: true, message: "Groq connection successful!" };
         }
         
         // Parse error response
@@ -1324,6 +1574,54 @@ export const fetchModelsFromProvider = async (
       case "puter": {
         // Puter.js models are fetched client-side via window.puter.ai.listModels()
         return { models: [], error: "Puter.js models must be fetched client-side" };
+      }
+
+      case "groq": {
+        // Return static models - Groq has a fixed list of available models
+        const groqModels: FetchedModel[] = [
+          {
+            id: "llama-3.3-70b-versatile",
+            name: "Llama 3.3 70B Versatile",
+            provider: "groq",
+            context: 8192,
+            max_tokens: 8192,
+            supportsThinking: false,
+          },
+          {
+            id: "llama-3.1-70b-versatile",
+            name: "Llama 3.1 70B Versatile",
+            provider: "groq",
+            context: 8192,
+            max_tokens: 8192,
+            supportsThinking: false,
+          },
+          {
+            id: "llama-3.1-8b-instant",
+            name: "Llama 3.1 8B Instant",
+            provider: "groq",
+            context: 8192,
+            max_tokens: 8192,
+            supportsThinking: false,
+          },
+          {
+            id: "mixtral-8x7b-32768",
+            name: "Mixtral 8x7B",
+            provider: "groq",
+            context: 32768,
+            max_tokens: 32768,
+            supportsThinking: false,
+          },
+          {
+            id: "gemma2-9b-it",
+            name: "Gemma 2 9B",
+            provider: "groq",
+            context: 8192,
+            max_tokens: 8192,
+            supportsThinking: false,
+          },
+        ];
+
+        return { models: groqModels };
       }
 
       default:

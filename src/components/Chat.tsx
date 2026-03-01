@@ -1998,6 +1998,7 @@ export default function Chat() {
     "google-ai-studio": { type: "google-ai-studio", isEnabled: false, profiles: [], activeProfileId: null },
     "google-vertex": { type: "google-vertex", isEnabled: false, profiles: [], activeProfileId: null },
     "nvidia-nim": { type: "nvidia-nim", isEnabled: false, profiles: [], activeProfileId: null },
+    "groq": { type: "groq", isEnabled: false, profiles: [], activeProfileId: null },
   });
   
   // Provider-specific models (fetched from API after connection)
@@ -2006,12 +2007,14 @@ export default function Chat() {
     "google-ai-studio": [],
     "google-vertex": [],
     "nvidia-nim": [],
+    "groq": [],
   });
   const [modelsFetching, setModelsFetching] = useState<Record<LLMProviderType, boolean>>({
     "puter": false,
     "google-ai-studio": false,
     "google-vertex": false,
     "nvidia-nim": false,
+    "groq": false,
   });
   
   // Active provider state - default to Google AI Studio (not Puter)
@@ -2056,6 +2059,7 @@ export default function Chat() {
     "google-ai-studio": { status: "disconnected" },
     "google-vertex": { status: "disconnected" },
     "nvidia-nim": { status: "disconnected" },
+    "groq": { status: "disconnected" },
   });
 
   // Profile management functions - defined early so they're available throughout the component
@@ -2474,12 +2478,13 @@ export default function Chat() {
         }
       } else {
         // Check for old per-provider storage (for users upgrading from older versions)
-        const providers: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim"];
+        const providers: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim", "groq"];
         const migratedConfigs: Record<LLMProviderType, ProviderConfig> = {
           "puter": { type: "puter", isEnabled: true, profiles: [], activeProfileId: null },
           "google-ai-studio": { type: "google-ai-studio", isEnabled: false, profiles: [], activeProfileId: null },
           "google-vertex": { type: "google-vertex", isEnabled: false, profiles: [], activeProfileId: null },
           "nvidia-nim": { type: "nvidia-nim", isEnabled: false, profiles: [], activeProfileId: null },
+          "groq": { type: "groq", isEnabled: false, profiles: [], activeProfileId: null },
         };
         
         providers.forEach(providerType => {
