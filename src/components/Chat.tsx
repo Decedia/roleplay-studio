@@ -1912,6 +1912,7 @@ export default function Chat() {
   const [characterName, setCharacterName] = useState("");
   const [characterDescription, setCharacterDescription] = useState("");
   const [characterFirstMessage, setCharacterFirstMessage] = useState("");
+  const [characterAvatar, setCharacterAvatar] = useState(""); // Avatar URL or base64
   // Instruction fields (SillyTavern style)
   const [characterScenario, setCharacterScenario] = useState("");
   const [characterSystemPrompt, setCharacterSystemPrompt] = useState("");
@@ -3096,6 +3097,7 @@ export default function Chat() {
       name: characterName.trim(),
       description: characterDescription.trim(),
       firstMessage: characterFirstMessage.trim(),
+      avatar: characterAvatar || undefined,
       // Instruction fields
       scenario: characterScenario.trim() || undefined,
       systemPrompt: characterSystemPrompt.trim() || undefined,
@@ -3110,10 +3112,12 @@ export default function Chat() {
     setCharacterName("");
     setCharacterDescription("");
     setCharacterFirstMessage("");
+    setCharacterAvatar("");
     setCharacterScenario("");
     setCharacterSystemPrompt("");
     setCharacterPostHistoryInstructions("");
     setCharacterMesExample("");
+    setCharacterAvatar("");
     setShowCharacterModal(false);
   };
 
@@ -3128,6 +3132,7 @@ export default function Chat() {
               name: characterName.trim(), 
               description: characterDescription.trim(),
               firstMessage: characterFirstMessage.trim(),
+              avatar: characterAvatar || undefined,
               // Instruction fields
               scenario: characterScenario.trim() || undefined,
               systemPrompt: characterSystemPrompt.trim() || undefined,
@@ -3147,6 +3152,7 @@ export default function Chat() {
     setCharacterSystemPrompt("");
     setCharacterPostHistoryInstructions("");
     setCharacterMesExample("");
+    setCharacterAvatar("");
     setShowCharacterModal(false);
   };
 
@@ -3182,6 +3188,7 @@ export default function Chat() {
     setCharacterName(character.name);
     setCharacterDescription(character.description);
     setCharacterFirstMessage(character.firstMessage);
+    setCharacterAvatar(character.avatar || "");
     // Load instruction fields
     setCharacterScenario(character.scenario || "");
     setCharacterSystemPrompt(character.systemPrompt || "");
@@ -7379,11 +7386,19 @@ Write an engaging story segment. If this is a good point for player interaction,
                       className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition-colors"
                     >
                       <div className="flex justify-between items-start mb-3">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                          <span className="text-xl text-white font-semibold">
-                            {character.name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
+                        {character.avatar ? (
+                          <img 
+                            src={character.avatar} 
+                            alt={character.name} 
+                            className="w-12 h-12 rounded-xl object-cover"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                            <span className="text-xl text-white font-semibold">
+                              {character.name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        )}
                         <div className="flex gap-1">
                           <button
                             onClick={() => openEditCharacter(character)}
@@ -7626,11 +7641,19 @@ Write an engaging story segment. If this is a good point for player interaction,
                         }`}
                       >
                         {message.role === "assistant" && (
-                          <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                            <span className="text-sm text-white font-semibold">
-                              {selectedCharacter?.name.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
+                          selectedCharacter?.avatar ? (
+                            <img 
+                              src={selectedCharacter.avatar} 
+                              alt={selectedCharacter.name} 
+                              className="w-8 h-8 rounded-lg object-cover"
+                            />
+                          ) : (
+                            <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                              <span className="text-sm text-white font-semibold">
+                                {selectedCharacter?.name.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          )
                         )}
                         <div className={`max-w-[80%] ${message.role === "user" ? "order-first" : ""}`}>
                           <div
@@ -7939,6 +7962,65 @@ Write an engaging story segment. If this is a good point for player interaction,
                 />
               </div>
 
+              {/* Avatar Upload */}
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-1">
+                  Avatar Image (Optional)
+                </label>
+                <div className="flex items-center gap-4">
+                  {characterAvatar ? (
+                    <div className="relative">
+                      <img 
+                        src={characterAvatar} 
+                        alt="Character avatar" 
+                        className="w-16 h-16 rounded-xl object-cover border-2 border-purple-500"
+                      />
+                      <button
+                        onClick={() => setCharacterAvatar("")}
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-colors"
+                        title="Remove avatar"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                      <span className="text-2xl text-white font-semibold">
+                        {characterName ? characterName.charAt(0).toUpperCase() : "?"}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            setCharacterAvatar(event.target?.result as string);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="hidden"
+                      id="avatar-upload"
+                    />
+                    <label
+                      htmlFor="avatar-upload"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors cursor-pointer text-sm"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      {characterAvatar ? "Change Image" : "Upload Image"}
+                    </label>
+                    <p className="text-xs text-zinc-500 mt-1">PNG, JPG, GIF up to 5MB</p>
+                  </div>
+                </div>
+              </div>
+
               {/* Alternate Greetings Section */}
               <div className="border-t border-zinc-700 pt-4 mt-4">
                 <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
@@ -8065,6 +8147,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                   setCharacterSystemPrompt("");
                   setCharacterPostHistoryInstructions("");
                   setCharacterMesExample("");
+                  setCharacterAvatar("");
                   setCharacterAlternateGreetings([]);
                 }}
                 className="flex-1 py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
