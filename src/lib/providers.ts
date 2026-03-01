@@ -1316,20 +1316,20 @@ export const testProviderConnection = async (
     
     case "pollinations": {
       // Pollinations AI doesn't require an API key - it's free
+      // Uses the new OpenAI-compatible API endpoint
       try {
         // Test with a minimal chat request
         const model = config.selectedModel || "z.ai/glm5";
-        const response = await fetch("https://text.pollinations.ai/", {
+        const response = await fetch("https://gen.pollinations.ai/v1/chat/completions", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            messages: [{ role: "user", content: "Hi" }],
             model: model,
+            messages: [{ role: "user", content: "Hi" }],
             max_tokens: 5,
             seed: Math.floor(Math.random() * 1000000),
-            secure: false,
           }),
         });
         
@@ -1337,8 +1337,8 @@ export const testProviderConnection = async (
           return { success: true, message: "Pollinations AI connection successful!" };
         }
         
-        const errorText = await response.text();
-        return { success: false, message: `HTTP ${response.status}: ${errorText}` };
+        const errorData = await response.json().catch(() => ({}));
+        return { success: false, message: errorData.error?.message || `HTTP ${response.status}` };
       } catch (error) {
         return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
       }
