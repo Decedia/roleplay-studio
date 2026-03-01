@@ -1773,128 +1773,6 @@ function SettingsModal({
                 )}
               </div>
 
-              {/* Groq */}
-              <div className="p-3 bg-zinc-800/50 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${
-                      connectionStatus["groq"]?.status === "connected" ? "bg-green-500" :
-                      connectionStatus["groq"]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
-                      connectionStatus["groq"]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
-                    }`} />
-                    <span className="text-sm font-medium text-white">Groq</span>
-                    {activeProvider === "groq" && (
-                      <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
-                    )}
-                    <span className="text-xs text-zinc-500">(Free tier available)</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setEditingProvider(editingProvider === 'groq' ? null : 'groq')}
-                    className="text-xs text-blue-400 hover:text-blue-300"
-                  >
-                    {editingProvider === 'groq' ? 'Hide' : 'Configure'}
-                  </button>
-                </div>
-                {connectionStatus["groq"]?.message && (
-                  <p className={`text-xs mb-2 ${
-                    connectionStatus["groq"]?.status === "connected" ? "text-green-400" :
-                    connectionStatus["groq"]?.status === "error" ? "text-red-400" : "text-zinc-400"
-                  }`}>
-                    {connectionStatus["groq"].message}
-                  </p>
-                )}
-                {editingProvider === 'groq' && (
-                  <div className="mt-3 space-y-3">
-                    {/* Profile selector */}
-                    <div>
-                      <label className="text-xs text-zinc-400 block mb-1">Profile</label>
-                      <select
-                        value={providerConfigs["groq"]?.activeProfileId || ""}
-                        onChange={(e) => {
-                          if (e.target.value === "__new__") {
-                            const name = prompt("Enter profile name:");
-                            if (name !== null) {
-                              createProfile("groq", {
-                                name: name.trim() || new Date().toLocaleString(),
-                              });
-                            }
-                          } else {
-                            selectProfile("groq", e.target.value);
-                          }
-                        }}
-                        className="w-full px-3 py-1.5 text-sm bg-zinc-700 text-white rounded border border-zinc-600 focus:border-blue-500 focus:outline-none"
-                      >
-                        <option value="">Select a profile...</option>
-                        {providerConfigs["groq"]?.profiles.map(profile => (
-                          <option key={profile.id} value={profile.id}>{profile.name}</option>
-                        ))}
-                        <option value="__new__">+ Create new profile</option>
-                      </select>
-                      {providerConfigs["groq"]?.activeProfileId && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (confirm("Delete this profile?")) {
-                              deleteProfile("groq", providerConfigs["groq"].activeProfileId!);
-                            }
-                          }}
-                          className="mt-2 text-xs text-red-400 hover:text-red-300"
-                        >
-                          Delete Profile
-                        </button>
-                      )}
-                    </div>
-                    {/* API Key - only show if profile is selected */}
-                    {providerConfigs["groq"]?.activeProfileId && (
-                      <>
-                        <div>
-                          <label className="text-xs text-zinc-400 block mb-1">API Key</label>
-                          <input
-                            type="password"
-                            value={getActiveProfile("groq")?.apiKey || ""}
-                            onChange={(e) => {
-                              const profileId = providerConfigs["groq"].activeProfileId;
-                              if (!profileId) return;
-                              
-                              setProviderConfigs(prev => ({
-                                ...prev,
-                                "groq": {
-                                  ...prev["groq"],
-                                  profiles: prev["groq"].profiles.map(p =>
-                                    p.id === profileId ? { ...p, apiKey: e.target.value } : p
-                                  )
-                                }
-                              }));
-                            }}
-                            placeholder="Enter your Groq API key"
-                            className="w-full px-3 py-1.5 text-sm bg-zinc-700 text-white rounded border border-zinc-600 focus:border-blue-500 focus:outline-none"
-                          />
-                        </div>
-                        <div className="flex gap-2 mt-3">
-                          <button
-                            type="button"
-                            onClick={() => onTestConnection("groq")}
-                            disabled={connectionStatus["groq"]?.status === "testing" || !getActiveProfile("groq")?.apiKey}
-                            className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {connectionStatus["groq"]?.status === "testing" ? "Testing..." : "Test Connection"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onConnect("groq")}
-                            disabled={connectionStatus["groq"]?.status !== "connected"}
-                            className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            Connect
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-
               {/* Pollinations AI - Free, no API key needed */}
               <div className="p-3 bg-zinc-800/50 rounded-lg">
                 <div className="flex items-center justify-between mb-2">
@@ -1932,7 +1810,7 @@ function SettingsModal({
                     <div>
                       <label className="text-xs text-zinc-400 block mb-1">Model</label>
                       <select
-                        value={getActiveProfile("pollinations")?.selectedModel || providerModels["pollinations"]?.[0]?.id || ""}
+                        value={getActiveProfile("pollinations")?.selectedModel || providerModels["pollinations"]?.[0]?.id || AVAILABLE_PROVIDERS.find(p => p.id === "pollinations")?.models?.[0]?.id || ""}
                         onChange={(e) => {
                           const profileId = providerConfigs["pollinations"]?.activeProfileId;
                           if (profileId) {
@@ -1949,7 +1827,12 @@ function SettingsModal({
                         }}
                         className="w-full px-3 py-1.5 text-sm bg-zinc-700 text-white rounded border border-zinc-600 focus:border-blue-500 focus:outline-none"
                       >
-                        {(providerModels["pollinations"] || []).map(model => (
+                        {/* Show API-fetched models if available, otherwise use fallback models from AVAILABLE_PROVIDERS */}
+                        {(
+                          providerModels["pollinations"]?.length > 0 
+                            ? providerModels["pollinations"] 
+                            : AVAILABLE_PROVIDERS.find(p => p.id === "pollinations")?.models || []
+                        ).map(model => (
                           <option key={model.id} value={model.id}>{model.name}</option>
                         ))}
                       </select>
@@ -2201,7 +2084,6 @@ export default function Chat() {
     "google-ai-studio": { type: "google-ai-studio", isEnabled: false, profiles: [], activeProfileId: null },
     "google-vertex": { type: "google-vertex", isEnabled: false, profiles: [], activeProfileId: null },
     "nvidia-nim": { type: "nvidia-nim", isEnabled: false, profiles: [], activeProfileId: null },
-    "groq": { type: "groq", isEnabled: false, profiles: [], activeProfileId: null },
     "pollinations": { type: "pollinations", isEnabled: false, profiles: [], activeProfileId: null },
   });
   
@@ -2211,7 +2093,6 @@ export default function Chat() {
     "google-ai-studio": [],
     "google-vertex": [],
     "nvidia-nim": [],
-    "groq": [],
     "pollinations": [],
   });
   const [modelsFetching, setModelsFetching] = useState<Record<LLMProviderType, boolean>>({
@@ -2219,7 +2100,6 @@ export default function Chat() {
     "google-ai-studio": false,
     "google-vertex": false,
     "nvidia-nim": false,
-    "groq": false,
     "pollinations": false,
   });
   
@@ -2265,7 +2145,6 @@ export default function Chat() {
     "google-ai-studio": { status: "disconnected" },
     "google-vertex": { status: "disconnected" },
     "nvidia-nim": { status: "disconnected" },
-    "groq": { status: "disconnected" },
     "pollinations": { status: "disconnected" },
   });
 
@@ -2680,7 +2559,7 @@ export default function Chat() {
           }
           
           // Ensure all providers exist in loaded configs
-          const allProviders: LLMProviderType[] = ["puter", "google-ai-studio", "google-vertex", "nvidia-nim", "groq", "pollinations"];
+          const allProviders: LLMProviderType[] = ["puter", "google-ai-studio", "google-vertex", "nvidia-nim", "pollinations"];
           allProviders.forEach(key => {
             if (!configs[key]) {
               configs[key] = { type: key, isEnabled: false, profiles: [], activeProfileId: null };
@@ -2693,13 +2572,12 @@ export default function Chat() {
         }
       } else {
         // Check for old per-provider storage (for users upgrading from older versions)
-        const providers: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim", "groq"];
+        const providers: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim"];
         const migratedConfigs: Record<LLMProviderType, ProviderConfig> = {
           "puter": { type: "puter", isEnabled: true, profiles: [], activeProfileId: null },
           "google-ai-studio": { type: "google-ai-studio", isEnabled: false, profiles: [], activeProfileId: null },
           "google-vertex": { type: "google-vertex", isEnabled: false, profiles: [], activeProfileId: null },
           "nvidia-nim": { type: "nvidia-nim", isEnabled: false, profiles: [], activeProfileId: null },
-          "groq": { type: "groq", isEnabled: false, profiles: [], activeProfileId: null },
           "pollinations": { type: "pollinations", isEnabled: false, profiles: [], activeProfileId: null },
         };
         
@@ -3144,7 +3022,7 @@ export default function Chat() {
       }
 
       // Import active provider
-      if (json.activeProvider && ["puter", "google-ai-studio", "google-vertex", "nvidia-nim", "groq"].includes(json.activeProvider)) {
+      if (json.activeProvider && ["puter", "google-ai-studio", "google-vertex", "nvidia-nim", "pollinations"].includes(json.activeProvider)) {
         setActiveProvider(json.activeProvider);
       }
 

@@ -170,54 +170,6 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
     ],
   },
   {
-    id: "groq",
-    name: "Groq",
-    description: "Fast AI inference with free tier - supports Llama, Mixtral, and Gemma models",
-    requiresApiKey: true,
-    models: [
-      {
-        id: "llama-3.3-70b-versatile",
-        name: "Llama 3.3 70B Versatile",
-        provider: "groq",
-        contextWindow: 8192,
-        maxTokens: 8192,
-        supportsThinking: false,
-      },
-      {
-        id: "llama-3.1-70b-versatile",
-        name: "Llama 3.1 70B Versatile",
-        provider: "groq",
-        contextWindow: 8192,
-        maxTokens: 8192,
-        supportsThinking: false,
-      },
-      {
-        id: "llama-3.1-8b-instant",
-        name: "Llama 3.1 8B Instant",
-        provider: "groq",
-        contextWindow: 8192,
-        maxTokens: 8192,
-        supportsThinking: false,
-      },
-      {
-        id: "mixtral-8x7b-32768",
-        name: "Mixtral 8x7B",
-        provider: "groq",
-        contextWindow: 32768,
-        maxTokens: 32768,
-        supportsThinking: false,
-      },
-      {
-        id: "gemma2-9b-it",
-        name: "Gemma 2 9B",
-        provider: "groq",
-        contextWindow: 8192,
-        maxTokens: 8192,
-        supportsThinking: false,
-      },
-    ],
-  },
-  {
     id: "pollinations",
     name: "Pollinations AI",
     description: "Free AI models via Pollinations AI - no API key required",
@@ -713,6 +665,7 @@ export const chatWithNvidiaNIM: ChatFunction = async (
           temperature: options.temperature,
           max_tokens: options.maxTokens,
           top_p: options.topP,
+          top_k: options.topK,
         },
       }),
     });
@@ -853,171 +806,6 @@ export const streamWithNvidiaNIM = async (
     }
 
     onChunk({ content: fullContent, thinking: fullThinking, done: true });
-  } catch (error) {
-    onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
-  }
-};
-
-// Groq chat implementation - uses server-side proxy to avoid CORS
-export const chatWithGroq: ChatFunction = async (
-  messages,
-  config,
-  options
-) => {
-  if (!config.apiKey) {
-    return { error: "Groq API key is required" };
-  }
-
-  try {
-    const formattedMessages = messages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
-
-    // Add system prompt if provided
-    const messagesWithSystem = options.systemPrompt
-      ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
-      : formattedMessages;
-
-    // Use server-side proxy to avoid CORS issues
-    const response = await fetch("/api/groq", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        endpoint: "chat/completions",
-        apiKey: config.apiKey,
-        payload: {
-          model: config.selectedModel,
-          messages: messagesWithSystem,
-          temperature: options.temperature,
-          max_tokens: options.maxTokens,
-          top_p: options.topP,
-        },
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      return {
-        error: data.error || `HTTP ${response.status}`,
-      };
-    }
-
-    const content = data.choices?.[0]?.message?.content || "";
-
-    return { content };
-  } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : "Unknown error occurred",
-    };
-  }
-};
-
-// Groq streaming implementation
-export const streamWithGroq = async (
-  messages: Message[],
-  config: ProviderConfig,
-  options: {
-    temperature: number;
-    maxTokens: number;
-    topP: number;
-    topK: number;
-    systemPrompt?: string;
-    enableThinking?: boolean;
-  },
-  onChunk: StreamCallback
-): Promise<void> => {
-  if (!config.apiKey) {
-    onChunk({ error: "Groq API key is required" });
-    return;
-  }
-
-  try {
-    const formattedMessages = messages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
-
-    const messagesWithSystem = options.systemPrompt
-      ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
-      : formattedMessages;
-
-    // Use server-side proxy with streaming
-    const response = await fetch("/api/groq", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        endpoint: "chat/completions",
-        apiKey: config.apiKey,
-        payload: {
-          model: config.selectedModel,
-          messages: messagesWithSystem,
-          temperature: options.temperature,
-          max_tokens: options.maxTokens,
-          top_p: options.topP,
-          stream: true,
-        },
-        stream: true,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      onChunk({ error: errorData.error || `HTTP ${response.status}` });
-      return;
-    }
-
-    const reader = response.body?.getReader();
-    if (!reader) {
-      onChunk({ error: "Failed to get response stream" });
-      return;
-    }
-
-    const decoder = new TextDecoder();
-    let fullContent = "";
-    let buffer = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
-
-      for (const line of lines) {
-        if (line.startsWith("data: ")) {
-          const jsonStr = line.slice(6).trim();
-          if (!jsonStr || jsonStr === "[DONE]") continue;
-
-          try {
-            const data = JSON.parse(jsonStr);
-            
-            // Check for error in stream
-            if (data.error) {
-              onChunk({ error: data.error });
-              return;
-            }
-            
-            const delta = data.choices?.[0]?.delta;
-            
-            if (delta?.content) {
-              fullContent += delta.content;
-              onChunk({ content: fullContent });
-            }
-          } catch {
-            // Skip invalid JSON
-          }
-        }
-      }
-    }
-
-    onChunk({ content: fullContent, done: true });
   } catch (error) {
     onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
   }
@@ -1317,8 +1105,6 @@ export const sendChatMessage = async (
       return chatWithVertexAI(messages, config, options);
     case "nvidia-nim":
       return chatWithNvidiaNIM(messages, config, options);
-    case "groq":
-      return chatWithGroq(messages, config, options);
     case "pollinations":
       return chatWithPollinations(messages, config, options);
     default:
@@ -1350,8 +1136,6 @@ export const streamChatMessage = async (
       return streamWithVertexAI(messages, config, options, onChunk);
     case "nvidia-nim":
       return streamWithNvidiaNIM(messages, config, options, onChunk);
-    case "groq":
-      return streamWithGroq(messages, config, options, onChunk);
     case "pollinations":
       return streamWithPollinations(messages, config, options, onChunk);
     default:
@@ -1492,66 +1276,6 @@ export const testProviderConnection = async (
         
         return { success: false, message: errorData.error || `HTTP ${response.status}` };
       } catch (error) {
-        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
-      }
-    }
-    
-    case "groq": {
-      if (!config.apiKey) {
-        return { success: false, message: "API key is required." };
-      }
-      try {
-        // Test with a minimal chat request using server-side proxy to avoid CORS
-        // Add timeout to prevent getting stuck
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-        
-        const response = await fetch("/api/groq", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            endpoint: "chat/completions",
-            apiKey: config.apiKey,
-            payload: {
-              model: "llama-3.1-8b-instant",
-              messages: [{ role: "user", content: "Hi" }],
-              max_tokens: 5,
-            },
-          }),
-          signal: controller.signal,
-        });
-        
-        clearTimeout(timeoutId);
-        
-        // 200 is success code
-        if (response.ok) {
-          return { success: true, message: "Groq connection successful!" };
-        }
-        
-        // Parse error response
-        const contentType = response.headers.get("content-type");
-        if (contentType?.includes("application/json")) {
-          const errorData = await response.json();
-          
-          if (response.status === 422) {
-            return { success: false, message: errorData.error || "Validation error (422)" };
-          }
-          
-          if (response.status === 500) {
-            return { success: false, message: "Server error (500) - please try again later" };
-          }
-          
-          return { success: false, message: errorData.error || `HTTP ${response.status}` };
-        } else {
-          const textResponse = await response.text();
-          return { success: false, message: textResponse || `HTTP ${response.status}` };
-        }
-      } catch (error) {
-        if (error instanceof Error && error.name === "AbortError") {
-          return { success: false, message: "Connection timed out after 30 seconds" };
-        }
         return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
       }
     }
@@ -1844,108 +1568,40 @@ export const fetchModelsFromProvider = async (
         return { models: [], error: "Puter.js models must be fetched client-side" };
       }
 
-      case "groq": {
-        // Return static Groq models from AVAILABLE_PROVIDERS
-        const staticModels: FetchedModel[] = [
-          {
-            id: "llama-3.3-70b-versatile",
-            name: "Llama 3.3 70B Versatile",
-            provider: "groq",
-            context: 8192,
-            max_tokens: 8192,
-            supportsThinking: false,
-          },
-          {
-            id: "llama-3.1-70b-versatile",
-            name: "Llama 3.1 70B Versatile",
-            provider: "groq",
-            context: 8192,
-            max_tokens: 8192,
-            supportsThinking: false,
-          },
-          {
-            id: "llama-3.1-8b-instant",
-            name: "Llama 3.1 8B Instant",
-            provider: "groq",
-            context: 8192,
-            max_tokens: 8192,
-            supportsThinking: false,
-          },
-          {
-            id: "mixtral-8x7b-32768",
-            name: "Mixtral 8x7B",
-            provider: "groq",
-            context: 32768,
-            max_tokens: 32768,
-            supportsThinking: false,
-          },
-          {
-            id: "gemma2-9b-it",
-            name: "Gemma 2 9B",
-            provider: "groq",
-            context: 8192,
-            max_tokens: 8192,
-            supportsThinking: false,
-          },
-        ];
-
-        return { models: staticModels };
-      }
-
       case "pollinations": {
-        // Return static Pollinations AI models from AVAILABLE_PROVIDERS
-        const staticModels: FetchedModel[] = [
-          {
-            id: "llama-3.1-70b-instruct",
-            name: "Llama 3.1 70B",
-            provider: "pollinations",
-            context: 131072,
-            max_tokens: 4096,
-            supportsThinking: false,
-          },
-          {
-            id: "llama-3.1-8b-instruct",
-            name: "Llama 3.1 8B",
-            provider: "pollinations",
-            context: 131072,
-            max_tokens: 4096,
-            supportsThinking: false,
-          },
-          {
-            id: "qwen-2.5-72b-instruct",
-            name: "Qwen 2.5 72B",
-            provider: "pollinations",
-            context: 32768,
-            max_tokens: 8192,
-            supportsThinking: false,
-          },
-          {
-            id: "qwen-2.5-14b-instruct",
-            name: "Qwen 2.5 14B",
-            provider: "pollinations",
-            context: 32768,
-            max_tokens: 8192,
-            supportsThinking: false,
-          },
-          {
-            id: "mistral-nemo-instruct",
-            name: "Mistral Nemo",
-            provider: "pollinations",
-            context: 131072,
-            max_tokens: 4096,
-            supportsThinking: false,
-          },
-          {
-            id: "deepseek-coder-v2-instruct",
-            name: "DeepSeek Coder V2",
-            provider: "pollinations",
-            context: 163840,
-            max_tokens: 16384,
-            supportsThinking: false,
-          },
-        ];
-
-        return { models: staticModels };
+        // Fetch models from Pollinations AI API
+        try {
+          const response = await fetch("/api/models?provider=pollinations");
+          const data = await response.json();
+          
+          if (data.models && data.models.length > 0) {
+            return { models: data.models };
+          }
+          
+          // Fallback to static models if API fails
+          const staticModels: FetchedModel[] = [
+            { id: "llama-3.1-70b-instruct", name: "Llama 3.1 70B", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
+            { id: "llama-3.1-8b-instruct", name: "Llama 3.1 8B", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
+            { id: "qwen-2.5-72b-instruct", name: "Qwen 2.5 72B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
+            { id: "qwen-2.5-14b-instruct", name: "Qwen 2.5 14B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
+            { id: "mistral-nemo-instruct", name: "Mistral Nemo", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
+            { id: "deepseek-coder-v2-instruct", name: "DeepSeek Coder V2", provider: "pollinations", context: 163840, max_tokens: 16384, supportsThinking: false },
+            { id: "flux", name: "Flux (Image Gen)", provider: "pollinations", context: 1, max_tokens: 1, supportsThinking: false },
+          ];
+          return { models: staticModels };
+        } catch (error) {
+          // Return fallback models on error
+          const staticModels: FetchedModel[] = [
+            { id: "llama-3.1-70b-instruct", name: "Llama 3.1 70B", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
+            { id: "llama-3.1-8b-instruct", name: "Llama 3.1 8B", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
+            { id: "qwen-2.5-72b-instruct", name: "Qwen 2.5 72B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
+            { id: "qwen-2.5-14b-instruct", name: "Qwen 2.5 14B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
+            { id: "mistral-nemo-instruct", name: "Mistral Nemo", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
+            { id: "deepseek-coder-v2-instruct", name: "DeepSeek Coder V2", provider: "pollinations", context: 163840, max_tokens: 16384, supportsThinking: false },
+            { id: "flux", name: "Flux (Image Gen)", provider: "pollinations", context: 1, max_tokens: 1, supportsThinking: false },
+          ];
+          return { models: staticModels };
+        }
       }
 
       default:
