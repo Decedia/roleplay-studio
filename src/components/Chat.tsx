@@ -2874,6 +2874,43 @@ export default function Chat() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showProviderConfig]);
 
+  // Fetch Pollinations models when opening configuration
+  useEffect(() => {
+    const fetchPollinationsModels = async () => {
+      if (editingProvider === 'pollinations') {
+        // Only fetch if we don't have models yet
+        const existingModels = providerModels['pollinations'];
+        if (existingModels && existingModels.length > 0) {
+          return; // Already have models
+        }
+        
+        // Get the active profile for Pollinations
+        const pollinationsConfig = providerConfigs['pollinations'];
+        const activeProfile = pollinationsConfig?.profiles.find(p => p.id === pollinationsConfig.activeProfileId);
+        
+        // Fetch models from API
+        setModelsFetching(prev => ({ ...prev, ['pollinations']: true }));
+        const result = await fetchModelsFromProvider('pollinations', {
+          type: 'pollinations',
+          isEnabled: false,
+          profiles: [],
+          activeProfileId: null,
+          apiKey: activeProfile?.apiKey || ''
+        });
+        setModelsFetching(prev => ({ ...prev, ['pollinations']: false }));
+        
+        if (result.models.length > 0) {
+          setProviderModels(prev => ({
+            ...prev,
+            ['pollinations']: result.models
+          }));
+        }
+      }
+    };
+    
+    fetchPollinationsModels();
+  }, [editingProvider, providerConfigs, providerModels]);
+
   // Persona functions
   const createPersona = () => {
     if (!personaName.trim() || !personaDescription.trim()) return;
