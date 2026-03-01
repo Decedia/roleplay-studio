@@ -204,9 +204,9 @@ export async function GET(request: NextRequest) {
 
       case "puter": {
         // Puter.js models are fetched client-side
-        return NextResponse.json({ 
+        return NextResponse.json({
           error: "Puter.js models must be fetched client-side",
-          models: [] 
+          models: []
         });
       }
 
