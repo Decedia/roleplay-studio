@@ -1,6 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 
 // NVIDIA NIM API proxy to avoid CORS issues
+// Timeout in milliseconds (90 seconds - below Cloudflare's 100s limit)
+const NVIDIA_NIM_TIMEOUT = 90000;
+
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs: number
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(`Request timed out after ${timeoutMs / 1000} seconds`);
+    }
+    throw error;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -13,16 +40,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Proxy request to NVIDIA NIM API
-    const response = await fetch(`https://integrate.api.nvidia.com/v1/${endpoint}`, {
-      method: "POST",
-      headers: {
-        "Accept": stream ? "text/event-stream" : "application/json",
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
+    // Proxy request to NVIDIA NIM API with timeout
+    const response = await fetchWithTimeout(
+      `https://integrate.api.nvidia.com/v1/${endpoint}`,
+      {
+        method: "POST",
+        headers: {
+          "Accept": stream ? "text/event-stream" : "application/json",
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(payload),
       },
-      body: JSON.stringify(payload),
-    });
+      NVIDIA_NIM_TIMEOUT
+    );
 
     // Handle streaming response
     if (stream && response.ok && response.body) {
@@ -112,8 +143,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(data);
   } catch (error) {
     console.error("NVIDIA NIM proxy error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    
+    // Check if it's a timeout error
+    if (errorMessage.includes("timed out")) {
+      return NextResponse.json(
+        {
+          error: "Request timed out. NVIDIA NIM models can be slow. Try: 1) Using a different model, 2) Reducing max tokens, 3) Trying again later",
+          timeout: true
+        },
+        { status: 504 }
+      );
+    }
+    
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unknown error" },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -131,14 +175,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Proxy request to NVIDIA NIM API for model list
-    const response = await fetch("https://integrate.api.nvidia.com/v1/models", {
-      method: "GET",
-      headers: {
-        "Accept": "application/json",
-        "Authorization": authHeader,
+    // Proxy request to NVIDIA NIM API for model list with timeout
+    const response = await fetchWithTimeout(
+      "https://integrate.api.nvidia.com/v1/models",
+      {
+        method: "GET",
+        headers: {
+          "Accept": "application/json",
+          "Authorization": authHeader,
+        },
       },
-    });
+      NVIDIA_NIM_TIMEOUT
+    );
 
     // Try to parse JSON, but handle non-JSON responses
     let data;
@@ -171,8 +219,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data);
   } catch (error) {
     console.error("NVIDIA NIM models fetch error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    
+    // Check if it's a timeout error
+    if (errorMessage.includes("timed out")) {
+      return NextResponse.json(
+        {
+          error: "Request timed out. Please try again later.",
+          timeout: true
+        },
+        { status: 504 }
+      );
+    }
+    
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unknown error" },
+      { error: errorMessage },
       { status: 500 }
     );
   }

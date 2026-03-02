@@ -8,6 +8,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
+- [x] Fix NVIDIA NIM 524 timeout error in VN generator - Added 90-second timeout to API route and reduced max tokens for NVIDIA NIM (800 for story, 1200 for characters/plot)
 - [x] Show AI response in VN generator premise step - Displays generated character JSON under the Generate Characters button
 - [x] Fix VN generator streaming for NVIDIA NIM - Always enable streaming when using NVIDIA NIM in VN generator, regardless of global settings
 - [x] Add thought signature for Gemini models - Shows model type badge (⚡ Flash, 🔮 Pro, 👑 Ultra, ✨ 1.5) in thinking section
@@ -459,6 +460,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date       | Changes                                                                                                                                                                                                                                          |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-03-02 | Fix NVIDIA NIM 524 timeout error in VN generator - Added 90-second timeout to API route and reduced max tokens for NVIDIA NIM (800 for story, 1200 for characters/plot) to prevent Cloudflare timeouts                                           |
 | 2026-03-02 | Merged feature-thought-signature branch to main - adds model type badges (⚡ Flash, 🔮 Pro, 👑 Ultra, ✨ 1.5) to Gemini thinking sections                                                                                                        |
 | 2026-02-28 | Fix message duplication bug in generator/brainstorm when resending same message - removed duplicate message addition to state, fixed refresh/continue buttons to only show on last assistant message, fixed regenerate to keep last user message |
 | 2026-02-28 | Add "Continue Last Session" button to home menu - stores last view, persona, character, conversation in localStorage, allows resuming chat, generator, brainstorm, and VN generator views                                                        |

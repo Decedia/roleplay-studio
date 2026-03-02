@@ -4131,12 +4131,16 @@ Generate 3-5 main characters. Respond with ONLY a JSON array of characters in th
       
       let responseText = "";
       
+      // Use lower max tokens for NVIDIA NIM to avoid timeouts
+      const isNvidiaNIM = activeProvider === "nvidia-nim";
+      const maxTokens = isNvidiaNIM ? 1200 : 2000;
+      
       if (activeProvider === "puter") {
         // Use streaming for puter as well to show real-time response
         const response = await window.puter.ai.chat(messages, {
           model: globalSettings.modelId,
           temperature: 0.8,
-          max_tokens: 2000,
+          max_tokens: maxTokens,
         });
         responseText = response.message.content;
         setVnPremiseResponse(responseText);
@@ -4147,7 +4151,7 @@ Generate 3-5 main characters. Respond with ONLY a JSON array of characters in th
           profileConfig,
           {
             temperature: 0.8,
-            maxTokens: 2000,
+            maxTokens: maxTokens,
             topP: 0.9,
             topK: 40,
             enableThinking: false,
@@ -4264,12 +4268,16 @@ Generate 5-10 plot points that tell a complete story. Respond with ONLY a JSON a
       
       let responseText = "";
       
+      // Use lower max tokens for NVIDIA NIM to avoid timeouts
+      const isNvidiaNIM = activeProvider === "nvidia-nim";
+      const maxTokens = isNvidiaNIM ? 1200 : 2000;
+      
       if (activeProvider === "puter") {
         // Use streaming for puter as well to show real-time response
         const response = await window.puter.ai.chat(messages, {
           model: globalSettings.modelId,
           temperature: 0.8,
-          max_tokens: 2000,
+          max_tokens: maxTokens,
         });
         responseText = response.message.content;
         setVnPremiseResponse(responseText);
@@ -4280,7 +4288,7 @@ Generate 5-10 plot points that tell a complete story. Respond with ONLY a JSON a
           profileConfig,
           {
             temperature: 0.8,
-            maxTokens: 2000,
+            maxTokens: maxTokens,
             topP: 0.9,
             topK: 40,
             enableThinking: false,
@@ -4393,11 +4401,15 @@ Write an engaging story segment. If this is a good point for player interaction,
       
       let responseText: string;
       
+      // Use lower max tokens for NVIDIA NIM to avoid timeouts
+      const isNvidiaNIM = activeProvider === "nvidia-nim";
+      const maxTokens = isNvidiaNIM ? 800 : 2000;
+      
       if (activeProvider === "puter") {
         const response = await window.puter.ai.chat(messages, {
           model: globalSettings.modelId,
           temperature: 0.9,
-          max_tokens: 2000,
+          max_tokens: maxTokens,
         });
         responseText = response.message.content;
       } else {
@@ -4407,7 +4419,7 @@ Write an engaging story segment. If this is a good point for player interaction,
           configWithModel,
           {
             temperature: 0.9,
-            maxTokens: 2000,
+            maxTokens: maxTokens,
             topP: 0.95,
             topK: 40,
             enableThinking: false,
