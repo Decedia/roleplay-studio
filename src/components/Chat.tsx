@@ -2247,6 +2247,7 @@ export default function Chat() {
   const [vnIsGenerating, setVnIsGenerating] = useState(false);
   const [vnError, setVnError] = useState<string | null>(null);
   const [vnInstructions, setVnInstructions] = useState<string>(DEFAULT_VN_INSTRUCTIONS);
+  const [vnPremiseResponse, setVnPremiseResponse] = useState<string>("");
   const [showVnInstructionsEditor, setShowVnInstructionsEditor] = useState(false);
   
   // Message editing state
@@ -4084,6 +4085,7 @@ export default function Chat() {
     
     setVnIsGenerating(true);
     setVnError(null);
+    setVnPremiseResponse("");
     
     let systemPrompt = vnInstructions;
     
@@ -4154,6 +4156,9 @@ Generate 3-5 main characters. Respond with ONLY a JSON array of characters in th
         }
         responseText = response.content || "";
       }
+      
+      // Store response for display
+      setVnPremiseResponse(responseText);
       
       // Parse JSON from response
       let jsonStr = responseText.trim();
@@ -4273,6 +4278,9 @@ Generate 5-10 plot points that tell a complete story. Respond with ONLY a JSON a
         }
         responseText = response.content || "";
       }
+      
+      // Store response for display
+      setVnPremiseResponse(responseText);
       
       // Parse JSON from response
       let jsonStr = responseText.trim();
@@ -4460,6 +4468,7 @@ Write an engaging story segment. If this is a good point for player interaction,
     setVnPremise("");
     setVnStep("premise");
     setVnError(null);
+    setVnPremiseResponse("");
   };
 
   // Navigation functions
@@ -7127,6 +7136,21 @@ Write an engaging story segment. If this is a good point for player interaction,
                       "Generate Characters →"
                     )}
                   </button>
+                  
+                  {/* AI Response Display */}
+                  {vnPremiseResponse && (
+                    <div className="mt-4 p-4 bg-zinc-800 border border-zinc-700 rounded-lg">
+                      <div className="text-xs text-zinc-500 mb-2 flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        AI Generated Characters (JSON)
+                      </div>
+                      <pre className="text-xs text-zinc-300 overflow-x-auto whitespace-pre-wrap font-mono max-h-64 overflow-y-auto">
+                        {vnPremiseResponse}
+                      </pre>
+                    </div>
+                  )}
                 </div>
               )}
               
