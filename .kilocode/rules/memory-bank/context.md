@@ -8,6 +8,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
+- [x] Fix VN generator streaming for NVIDIA NIM - Always enable streaming when using NVIDIA NIM in VN generator, regardless of global settings
 - [x] Add thought signature for Gemini models - Shows model type badge (⚡ Flash, 🔮 Pro, 👑 Ultra, ✨ 1.5) in thinking section
 - [x] Add conversation history modal - View all messages from past conversations with "Continue Conversation" button
 - [x] Add "History" button under Continue in character selection (conversations view)
