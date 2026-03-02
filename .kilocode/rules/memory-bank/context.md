@@ -8,6 +8,8 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
+- [x] Add conversation history modal - View all messages from past conversations with "Continue Conversation" button
+- [x] Add "History" button under Continue in character selection (conversations view)
 - [x] Remove provider selector dropdown from header - model configuration now only accessible via gear/settings button
 - [x] Clean up unused state variables (showProviderConfig, providerDropdownRef) and related effect
 - [x] Create "Clean-Up" branch for UI simplification
