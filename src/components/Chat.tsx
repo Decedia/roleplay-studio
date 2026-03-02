@@ -5187,7 +5187,8 @@ Write an engaging story segment. If this is a good point for player interaction,
         );
 
         // Use streaming or non-streaming based on settings
-        if (globalSettings.enableStreaming) {
+        // Always enable streaming for NVIDIA NIM in VN generator
+        if (globalSettings.enableStreaming || activeProvider === "nvidia-nim") {
           await streamChatMessage(
             truncatedMessages,
             profileConfig,
@@ -5205,19 +5206,20 @@ Write an engaging story segment. If this is a good point for player interaction,
                 setError(chunk.error);
                 return;
               }
-              
+
               if (chunk.content !== undefined) {
                 setStreamingContent(chunk.content);
               }
-              
+
               if (chunk.thinking !== undefined) {
                 setStreamingThinking(chunk.thinking);
               }
-              
+
               if (chunk.done) {
+                const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
                 const finalMessages: Message[] = [
                   ...messagesAfterEdit,
-                  { role: "assistant", content: chunk.content || "", thinking: chunk.thinking },
+                  { role: "assistant", content: chunk.content || "", thinking: chunk.thinking, signature: thoughtSig?.signature, modelName: thoughtSig?.modelName },
                 ];
                 updateConversationMessages(finalMessages);
                 setStreamingContent("");
@@ -5239,13 +5241,14 @@ Write an engaging story segment. If this is a good point for player interaction,
               thinkingLevel: globalSettings.thinkingLevel,
             }
           );
-          
+
           if (response.error) {
             setError(response.error);
           } else {
+            const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
             const finalMessages: Message[] = [
               ...messagesAfterEdit,
-              { role: "assistant", content: response.content || "", thinking: response.thinking },
+              { role: "assistant", content: response.content || "", thinking: response.thinking, signature: thoughtSig?.signature, modelName: thoughtSig?.modelName },
             ];
             updateConversationMessages(finalMessages);
           }
