@@ -345,6 +345,9 @@ export const buildFullSystemPrompt = (
   
   // === NEGATIVE AND FORMATTING CONSTRAINTS (at the end) ===
   
+  // Formatting instructions - ensures proper paragraph breaks and readability
+  constraintSections.push("Format your responses with proper paragraph breaks, line spacing, and natural dialogue structure. Use separate paragraphs for different ideas, actions, and speech. Avoid walls of text.");
+  
   // Jailbreak instructions (if enabled) - placed near end as it's a constraint
   if (globalInstructions?.enableJailbreak && globalInstructions.jailbreakInstructions) {
     constraintSections.push(globalInstructions.jailbreakInstructions);
