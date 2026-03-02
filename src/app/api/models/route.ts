@@ -273,8 +273,7 @@ export async function GET(request: NextRequest) {
           const models = Object.values(allModels);
           if (models.length === 0) {
             const fallbackModels = [
-              { id: "llama-3.1-70b-instruct", name: "Llama 3.1 70B", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false, type: "text" },
-              { id: "llama-3.1-8b-instruct", name: "Llama 3.1 8B", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false, type: "text" },
+              { id: "z.ai/glm5", name: "GLM 5", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false, type: "text" },
               { id: "qwen-2.5-72b-instruct", name: "Qwen 2.5 72B", provider: "pollinations", contextWindow: 32768, maxTokens: 8192, supportsThinking: false, type: "text" },
               { id: "qwen-2.5-14b-instruct", name: "Qwen 2.5 14B", provider: "pollinations", contextWindow: 32768, maxTokens: 8192, supportsThinking: false, type: "text" },
               { id: "mistral-nemo-instruct", name: "Mistral Nemo", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false, type: "text" },
@@ -288,8 +287,7 @@ export async function GET(request: NextRequest) {
         } catch (error) {
           // Return fallback models on error
           const fallbackModels = [
-            { id: "llama-3.1-70b-instruct", name: "Llama 3.1 70B", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false, type: "text" },
-            { id: "llama-3.1-8b-instruct", name: "Llama 3.1 8B", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false, type: "text" },
+            { id: "z.ai/glm5", name: "GLM 5", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false, type: "text" },
             { id: "qwen-2.5-72b-instruct", name: "Qwen 2.5 72B", provider: "pollinations", contextWindow: 32768, maxTokens: 8192, supportsThinking: false, type: "text" },
             { id: "qwen-2.5-14b-instruct", name: "Qwen 2.5 14B", provider: "pollinations", contextWindow: 32768, maxTokens: 8192, supportsThinking: false, type: "text" },
             { id: "mistral-nemo-instruct", name: "Mistral Nemo", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false, type: "text" },

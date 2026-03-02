@@ -1796,7 +1796,7 @@ function SettingsModal({
                         createProfile("pollinations", {
                           name: "Default Profile",
                           apiKey: "",
-                          selectedModel: "llama-3.1-70b-instruct",
+                          selectedModel: "z.ai/glm5",
                         });
                       }
                       setEditingProvider(editingProvider === 'pollinations' ? null : 'pollinations');

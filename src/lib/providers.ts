@@ -128,30 +128,6 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
         supportsThinking: false,
       },
       {
-        id: "meta/llama-3.1-405b-instruct",
-        name: "Llama 3.1 405B Instruct",
-        provider: "nvidia-nim",
-        contextWindow: 131072,
-        maxTokens: 4096,
-        supportsThinking: false,
-      },
-      {
-        id: "meta/llama-3.1-70b-instruct",
-        name: "Llama 3.1 70B Instruct",
-        provider: "nvidia-nim",
-        contextWindow: 131072,
-        maxTokens: 4096,
-        supportsThinking: false,
-      },
-      {
-        id: "meta/llama-3.1-8b-instruct",
-        name: "Llama 3.1 8B Instruct",
-        provider: "nvidia-nim",
-        contextWindow: 131072,
-        maxTokens: 4096,
-        supportsThinking: false,
-      },
-      {
         id: "mistralai/mistral-large",
         name: "Mistral Large",
         provider: "nvidia-nim",
@@ -176,16 +152,8 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
     requiresApiKey: false,
     models: [
       {
-        id: "llama-3.1-70b-instruct",
-        name: "Llama 3.1 70B",
-        provider: "pollinations",
-        contextWindow: 131072,
-        maxTokens: 4096,
-        supportsThinking: false,
-      },
-      {
-        id: "llama-3.1-8b-instruct",
-        name: "Llama 3.1 8B",
+        id: "z.ai/glm5",
+        name: "GLM 5",
         provider: "pollinations",
         contextWindow: 131072,
         maxTokens: 4096,
@@ -857,7 +825,7 @@ export const chatWithPollinations: ChatFunction = async (
       : formattedMessages;
 
     // Pollinations AI uses a direct URL with query parameters
-    const model = config.selectedModel || "llama-3.1-70b-instruct";
+    const model = config.selectedModel || "z.ai/glm5";
     const url = `https://text.pollinations.ai/`;
     
     // Build headers - API key is optional
@@ -919,7 +887,7 @@ export const streamWithPollinations = async (
       : formattedMessages;
 
     // Pollinations AI uses a direct URL with query parameters
-    const model = config.selectedModel || "llama-3.1-70b-instruct";
+    const model = config.selectedModel || "z.ai/glm5";
     const url = `https://text.pollinations.ai/`;
     
     // Build headers - API key is optional
@@ -1318,7 +1286,7 @@ export const testProviderConnection = async (
       // Pollinations AI doesn't require an API key - it's free
       try {
         // Test with a minimal chat request
-        const model = config.selectedModel || "llama-3.1-70b-instruct";
+        const model = config.selectedModel || "z.ai/glm5";
         const response = await fetch("https://text.pollinations.ai/", {
           method: "POST",
           headers: {
@@ -1621,8 +1589,7 @@ export const fetchModelsFromProvider = async (
           
           // Fallback to static models if API fails
           const staticModels: FetchedModel[] = [
-            { id: "llama-3.1-70b-instruct", name: "Llama 3.1 70B", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
-            { id: "llama-3.1-8b-instruct", name: "Llama 3.1 8B", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
+            { id: "z.ai/glm5", name: "GLM 5", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
             { id: "qwen-2.5-72b-instruct", name: "Qwen 2.5 72B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
             { id: "qwen-2.5-14b-instruct", name: "Qwen 2.5 14B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
             { id: "mistral-nemo-instruct", name: "Mistral Nemo", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
@@ -1633,8 +1600,7 @@ export const fetchModelsFromProvider = async (
         } catch (error) {
           // Return fallback models on error
           const staticModels: FetchedModel[] = [
-            { id: "llama-3.1-70b-instruct", name: "Llama 3.1 70B", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
-            { id: "llama-3.1-8b-instruct", name: "Llama 3.1 8B", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
+            { id: "z.ai/glm5", name: "GLM 5", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
             { id: "qwen-2.5-72b-instruct", name: "Qwen 2.5 72B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
             { id: "qwen-2.5-14b-instruct", name: "Qwen 2.5 14B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
             { id: "mistral-nemo-instruct", name: "Mistral Nemo", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
