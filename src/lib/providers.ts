@@ -176,7 +176,7 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
     requiresApiKey: false,
     models: [
       {
-        id: "z.ai/glm5",
+        id: "gemini-flash",
         name: "Z.ai GLM 5",
         provider: "pollinations",
         contextWindow: 131072,
@@ -809,7 +809,7 @@ export const chatWithPollinations: ChatFunction = async (
       : formattedMessages;
 
     // Pollinations AI uses the new OpenAI-compatible API endpoint
-    const model = config.selectedModel || "z.ai/glm5";
+    const model = config.selectedModel || "gemini-flash";
     const url = `https://gen.pollinations.ai/v1/chat/completions`;
     
     // Build headers - API key is optional
@@ -871,7 +871,7 @@ export const streamWithPollinations = async (
       : formattedMessages;
 
     // Pollinations AI uses the new OpenAI-compatible API endpoint
-    const model = config.selectedModel || "z.ai/glm5";
+    const model = config.selectedModel || "gemini-flash";
     const url = `https://gen.pollinations.ai/v1/chat/completions`;
     
     // Build headers - API key is optional
@@ -1271,7 +1271,7 @@ export const testProviderConnection = async (
       // Uses the new OpenAI-compatible API endpoint
       try {
         // Test with a minimal chat request
-        const model = config.selectedModel || "z.ai/glm5";
+        const model = config.selectedModel || "gemini-flash";
         const response = await fetch("https://gen.pollinations.ai/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -1573,13 +1573,13 @@ export const fetchModelsFromProvider = async (
           
           // Fallback to static models if API fails
           const staticModels: FetchedModel[] = [
-            { id: "z.ai/glm5", name: "Z.ai GLM 5", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
+            { id: "gemini-flash", name: "Z.ai GLM 5", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
           ];
           return { models: staticModels };
         } catch (error) {
           // Return fallback models on error
           const staticModels: FetchedModel[] = [
-            { id: "z.ai/glm5", name: "Z.ai GLM 5", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
+            { id: "gemini-flash", name: "Z.ai GLM 5", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
           ];
           return { models: staticModels };
         }

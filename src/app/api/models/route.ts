@@ -250,13 +250,13 @@ export async function GET(request: NextRequest) {
 
           // Fallback to static models if API fails or returns empty
           const fallbackModels = [
-            { id: "z.ai/glm5", name: "Z.ai GLM 5", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
+            { id: "gemini-flash", name: "Z.ai GLM 5", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
           ];
           return NextResponse.json({ models: fallbackModels });
         } catch (error) {
           // Return fallback models on error
           const fallbackModels = [
-            { id: "z.ai/glm5", name: "Z.ai GLM 5", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
+            { id: "gemini-flash", name: "Z.ai GLM 5", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
           ];
           return NextResponse.json({ models: fallbackModels });
         }
