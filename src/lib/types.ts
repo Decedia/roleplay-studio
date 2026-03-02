@@ -105,6 +105,8 @@ export interface Message {
   content: string;
   thinking?: string; // For AI reasoning display
   isContinue?: boolean; // Flag for continue instruction messages (hidden in UI)
+  signature?: string; // Model signature (e.g., "Gemini Flash")
+  modelName?: string; // Full model name for display
 }
 
 // Conversation between a persona and character

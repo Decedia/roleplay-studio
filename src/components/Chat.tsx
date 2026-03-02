@@ -455,8 +455,29 @@ function replaceMacros(content: string, personaName: string, characterName: stri
     .replace(/\{\{char\}\}/gi, characterName);
 }
 
+// Helper function to get thought signature for Gemini models
+function getThoughtSignature(modelId: string, provider: LLMProviderType): { signature: string; modelName: string } | null {
+  if (provider !== "google-ai-studio" && provider !== "google-vertex") {
+    return null;
+  }
+  
+  const modelLower = modelId.toLowerCase();
+  
+  if (modelLower.includes("flash")) {
+    return { signature: "⚡ Flash", modelName: "Gemini 2.0 Flash" };
+  } else if (modelLower.includes("pro")) {
+    return { signature: "🔮 Pro", modelName: "Gemini 2.0 Pro" };
+  } else if (modelLower.includes("ultra")) {
+    return { signature: "👑 Ultra", modelName: "Gemini Ultra" };
+  } else if (modelLower.includes("1.5")) {
+    return { signature: "✨ 1.5", modelName: "Gemini 1.5" };
+  }
+  
+  return { signature: "🔷 Gemini", modelName: "Gemini" };
+}
+
 // Thinking Section Component
-function ThinkingSection({ content }: { content: string }) {
+function ThinkingSection({ content, signature, modelName }: { content: string; signature?: string; modelName?: string }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -467,6 +488,11 @@ function ThinkingSection({ content }: { content: string }) {
       >
         <span className="text-base">💭</span>
         <span>Thinking...</span>
+        {signature && (
+          <span className="px-2 py-0.5 bg-blue-900/50 text-blue-300 text-xs rounded-full border border-blue-800">
+            {signature}
+          </span>
+        )}
         <svg 
           className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`} 
           fill="none" 
@@ -478,6 +504,11 @@ function ThinkingSection({ content }: { content: string }) {
       </button>
       {isExpanded && (
         <div className="mt-2 p-3 bg-zinc-900/50 rounded-lg border border-zinc-700 text-sm text-zinc-400 italic whitespace-pre-wrap">
+          {modelName && (
+            <div className="text-xs text-blue-400 mb-2 pb-2 border-b border-zinc-700">
+              Thought process from {modelName}
+            </div>
+          )}
           {content}
         </div>
       )}
@@ -4702,9 +4733,16 @@ Write an engaging story segment. If this is a good point for player interaction,
             }
             
             if (chunk.done) {
+              const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
               const finalMessages: Message[] = [
                 ...updatedMessages,
-                { role: "assistant", content: chunk.content || "", thinking: chunk.thinking },
+                { 
+                  role: "assistant", 
+                  content: chunk.content || "", 
+                  thinking: chunk.thinking,
+                  signature: thoughtSig?.signature,
+                  modelName: thoughtSig?.modelName,
+                },
               ];
               updateConversationMessages(finalMessages);
               setStreamingContent("");
@@ -4731,9 +4769,16 @@ Write an engaging story segment. If this is a good point for player interaction,
         if (response.error) {
           setError(response.error);
         } else {
+          const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
           const finalMessages: Message[] = [
             ...updatedMessages,
-            { role: "assistant", content: response.content || "", thinking: response.thinking },
+            { 
+              role: "assistant", 
+              content: response.content || "", 
+              thinking: response.thinking,
+              signature: thoughtSig?.signature,
+              modelName: thoughtSig?.modelName,
+            },
           ];
           updateConversationMessages(finalMessages);
         }
@@ -4854,9 +4899,16 @@ Write an engaging story segment. If this is a good point for player interaction,
             }
             
             if (chunk.done) {
+              const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
               const finalMessages: Message[] = [
                 ...messagesBeforeRetry,
-                { role: "assistant", content: chunk.content || "", thinking: chunk.thinking },
+                { 
+                  role: "assistant", 
+                  content: chunk.content || "", 
+                  thinking: chunk.thinking,
+                  signature: thoughtSig?.signature,
+                  modelName: thoughtSig?.modelName,
+                },
               ];
               updateConversationMessages(finalMessages);
               setStreamingContent("");
@@ -7823,7 +7875,11 @@ Write an engaging story segment. If this is a good point for player interaction,
                               <>
                                 {/* Thinking section - collapsible */}
                                 {thinkContent && selectedPersona && selectedCharacter && (
-                                  <ThinkingSection content={replaceMacros(thinkContent, selectedPersona.name, selectedCharacter.name)} />
+                                  <ThinkingSection 
+                                    content={replaceMacros(thinkContent, selectedPersona.name, selectedCharacter.name)} 
+                                    signature={message.signature}
+                                    modelName={message.modelName}
+                                  />
                                 )}
                                 <FormattedText content={displayContent} />
                               </>
@@ -7917,7 +7973,11 @@ Write an engaging story segment. If this is a good point for player interaction,
                       </div>
                       <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-zinc-800 text-zinc-100">
                         {streamingThinking && selectedPersona && selectedCharacter && (
-                          <ThinkingSection content={replaceMacros(streamingThinking, selectedPersona.name, selectedCharacter.name)} />
+                          <ThinkingSection 
+                            content={replaceMacros(streamingThinking, selectedPersona.name, selectedCharacter.name)} 
+                            signature={getThoughtSignature(globalSettings.modelId, activeProvider)?.signature}
+                            modelName={getThoughtSignature(globalSettings.modelId, activeProvider)?.modelName}
+                          />
                         )}
                         <FormattedText content={selectedPersona && selectedCharacter ? replaceMacros(streamingContent, selectedPersona.name, selectedCharacter.name) : streamingContent} />
                         <span className="inline-block w-2 h-4 ml-1 bg-zinc-400 animate-pulse" />
