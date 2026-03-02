@@ -1966,6 +1966,8 @@ export default function Chat() {
   const [showCharacterModal, setShowCharacterModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showConversationHistory, setShowConversationHistory] = useState(false);
+  const [viewingConversation, setViewingConversation] = useState<Conversation | null>(null);
   const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
   const [editingCharacter, setEditingCharacter] = useState<Character | null>(null);
   
@@ -7701,6 +7703,16 @@ Write an engaging story segment. If this is a good point for player interaction,
                               Continue
                             </button>
                             <button
+                              onClick={() => {
+                                setViewingConversation(conversation);
+                                setShowConversationHistory(true);
+                              }}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                              title="View conversation history"
+                            >
+                              History
+                            </button>
+                            <button
                               onClick={() => deleteConversation(conversation.id)}
                               className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
                             >
@@ -8423,6 +8435,102 @@ Write an engaging story segment. If this is a good point for player interaction,
           getActiveProfile={getActiveProfile}
         />
       )}
+
+      {/* Conversation History Modal */}
+      {showConversationHistory && viewingConversation && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-zinc-800">
+              <div>
+                <h2 className="text-lg font-semibold text-white">Conversation History</h2>
+                <p className="text-sm text-zinc-500">
+                  {viewingConversation.messages.length} messages 
+                  Updated {new Date(viewingConversation.updatedAt).toLocaleDateString()}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowConversationHistory(false);
+                  setViewingConversation(null);
+                }}
+                className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+              >
+                <svg className="w-6 h-6 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            {/* Messages Container */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[calc(90vh-200px)]">
+              {viewingConversation?.messages
+                ?.filter(m => !m.isContinue)
+                ?.map((message, index) => (
+                  <div
+                    key={index}
+                    className={`flex gap-4 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    {message.role === "assistant" && (
+                      <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                        <span className="text-sm text-white font-semibold">
+                          {selectedCharacter?.name.charAt(0).toUpperCase() || "A"}
+                        </span>
+                      </div>
+                    )}
+                    <div className={`max-w-[80%] ${message.role === "user" ? "order-first" : ""}`}>
+                      <div
+                        className={`rounded-2xl px-4 py-3 ${
+                          message.role === "user"
+                            ? "bg-zinc-700 text-white"
+                            : "bg-zinc-800 text-zinc-100"
+                        }`}
+                      >
+                        <div className="whitespace-pre-wrap text-sm">
+                          {message.content}
+                        </div>
+                      </div>
+                      <p className="text-xs text-zinc-500 mt-1">
+                        {message.role === "user" ? selectedPersona?.name || "You" : selectedCharacter?.name || "AI"}
+                      </p>
+                    </div>
+                    {message.role === "user" && (
+                      <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                        <span className="text-sm text-white font-semibold">
+                          {selectedPersona?.name.charAt(0).toUpperCase() || "Y"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+            </div>
+            
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-zinc-800 flex gap-3">
+              <button
+                onClick={() => {
+                  continueConversation(viewingConversation);
+                  setShowConversationHistory(false);
+                  setViewingConversation(null);
+                }}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Continue Conversation
+              </button>
+              <button
+                onClick={() => {
+                  setShowConversationHistory(false);
+                  setViewingConversation(null);
+                }}
+                className="px-4 py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
