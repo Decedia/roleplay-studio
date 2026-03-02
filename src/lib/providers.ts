@@ -175,62 +175,27 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
     description: "AI models via Pollinations AI - supports optional API key for more requests",
     requiresApiKey: false,
     models: [
-      {
-        id: "llama-3.1-70b-instruct",
-        name: "Llama 3.1 70B",
-        provider: "pollinations",
-        contextWindow: 131072,
-        maxTokens: 4096,
-        supportsThinking: false,
-      },
-      {
-        id: "llama-3.1-8b-instruct",
-        name: "Llama 3.1 8B",
-        provider: "pollinations",
-        contextWindow: 131072,
-        maxTokens: 4096,
-        supportsThinking: false,
-      },
-      {
-        id: "qwen-2.5-72b-instruct",
-        name: "Qwen 2.5 72B",
-        provider: "pollinations",
-        contextWindow: 32768,
-        maxTokens: 8192,
-        supportsThinking: false,
-      },
-      {
-        id: "qwen-2.5-14b-instruct",
-        name: "Qwen 2.5 14B",
-        provider: "pollinations",
-        contextWindow: 32768,
-        maxTokens: 8192,
-        supportsThinking: false,
-      },
-      {
-        id: "mistral-nemo-instruct",
-        name: "Mistral Nemo",
-        provider: "pollinations",
-        contextWindow: 131072,
-        maxTokens: 4096,
-        supportsThinking: false,
-      },
-      {
-        id: "deepseek-coder-v2-instruct",
-        name: "DeepSeek Coder V2",
-        provider: "pollinations",
-        contextWindow: 163840,
-        maxTokens: 16384,
-        supportsThinking: false,
-      },
-      {
-        id: "flux",
-        name: "Flux (Image Gen)",
-        provider: "pollinations",
-        contextWindow: 1,
-        maxTokens: 1,
-        supportsThinking: false,
-      },
+      { id: "openai", name: "OpenAI", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false },
+      { id: "openai-fast", name: "OpenAI Fast", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false },
+      { id: "openai-large", name: "OpenAI Large", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false },
+      { id: "qwen-coder", name: "Qwen Coder", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false },
+      { id: "mistral", name: "Mistral", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false },
+      { id: "openai-audio", name: "OpenAI Audio", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false },
+      { id: "gemini-fast", name: "Gemini Fast", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false },
+      { id: "deepseek", name: "DeepSeek", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: true },
+      { id: "gemini-search", name: "Gemini Search", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false },
+      { id: "midijourney", name: "Midijourney", provider: "pollinations", contextWindow: 1, maxTokens: 1, supportsThinking: false },
+      { id: "claude-fast", name: "Claude Fast", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false },
+      { id: "perplexity-fast", name: "Perplexity Fast", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false },
+      { id: "perplexity-reasoning", name: "Perplexity Reasoning", provider: "pollinations", contextWindow: 131072, maxTokens: 8192, supportsThinking: true },
+      { id: "kimi", name: "Kimi", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false },
+      { id: "nova-fast", name: "Nova Fast", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false },
+      { id: "glm", name: "GLM", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false },
+      { id: "minimax", name: "Minimax", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false },
+      { id: "nomnom", name: "Nomnom", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false },
+      { id: "polly", name: "Polly", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false },
+      { id: "qwen-safety", name: "Qwen Safety", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false },
+      { id: "qwen-character", name: "Qwen Character", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false },
     ],
   },
 ];
@@ -641,25 +606,32 @@ export const chatWithNvidiaNIM: ChatFunction = async (
   }
 
   try {
-    const formattedMessages = messages.map((m) => ({
+    // 1. CONTEXT: Format conversation history (user/assistant messages)
+    const contextMessages = messages.map((m) => ({
       role: m.role,
       content: m.content,
     }));
 
-    // Build structured system prompt following Gemini-style hierarchy:
-    // 1. Instructions (system prompt)
-    // 2. Context (conversation history handled in messages)
-    // 3. Limitations (included in system prompt)
-    let systemContent = "";
-    if (options.systemPrompt) {
-      // Format system prompt with clear sections
-      systemContent = options.systemPrompt;
-    }
+    // 2. INSTRUCTIONS: System prompt with structured sections
+    // Following Gemini-style: systemInstruction is separate from context
+    const systemInstruction = options.systemPrompt
+      ? { role: "system" as const, content: options.systemPrompt }
+      : null;
 
-    // Add system message if we have system content
-    const messagesWithSystem = systemContent
-      ? [{ role: "system", content: systemContent }, ...formattedMessages]
-      : formattedMessages;
+    // Combine instructions + context
+    const messagesWithSystem = systemInstruction
+      ? [systemInstruction, ...contextMessages]
+      : contextMessages;
+
+    // 3. LIMITATIONS: Generation config (constraints on output)
+    const generationConfig = {
+      model: config.selectedModel,
+      messages: messagesWithSystem,
+      temperature: options.temperature,
+      max_tokens: options.maxTokens,
+      top_p: options.topP,
+      top_k: options.topK,
+    };
 
     // Use server-side proxy to avoid CORS issues
     const response = await fetch("/api/nvidia-nim", {
@@ -670,14 +642,7 @@ export const chatWithNvidiaNIM: ChatFunction = async (
       body: JSON.stringify({
         endpoint: "chat/completions",
         apiKey: config.apiKey,
-        payload: {
-          model: config.selectedModel,
-          messages: messagesWithSystem,
-          temperature: options.temperature,
-          max_tokens: options.maxTokens,
-          top_p: options.topP,
-          top_k: options.topK,
-        },
+        payload: generationConfig,
       }),
     });
 
@@ -722,24 +687,33 @@ export const streamWithNvidiaNIM = async (
   }
 
   try {
-    const formattedMessages = messages.map((m) => ({
+    // 1. CONTEXT: Format conversation history (user/assistant messages)
+    const contextMessages = messages.map((m) => ({
       role: m.role,
       content: m.content,
     }));
 
-    // Build structured system prompt following Gemini-style hierarchy:
-    // 1. Instructions (system prompt)
-    // 2. Context (conversation history handled in messages)
-    // 3. Limitations (included in system prompt)
-    let systemContent = "";
-    if (options.systemPrompt) {
-      systemContent = options.systemPrompt;
-    }
+    // 2. INSTRUCTIONS: System prompt with structured sections
+    // Following Gemini-style: systemInstruction is separate from context
+    const systemInstruction = options.systemPrompt
+      ? { role: "system" as const, content: options.systemPrompt }
+      : null;
 
-    // Add system message if we have system content
-    const messagesWithSystem = systemContent
-      ? [{ role: "system", content: systemContent }, ...formattedMessages]
-      : formattedMessages;
+    // Combine instructions + context
+    const messagesWithSystem = systemInstruction
+      ? [systemInstruction, ...contextMessages]
+      : contextMessages;
+
+    // 3. LIMITATIONS: Generation config (constraints on output)
+    const generationConfig = {
+      model: config.selectedModel,
+      messages: messagesWithSystem,
+      temperature: options.temperature,
+      max_tokens: options.maxTokens,
+      top_p: options.topP,
+      top_k: options.topK,
+      stream: true,
+    };
 
     // Use server-side proxy with streaming
     const response = await fetch("/api/nvidia-nim", {
@@ -750,15 +724,7 @@ export const streamWithNvidiaNIM = async (
       body: JSON.stringify({
         endpoint: "chat/completions",
         apiKey: config.apiKey,
-        payload: {
-          model: config.selectedModel,
-          messages: messagesWithSystem,
-          temperature: options.temperature,
-          max_tokens: options.maxTokens,
-          top_p: options.topP,
-          top_k: options.topK,
-          stream: true,
-        },
+        payload: generationConfig,
         stream: true,
       }),
     });
