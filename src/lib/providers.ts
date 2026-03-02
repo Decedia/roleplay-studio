@@ -17,13 +17,6 @@ export type { LLMProviderType, ProviderConfig, Message, LLMModel, LLMProvider, V
 // Available providers configuration
 export const AVAILABLE_PROVIDERS: LLMProvider[] = [
   {
-    id: "puter",
-    name: "Puter.js",
-    description: "Free AI access via Puter.js - no API key required",
-    requiresApiKey: false,
-    models: [], // Loaded dynamically via puter.ai.listModels()
-  },
-  {
     id: "google-ai-studio",
     name: "Google AI Studio",
     description: "Google's Gemini models via AI Studio API",
@@ -172,109 +165,6 @@ type ChatFunction = (
   }
 ) => Promise<ChatResponse>;
 
-// Puter.js chat implementation
-export const chatWithPuter: ChatFunction = async (
-  messages,
-  _config,
-  options
-) => {
-  try {
-    // Check if puter is available
-    if (typeof window === "undefined" || !window.puter) {
-      return { error: "Puter.js is not available" };
-    }
-
-    const formattedMessages = messages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
-
-    // Add system prompt if provided
-    const messagesWithSystem = options.systemPrompt
-      ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
-      : formattedMessages;
-
-    const response = await window.puter.ai.chat(messagesWithSystem, {
-      model: _config.selectedModel,
-      temperature: options.temperature,
-      max_tokens: options.maxTokens,
-      top_p: options.topP,
-    });
-
-    return {
-      content: response.message.content,
-    };
-  } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : "Unknown error occurred",
-    };
-  }
-};
-
-// Puter.js streaming chat implementation
-export const streamWithPuter = async (
-  messages: Message[],
-  config: ProviderConfig,
-  options: {
-    temperature: number;
-    maxTokens: number;
-    topP: number;
-    topK: number;
-    systemPrompt?: string;
-    enableThinking?: boolean;
-  },
-  onChunk: StreamCallback
-): Promise<void> => {
-  try {
-    if (typeof window === "undefined" || !window.puter) {
-      onChunk({ error: "Puter.js is not available" });
-      return;
-    }
-
-    const formattedMessages = messages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
-
-    const messagesWithSystem = options.systemPrompt
-      ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
-      : formattedMessages;
-
-    // Use streaming mode - cast to unknown first, then to target type
-    const stream = await (window.puter.ai.chat as unknown as (messages: unknown, options: unknown) => Promise<AsyncIterable<unknown>>)(messagesWithSystem, {
-      model: config.selectedModel,
-      temperature: options.temperature,
-      max_tokens: options.maxTokens,
-      top_p: options.topP,
-      stream: true,
-    });
-
-    let fullContent = "";
-    let fullThinking = "";
-
-    // Handle async iterator
-    const asyncIterator = stream;
-    for await (const chunk of asyncIterator) {
-      // Handle different chunk formats - cast to allow property access
-      const c = chunk as { choices?: { delta?: { content?: string; thinking?: string } }[]; delta?: { content?: string; thinking?: string }; content?: string; thinking?: string };
-      const delta = c?.choices?.[0]?.delta || c?.delta || c;
-      
-      if (delta?.content) {
-        fullContent += delta.content;
-        onChunk({ content: fullContent });
-      }
-      
-      if (delta?.thinking) {
-        fullThinking += delta.thinking;
-        onChunk({ thinking: fullThinking });
-      }
-    }
-
-    onChunk({ content: fullContent, thinking: fullThinking, done: true });
-  } catch (error) {
-    onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
-  }
-};
 
 // Google AI Studio chat implementation
 export const chatWithGoogleAIStudio: ChatFunction = async (
@@ -888,8 +778,6 @@ export const sendChatMessage = async (
   }
 ): Promise<ChatResponse> => {
   switch (config.type) {
-    case "puter":
-      return chatWithPuter(messages, config, options);
     case "google-ai-studio":
       return chatWithGoogleAIStudio(messages, config, options);
     case "google-vertex":
@@ -917,8 +805,6 @@ export const streamChatMessage = async (
   onChunk: StreamCallback
 ): Promise<void> => {
   switch (config.type) {
-    case "puter":
-      return streamWithPuter(messages, config, options, onChunk);
     case "google-ai-studio":
       return streamWithGoogleAIStudio(messages, config, options, onChunk);
     case "google-vertex":
@@ -951,20 +837,6 @@ export const testProviderConnection = async (
   config: ProviderConfig
 ): Promise<TestConnectionResult> => {
   switch (providerType) {
-    case "puter": {
-      // Puter.js doesn't need API key - just check if it's available
-      if (typeof window === "undefined" || !window.puter) {
-        return { success: false, message: "Puter.js is not available. Please refresh the page." };
-      }
-      try {
-        // Try a minimal model list call to verify connection
-        await window.puter.ai.listModels();
-        return { success: true, message: "Puter.js is connected and ready to use." };
-      } catch (error) {
-        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
-      }
-    }
-    
     case "google-ai-studio": {
       if (!config.apiKey) {
         return { success: false, message: "API key is required." };
@@ -1318,11 +1190,6 @@ export const fetchModelsFromProvider = async (
         ];
 
         return { models: staticModels };
-      }
-
-      case "puter": {
-        // Puter.js models are fetched client-side via window.puter.ai.listModels()
-        return { models: [], error: "Puter.js models must be fetched client-side" };
       }
 
       default:

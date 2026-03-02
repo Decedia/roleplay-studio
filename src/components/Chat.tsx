@@ -51,7 +51,7 @@ export interface Character {
   createdAt: number;
 }
 
-// Model configuration from puter.ai.listModels()
+// Model configuration
 interface ModelCost {
   currency?: string;
   tokens?: number;
@@ -151,52 +151,7 @@ interface Conversation {
   updatedAt: number;
 }
 
-// Declare puter as a global
-declare global {
-  interface Window {
-    puter: {
-      ai: {
-        chat: (
-          messages: Array<{ role: string; content: string }>,
-          options?: { 
-            model?: string;
-            temperature?: number;
-            max_tokens?: number;
-            top_p?: number;
-          }
-        ) => Promise<{ message: { content: string } }>;
-        listModels: (provider?: string) => Promise<Model[]>;
-      };
-      auth: {
-        getUser: () => Promise<PuterUser | null>;
-        getMonthlyUsage: () => Promise<PuterUsage>;
-        getDetailedAppUsage: (appId: string) => Promise<PuterAppUsage>;
-        signOut: () => Promise<void>;
-      };
-    };
-  }
-}
 
-interface PuterUser {
-  username: string;
-  email?: string;
-  uuid: string;
-}
-
-interface PuterUsage {
-  ai_chat_tokens?: number;
-  ai_image_generations?: number;
-  storage_bytes?: number;
-  [key: string]: number | undefined;
-}
-
-interface PuterAppUsage {
-  app_id?: string;
-  ai_chat_tokens?: number;
-  ai_image_generations?: number;
-  storage_bytes?: number;
-  [key: string]: string | number | undefined;
-}
 
 // Connection status for each provider
 interface ConnectionStatus {
@@ -400,7 +355,7 @@ const estimateTokens = (text: string): number => {
 // Check if a provider supports image generation
 // Puter.js and Google AI Studio/Vertex AI support image generation, NVIDIA NIM does not
 const providerSupportsImageGeneration = (provider: LLMProviderType): boolean => {
-  return ["puter", "google-ai-studio", "google-vertex"].includes(provider);
+  return ["google-ai-studio", "google-vertex"].includes(provider);
 };
 
 // Truncate messages to fit within max context tokens
@@ -636,9 +591,6 @@ function SettingsModal({
   setGlobalSettings,
   globalInstructions,
   setGlobalInstructions,
-  models,
-  modelsLoading,
-  modelsError,
   providerConfigs,
   setProviderConfigs,
   activeProvider,
@@ -664,9 +616,6 @@ function SettingsModal({
   setGlobalSettings: React.Dispatch<React.SetStateAction<GlobalSettings>>;
   globalInstructions: GlobalInstructions;
   setGlobalInstructions: React.Dispatch<React.SetStateAction<GlobalInstructions>>;
-  models: Model[];
-  modelsLoading: boolean;
-  modelsError: string | null;
   providerConfigs: Record<LLMProviderType, ProviderConfig>;
   setProviderConfigs: React.Dispatch<React.SetStateAction<Record<LLMProviderType, ProviderConfig>>>;
   activeProvider: LLMProviderType;
@@ -694,19 +643,13 @@ function SettingsModal({
   const instructionsFileInputRef = useRef<HTMLInputElement>(null);
   const dataImportInputRef = useRef<HTMLInputElement>(null);
 
-  // Get models for the active provider (from fetched models or puter.js models)
-  const activeProviderModels = activeProvider === "puter" 
-    ? models.filter(m => m.provider === "Other" || !m.provider) // Puter.js models
-    : providerModels[activeProvider] || [];
+  // Get models for the active provider
+  const activeProviderModels = providerModels[activeProvider] || [];
   
-  const isLoadingModels = activeProvider === "puter" 
-    ? modelsLoading 
-    : modelsFetching[activeProvider];
+  const isLoadingModels = modelsFetching[activeProvider];
 
   // Find selected model info
-  const selectedModel = activeProvider === "puter"
-    ? models.find(m => m.id === globalSettings.modelId)
-    : activeProviderModels.find(m => m.id === globalSettings.modelId);
+  const selectedModel = activeProviderModels.find(m => m.id === globalSettings.modelId);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -766,7 +709,7 @@ function SettingsModal({
           {/* Model Selection */}
           <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
-              Model {activeProvider !== "puter" && `(${AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || activeProvider})`}
+              Model ({AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || activeProvider})
             </label>
             {isLoadingModels ? (
               <div className="w-full bg-zinc-800 text-zinc-400 rounded-lg px-4 py-2 border border-zinc-700">
@@ -774,9 +717,7 @@ function SettingsModal({
               </div>
             ) : activeProviderModels.length === 0 ? (
               <div className="w-full bg-zinc-800/50 text-zinc-400 rounded-lg px-4 py-2 border border-zinc-700">
-                {activeProvider === "puter" 
-                  ? "Connect to Puter.js to see models" 
-                  : "Test connection to load models"}
+                Test connection to load models
               </div>
             ) : (
               <>
@@ -1835,49 +1776,7 @@ function SettingsModal({
                 )}
               </div>
 
-              {/* Puter.js - No API key needed */}
-              <div className="p-3 bg-zinc-800/50 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${
-                      connectionStatus["puter"]?.status === "connected" ? "bg-green-500" :
-                      connectionStatus["puter"]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
-                      connectionStatus["puter"]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
-                    }`} />
-                    <span className="text-sm font-medium text-white">Puter.js</span>
-                    {activeProvider === "puter" && (
-                      <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
-                    )}
-                    <span className="text-xs text-zinc-500">(Free, no API key required)</span>
-                  </div>
-                </div>
-                {connectionStatus["puter"]?.message && (
-                  <p className={`text-xs mb-2 ${
-                    connectionStatus["puter"]?.status === "connected" ? "text-green-400" :
-                    connectionStatus["puter"]?.status === "error" ? "text-red-400" : "text-zinc-400"
-                  }`}>
-                    {connectionStatus["puter"].message}
-                  </p>
-                )}
-                <div className="flex gap-2 mt-2">
-                  <button
-                    type="button"
-                    onClick={() => onTestConnection("puter")}
-                    disabled={connectionStatus["puter"]?.status === "testing"}
-                    className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {connectionStatus["puter"]?.status === "testing" ? "Testing..." : "Test Connection"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onConnect("puter")}
-                    disabled={connectionStatus["puter"]?.status === "error"}
-                    className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Connect
-                  </button>
-                </div>
-              </div>
+
             </div>
           </div>
 
@@ -2058,7 +1957,6 @@ export default function Chat() {
   
   // Provider configuration state
   const [providerConfigs, setProviderConfigs] = useState<Record<LLMProviderType, ProviderConfig>>({
-    "puter": { type: "puter", isEnabled: true, profiles: [], activeProfileId: null },
     "google-ai-studio": { type: "google-ai-studio", isEnabled: false, profiles: [], activeProfileId: null },
     "google-vertex": { type: "google-vertex", isEnabled: false, profiles: [], activeProfileId: null },
     "nvidia-nim": { type: "nvidia-nim", isEnabled: false, profiles: [], activeProfileId: null },
@@ -2066,13 +1964,11 @@ export default function Chat() {
   
   // Provider-specific models (fetched from API after connection)
   const [providerModels, setProviderModels] = useState<Record<LLMProviderType, FetchedModel[]>>({
-    "puter": [],
     "google-ai-studio": [],
     "google-vertex": [],
     "nvidia-nim": [],
   });
   const [modelsFetching, setModelsFetching] = useState<Record<LLMProviderType, boolean>>({
-    "puter": false,
     "google-ai-studio": false,
     "google-vertex": false,
     "nvidia-nim": false,
@@ -2091,17 +1987,8 @@ export default function Chat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   
-  // User state
-  const [user, setUser] = useState<PuterUser | null>(null);
-  const [usage, setUsage] = useState<PuterUsage | null>(null);
-  const [appUsage, setAppUsage] = useState<PuterAppUsage | null>(null);
+  // User menu state
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [usageError, setUsageError] = useState<string | null>(null);
-  
-  // Models state
-  const [models, setModels] = useState<Model[]>([]);
-  const [modelsLoading, setModelsLoading] = useState(true);
-  const [modelsError, setModelsError] = useState<string | null>(null);
   
   // Global instructions state
   const [globalInstructions, setGlobalInstructions] = useState<GlobalInstructions>(DEFAULT_GLOBAL_INSTRUCTIONS);
@@ -2114,7 +2001,6 @@ export default function Chat() {
   
   // Connection status state for each provider
   const [connectionStatus, setConnectionStatus] = useState<Record<LLMProviderType, ConnectionStatus>>({
-    "puter": { status: "disconnected" },
     "google-ai-studio": { status: "disconnected" },
     "google-vertex": { status: "disconnected" },
     "nvidia-nim": { status: "disconnected" },
@@ -2543,7 +2429,7 @@ export default function Chat() {
           }
           
           // Ensure all providers exist in loaded configs
-          const allProviders: LLMProviderType[] = ["puter", "google-ai-studio", "google-vertex", "nvidia-nim"];
+          const allProviders: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim"];
           allProviders.forEach(key => {
             if (!configs[key]) {
               configs[key] = { type: key, isEnabled: false, profiles: [], activeProfileId: null };
@@ -2558,7 +2444,6 @@ export default function Chat() {
         // Check for old per-provider storage (for users upgrading from older versions)
         const providers: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim"];
         const migratedConfigs: Record<LLMProviderType, ProviderConfig> = {
-          "puter": { type: "puter", isEnabled: true, profiles: [], activeProfileId: null },
           "google-ai-studio": { type: "google-ai-studio", isEnabled: false, profiles: [], activeProfileId: null },
           "google-vertex": { type: "google-vertex", isEnabled: false, profiles: [], activeProfileId: null },
           "nvidia-nim": { type: "nvidia-nim", isEnabled: false, profiles: [], activeProfileId: null },
@@ -2677,121 +2562,6 @@ export default function Chat() {
     }
   }, [view]);
 
-  // Fetch user and usage data from puter.js
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        if (typeof window.puter !== "undefined") {
-          console.log("Fetching user data...");
-          const userData = await window.puter.auth.getUser();
-          console.log("User data:", userData);
-          setUser(userData);
-          
-          console.log("Fetching usage data...");
-          const usageData = await window.puter.auth.getMonthlyUsage();
-          console.log("Usage data:", usageData);
-          setUsage(usageData);
-
-          // Get detailed app usage if we have an app ID
-          const puterWithApp = window.puter as typeof window.puter & { appID?: string };
-          if (puterWithApp.appID) {
-            console.log("Fetching detailed app usage for app:", puterWithApp.appID);
-            try {
-              const appUsageData = await window.puter.auth.getDetailedAppUsage(puterWithApp.appID);
-              console.log("App usage data:", appUsageData);
-              setAppUsage(appUsageData);
-            } catch (appErr) {
-              console.warn("Could not fetch detailed app usage:", appErr);
-            }
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch user data:", err);
-        setUsageError(err instanceof Error ? err.message : "Failed to load usage data");
-      }
-    };
-
-    // Wait for puter.js to load
-    const checkPuter = setInterval(() => {
-      if (typeof window.puter !== "undefined") {
-        clearInterval(checkPuter);
-        fetchUserData();
-      }
-    }, 100);
-
-    // Cleanup interval after 10 seconds if puter doesn't load
-    const timeout = setTimeout(() => {
-      clearInterval(checkPuter);
-      if (typeof window.puter === "undefined") {
-        setUsageError("Puter.js failed to load");
-      }
-    }, 10000);
-    
-    return () => {
-      clearInterval(checkPuter);
-      clearTimeout(timeout);
-    };
-  }, []);
-
-  // Fetch available models from puter.ai.listModels()
-  useEffect(() => {
-    const fetchModels = async () => {
-      try {
-        setModelsLoading(true);
-        if (typeof window.puter !== "undefined") {
-          console.log("Fetching available models...");
-          const modelsData = await window.puter.ai.listModels();
-          console.log("Models data:", modelsData);
-          setModels(modelsData);
-          
-          // Set default model if not already set - prefer GLM 5
-          if (modelsData.length > 0) {
-            let defaultModel: Model | undefined;
-            // Try each preferred model ID in order
-            for (const pref of DEFAULT_MODEL_PREFERENCES) {
-              defaultModel = modelsData.find(m => m.id === pref || m.id.includes(pref));
-              if (defaultModel) break;
-            }
-            // Fall back to first model if no preference found
-            if (!defaultModel) {
-              defaultModel = modelsData[0];
-            }
-            setGlobalSettings(prev => ({
-              ...prev,
-              modelId: prev.modelId || defaultModel!.id
-            }));
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch models:", err);
-        setModelsError(err instanceof Error ? err.message : "Failed to load models");
-      } finally {
-        setModelsLoading(false);
-      }
-    };
-
-    // Wait for puter.js to load
-    const checkPuter = setInterval(() => {
-      if (typeof window.puter !== "undefined") {
-        clearInterval(checkPuter);
-        fetchModels();
-      }
-    }, 100);
-
-    // Cleanup interval after 10 seconds if puter doesn't load
-    const timeout = setTimeout(() => {
-      clearInterval(checkPuter);
-      if (typeof window.puter === "undefined") {
-        setModelsError("Puter.js failed to load");
-        setModelsLoading(false);
-      }
-    }, 10000);
-    
-    return () => {
-      clearInterval(checkPuter);
-      clearTimeout(timeout);
-    };
-  }, []);
 
   // Close user menu when clicking outside
   useEffect(() => {
@@ -2992,7 +2762,7 @@ export default function Chat() {
       }
 
       // Import active provider
-      if (json.activeProvider && ["puter", "google-ai-studio", "google-vertex", "nvidia-nim"].includes(json.activeProvider)) {
+      if (json.activeProvider && ["google-ai-studio", "google-vertex", "nvidia-nim"].includes(json.activeProvider)) {
         setActiveProvider(json.activeProvider);
       }
 
@@ -3038,7 +2808,7 @@ export default function Chat() {
     }));
 
     // If connection successful, fetch models from the provider
-    if (result.success && providerType !== "puter") {
+    if (result.success) {
       setModelsFetching(prev => ({ ...prev, [providerType]: true }));
       const modelsResult = await fetchModelsFromProvider(providerType, profileConfig);
       setModelsFetching(prev => ({ ...prev, [providerType]: false }));
@@ -3282,21 +3052,7 @@ export default function Chat() {
       
       let imageUrl: string | null = null;
       
-      if (activeProvider === "puter") {
-        // Use Puter.js image generation
-        // Cast to any to access the img function which may not be in the type definitions
-        const puterAI = window.puter?.ai as any;
-        if (puterAI?.img) {
-          const response = await puterAI.img(userPrompt, {
-            model: "flux",
-            size: "1:1",
-            quality: "standard",
-          });
-          imageUrl = response.image_url;
-        } else {
-          throw new Error("Puter.js image generation is not available");
-        }
-      } else if (activeProvider === "google-ai-studio" || activeProvider === "google-vertex") {
+      if (activeProvider === "google-ai-studio" || activeProvider === "google-vertex") {
         // Use Google AI Studio/Vertex AI for image generation
         const config = providerConfigs[activeProvider];
         const activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
@@ -3516,59 +3272,50 @@ export default function Chat() {
       
       let responseText: string;
       
-      if (activeProvider === "puter") {
-        const response = await window.puter.ai.chat(messages, {
-          model: globalSettings.modelId,
-          temperature: 0.8,
-          max_tokens: 2000,
-        });
-        responseText = response.message.content;
-      } else {
-        const configWithModel = profileConfig;
-        
-        if (globalSettings.enableStreaming) {
-          // Use streaming
-          let streamedContent = "";
-          await streamChatMessage(
-            messages,
-            configWithModel,
-            {
-              temperature: 0.8,
-              maxTokens: 2000,
-              topP: 0.9,
-              topK: 40,
-              enableThinking: false,
-            },
-            (chunk) => {
-              if (chunk.error) {
-                throw new Error(chunk.error);
-              }
-              if (chunk.content !== undefined) {
-                streamedContent = chunk.content;
-              }
-              if (chunk.done) {
-                responseText = chunk.content || "";
-              }
+      const configWithModel = profileConfig;
+      
+      if (globalSettings.enableStreaming) {
+        // Use streaming
+        let streamedContent = "";
+        await streamChatMessage(
+          messages,
+          configWithModel,
+          {
+            temperature: 0.8,
+            maxTokens: 2000,
+            topP: 0.9,
+            topK: 40,
+            enableThinking: false,
+          },
+          (chunk) => {
+            if (chunk.error) {
+              throw new Error(chunk.error);
             }
-          );
-        } else {
-          // Use non-streaming
-          const response = await sendChatMessage(
-            messages,
-            configWithModel,
-            {
-              temperature: 0.8,
-              maxTokens: 2000,
-              topP: 0.9,
-              topK: 40,
-              enableThinking: false,
+            if (chunk.content !== undefined) {
+              streamedContent = chunk.content;
             }
-          );
-          if (response.error) {
-            throw new Error(response.error);
+            if (chunk.done) {
+              responseText = chunk.content || "";
+            }
           }
-          responseText = response.content || "";
+        );
+      } else {
+        // Use non-streaming
+        const response = await sendChatMessage(
+          messages,
+          configWithModel,
+          {
+            temperature: 0.8,
+            maxTokens: 2000,
+            topP: 0.9,
+            topK: 40,
+            enableThinking: false,
+          }
+        );
+        if (response.error) {
+          throw new Error(response.error);
         }
+        responseText = response.content || "";
       }
       
       setGeneratorMessages(prev => [...prev, { role: "assistant", content: responseText }]);
@@ -3846,15 +3593,7 @@ export default function Chat() {
       
       let responseText: string;
       
-      if (activeProvider === "puter") {
-        const response = await window.puter.ai.chat(messages, {
-          model: globalSettings.modelId,
-          temperature: 0.8,
-          max_tokens: 2000,
-        });
-        responseText = response.message.content;
-      } else {
-        const configWithModel = profileConfig;
+      const configWithModel = profileConfig;
         
         if (globalSettings.enableStreaming) {
           let streamedContent = "";
@@ -3897,7 +3636,6 @@ export default function Chat() {
           }
           responseText = response.content || "";
         }
-      }
 
       // Append to existing assistant message instead of creating new one
       setGeneratorMessages(prev => {
@@ -3974,15 +3712,7 @@ export default function Chat() {
       
       let responseText: string;
       
-      if (activeProvider === "puter") {
-        const response = await window.puter.ai.chat(messages, {
-          model: globalSettings.modelId,
-          temperature: 0.8,
-          max_tokens: 2000,
-        });
-        responseText = response.message.content;
-      } else {
-        const configWithModel = profileConfig;
+      const configWithModel = profileConfig;
         
         if (globalSettings.enableStreaming) {
           let streamedContent = "";
@@ -4025,7 +3755,6 @@ export default function Chat() {
           }
           responseText = response.content || "";
         }
-      }
 
       // Append to existing assistant message instead of creating new one
       setBrainstormMessages(prev => {
@@ -4136,17 +3865,7 @@ Generate 3-5 main characters. Respond with ONLY a JSON array of characters in th
       const isNvidiaNIM = activeProvider === "nvidia-nim";
       const maxTokens = isNvidiaNIM ? 1200 : 2000;
       
-      if (activeProvider === "puter") {
-        // Use streaming for puter as well to show real-time response
-        const response = await window.puter.ai.chat(messages, {
-          model: globalSettings.modelId,
-          temperature: 0.8,
-          max_tokens: maxTokens,
-        });
-        responseText = response.message.content;
-        setVnPremiseResponse(responseText);
-      } else {
-        // Use streaming to show response in real-time
+      // Use streaming to show response in real-time
         await streamChatMessage(
           messages,
           profileConfig,
@@ -4174,7 +3893,6 @@ Generate 3-5 main characters. Respond with ONLY a JSON array of characters in th
             }
           }
         );
-      }
       
       // Parse JSON from response
       let jsonStr = responseText.trim();
@@ -4274,17 +3992,7 @@ Generate 5-10 plot points that tell a complete story. Respond with ONLY a JSON a
       const isNvidiaNIM = activeProvider === "nvidia-nim";
       const maxTokens = isNvidiaNIM ? 1200 : 2000;
       
-      if (activeProvider === "puter") {
-        // Use streaming for puter as well to show real-time response
-        const response = await window.puter.ai.chat(messages, {
-          model: globalSettings.modelId,
-          temperature: 0.8,
-          max_tokens: maxTokens,
-        });
-        responseText = response.message.content;
-        setVnPlotResponse(responseText);
-      } else {
-        // Use streaming to show response in real-time
+      // Use streaming to show response in real-time
         await streamChatMessage(
           messages,
           profileConfig,
@@ -4312,8 +4020,7 @@ Generate 5-10 plot points that tell a complete story. Respond with ONLY a JSON a
             }
           }
         );
-      }
-      
+
       // Parse JSON from response
       let jsonStr = responseText.trim();
       if (jsonStr.startsWith("```json")) {
@@ -4407,15 +4114,7 @@ Write an engaging story segment. If this is a good point for player interaction,
       const isNvidiaNIM = activeProvider === "nvidia-nim";
       const maxTokens = isNvidiaNIM ? 800 : 2000;
       
-      if (activeProvider === "puter") {
-        const response = await window.puter.ai.chat(messages, {
-          model: globalSettings.modelId,
-          temperature: 0.9,
-          max_tokens: maxTokens,
-        });
-        responseText = response.message.content;
-      } else {
-        const configWithModel = profileConfig;
+      const configWithModel = profileConfig;
         const response = await sendChatMessage(
           messages,
           configWithModel,
@@ -4431,8 +4130,7 @@ Write an engaging story segment. If this is a good point for player interaction,
           throw new Error(response.error);
         }
         responseText = response.content || "";
-      }
-      
+
       // Parse JSON from response
       let jsonStr = responseText.trim();
       if (jsonStr.startsWith("```json")) {
@@ -5524,129 +5222,7 @@ Write an engaging story segment. If this is a good point for player interaction,
               </svg>
             </button>
             
-            {/* Usage Stats - Always Visible */}
-            {usage && (
-              <div className="hidden sm:flex items-center gap-3 px-3 py-1.5 bg-zinc-900/50 rounded-lg border border-zinc-800 mr-2">
-                <div className="flex items-center gap-1.5">
-                  <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                  </svg>
-                  <span className="text-xs text-zinc-400">Tokens:</span>
-                  <span className="text-xs text-white font-mono font-medium">{usage.ai_chat_tokens?.toLocaleString() ?? 0}</span>
-                </div>
-              </div>
-            )}
-            
-            {/* User Menu */}
-            {user && (
-              <div className="relative user-menu-container">
-                <button
-                  onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="flex items-center gap-2 px-3 py-2 bg-zinc-900 hover:bg-zinc-800 rounded-lg transition-colors border border-zinc-800"
-                >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center">
-                    <span className="text-sm text-white font-semibold">
-                      {user.username.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <span className="text-sm text-zinc-300 hidden sm:block">{user.username}</span>
-                  <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                
-                {showUserMenu && (
-                  <div className="absolute right-0 mt-2 w-72 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50">
-                    <div className="p-4 border-b border-zinc-800">
-                      <p className="text-sm text-zinc-400">Signed in as</p>
-                      <p className="text-white font-medium">{user.username}</p>
-                      {user.email && <p className="text-xs text-zinc-500 mt-1">{user.email}</p>}
-                    </div>
-                    <div className="p-4">
-                      <p className="text-sm text-zinc-400 mb-3 font-medium">Monthly Usage</p>
-                      {usageError ? (
-                        <p className="text-sm text-red-400">{usageError}</p>
-                      ) : usage ? (
-                        <div className="space-y-2">
-                          {usage.ai_chat_tokens !== undefined && (
-                            <div className="flex justify-between text-sm">
-                              <span className="text-zinc-500">Chat Tokens</span>
-                              <span className="text-zinc-300 font-mono">{usage.ai_chat_tokens.toLocaleString()}</span>
-                            </div>
-                          )}
-                          {usage.ai_image_generations !== undefined && (
-                            <div className="flex justify-between text-sm">
-                              <span className="text-zinc-500">Image Generations</span>
-                              <span className="text-zinc-300 font-mono">{usage.ai_image_generations}</span>
-                            </div>
-                          )}
-                          {usage.storage_bytes !== undefined && (
-                            <div className="flex justify-between text-sm">
-                              <span className="text-zinc-500">Storage</span>
-                              <span className="text-zinc-300 font-mono">{(usage.storage_bytes / 1024 / 1024).toFixed(2)} MB</span>
-                            </div>
-                          )}
-                          {Object.keys(usage).length === 0 && (
-                            <p className="text-sm text-zinc-500">No usage data available</p>
-                          )}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-zinc-500">Loading usage data...</p>
-                      )}
-                      
-                      {/* App-specific usage */}
-                      {appUsage && (
-                        <div className="mt-4 pt-4 border-t border-zinc-800">
-                          <p className="text-sm text-zinc-400 mb-3 font-medium">This App&apos;s Usage</p>
-                          <div className="space-y-2">
-                            {appUsage.ai_chat_tokens !== undefined && (
-                              <div className="flex justify-between text-sm">
-                                <span className="text-zinc-500">Chat Tokens</span>
-                                <span className="text-zinc-300 font-mono">{appUsage.ai_chat_tokens.toLocaleString()}</span>
-                              </div>
-                            )}
-                            {appUsage.ai_image_generations !== undefined && (
-                              <div className="flex justify-between text-sm">
-                                <span className="text-zinc-500">Image Generations</span>
-                                <span className="text-zinc-300 font-mono">{appUsage.ai_image_generations}</span>
-                              </div>
-                            )}
-                            {appUsage.storage_bytes !== undefined && (
-                              <div className="flex justify-between text-sm">
-                                <span className="text-zinc-500">Storage</span>
-                                <span className="text-zinc-300 font-mono">{(appUsage.storage_bytes / 1024 / 1024).toFixed(2)} MB</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Sign Out Button */}
-                    <div className="p-3 border-t border-zinc-800">
-                      <button
-                        onClick={async () => {
-                          try {
-                            await window.puter.auth.signOut();
-                            setUser(null);
-                            setUsage(null);
-                            setShowUserMenu(false);
-                          } catch (error) {
-                            console.error("Sign out error:", error);
-                          }
-                        }}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-zinc-800 rounded-lg transition-colors"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                        </svg>
-                        Sign Out
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            {/* User menu and usage stats removed with Puter.js */}
           </div>
         </div>
       </header>
@@ -8556,9 +8132,6 @@ Write an engaging story segment. If this is a good point for player interaction,
           setGlobalSettings={setGlobalSettings}
           globalInstructions={globalInstructions}
           setGlobalInstructions={setGlobalInstructions}
-          models={models}
-          modelsLoading={modelsLoading}
-          modelsError={modelsError}
           providerConfigs={providerConfigs}
           setProviderConfigs={setProviderConfigs}
           activeProvider={activeProvider}

@@ -8,6 +8,8 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
+- [x] Remove Puter.js provider completely - removed from providers.ts, types.ts, Chat.tsx state, UI components, and layout.tsx script
+- [x] Remove Puter.js usage stats and user menu from header - removed user authentication, usage display, and sign out functionality
 - [x] Add streaming plot generation display in VN generator - Shows AI-generated plot JSON in real-time under the Generate Plot button
 - [x] Fix NVIDIA NIM 524 timeout error in VN generator - Added 90-second timeout to API route and reduced max tokens for NVIDIA NIM (800 for story, 1200 for characters/plot)
 - [x] Show AI response in VN generator premise step - Displays generated character JSON under the Generate Characters button
@@ -30,7 +32,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] Add Groq as a free AI provider - fast inference with free tier, supports Llama 3.3, Llama 3.1, Mixtral, and Gemma models. API key required but has generous free credits.
 - [x] Fix NVIDIA NIM API key not being passed to chat requests - properly extracts API key from active profile
 - [x] Add character avatar feature - users can now upload character images (PNG, JPG, GIF up to 5MB) that display in character list and chat messages. Falls back to initial if no image uploaded.
-- [x] Add AI image generation for character avatars - users can generate character images using AI. Button in character modal uses Puter.js image generation. Disabled when using providers that don't support image generation (NVIDIA NIM). Instructions configurable in global settings.
+- [x] Add AI image generation for character avatars - users can generate character images using AI. Button in character modal uses the current LLM provider. Disabled when using providers that don't support image generation (NVIDIA NIM). Instructions configurable in global settings.
 - [x] Fix navigation back button: home no longer has back button, personas now has back button (goes to home), characters/generator/brainstorm/vn-generator now go back to main menu (home)
 - [x] Fix message duplication bug in generator/brainstorm when resending same message - removed duplicate message addition to state (only add new messages, not resends)
 - [x] Fix refresh/continue button showing on all assistant messages - now only shows on last assistant message
@@ -66,7 +68,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] ESLint configuration
 - [x] Memory bank documentation
 - [x] Recipe system for common features
-- [x] GLM 5 Chat component with puter.js integration
+- [x] GLM 5 Chat component with multi-provider support
 - [x] Modern black theme UI with gradient accents
 - [x] **Separated persona and character systems**
 - [x] **Character creation with name, description, and first message**
@@ -75,9 +77,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] Conversation management (create, delete, continue)
 - [x] LocalStorage persistence for personas, characters, and conversations
 - [x] Loading states and error handling
-- [x] User info display with puter.js getUser
-- [x] Monthly usage stats with getMonthlyUsage
-- [x] **Dynamic model selection with puter.ai.listModels()**
+- [x] **Dynamic model selection from provider APIs**
 - [x] **Model pricing display - shows "Free" for zero-cost models**
 - [x] **GLM 5 preferred as default model**
 - [x] **Fixed send button position - centered with flexbox layout**
@@ -87,7 +87,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **Settings modal always accessible from header**
 - [x] **Collapsible think tag display for AI reasoning**
 - [x] **Empty message resends last user message**
-- [x] **Multiple LLM provider support (Puter.js, Google AI Studio, Google Vertex AI, NVIDIA NIM)**
+- [x] **Multiple LLM provider support (Google AI Studio, Google Vertex AI, NVIDIA NIM)**
 - [x] **Provider selector in header with visual indicators**
 - [x] **API key configuration in settings modal**
 - [x] **SillyTavern character JSON import**
@@ -164,7 +164,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 | File/Directory                | Purpose                                           | Status   |
 | ----------------------------- | ------------------------------------------------- | -------- |
 | `src/app/page.tsx`            | Home page with Chat component                     | ✅ Ready |
-| `src/app/layout.tsx`          | Root layout with puter.js script                  | ✅ Ready |
+| `src/app/layout.tsx`          | Root layout                                       | ✅ Ready |
 | `src/app/globals.css`         | Global styles (black theme)                       | ✅ Ready |
 | `src/components/Chat.tsx`     | Main chat interface with persona/character system | ✅ Ready |
 | `src/lib/types.ts`            | TypeScript type definitions                       | ✅ Ready |
@@ -322,8 +322,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 ### AI Integration
 
 - Multiple LLM providers supported:
-  - **Puter.js** (default, free, no API key required)
-  - **Google AI Studio** (Gemini models)
+  - **Google AI Studio** (Gemini models, default)
   - **Google Vertex AI** (enterprise Gemini)
   - **NVIDIA NIM** (DeepSeek R1, Llama, Mistral, Codestral)
 - System prompt follows SillyTavern hierarchy:
@@ -461,6 +460,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date       | Changes                                                                                                                                                                                                                                          |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-03-02 | Remove Puter.js provider completely - removed from providers.ts, types.ts, Chat.tsx state/UI/effects, and layout.tsx script; removed user authentication, usage stats, and sign out functionality from header                                    |
 | 2026-03-02 | Add streaming plot generation display in VN generator - Shows AI-generated plot JSON in real-time under the Generate Plot button                                                                                                                 |
 | 2026-03-02 | Fix NVIDIA NIM 524 timeout error in VN generator - Added 90-second timeout to API route and reduced max tokens for NVIDIA NIM (800 for story, 1200 for characters/plot) to prevent Cloudflare timeouts                                           |
 | 2026-03-02 | Merged feature-thought-signature branch to main - adds model type badges (⚡ Flash, 🔮 Pro, 👑 Ultra, ✨ 1.5) to Gemini thinking sections                                                                                                        |
@@ -514,9 +514,8 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 | 2026-02-15 | Fixed send button position (flexbox layout), added retry button for errors, added custom instructions field                                                                                                                                      |
 | 2026-02-15 | Added dynamic model selection, "Free" pricing display for zero-cost models, GLM 5 as preferred default                                                                                                                                           |
 | 2026-02-15 | Major refactor: separated persona/character systems, added conversation settings, visible usage stats                                                                                                                                            |
-| 2026-02-15 | Added getUser and getMonthlyUsage integration with user menu in header                                                                                                                                                                           |
 | 2026-02-15 | Fixed persona system: persona now represents the user (not AI) in conversations                                                                                                                                                                  |
 | 2026-02-15 | Added persona system with create/edit/delete, conversation management, and black theme                                                                                                                                                           |
 | 2026-02-15 | Enhanced dark theme with custom scrollbar and global dark mode styles                                                                                                                                                                            |
-| 2026-02-15 | Created GLM 5 chat application with puter.js integration                                                                                                                                                                                         |
+| 2026-02-15 | Created GLM 5 chat application with multi-provider support                                                                                                                                                                                       |
 | Initial    | Template created with base setup                                                                                                                                                                                                                 |
