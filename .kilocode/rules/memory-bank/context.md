@@ -8,11 +8,18 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
+- [x] Add thought signature for Gemini models - Shows model type badge (⚡ Flash, 🔮 Pro, 👑 Ultra, ✨ 1.5) in thinking section
 - [x] Add conversation history modal - View all messages from past conversations with "Continue Conversation" button
 - [x] Add "History" button under Continue in character selection (conversations view)
 - [x] Remove provider selector dropdown from header - model configuration now only accessible via gear/settings button
 - [x] Clean up unused state variables (showProviderConfig, providerDropdownRef) and related effect
 - [x] Create "Clean-Up" branch for UI simplification
+- [x] Create "feature-thought-signature" branch for Gemini thought signatures
+
+## Active Branches
+
+- `main` - Production branch with all merged features
+- `feature-thought-signature` - Development branch for thought signature feature (unmerged)
 - [x] Remove Groq provider completely - was causing errors, removed from providers, API routes, and UI
 - [x] Update Pollinations AI models endpoint - now fetches from `https://gen.pollinations.ai/v1/models` when user clicks Configure in the configuration modal
 - [x] Add top_k parameter to NVIDIA NIM - for better response control similar to other providers
