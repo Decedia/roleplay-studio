@@ -117,19 +117,27 @@ export const exportToSillyTavern = (character: Character): string => {
 };
 
 // Build system prompt from character
-// Follows guideline: [Context] [Main instructions] [Negative constraints at end]
+// Follows guideline: [Formatting] [Context] [Main instructions] [Negative constraints at end]
 export const buildCharacterSystemPrompt = (
   character: Character,
   personaName: string,
   personaDescription: string,
   globalInstructions?: GlobalInstructions
 ): string => {
+  const formattingSections: string[] = [];
   const contextSections: string[] = [];
   const instructionSections: string[] = [];
   const constraintSections: string[] = [];
-  
+
+  // === FORMATTING INSTRUCTIONS (sent before context) ===
+
+  // Formatting prompt - guides how the AI formats responses
+  if (globalInstructions?.formattingPrompt) {
+    formattingSections.push(globalInstructions.formattingPrompt);
+  }
+
   // === CONTEXT AND SOURCE MATERIAL ===
-  
+
   // Character description
   if (character.description) {
     contextSections.push(`[Character Description]\n${character.description}`);
@@ -184,8 +192,8 @@ export const buildCharacterSystemPrompt = (
   // Final instruction - core constraint at the very end
   constraintSections.push("Stay in character at all times. Respond naturally and engage with the roleplay scenario. Do not break character or acknowledge that you are an AI.");
   
-  // Combine: Context -> Instructions -> Constraints
-  return [...contextSections, ...instructionSections, ...constraintSections].join("\n\n");
+  // Combine: Formatting -> Context -> Instructions -> Constraints
+  return [...formattingSections, ...contextSections, ...instructionSections, ...constraintSections].join("\n\n");
 };
 
 // Scan messages for lorebook keyword matches
@@ -271,7 +279,7 @@ const scanForLorebookEntries = (
 };
 
 // Build full system prompt with lorebook support
-// Follows guideline: [Context] [Main instructions] [Negative constraints at end]
+// Follows guideline: [Formatting] [Context] [Main instructions] [Negative constraints at end]
 export const buildFullSystemPrompt = (
   character: Character,
   personaName: string,
@@ -279,12 +287,20 @@ export const buildFullSystemPrompt = (
   messages: Message[],
   globalInstructions?: GlobalInstructions
 ): string => {
+  const formattingSections: string[] = [];
   const contextSections: string[] = [];
   const instructionSections: string[] = [];
   const constraintSections: string[] = [];
-  
+
+  // === FORMATTING INSTRUCTIONS (sent before context) ===
+
+  // Formatting prompt - guides how the AI formats responses
+  if (globalInstructions?.formattingPrompt) {
+    formattingSections.push(globalInstructions.formattingPrompt);
+  }
+
   // === CONTEXT AND SOURCE MATERIAL ===
-  
+
   // Character description
   if (character.description) {
     contextSections.push(`[Character Description]\n${character.description}`);
@@ -356,6 +372,6 @@ export const buildFullSystemPrompt = (
   // Final instruction - core constraint at the very end
   constraintSections.push("Stay in character at all times. Respond naturally and engage with the roleplay scenario. Do not break character or acknowledge that you are an AI.");
   
-  // Combine: Context -> Instructions -> Constraints
-  return [...contextSections, ...instructionSections, ...constraintSections].join("\n\n");
+  // Combine: Formatting -> Context -> Instructions -> Constraints
+  return [...formattingSections, ...contextSections, ...instructionSections, ...constraintSections].join("\n\n");
 };

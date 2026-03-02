@@ -217,6 +217,8 @@ export interface GlobalInstructions {
   enableJailbreak: boolean;
   // Continue instruction for incomplete responses
   continueInstruction?: string;
+  // Formatting prompt - sent before context for formatting instructions
+  formattingPrompt?: string;
 }
 
 // Model cost structure

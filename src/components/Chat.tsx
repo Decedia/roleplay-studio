@@ -100,6 +100,8 @@ interface GlobalInstructions {
   continueInstruction?: string;
   // Image generation instructions for character avatars
   imageGenerationInstructions?: string;
+  // Formatting prompt - sent before context for formatting instructions
+  formattingPrompt?: string;
 }
 
 // Auto-export settings
@@ -122,6 +124,14 @@ const DEFAULT_CONTINUE_INSTRUCTION = "Continue your previous response from where
 // Default image generation instructions for character avatars
 const DEFAULT_IMAGE_GENERATION_INSTRUCTIONS = "You are an expert portrait artist. Generate a high-quality portrait image of a character based on the description. The image should be: realistic style, centered face, neutral or slight expression, good lighting, clean background (solid color or simple gradient). The character should look like they could appear in a story or game.";
 
+// Default formatting prompt for response formatting
+const DEFAULT_FORMATTING_PROMPT = `Format your responses following these guidelines:
+- Actions: Use *asterisks* or _underscores_ to describe actions (e.g., *smiles warmly*)
+- Speech: Use "quotation marks" for dialogue (e.g., "Hello there!")
+- Thoughts: Use ((double parentheses)) for thoughts (e.g., ((I wonder what they want)))
+- OOC: Use ((OOC: ...)) for out-of-character messages (e.g., ((OOC: brb)))
+- Stay immersive and in-character throughout the roleplay`;
+
 // Default global instructions
 const DEFAULT_GLOBAL_INSTRUCTIONS: GlobalInstructions = {
   customInstructions: "",
@@ -129,6 +139,7 @@ const DEFAULT_GLOBAL_INSTRUCTIONS: GlobalInstructions = {
   enableJailbreak: false,
   continueInstruction: DEFAULT_CONTINUE_INSTRUCTION,
   imageGenerationInstructions: DEFAULT_IMAGE_GENERATION_INSTRUCTIONS,
+  formattingPrompt: DEFAULT_FORMATTING_PROMPT,
 };
 
 interface Conversation {
@@ -1147,6 +1158,26 @@ function SettingsModal({
             {/* Advanced Instructions Section */}
             {showAdvancedInstructions && (
               <div className="space-y-4 pl-4 border-l-2 border-zinc-700">
+                {/* Formatting Prompt */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-2">
+                    Formatting Prompt
+                  </label>
+                  <textarea
+                    value={globalInstructions.formattingPrompt || DEFAULT_FORMATTING_PROMPT}
+                    onChange={(e) => setGlobalInstructions({
+                      ...globalInstructions,
+                      formattingPrompt: e.target.value
+                    })}
+                    placeholder="Instructions for how the AI should format responses (actions, dialogue, thoughts...)"
+                    rows={5}
+                    className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none text-sm"
+                  />
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Sent before context to guide response formatting (actions, speech, thoughts)
+                  </p>
+                </div>
+
                 {/* Jailbreak Instructions */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
