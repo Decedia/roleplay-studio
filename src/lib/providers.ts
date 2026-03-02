@@ -128,30 +128,6 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
         supportsThinking: false,
       },
       {
-        id: "meta/llama-3.1-405b-instruct",
-        name: "Llama 3.1 405B Instruct",
-        provider: "nvidia-nim",
-        contextWindow: 131072,
-        maxTokens: 4096,
-        supportsThinking: false,
-      },
-      {
-        id: "meta/llama-3.1-70b-instruct",
-        name: "Llama 3.1 70B Instruct",
-        provider: "nvidia-nim",
-        contextWindow: 131072,
-        maxTokens: 4096,
-        supportsThinking: false,
-      },
-      {
-        id: "meta/llama-3.1-8b-instruct",
-        name: "Llama 3.1 8B Instruct",
-        provider: "nvidia-nim",
-        contextWindow: 131072,
-        maxTokens: 4096,
-        supportsThinking: false,
-      },
-      {
         id: "mistralai/mistral-large",
         name: "Mistral Large",
         provider: "nvidia-nim",
@@ -176,11 +152,51 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
     requiresApiKey: false,
     models: [
       {
-        id: "gemini-flash",
-        name: "Z.ai GLM 5",
+        id: "z.ai/glm5",
+        name: "GLM 5",
         provider: "pollinations",
         contextWindow: 131072,
         maxTokens: 4096,
+        supportsThinking: false,
+      },
+      {
+        id: "qwen-2.5-72b-instruct",
+        name: "Qwen 2.5 72B",
+        provider: "pollinations",
+        contextWindow: 32768,
+        maxTokens: 8192,
+        supportsThinking: false,
+      },
+      {
+        id: "qwen-2.5-14b-instruct",
+        name: "Qwen 2.5 14B",
+        provider: "pollinations",
+        contextWindow: 32768,
+        maxTokens: 8192,
+        supportsThinking: false,
+      },
+      {
+        id: "mistral-nemo-instruct",
+        name: "Mistral Nemo",
+        provider: "pollinations",
+        contextWindow: 131072,
+        maxTokens: 4096,
+        supportsThinking: false,
+      },
+      {
+        id: "deepseek-coder-v2-instruct",
+        name: "DeepSeek Coder V2",
+        provider: "pollinations",
+        contextWindow: 163840,
+        maxTokens: 16384,
+        supportsThinking: false,
+      },
+      {
+        id: "flux",
+        name: "Flux (Image Gen)",
+        provider: "pollinations",
+        contextWindow: 1,
+        maxTokens: 1,
         supportsThinking: false,
       },
     ],
@@ -808,9 +824,9 @@ export const chatWithPollinations: ChatFunction = async (
       ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
       : formattedMessages;
 
-    // Pollinations AI uses the new OpenAI-compatible API endpoint
-    const model = config.selectedModel || "gemini-flash";
-    const url = `https://gen.pollinations.ai/v1/chat/completions`;
+    // Pollinations AI uses a direct URL with query parameters
+    const model = config.selectedModel || "z.ai/glm5";
+    const url = `https://text.pollinations.ai/`;
     
     // Build headers - API key is optional
     const headers: Record<string, string> = {
@@ -870,9 +886,9 @@ export const streamWithPollinations = async (
       ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
       : formattedMessages;
 
-    // Pollinations AI uses the new OpenAI-compatible API endpoint
-    const model = config.selectedModel || "gemini-flash";
-    const url = `https://gen.pollinations.ai/v1/chat/completions`;
+    // Pollinations AI uses a direct URL with query parameters
+    const model = config.selectedModel || "z.ai/glm5";
+    const url = `https://text.pollinations.ai/`;
     
     // Build headers - API key is optional
     const headers: Record<string, string> = {
@@ -1268,20 +1284,20 @@ export const testProviderConnection = async (
     
     case "pollinations": {
       // Pollinations AI doesn't require an API key - it's free
-      // Uses the new OpenAI-compatible API endpoint
       try {
         // Test with a minimal chat request
-        const model = config.selectedModel || "gemini-flash";
-        const response = await fetch("https://gen.pollinations.ai/v1/chat/completions", {
+        const model = config.selectedModel || "z.ai/glm5";
+        const response = await fetch("https://text.pollinations.ai/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: model,
             messages: [{ role: "user", content: "Hi" }],
+            model: model,
             max_tokens: 5,
             seed: Math.floor(Math.random() * 1000000),
+            secure: false,
           }),
         });
         
@@ -1289,8 +1305,8 @@ export const testProviderConnection = async (
           return { success: true, message: "Pollinations AI connection successful!" };
         }
         
-        const errorData = await response.json().catch(() => ({}));
-        return { success: false, message: errorData.error?.message || `HTTP ${response.status}` };
+        const errorText = await response.text();
+        return { success: false, message: `HTTP ${response.status}: ${errorText}` };
       } catch (error) {
         return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
       }
@@ -1573,13 +1589,23 @@ export const fetchModelsFromProvider = async (
           
           // Fallback to static models if API fails
           const staticModels: FetchedModel[] = [
-            { id: "gemini-flash", name: "Z.ai GLM 5", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
+            { id: "z.ai/glm5", name: "GLM 5", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
+            { id: "qwen-2.5-72b-instruct", name: "Qwen 2.5 72B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
+            { id: "qwen-2.5-14b-instruct", name: "Qwen 2.5 14B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
+            { id: "mistral-nemo-instruct", name: "Mistral Nemo", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
+            { id: "deepseek-coder-v2-instruct", name: "DeepSeek Coder V2", provider: "pollinations", context: 163840, max_tokens: 16384, supportsThinking: false },
+            { id: "flux", name: "Flux (Image Gen)", provider: "pollinations", context: 1, max_tokens: 1, supportsThinking: false },
           ];
           return { models: staticModels };
         } catch (error) {
           // Return fallback models on error
           const staticModels: FetchedModel[] = [
-            { id: "gemini-flash", name: "Z.ai GLM 5", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
+            { id: "z.ai/glm5", name: "GLM 5", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
+            { id: "qwen-2.5-72b-instruct", name: "Qwen 2.5 72B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
+            { id: "qwen-2.5-14b-instruct", name: "Qwen 2.5 14B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
+            { id: "mistral-nemo-instruct", name: "Mistral Nemo", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
+            { id: "deepseek-coder-v2-instruct", name: "DeepSeek Coder V2", provider: "pollinations", context: 163840, max_tokens: 16384, supportsThinking: false },
+            { id: "flux", name: "Flux (Image Gen)", provider: "pollinations", context: 1, max_tokens: 1, supportsThinking: false },
           ];
           return { models: staticModels };
         }

@@ -204,16 +204,15 @@ export async function GET(request: NextRequest) {
 
       case "puter": {
         // Puter.js models are fetched client-side
-        return NextResponse.json({
+        return NextResponse.json({ 
           error: "Puter.js models must be fetched client-side",
-          models: []
+          models: [] 
         });
       }
 
       case "pollinations": {
         // Fetch models from Pollinations AI API
         // Supports optional API key for authenticated requests
-        // Uses Base URL: https://gen.pollinations.ai, GET /v1/models
         try {
           // Build headers - API key is optional
           const headers: Record<string, string> = {
@@ -223,40 +222,77 @@ export async function GET(request: NextRequest) {
             headers["Authorization"] = `Bearer ${apiKey}`;
           }
 
-          // Fetch from the new endpoint: https://gen.pollinations.ai/v1/models
-          const response = await fetch("https://gen.pollinations.ai/v1/models", {
-            method: "GET",
-            headers,
-          });
+          // Fetch from multiple endpoints and combine results
+          const endpoints = [
+            "https://text.pollinations.ai/text/models",
+            "https://text.pollinations.ai/v1/models",
+            "https://text.pollinations.ai/image/models",
+            "https://text.pollinations.ai/audio/models",
+          ];
 
-          if (response.ok) {
-            const data = await response.json();
-            const models = (data.data || []).map((model: { id: string; name?: string; context?: number; max_tokens?: number }) => {
-              const modelId = model.id;
-              return {
-                id: modelId,
-                provider: "pollinations",
-                name: model.name || modelId,
-                context: model.context || 131072,
-                max_tokens: model.max_tokens || 8192,
-                supportsThinking: modelId.includes('reasoning') || modelId.includes('r1') || modelId.includes('deepseek'),
-              };
-            });
+          const allModels: Record<string, { id: string; provider: string; name: string; contextWindow: number; maxTokens: number; supportsThinking: boolean; type?: string }> = {};
 
-            if (models.length > 0) {
-              return NextResponse.json({ models });
+          for (const endpoint of endpoints) {
+            try {
+              const response = await fetch(endpoint, {
+                method: "GET",
+                headers,
+              });
+
+              if (response.ok) {
+                const data = await response.json();
+                const models = data.data || data.models || [];
+                
+                for (const model of models) {
+                  const modelId = model.id || model.name || model.model;
+                  if (!modelId || allModels[modelId]) continue;
+
+                  // Determine model type from endpoint
+                  let modelType = 'text';
+                  if (endpoint.includes('/image/')) modelType = 'image';
+                  else if (endpoint.includes('/audio/')) modelType = 'audio';
+                  else if (endpoint.includes('/v1/') && !endpoint.includes('/text/')) modelType = 'text';
+
+                  allModels[modelId] = {
+                    id: modelId,
+                    provider: "pollinations",
+                    name: modelId,
+                    contextWindow: model.contextWindow || model.context || 131072,
+                    maxTokens: model.maxTokens || model.max_tokens || 8192,
+                    supportsThinking: modelId.includes('reasoning') || modelId.includes('r1') || modelId.includes('deepseek'),
+                    type: modelType,
+                  };
+                }
+              }
+            } catch {
+              // Continue to next endpoint if one fails
             }
           }
 
-          // Fallback to static models if API fails or returns empty
-          const fallbackModels = [
-            { id: "gemini-flash", name: "Z.ai GLM 5", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
-          ];
-          return NextResponse.json({ models: fallbackModels });
+          // If no models found from API, use fallback models
+          const models = Object.values(allModels);
+          if (models.length === 0) {
+            const fallbackModels = [
+              { id: "z.ai/glm5", name: "GLM 5", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false, type: "text" },
+              { id: "qwen-2.5-72b-instruct", name: "Qwen 2.5 72B", provider: "pollinations", contextWindow: 32768, maxTokens: 8192, supportsThinking: false, type: "text" },
+              { id: "qwen-2.5-14b-instruct", name: "Qwen 2.5 14B", provider: "pollinations", contextWindow: 32768, maxTokens: 8192, supportsThinking: false, type: "text" },
+              { id: "mistral-nemo-instruct", name: "Mistral Nemo", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false, type: "text" },
+              { id: "deepseek-coder-v2-instruct", name: "DeepSeek Coder V2", provider: "pollinations", contextWindow: 163840, maxTokens: 16384, supportsThinking: false, type: "text" },
+              { id: "flux", name: "Flux (Image Gen)", provider: "pollinations", contextWindow: 1, maxTokens: 1, supportsThinking: false, type: "image" },
+            ];
+            return NextResponse.json({ models: fallbackModels });
+          }
+
+          return NextResponse.json({ models });
         } catch (error) {
           // Return fallback models on error
           const fallbackModels = [
-            { id: "gemini-flash", name: "Z.ai GLM 5", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
+            { id: "z.ai/glm5", name: "GLM 5", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false, type: "text" },
+            { id: "qwen-2.5-72b-instruct", name: "Qwen 2.5 72B", provider: "pollinations", contextWindow: 32768, maxTokens: 8192, supportsThinking: false, type: "text" },
+            { id: "qwen-2.5-14b-instruct", name: "Qwen 2.5 14B", provider: "pollinations", contextWindow: 32768, maxTokens: 8192, supportsThinking: false, type: "text" },
+            { id: "mistral-nemo-instruct", name: "Mistral Nemo", provider: "pollinations", contextWindow: 131072, maxTokens: 4096, supportsThinking: false, type: "text" },
+            { id: "deepseek-coder-v2-instruct", name: "DeepSeek Coder V2", provider: "pollinations", contextWindow: 163840, maxTokens: 16384, supportsThinking: false, type: "text" },
+            { id: "flux", name: "Flux (Image Gen)", provider: "pollinations", contextWindow: 1, maxTokens: 1, supportsThinking: false, type: "image" },
           ];
           return NextResponse.json({ models: fallbackModels });
         }
