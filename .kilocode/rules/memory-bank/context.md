@@ -18,8 +18,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Active Branches
 
-- `main` - Production branch with all merged features
-- `feature-thought-signature` - Development branch for thought signature feature (unmerged)
+- `main` - Production branch with all merged features (includes thought signature)
 - [x] Remove Groq provider completely - was causing errors, removed from providers, API routes, and UI
 - [x] Update Pollinations AI models endpoint - now fetches from `https://gen.pollinations.ai/v1/models` when user clicks Configure in the configuration modal
 - [x] Add top_k parameter to NVIDIA NIM - for better response control similar to other providers
@@ -458,6 +457,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date       | Changes                                                                                                                                                                                                                                          |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-03-02 | Merged feature-thought-signature branch to main - adds model type badges (⚡ Flash, 🔮 Pro, 👑 Ultra, ✨ 1.5) to Gemini thinking sections                                                                                                        |
 | 2026-02-28 | Fix message duplication bug in generator/brainstorm when resending same message - removed duplicate message addition to state, fixed refresh/continue buttons to only show on last assistant message, fixed regenerate to keep last user message |
 | 2026-02-28 | Add "Continue Last Session" button to home menu - stores last view, persona, character, conversation in localStorage, allows resuming chat, generator, brainstorm, and VN generator views                                                        |
 | 2026-02-26 | Add alternate greetings feature - characters can have multiple greetings stored, users can choose which greeting to start roleplay with when creating new conversation                                                                           |
