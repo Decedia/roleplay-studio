@@ -5721,8 +5721,10 @@ Write an engaging story segment. If this is a good point for player interaction,
                     </p>
                   </div>
                 ) : (
-                  generatorMessages.map((msg, idx) => {
-                    if (msg.isContinue) return null;
+                  generatorMessages
+                    .map((msg, originalIdx) => ({ msg, originalIdx }))
+                    .filter(({ msg }) => !msg.isContinue)
+                    .map(({ msg, originalIdx: idx }) => {
                     
                     // Check if message contains character JSON
                     const characterData = msg.role === "assistant" ? extractCharacterJson(msg.content) : [];
@@ -6282,8 +6284,10 @@ Write an engaging story segment. If this is a good point for player interaction,
                     </p>
                   </div>
                 ) : (
-                  brainstormMessages.map((msg, idx) => {
-                    if (msg.isContinue) return null;
+                  brainstormMessages
+                    .map((msg, originalIdx) => ({ msg, originalIdx }))
+                    .filter(({ msg }) => !msg.isContinue)
+                    .map(({ msg, originalIdx: idx }) => {
                     
                     const instructions = msg.role === "assistant" ? extractInstructions(msg.content) : [];
                     const contentWithoutInstructions = msg.role === "assistant" 
@@ -7460,7 +7464,10 @@ Write an engaging story segment. If this is a good point for player interaction,
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {currentConversation.messages.filter(m => !m.isContinue).map((message, index) => {
+                  {currentConversation.messages
+                    .map((message, originalIndex) => ({ message, originalIndex }))
+                    .filter(({ message }) => !message.isContinue)
+                    .map(({ message, originalIndex: index }) => {
                     // Get thinking content from message.thinking property or extract from content
                     const thinkContent = message.role === "assistant" 
                       ? (message.thinking || extractThinkContent(message.content))
