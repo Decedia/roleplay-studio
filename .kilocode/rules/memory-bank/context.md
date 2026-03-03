@@ -8,7 +8,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
-- [x] Remove Groq provider completely - was causing errors, removed from providers, API routes, and UI
+- [x] Add support for Gemini 2.5 and Gemini 3 models - added new models to Google AI Studio and Vertex AI providers, implemented thinking parameter logic: Gemini 2.5 uses thinkingBudget, Gemini 3 uses includeThoughts boolean, all synchronized with global enableThinking setting
 - [x] Fix Pollinations AI dropdown - models now fetched dynamically from API before testing connection
 - [x] Add top_k parameter to NVIDIA NIM - for better response control similar to other providers
 - [x] Fix Groq provider error when pressing Configure - added migration code to ensure groq is added to providerConfigs when loading from old localStorage data
