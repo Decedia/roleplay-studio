@@ -5709,7 +5709,7 @@ Write an engaging story segment. If this is a good point for player interaction,
               </div>
               
               {/* Chat messages */}
-              <div className="space-y-4 bg-zinc-900/50 rounded-xl p-4">
+              <div className="space-y-4 bg-zinc-900/50 rounded-xl p-4 min-h-[400px] max-h-[500px] overflow-y-auto">
                 {generatorMessages.length === 0 ? (
                   <div className="text-center py-12">
                     <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mx-auto mb-4">
@@ -6272,7 +6272,7 @@ Write an engaging story segment. If this is a good point for player interaction,
               </div>
               
               {/* Chat messages */}
-              <div className="space-y-4 bg-zinc-900/50 rounded-xl p-4">
+              <div className="space-y-4 bg-zinc-900/50 rounded-xl p-4 min-h-[400px] max-h-[500px] overflow-y-auto">
                 {brainstormMessages.length === 0 ? (
                   <div className="text-center py-12">
                     <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center mx-auto mb-4">
