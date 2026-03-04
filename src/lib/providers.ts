@@ -363,9 +363,14 @@ export const chatWithGoogleAIStudio: ChatFunction = async (
 
     // Add thinking config for models that support it (Gemini 2.0+)
     if (options.enableThinking) {
-      generationConfig.thinkingConfig = {
+      const thinkingConfig: Record<string, unknown> = {
         thinkingLevel: options.thinkingLevel || "HIGH"
       };
+      // Only add includeThoughts for Gemini 3 models, not Gemini 2.5
+      if (config.selectedModel?.startsWith("gemini-3")) {
+        thinkingConfig.includeThoughts = true;
+      }
+      generationConfig.thinkingConfig = thinkingConfig;
     }
 
     const response = await fetch(
@@ -441,9 +446,14 @@ export const streamWithGoogleAIStudio = async (
 
     // Add thinking config for models that support it (Gemini 2.0+)
     if (options.enableThinking) {
-      generationConfig.thinkingConfig = {
+      const thinkingConfig: Record<string, unknown> = {
         thinkingLevel: options.thinkingLevel || "HIGH"
       };
+      // Only add includeThoughts for Gemini 3 models, not Gemini 2.5
+      if (config.selectedModel?.startsWith("gemini-3")) {
+        thinkingConfig.includeThoughts = true;
+      }
+      generationConfig.thinkingConfig = thinkingConfig;
     }
 
     const response = await fetch(
@@ -555,9 +565,14 @@ export const chatWithVertexAI: ChatFunction = async (
 
     // Add thinking config for models that support it (Gemini 2.0+)
     if (options.enableThinking) {
-      generationConfig.thinkingConfig = {
+      const thinkingConfig: Record<string, unknown> = {
         thinkingLevel: options.thinkingLevel || "HIGH"
       };
+      // Only add includeThoughts for Gemini 3 models, not Gemini 2.5
+      if (config.selectedModel?.startsWith("gemini-3")) {
+        thinkingConfig.includeThoughts = true;
+      }
+      generationConfig.thinkingConfig = thinkingConfig;
     }
 
     // Use server-side proxy to avoid CORS issues
@@ -1003,9 +1018,14 @@ export const streamWithVertexAI = async (
 
     // Add thinking config for models that support it (Gemini 2.0+)
     if (options.enableThinking) {
-      generationConfig.thinkingConfig = {
+      const thinkingConfig: Record<string, unknown> = {
         thinkingLevel: options.thinkingLevel || "HIGH"
       };
+      // Only add includeThoughts for Gemini 3 models, not Gemini 2.5
+      if (config.selectedModel?.startsWith("gemini-3")) {
+        thinkingConfig.includeThoughts = true;
+      }
+      generationConfig.thinkingConfig = thinkingConfig;
     }
 
     // Use server-side proxy to avoid CORS issues
