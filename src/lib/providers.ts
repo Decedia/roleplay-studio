@@ -9,13 +9,21 @@ import {
   VertexMode,
   VertexLocation,
   ThinkingLevel,
+  ThinkingBudget,
 } from "./types";
 
 // Re-export types for convenience
-export type { LLMProviderType, ProviderConfig, Message, LLMModel, LLMProvider, VertexMode, VertexLocation, ThinkingLevel };
+export type { LLMProviderType, ProviderConfig, Message, LLMModel, LLMProvider, VertexMode, VertexLocation, ThinkingLevel, ThinkingBudget };
 
 // Available providers configuration
 export const AVAILABLE_PROVIDERS: LLMProvider[] = [
+  {
+    id: "puter",
+    name: "Puter.js",
+    description: "Free AI access via Puter.js - no API key required",
+    requiresApiKey: false,
+    models: [], // Loaded dynamically via puter.ai.listModels()
+  },
   {
     id: "google-ai-studio",
     name: "Google AI Studio",
@@ -54,38 +62,6 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
         maxTokens: 8192,
         supportsThinking: false,
       },
-      {
-        id: "gemini-2.5-pro",
-        name: "Gemini 2.5 Pro",
-        provider: "google-ai-studio",
-        contextWindow: 1048576,
-        maxTokens: 8192,
-        supportsThinking: true,
-      },
-      {
-        id: "gemini-2.5-flash",
-        name: "Gemini 2.5 Flash",
-        provider: "google-ai-studio",
-        contextWindow: 1048576,
-        maxTokens: 8192,
-        supportsThinking: true,
-      },
-      {
-        id: "gemini-3-pro",
-        name: "Gemini 3 Pro",
-        provider: "google-ai-studio",
-        contextWindow: 1048576,
-        maxTokens: 8192,
-        supportsThinking: true,
-      },
-      {
-        id: "gemini-3-flash",
-        name: "Gemini 3 Flash",
-        provider: "google-ai-studio",
-        contextWindow: 1048576,
-        maxTokens: 8192,
-        supportsThinking: true,
-      },
     ],
   },
   {
@@ -119,38 +95,6 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
         contextWindow: 1048576,
         maxTokens: 8192,
         supportsThinking: false,
-      },
-      {
-        id: "gemini-2.5-pro",
-        name: "Gemini 2.5 Pro",
-        provider: "google-vertex",
-        contextWindow: 1048576,
-        maxTokens: 8192,
-        supportsThinking: true,
-      },
-      {
-        id: "gemini-2.5-flash",
-        name: "Gemini 2.5 Flash",
-        provider: "google-vertex",
-        contextWindow: 1048576,
-        maxTokens: 8192,
-        supportsThinking: true,
-      },
-      {
-        id: "gemini-3-pro",
-        name: "Gemini 3 Pro",
-        provider: "google-vertex",
-        contextWindow: 1048576,
-        maxTokens: 8192,
-        supportsThinking: true,
-      },
-      {
-        id: "gemini-3-flash",
-        name: "Gemini 3 Flash",
-        provider: "google-vertex",
-        contextWindow: 1048576,
-        maxTokens: 8192,
-        supportsThinking: true,
       },
     ],
   },
@@ -202,6 +146,62 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
       },
     ],
   },
+  {
+    id: "pollinations",
+    name: "Pollinations AI",
+    description: "AI models via Pollinations AI - supports optional API key for more requests",
+    requiresApiKey: false,
+    models: [
+      {
+        id: "z.ai/glm5",
+        name: "GLM 5",
+        provider: "pollinations",
+        contextWindow: 131072,
+        maxTokens: 4096,
+        supportsThinking: false,
+      },
+      {
+        id: "qwen-2.5-72b-instruct",
+        name: "Qwen 2.5 72B",
+        provider: "pollinations",
+        contextWindow: 32768,
+        maxTokens: 8192,
+        supportsThinking: false,
+      },
+      {
+        id: "qwen-2.5-14b-instruct",
+        name: "Qwen 2.5 14B",
+        provider: "pollinations",
+        contextWindow: 32768,
+        maxTokens: 8192,
+        supportsThinking: false,
+      },
+      {
+        id: "mistral-nemo-instruct",
+        name: "Mistral Nemo",
+        provider: "pollinations",
+        contextWindow: 131072,
+        maxTokens: 4096,
+        supportsThinking: false,
+      },
+      {
+        id: "deepseek-coder-v2-instruct",
+        name: "DeepSeek Coder V2",
+        provider: "pollinations",
+        contextWindow: 163840,
+        maxTokens: 16384,
+        supportsThinking: false,
+      },
+      {
+        id: "flux",
+        name: "Flux (Image Gen)",
+        provider: "pollinations",
+        contextWindow: 1,
+        maxTokens: 1,
+        supportsThinking: false,
+      },
+    ],
+  },
 ];
 
 // Chat response interface
@@ -226,9 +226,113 @@ type ChatFunction = (
     systemPrompt?: string;
     enableThinking?: boolean;
     thinkingLevel?: ThinkingLevel;
+    thinkingBudget?: ThinkingBudget;
   }
 ) => Promise<ChatResponse>;
 
+// Puter.js chat implementation
+export const chatWithPuter: ChatFunction = async (
+  messages,
+  _config,
+  options
+) => {
+  try {
+    // Check if puter is available
+    if (typeof window === "undefined" || !window.puter) {
+      return { error: "Puter.js is not available" };
+    }
+
+    const formattedMessages = messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    // Add system prompt if provided
+    const messagesWithSystem = options.systemPrompt
+      ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
+      : formattedMessages;
+
+    const response = await window.puter.ai.chat(messagesWithSystem, {
+      model: _config.selectedModel,
+      temperature: options.temperature,
+      max_tokens: options.maxTokens,
+      top_p: options.topP,
+    });
+
+    return {
+      content: response.message.content,
+    };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+};
+
+// Puter.js streaming chat implementation
+export const streamWithPuter = async (
+  messages: Message[],
+  config: ProviderConfig,
+  options: {
+    temperature: number;
+    maxTokens: number;
+    topP: number;
+    topK: number;
+    systemPrompt?: string;
+    enableThinking?: boolean;
+  },
+  onChunk: StreamCallback
+): Promise<void> => {
+  try {
+    if (typeof window === "undefined" || !window.puter) {
+      onChunk({ error: "Puter.js is not available" });
+      return;
+    }
+
+    const formattedMessages = messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    const messagesWithSystem = options.systemPrompt
+      ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
+      : formattedMessages;
+
+    // Use streaming mode - cast to unknown first, then to target type
+    const stream = await (window.puter.ai.chat as unknown as (messages: unknown, options: unknown) => Promise<AsyncIterable<unknown>>)(messagesWithSystem, {
+      model: config.selectedModel,
+      temperature: options.temperature,
+      max_tokens: options.maxTokens,
+      top_p: options.topP,
+      stream: true,
+    });
+
+    let fullContent = "";
+    let fullThinking = "";
+
+    // Handle async iterator
+    const asyncIterator = stream;
+    for await (const chunk of asyncIterator) {
+      // Handle different chunk formats - cast to allow property access
+      const c = chunk as { choices?: { delta?: { content?: string; thinking?: string } }[]; delta?: { content?: string; thinking?: string }; content?: string; thinking?: string };
+      const delta = c?.choices?.[0]?.delta || c?.delta || c;
+      
+      if (delta?.content) {
+        fullContent += delta.content;
+        onChunk({ content: fullContent });
+      }
+      
+      if (delta?.thinking) {
+        fullThinking += delta.thinking;
+        onChunk({ thinking: fullThinking });
+      }
+    }
+
+    onChunk({ content: fullContent, thinking: fullThinking, done: true });
+  } catch (error) {
+    onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
+  }
+};
 
 // Google AI Studio chat implementation
 export const chatWithGoogleAIStudio: ChatFunction = async (
@@ -259,17 +363,24 @@ export const chatWithGoogleAIStudio: ChatFunction = async (
       topK: options.topK,
     };
 
-    // Add thinking config based on model version
+    // Add thinking config for models that support it (Gemini 2.0+)
     if (options.enableThinking && config.selectedModel) {
       const modelId = config.selectedModel.toLowerCase();
       if (modelId.includes("gemini-3")) {
         // Gemini 3 models use includeThoughts boolean
         generationConfig.includeThoughts = true;
       } else if (modelId.includes("gemini-2.5")) {
-        // Gemini 2.5 models use thinking_budget (tokens)
-        generationConfig.thinkingConfig = {
-          thinkingBudget: 8192 // Default to 8k tokens
+        // Gemini 2.5 models use thinkingBudget (tokens)
+        const budgetMap: Record<string, number> = {
+          NONE: 0,
+          LOW: 1024,
+          MEDIUM: 4096,
+          HIGH: 8192
         };
+        const budget = budgetMap[options.thinkingBudget || "LOW"];
+        if (budget > 0) {
+          generationConfig.thinkingBudget = budget;
+        }
       } else {
         // Legacy thinking config for Gemini 2.0 and earlier
         generationConfig.thinkingConfig = {
@@ -323,6 +434,7 @@ export const streamWithGoogleAIStudio = async (
     systemPrompt?: string;
     enableThinking?: boolean;
     thinkingLevel?: ThinkingLevel;
+    thinkingBudget?: ThinkingBudget;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -349,17 +461,24 @@ export const streamWithGoogleAIStudio = async (
       topK: options.topK,
     };
 
-    // Add thinking config based on model version
+    // Add thinking config for models that support it (Gemini 2.0+)
     if (options.enableThinking && config.selectedModel) {
       const modelId = config.selectedModel.toLowerCase();
       if (modelId.includes("gemini-3")) {
         // Gemini 3 models use includeThoughts boolean
         generationConfig.includeThoughts = true;
       } else if (modelId.includes("gemini-2.5")) {
-        // Gemini 2.5 models use thinking_budget (tokens)
-        generationConfig.thinkingConfig = {
-          thinkingBudget: 8192 // Default to 8k tokens
+        // Gemini 2.5 models use thinkingBudget (tokens)
+        const budgetMap: Record<string, number> = {
+          NONE: 0,
+          LOW: 1024,
+          MEDIUM: 4096,
+          HIGH: 8192
         };
+        const budget = budgetMap[options.thinkingBudget || "LOW"];
+        if (budget > 0) {
+          generationConfig.thinkingBudget = budget;
+        }
       } else {
         // Legacy thinking config for Gemini 2.0 and earlier
         generationConfig.thinkingConfig = {
@@ -475,17 +594,24 @@ export const chatWithVertexAI: ChatFunction = async (
       topK: options.topK,
     };
 
-    // Add thinking config based on model version
+    // Add thinking config for models that support it (Gemini 2.0+)
     if (options.enableThinking && config.selectedModel) {
       const modelId = config.selectedModel.toLowerCase();
       if (modelId.includes("gemini-3")) {
         // Gemini 3 models use includeThoughts boolean
         generationConfig.includeThoughts = true;
       } else if (modelId.includes("gemini-2.5")) {
-        // Gemini 2.5 models use thinking_budget (tokens)
-        generationConfig.thinkingConfig = {
-          thinkingBudget: 8192 // Default to 8k tokens
+        // Gemini 2.5 models use thinkingBudget (tokens)
+        const budgetMap: Record<string, number> = {
+          NONE: 0,
+          LOW: 1024,
+          MEDIUM: 4096,
+          HIGH: 8192
         };
+        const budget = budgetMap[options.thinkingBudget || "LOW"];
+        if (budget > 0) {
+          generationConfig.thinkingBudget = budget;
+        }
       } else {
         // Legacy thinking config for Gemini 2.0 and earlier
         generationConfig.thinkingConfig = {
@@ -735,6 +861,161 @@ export const streamWithNvidiaNIM = async (
   }
 };
 
+// Pollinations AI chat implementation - uses direct API call (no API key required)
+export const chatWithPollinations: ChatFunction = async (
+  messages: Message[],
+  config: ProviderConfig,
+  options: {
+    temperature: number;
+    maxTokens: number;
+    topP: number;
+    topK: number;
+    systemPrompt?: string;
+    enableThinking?: boolean;
+  }
+): Promise<ChatResponse> => {
+  try {
+    const formattedMessages = messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    const messagesWithSystem = options.systemPrompt
+      ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
+      : formattedMessages;
+
+    // Pollinations AI uses a direct URL with query parameters
+    const model = config.selectedModel || "z.ai/glm5";
+    const url = `https://text.pollinations.ai/`;
+    
+    // Build headers - API key is optional
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (config.apiKey) {
+      headers["Authorization"] = `Bearer ${config.apiKey}`;
+    }
+    
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        messages: messagesWithSystem,
+        model: model,
+        temperature: options.temperature,
+        max_tokens: options.maxTokens,
+        top_p: options.topP,
+        seed: Math.floor(Math.random() * 1000000),
+        secure: false,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return { error: `HTTP ${response.status}: ${errorText}` };
+    }
+
+    const content = await response.text();
+    return { content };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Unknown error occurred" };
+  }
+};
+
+// Pollinations AI streaming implementation
+export const streamWithPollinations = async (
+  messages: Message[],
+  config: ProviderConfig,
+  options: {
+    temperature: number;
+    maxTokens: number;
+    topP: number;
+    topK: number;
+    systemPrompt?: string;
+    enableThinking?: boolean;
+  },
+  onChunk: StreamCallback
+): Promise<void> => {
+  try {
+    const formattedMessages = messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    const messagesWithSystem = options.systemPrompt
+      ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
+      : formattedMessages;
+
+    // Pollinations AI uses a direct URL with query parameters
+    const model = config.selectedModel || "z.ai/glm5";
+    const url = `https://text.pollinations.ai/`;
+    
+    // Build headers - API key is optional
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      "Accept": "text/event-stream",
+    };
+    if (config.apiKey) {
+      headers["Authorization"] = `Bearer ${config.apiKey}`;
+    }
+    
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        messages: messagesWithSystem,
+        model: model,
+        temperature: options.temperature,
+        max_tokens: options.maxTokens,
+        top_p: options.topP,
+        seed: Math.floor(Math.random() * 1000000),
+        secure: false,
+        stream: true,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      onChunk({ error: `HTTP ${response.status}: ${errorText}` });
+      return;
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      onChunk({ error: "Failed to get response stream" });
+      return;
+    }
+
+    const decoder = new TextDecoder();
+    let fullContent = "";
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr) continue;
+
+          // Pollinations returns plain text, not JSON for streaming
+          fullContent += jsonStr;
+          onChunk({ content: fullContent });
+        }
+      }
+    }
+
+    onChunk({ content: fullContent, done: true });
+  } catch (error) {
+    onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
+  }
+};
+
 // Vertex AI streaming implementation - uses server-side proxy to avoid CORS
 export const streamWithVertexAI = async (
   messages: Message[],
@@ -747,6 +1028,7 @@ export const streamWithVertexAI = async (
     systemPrompt?: string;
     enableThinking?: boolean;
     thinkingLevel?: ThinkingLevel;
+    thinkingBudget?: ThinkingBudget;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -780,17 +1062,24 @@ export const streamWithVertexAI = async (
       topK: options.topK,
     };
 
-    // Add thinking config based on model version
+    // Add thinking config for models that support it (Gemini 2.0+)
     if (options.enableThinking && config.selectedModel) {
       const modelId = config.selectedModel.toLowerCase();
       if (modelId.includes("gemini-3")) {
         // Gemini 3 models use includeThoughts boolean
         generationConfig.includeThoughts = true;
       } else if (modelId.includes("gemini-2.5")) {
-        // Gemini 2.5 models use thinking_budget (tokens)
-        generationConfig.thinkingConfig = {
-          thinkingBudget: 8192 // Default to 8k tokens
+        // Gemini 2.5 models use thinkingBudget (tokens)
+        const budgetMap: Record<string, number> = {
+          NONE: 0,
+          LOW: 1024,
+          MEDIUM: 4096,
+          HIGH: 8192
         };
+        const budget = budgetMap[options.thinkingBudget || "LOW"];
+        if (budget > 0) {
+          generationConfig.thinkingBudget = budget;
+        }
       } else {
         // Legacy thinking config for Gemini 2.0 and earlier
         generationConfig.thinkingConfig = {
@@ -887,15 +1176,20 @@ export const sendChatMessage = async (
     systemPrompt?: string;
     enableThinking?: boolean;
     thinkingLevel?: ThinkingLevel;
+    thinkingBudget?: ThinkingBudget;
   }
 ): Promise<ChatResponse> => {
   switch (config.type) {
+    case "puter":
+      return chatWithPuter(messages, config, options);
     case "google-ai-studio":
       return chatWithGoogleAIStudio(messages, config, options);
     case "google-vertex":
       return chatWithVertexAI(messages, config, options);
     case "nvidia-nim":
       return chatWithNvidiaNIM(messages, config, options);
+    case "pollinations":
+      return chatWithPollinations(messages, config, options);
     default:
       return { error: `Unknown provider: ${config.type}` };
   }
@@ -913,16 +1207,21 @@ export const streamChatMessage = async (
     systemPrompt?: string;
     enableThinking?: boolean;
     thinkingLevel?: ThinkingLevel;
+    thinkingBudget?: ThinkingBudget;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
   switch (config.type) {
+    case "puter":
+      return streamWithPuter(messages, config, options, onChunk);
     case "google-ai-studio":
       return streamWithGoogleAIStudio(messages, config, options, onChunk);
     case "google-vertex":
       return streamWithVertexAI(messages, config, options, onChunk);
     case "nvidia-nim":
       return streamWithNvidiaNIM(messages, config, options, onChunk);
+    case "pollinations":
+      return streamWithPollinations(messages, config, options, onChunk);
     default:
       onChunk({ error: `Unknown provider: ${config.type}` });
       return;
@@ -949,6 +1248,20 @@ export const testProviderConnection = async (
   config: ProviderConfig
 ): Promise<TestConnectionResult> => {
   switch (providerType) {
+    case "puter": {
+      // Puter.js doesn't need API key - just check if it's available
+      if (typeof window === "undefined" || !window.puter) {
+        return { success: false, message: "Puter.js is not available. Please refresh the page." };
+      }
+      try {
+        // Try a minimal model list call to verify connection
+        await window.puter.ai.listModels();
+        return { success: true, message: "Puter.js is connected and ready to use." };
+      } catch (error) {
+        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
+      }
+    }
+    
     case "google-ai-studio": {
       if (!config.apiKey) {
         return { success: false, message: "API key is required." };
@@ -1050,7 +1363,37 @@ export const testProviderConnection = async (
         return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
       }
     }
-
+    
+    case "pollinations": {
+      // Pollinations AI doesn't require an API key - it's free
+      try {
+        // Test with a minimal chat request
+        const model = config.selectedModel || "z.ai/glm5";
+        const response = await fetch("https://text.pollinations.ai/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            messages: [{ role: "user", content: "Hi" }],
+            model: model,
+            max_tokens: 5,
+            seed: Math.floor(Math.random() * 1000000),
+            secure: false,
+          }),
+        });
+        
+        if (response.ok) {
+          return { success: true, message: "Pollinations AI connection successful!" };
+        }
+        
+        const errorText = await response.text();
+        return { success: false, message: `HTTP ${response.status}: ${errorText}` };
+      } catch (error) {
+        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
+      }
+    }
+    
     default:
       return { success: false, message: `Unknown provider: ${providerType}` };
   }
@@ -1302,6 +1645,52 @@ export const fetchModelsFromProvider = async (
         ];
 
         return { models: staticModels };
+      }
+
+      case "puter": {
+        // Puter.js models are fetched client-side via window.puter.ai.listModels()
+        return { models: [], error: "Puter.js models must be fetched client-side" };
+      }
+
+      case "pollinations": {
+        // Fetch models from Pollinations AI API
+        // Supports optional API key for authenticated requests
+        try {
+          // Build URL with optional API key
+          let url = "/api/models?provider=pollinations";
+          if (config.apiKey) {
+            url += `&apiKey=${encodeURIComponent(config.apiKey)}`;
+          }
+          
+          const response = await fetch(url);
+          const data = await response.json();
+          
+          if (data.models && data.models.length > 0) {
+            return { models: data.models };
+          }
+          
+          // Fallback to static models if API fails
+          const staticModels: FetchedModel[] = [
+            { id: "z.ai/glm5", name: "GLM 5", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
+            { id: "qwen-2.5-72b-instruct", name: "Qwen 2.5 72B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
+            { id: "qwen-2.5-14b-instruct", name: "Qwen 2.5 14B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
+            { id: "mistral-nemo-instruct", name: "Mistral Nemo", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
+            { id: "deepseek-coder-v2-instruct", name: "DeepSeek Coder V2", provider: "pollinations", context: 163840, max_tokens: 16384, supportsThinking: false },
+            { id: "flux", name: "Flux (Image Gen)", provider: "pollinations", context: 1, max_tokens: 1, supportsThinking: false },
+          ];
+          return { models: staticModels };
+        } catch (error) {
+          // Return fallback models on error
+          const staticModels: FetchedModel[] = [
+            { id: "z.ai/glm5", name: "GLM 5", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
+            { id: "qwen-2.5-72b-instruct", name: "Qwen 2.5 72B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
+            { id: "qwen-2.5-14b-instruct", name: "Qwen 2.5 14B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
+            { id: "mistral-nemo-instruct", name: "Mistral Nemo", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
+            { id: "deepseek-coder-v2-instruct", name: "DeepSeek Coder V2", provider: "pollinations", context: 163840, max_tokens: 16384, supportsThinking: false },
+            { id: "flux", name: "Flux (Image Gen)", provider: "pollinations", context: 1, max_tokens: 1, supportsThinking: false },
+          ];
+          return { models: staticModels };
+        }
       }
 
       default:
