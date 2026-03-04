@@ -5878,7 +5878,10 @@ Write an engaging story segment. If this is a good point for player interaction,
                               </div>
                             ) : (
                               <>
-                                <FormattedText content={thinkContent ? `[Thinking: ${thinkContent}]\n\n${displayContent || (characterData.length > 0 ? "Here is the generated character:" : "")}` : (displayContent || (characterData.length > 0 ? "Here is the generated character:" : ""))} />
+                                {thinkContent && (
+                                  <ThinkingSection content={thinkContent} />
+                                )}
+                                <FormattedText content={displayContent || (characterData.length > 0 ? "Here is the generated character:" : "")} />
                               </>
                             )}
                           </div>
@@ -6436,7 +6439,10 @@ Write an engaging story segment. If this is a good point for player interaction,
                               </div>
                             ) : (
                               <>
-                                <FormattedText content={thinkContent ? `[Thinking: ${thinkContent}]\n\n${displayContent}` : displayContent} />
+                                {thinkContent && (
+                                  <ThinkingSection content={thinkContent} />
+                                )}
+                                <FormattedText content={displayContent} />
                               </>
                             )}
                           </div>
@@ -7620,7 +7626,16 @@ Write an engaging story segment. If this is a good point for player interaction,
                               </div>
                             ) : (
                               <>
-                                <FormattedText content={thinkContent && selectedPersona && selectedCharacter ? `[Thinking: ${replaceMacros(thinkContent, selectedPersona.name, selectedCharacter.name)}]\n\n${displayContent}` : displayContent} />
+                                {thinkContent && (
+                                  <ThinkingSection 
+                                    content={selectedPersona && selectedCharacter 
+                                      ? replaceMacros(thinkContent, selectedPersona.name, selectedCharacter.name)
+                                      : thinkContent}
+                                    signature={message.signature}
+                                    modelName={message.modelName}
+                                  />
+                                )}
+                                <FormattedText content={displayContent} />
                               </>
                             )}
                           </div>
