@@ -9,10 +9,11 @@ import {
   VertexMode,
   VertexLocation,
   ThinkingLevel,
+  ThinkingBudget,
 } from "./types";
 
 // Re-export types for convenience
-export type { LLMProviderType, ProviderConfig, Message, LLMModel, LLMProvider, VertexMode, VertexLocation, ThinkingLevel };
+export type { LLMProviderType, ProviderConfig, Message, LLMModel, LLMProvider, VertexMode, VertexLocation, ThinkingLevel, ThinkingBudget };
 
 // Available providers configuration
 export const AVAILABLE_PROVIDERS: LLMProvider[] = [
@@ -225,6 +226,7 @@ type ChatFunction = (
     systemPrompt?: string;
     enableThinking?: boolean;
     thinkingLevel?: ThinkingLevel;
+    thinkingBudget?: ThinkingBudget;
   }
 ) => Promise<ChatResponse>;
 
@@ -363,9 +365,23 @@ export const chatWithGoogleAIStudio: ChatFunction = async (
 
     // Add thinking config for models that support it (Gemini 2.0+)
     if (options.enableThinking) {
-      generationConfig.thinkingConfig = {
-        thinkingLevel: options.thinkingLevel || "HIGH"
-      };
+      // Check if model is Gemini 2.5 (uses thinkingBudget instead of thinkingLevel)
+      if (config.selectedModel?.startsWith("gemini-2.5")) {
+        const budgetMap: Record<string, number> = {
+          NONE: 0,
+          LOW: 1024,
+          MEDIUM: 4096,
+          HIGH: 8192
+        };
+        const budget = budgetMap[options.thinkingBudget || "LOW"];
+        if (budget > 0) {
+          generationConfig.thinkingBudget = budget;
+        }
+      } else {
+        generationConfig.thinkingConfig = {
+          thinkingLevel: options.thinkingLevel || "HIGH"
+        };
+      }
     }
 
     const response = await fetch(
@@ -413,6 +429,7 @@ export const streamWithGoogleAIStudio = async (
     systemPrompt?: string;
     enableThinking?: boolean;
     thinkingLevel?: ThinkingLevel;
+    thinkingBudget?: ThinkingBudget;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -441,9 +458,23 @@ export const streamWithGoogleAIStudio = async (
 
     // Add thinking config for models that support it (Gemini 2.0+)
     if (options.enableThinking) {
-      generationConfig.thinkingConfig = {
-        thinkingLevel: options.thinkingLevel || "HIGH"
-      };
+      // Check if model is Gemini 2.5 (uses thinkingBudget instead of thinkingLevel)
+      if (config.selectedModel?.startsWith("gemini-2.5")) {
+        const budgetMap: Record<string, number> = {
+          NONE: 0,
+          LOW: 1024,
+          MEDIUM: 4096,
+          HIGH: 8192
+        };
+        const budget = budgetMap[options.thinkingBudget || "LOW"];
+        if (budget > 0) {
+          generationConfig.thinkingBudget = budget;
+        }
+      } else {
+        generationConfig.thinkingConfig = {
+          thinkingLevel: options.thinkingLevel || "HIGH"
+        };
+      }
     }
 
     const response = await fetch(
@@ -555,9 +586,23 @@ export const chatWithVertexAI: ChatFunction = async (
 
     // Add thinking config for models that support it (Gemini 2.0+)
     if (options.enableThinking) {
-      generationConfig.thinkingConfig = {
-        thinkingLevel: options.thinkingLevel || "HIGH"
-      };
+      // Check if model is Gemini 2.5 (uses thinkingBudget instead of thinkingLevel)
+      if (config.selectedModel?.startsWith("gemini-2.5")) {
+        const budgetMap: Record<string, number> = {
+          NONE: 0,
+          LOW: 1024,
+          MEDIUM: 4096,
+          HIGH: 8192
+        };
+        const budget = budgetMap[options.thinkingBudget || "LOW"];
+        if (budget > 0) {
+          generationConfig.thinkingBudget = budget;
+        }
+      } else {
+        generationConfig.thinkingConfig = {
+          thinkingLevel: options.thinkingLevel || "HIGH"
+        };
+      }
     }
 
     // Use server-side proxy to avoid CORS issues
@@ -968,6 +1013,7 @@ export const streamWithVertexAI = async (
     systemPrompt?: string;
     enableThinking?: boolean;
     thinkingLevel?: ThinkingLevel;
+    thinkingBudget?: ThinkingBudget;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -1003,9 +1049,23 @@ export const streamWithVertexAI = async (
 
     // Add thinking config for models that support it (Gemini 2.0+)
     if (options.enableThinking) {
-      generationConfig.thinkingConfig = {
-        thinkingLevel: options.thinkingLevel || "HIGH"
-      };
+      // Check if model is Gemini 2.5 (uses thinkingBudget instead of thinkingLevel)
+      if (config.selectedModel?.startsWith("gemini-2.5")) {
+        const budgetMap: Record<string, number> = {
+          NONE: 0,
+          LOW: 1024,
+          MEDIUM: 4096,
+          HIGH: 8192
+        };
+        const budget = budgetMap[options.thinkingBudget || "LOW"];
+        if (budget > 0) {
+          generationConfig.thinkingBudget = budget;
+        }
+      } else {
+        generationConfig.thinkingConfig = {
+          thinkingLevel: options.thinkingLevel || "HIGH"
+        };
+      }
     }
 
     // Use server-side proxy to avoid CORS issues
@@ -1096,6 +1156,7 @@ export const sendChatMessage = async (
     systemPrompt?: string;
     enableThinking?: boolean;
     thinkingLevel?: ThinkingLevel;
+    thinkingBudget?: ThinkingBudget;
   }
 ): Promise<ChatResponse> => {
   switch (config.type) {
@@ -1126,6 +1187,7 @@ export const streamChatMessage = async (
     systemPrompt?: string;
     enableThinking?: boolean;
     thinkingLevel?: ThinkingLevel;
+    thinkingBudget?: ThinkingBudget;
   },
   onChunk: StreamCallback
 ): Promise<void> => {

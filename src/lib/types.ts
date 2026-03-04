@@ -193,6 +193,7 @@ export interface ProviderConfig {
 
 // Thinking level for Gemini models
 export type ThinkingLevel = "LOW" | "MEDIUM" | "HIGH";
+export type ThinkingBudget = "NONE" | "LOW" | "MEDIUM" | "HIGH";
 
 // Global settings
 export interface GlobalSettings {
@@ -203,6 +204,7 @@ export interface GlobalSettings {
   modelId: string;
   enableThinking: boolean;
   thinkingLevel: ThinkingLevel; // Thinking level for Gemini models (LOW/MEDIUM/HIGH)
+  thinkingBudget: ThinkingBudget; // Thinking budget for Gemini 2.5 models
   activeProvider: LLMProviderType;
 }
 
