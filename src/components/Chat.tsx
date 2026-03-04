@@ -5829,11 +5829,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                               </div>
                             ) : (
                               <>
-                                {/* Thinking section - collapsible */}
-                                {thinkContent && (
-                                  <ThinkingSection content={thinkContent} />
-                                )}
-                                <FormattedText content={displayContent || (characterData.length > 0 ? "Here is the generated character:" : "")} />
+                                <FormattedText content={thinkContent ? `[Thinking: ${thinkContent}]\n\n${displayContent || (characterData.length > 0 ? "Here is the generated character:" : "")}` : (displayContent || (characterData.length > 0 ? "Here is the generated character:" : ""))} />
                               </>
                             )}
                           </div>
@@ -6391,11 +6387,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                               </div>
                             ) : (
                               <>
-                                {/* Thinking section - collapsible */}
-                                {thinkContent && (
-                                  <ThinkingSection content={thinkContent} />
-                                )}
-                                <FormattedText content={displayContent} />
+                                <FormattedText content={thinkContent ? `[Thinking: ${thinkContent}]\n\n${displayContent}` : displayContent} />
                               </>
                             )}
                           </div>
@@ -7579,15 +7571,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                               </div>
                             ) : (
                               <>
-                                {/* Thinking section - collapsible */}
-                                {thinkContent && selectedPersona && selectedCharacter && (
-                                  <ThinkingSection 
-                                    content={replaceMacros(thinkContent, selectedPersona.name, selectedCharacter.name)} 
-                                    signature={message.signature}
-                                    modelName={message.modelName}
-                                  />
-                                )}
-                                <FormattedText content={displayContent} />
+                                <FormattedText content={thinkContent && selectedPersona && selectedCharacter ? `[Thinking: ${replaceMacros(thinkContent, selectedPersona.name, selectedCharacter.name)}]\n\n${displayContent}` : displayContent} />
                               </>
                             )}
                           </div>
@@ -7678,14 +7662,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                         </span>
                       </div>
                       <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-zinc-800 text-zinc-100">
-                        {streamingThinking && selectedPersona && selectedCharacter && (
-                          <ThinkingSection 
-                            content={replaceMacros(streamingThinking, selectedPersona.name, selectedCharacter.name)} 
-                            signature={getThoughtSignature(globalSettings.modelId, activeProvider)?.signature}
-                            modelName={getThoughtSignature(globalSettings.modelId, activeProvider)?.modelName}
-                          />
-                        )}
-                        <FormattedText content={selectedPersona && selectedCharacter ? replaceMacros(streamingContent, selectedPersona.name, selectedCharacter.name) : streamingContent} />
+                        <FormattedText content={streamingThinking && selectedPersona && selectedCharacter ? `[Thinking: ${replaceMacros(streamingThinking, selectedPersona.name, selectedCharacter.name)}]\n\n${selectedPersona && selectedCharacter ? replaceMacros(streamingContent, selectedPersona.name, selectedCharacter.name) : streamingContent}` : (selectedPersona && selectedCharacter ? replaceMacros(streamingContent, selectedPersona.name, selectedCharacter.name) : streamingContent)} />
                         <span className="inline-block w-2 h-4 ml-1 bg-zinc-400 animate-pulse" />
                       </div>
                     </div>
