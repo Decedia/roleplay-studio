@@ -8,6 +8,8 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
+- [x] Wrap all thinking/reasoning content in `<think>` tags - removed `thinking` property from Message type, now thinking content is wrapped in `<think> tags</think>` and stored in message content for consistent format across all providers
+- [x] Remove includeThoughts from Gemini 3 models - removed the `includeThoughts` parameter from all Gemini 3 model configurations in providers.ts (4 locations: chatWithGoogleAIStudio, streamChatWithGoogleAIStudio, chatWithVertexAI, streamChatWithVertexAI)
 - [x] Fix delete button bug in chat views - Fixed issue where delete button was deleting wrong message due to index mismatch when filtering out continue messages. Applied fix to main chat, generator, and brainstorm views by preserving original index before filtering.
 - [x] Remove Puter.js provider completely - removed from providers.ts, types.ts, Chat.tsx state, UI components, and layout.tsx script
 - [x] Remove Puter.js usage stats and user menu from header - removed user authentication, usage display, and sign out functionality
@@ -457,6 +459,8 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date       | Changes                                                                                                                                                                                                                                                               |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-03-04 | Wrap all thinking/reasoning content in `<think>` tags - removed `thinking` property from Message type, now thinking content is wrapped in `<think> tags</think>` and stored in message content for consistent format across all providers                             |
+| 2026-03-04 | Remove includeThoughts from Gemini 3 models - removed the `includeThoughts` parameter from all Gemini 3 model configurations in providers.ts (4 locations: chatWithGoogleAIStudio, streamChatWithGoogleAIStudio, chatWithVertexAI, streamChatWithVertexAI)            |
 | 2026-03-03 | Fix delete button bug in chat views - Fixed issue where delete button was deleting wrong message due to index mismatch when filtering out continue messages. Applied fix to main chat, generator, and brainstorm views by preserving original index before filtering. |
 | 2026-03-02 | Remove Puter.js provider completely - removed from providers.ts, types.ts, Chat.tsx state/UI/effects, and layout.tsx script; removed user authentication, usage stats, and sign out functionality from header                                                         |
 | 2026-03-02 | Add streaming plot generation display in VN generator - Shows AI-generated plot JSON in real-time under the Generate Plot button                                                                                                                                      |

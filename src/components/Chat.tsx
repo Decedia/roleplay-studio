@@ -376,7 +376,8 @@ const truncateMessagesToContext = (messages: Message[], maxContextTokens: number
   
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i];
-    const msgTokens = estimateTokens(msg.content) + (msg.thinking ? estimateTokens(msg.thinking) : 0);
+    const thinkContent = extractThinkContent(msg.content);
+    const msgTokens = estimateTokens(msg.content) + (thinkContent ? estimateTokens(thinkContent) : 0);
     
     if (totalTokens + msgTokens <= availableTokens) {
       result.unshift(msg);
@@ -4509,12 +4510,15 @@ Write an engaging story segment. If this is a good point for player interaction,
             
             if (chunk.done) {
               const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
+              // Wrap thinking in <think> tags if present
+              const contentWithThinking = chunk.thinking
+                ? `<think>${chunk.thinking}</think>\n\n${chunk.content || ""}`
+                : (chunk.content || "");
               const finalMessages: Message[] = [
                 ...updatedMessages,
-                { 
-                  role: "assistant", 
-                  content: chunk.content || "", 
-                  thinking: chunk.thinking,
+                {
+                  role: "assistant",
+                  content: contentWithThinking,
                   signature: thoughtSig?.signature,
                   modelName: thoughtSig?.modelName,
                 },
@@ -4546,12 +4550,15 @@ Write an engaging story segment. If this is a good point for player interaction,
           setError(response.error);
         } else {
           const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
+          // Wrap thinking in <think> tags if present
+          const contentWithThinking = response.thinking
+            ? `<think>${response.thinking}</think>\n\n${response.content || ""}`
+            : (response.content || "");
           const finalMessages: Message[] = [
             ...updatedMessages,
-            { 
-              role: "assistant", 
-              content: response.content || "", 
-              thinking: response.thinking,
+            {
+              role: "assistant",
+              content: contentWithThinking,
               signature: thoughtSig?.signature,
               modelName: thoughtSig?.modelName,
             },
@@ -4677,12 +4684,15 @@ Write an engaging story segment. If this is a good point for player interaction,
             
             if (chunk.done) {
               const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
+              // Wrap thinking in <think> tags if present
+              const contentWithThinking = chunk.thinking
+                ? `<think>${chunk.thinking}</think>\n\n${chunk.content || ""}`
+                : (chunk.content || "");
               const finalMessages: Message[] = [
                 ...messagesBeforeRetry,
-                { 
-                  role: "assistant", 
-                  content: chunk.content || "", 
-                  thinking: chunk.thinking,
+                {
+                  role: "assistant",
+                  content: contentWithThinking,
                   signature: thoughtSig?.signature,
                   modelName: thoughtSig?.modelName,
                 },
@@ -4713,9 +4723,13 @@ Write an engaging story segment. If this is a good point for player interaction,
         if (response.error) {
           setError(response.error);
         } else {
+          // Wrap thinking in <think> tags if present
+          const contentWithThinking = response.thinking
+            ? `<think>${response.thinking}</think>\n\n${response.content || ""}`
+            : (response.content || "");
           const finalMessages: Message[] = [
             ...messagesBeforeRetry,
-            { role: "assistant", content: response.content || "", thinking: response.thinking },
+            { role: "assistant", content: contentWithThinking },
           ];
           updateConversationMessages(finalMessages);
         }
@@ -4823,15 +4837,28 @@ Write an engaging story segment. If this is a good point for player interaction,
               const existingMessages = [...messagesWithContinue];
               const lastAssistantIdx = existingMessages.findLastIndex(m => m.role === 'assistant');
               if (lastAssistantIdx !== -1) {
+                // Get existing content and remove old think tags for re-assembly
+                const existingContent = existingMessages[lastAssistantIdx].content;
+                const existingThinking = extractThinkContent(existingContent) || '';
+                const contentWithoutThink = removeThinkTags(existingContent);
+                
+                // Combine thinking and append content
+                const combinedThinking = existingThinking + (chunk.thinking || '');
+                const newContent = combinedThinking
+                  ? `<think>${combinedThinking}</think>\n\n${contentWithoutThink}${chunk.content || ''}`
+                  : contentWithoutThink + (chunk.content || '');
+                
                 // Append to existing message
                 existingMessages[lastAssistantIdx] = {
                   ...existingMessages[lastAssistantIdx],
-                  content: existingMessages[lastAssistantIdx].content + (chunk.content || ''),
-                  thinking: chunk.thinking || existingMessages[lastAssistantIdx].thinking
+                  content: newContent
                 };
               } else {
                 // Fallback: add new message if no existing assistant message
-                existingMessages.push({ role: 'assistant', content: chunk.content || '', thinking: chunk.thinking });
+                const contentWithThinking = chunk.thinking
+                  ? `<think>${chunk.thinking}</think>\n\n${chunk.content || ''}`
+                  : (chunk.content || '');
+                existingMessages.push({ role: 'assistant', content: contentWithThinking });
               }
               updateConversationMessages(existingMessages);
               setStreamingContent("");
@@ -4863,15 +4890,28 @@ Write an engaging story segment. If this is a good point for player interaction,
           const existingMessages = [...messagesWithContinue];
           const lastAssistantIdx = existingMessages.findLastIndex(m => m.role === 'assistant');
           if (lastAssistantIdx !== -1) {
+            // Get existing content and remove old think tags for re-assembly
+            const existingContent = existingMessages[lastAssistantIdx].content;
+            const existingThinking = extractThinkContent(existingContent) || '';
+            const contentWithoutThink = removeThinkTags(existingContent);
+            
+            // Combine thinking and append content
+            const combinedThinking = existingThinking + (response.thinking || '');
+            const newContent = combinedThinking
+              ? `<think>${combinedThinking}</think>\n\n${contentWithoutThink}${response.content || ''}`
+              : contentWithoutThink + (response.content || '');
+            
             // Append to existing message
             existingMessages[lastAssistantIdx] = {
               ...existingMessages[lastAssistantIdx],
-              content: existingMessages[lastAssistantIdx].content + (response.content || ''),
-              thinking: response.thinking || existingMessages[lastAssistantIdx].thinking
+              content: newContent
             };
           } else {
             // Fallback: add new message if no existing assistant message
-            existingMessages.push({ role: 'assistant', content: response.content || '', thinking: response.thinking });
+            const contentWithThinking = response.thinking
+              ? `<think>${response.thinking}</think>\n\n${response.content || ''}`
+              : (response.content || '');
+            existingMessages.push({ role: 'assistant', content: contentWithThinking });
           }
           updateConversationMessages(existingMessages);
         }
@@ -4998,9 +5038,13 @@ Write an engaging story segment. If this is a good point for player interaction,
 
               if (chunk.done) {
                 const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
+                // Wrap thinking in <think> tags if present
+                const contentWithThinking = chunk.thinking
+                  ? `<think>${chunk.thinking}</think>\n\n${chunk.content || ""}`
+                  : (chunk.content || "");
                 const finalMessages: Message[] = [
                   ...messagesAfterEdit,
-                  { role: "assistant", content: chunk.content || "", thinking: chunk.thinking, signature: thoughtSig?.signature, modelName: thoughtSig?.modelName },
+                  { role: "assistant", content: contentWithThinking, signature: thoughtSig?.signature, modelName: thoughtSig?.modelName },
                 ];
                 updateConversationMessages(finalMessages);
                 setStreamingContent("");
@@ -5028,9 +5072,13 @@ Write an engaging story segment. If this is a good point for player interaction,
             setError(response.error);
           } else {
             const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
+            // Wrap thinking in <think> tags if present
+            const contentWithThinking = response.thinking
+              ? `<think>${response.thinking}</think>\n\n${response.content || ""}`
+              : (response.content || "");
             const finalMessages: Message[] = [
               ...messagesAfterEdit,
-              { role: "assistant", content: response.content || "", thinking: response.thinking, signature: thoughtSig?.signature, modelName: thoughtSig?.modelName },
+              { role: "assistant", content: contentWithThinking, signature: thoughtSig?.signature, modelName: thoughtSig?.modelName },
             ];
             updateConversationMessages(finalMessages);
           }
@@ -5167,7 +5215,8 @@ Write an engaging story segment. If this is a good point for player interaction,
     
     // Calculate message tokens
     const messageTokens = currentConversation.messages.reduce((total, msg) => {
-      return total + estimateTokens(msg.content) + (msg.thinking ? estimateTokens(msg.thinking) : 0);
+      const thinkContent = extractThinkContent(msg.content);
+      return total + estimateTokens(msg.content) + (thinkContent ? estimateTokens(thinkContent) : 0);
     }, 0);
     
     return systemTokens + messageTokens;
@@ -7499,9 +7548,9 @@ Write an engaging story segment. If this is a good point for player interaction,
                     .map((message, originalIndex) => ({ message, originalIndex }))
                     .filter(({ message }) => !message.isContinue)
                     .map(({ message, originalIndex: index }) => {
-                    // Get thinking content from message.thinking property or extract from content
-                    const thinkContent = message.role === "assistant" 
-                      ? (message.thinking || extractThinkContent(message.content))
+                    // Get thinking content from content (wrapped in <think> tags)
+                    const thinkContent = message.role === "assistant"
+                      ? extractThinkContent(message.content)
                       : null;
                     // Apply macro replacement for {{user}} -> persona name
                     const rawContent = message.role === "assistant"

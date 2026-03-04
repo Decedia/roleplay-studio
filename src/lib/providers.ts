@@ -255,10 +255,7 @@ export const chatWithGoogleAIStudio: ChatFunction = async (
     // Add thinking config for models that support it (Gemini 2.0+)
     if (options.enableThinking && config.selectedModel) {
       const modelId = config.selectedModel.toLowerCase();
-      if (modelId.includes("gemini-3")) {
-        // Gemini 3 models use includeThoughts boolean
-        generationConfig.includeThoughts = true;
-      } else if (modelId.includes("gemini-2.5")) {
+      if (modelId.includes("gemini-2.5")) {
         // Gemini 2.5 models use thinkingBudget (tokens)
         const budgetMap: Record<string, number> = {
           NONE: 0,
@@ -355,10 +352,7 @@ export const streamWithGoogleAIStudio = async (
     // Add thinking config for models that support it (Gemini 2.0+)
     if (options.enableThinking && config.selectedModel) {
       const modelId = config.selectedModel.toLowerCase();
-      if (modelId.includes("gemini-3")) {
-        // Gemini 3 models use includeThoughts boolean
-        generationConfig.includeThoughts = true;
-      } else if (modelId.includes("gemini-2.5")) {
+      if (modelId.includes("gemini-2.5")) {
         // Gemini 2.5 models use thinkingBudget (tokens)
         const budgetMap: Record<string, number> = {
           NONE: 0,
@@ -490,10 +484,7 @@ export const chatWithVertexAI: ChatFunction = async (
     // Add thinking config for models that support it (Gemini 2.0+)
     if (options.enableThinking && config.selectedModel) {
       const modelId = config.selectedModel.toLowerCase();
-      if (modelId.includes("gemini-3")) {
-        // Gemini 3 models use includeThoughts boolean
-        generationConfig.includeThoughts = true;
-      } else if (modelId.includes("gemini-2.5")) {
+      if (modelId.includes("gemini-2.5")) {
         // Gemini 2.5 models use thinkingBudget (tokens)
         const budgetMap: Record<string, number> = {
           NONE: 0,
@@ -960,10 +951,7 @@ export const streamWithVertexAI = async (
     // Add thinking config for models that support it (Gemini 2.0+)
     if (options.enableThinking && config.selectedModel) {
       const modelId = config.selectedModel.toLowerCase();
-      if (modelId.includes("gemini-3")) {
-        // Gemini 3 models use includeThoughts boolean
-        generationConfig.includeThoughts = true;
-      } else if (modelId.includes("gemini-2.5")) {
+      if (modelId.includes("gemini-2.5")) {
         // Gemini 2.5 models use thinkingBudget (tokens)
         const budgetMap: Record<string, number> = {
           NONE: 0,
