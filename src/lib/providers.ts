@@ -268,7 +268,9 @@ export const chatWithGoogleAIStudio: ChatFunction = async (
         };
         const budget = budgetMap[options.thinkingBudget || "LOW"];
         if (budget > 0) {
-          generationConfig.thinkingBudget = budget;
+          generationConfig.thinkingConfig = {
+            thinkingBudget: budget
+          };
         }
       } else {
         // Legacy thinking config for Gemini 2.0 and earlier
@@ -366,7 +368,9 @@ export const streamWithGoogleAIStudio = async (
         };
         const budget = budgetMap[options.thinkingBudget || "LOW"];
         if (budget > 0) {
-          generationConfig.thinkingBudget = budget;
+          generationConfig.thinkingConfig = {
+            thinkingBudget: budget
+          };
         }
       } else {
         // Legacy thinking config for Gemini 2.0 and earlier
@@ -499,7 +503,9 @@ export const chatWithVertexAI: ChatFunction = async (
         };
         const budget = budgetMap[options.thinkingBudget || "LOW"];
         if (budget > 0) {
-          generationConfig.thinkingBudget = budget;
+          generationConfig.thinkingConfig = {
+            thinkingBudget: budget
+          };
         }
       } else {
         // Legacy thinking config for Gemini 2.0 and earlier
@@ -967,7 +973,9 @@ export const streamWithVertexAI = async (
         };
         const budget = budgetMap[options.thinkingBudget || "LOW"];
         if (budget > 0) {
-          generationConfig.thinkingBudget = budget;
+          generationConfig.thinkingConfig = {
+            thinkingBudget: budget
+          };
         }
       } else {
         // Legacy thinking config for Gemini 2.0 and earlier
