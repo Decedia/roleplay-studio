@@ -82,6 +82,7 @@ interface GlobalSettings {
   modelId: string;
   enableThinking: boolean;
   thinkingLevel: "LOW" | "MEDIUM" | "HIGH"; // Thinking level for Gemini models
+  thinkingBudget: "NONE" | "LOW" | "MEDIUM" | "HIGH"; // Thinking budget for Gemini 2.5 models
   useCustomSize: boolean; // Enable custom context/output sizes
   enableStreaming: boolean; // Enable/disable streaming for all AI responses
   dingWhenUnfocused: boolean; // Play notification sound when AI finishes and window is unfocused
@@ -341,6 +342,7 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   modelId: "", // Empty initially - user must connect to a provider first
   enableThinking: false,
   thinkingLevel: "HIGH" as const, // Default thinking level for Gemini models
+  thinkingBudget: "LOW" as const, // Default thinking budget for Gemini 2.5 models
   useCustomSize: false, // By default, use model max sizes
   enableStreaming: true, // Streaming enabled by default for better UX
   dingWhenUnfocused: false, // Disabled by default
@@ -1044,24 +1046,48 @@ function SettingsModal({
             </p>
           </div>
 
-          {/* Thinking Level - Only for Google providers */}
+          {/* Thinking Level/Budget - Only for Google providers */}
           {(activeProvider === "google-ai-studio" || activeProvider === "google-vertex") && globalSettings.enableThinking && (
             <div>
-              <label className="block text-sm font-medium text-zinc-400 mb-2">
-                Thinking Level
-              </label>
-              <select
-                value={globalSettings.thinkingLevel}
-                onChange={(e) => setGlobalSettings({ ...globalSettings, thinkingLevel: e.target.value as "LOW" | "MEDIUM" | "HIGH" })}
-                className="w-full bg-zinc-800 text-white rounded-lg px-4 py-2 border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="LOW">Low - Quick responses with minimal thinking</option>
-                <option value="MEDIUM">Medium - Balanced thinking and speed</option>
-                <option value="HIGH">High - Deep thinking for complex responses</option>
-              </select>
-              <p className="text-xs text-zinc-500 mt-1">
-                Controls how deeply the AI thinks before responding (affects response quality and speed)
-              </p>
+              {/* Check if model is Gemini 2.5 */}
+              {globalSettings.modelId?.startsWith("gemini-2.5") ? (
+                <>
+                  <label className="block text-sm font-medium text-zinc-400 mb-2">
+                    Thinking Budget
+                  </label>
+                  <select
+                    value={globalSettings.thinkingBudget}
+                    onChange={(e) => setGlobalSettings({ ...globalSettings, thinkingBudget: e.target.value as "NONE" | "LOW" | "MEDIUM" | "HIGH" })}
+                    className="w-full bg-zinc-800 text-white rounded-lg px-4 py-2 border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="NONE">None - No thinking budget</option>
+                    <option value="LOW">Low - Minimal thinking (fastest)</option>
+                    <option value="MEDIUM">Medium - Balanced thinking</option>
+                    <option value="HIGH">High - Maximum thinking (slowest)</option>
+                  </select>
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Controls the thinking budget for Gemini 2.5 models (affects response quality and speed)
+                  </p>
+                </>
+              ) : (
+                <>
+                  <label className="block text-sm font-medium text-zinc-400 mb-2">
+                    Thinking Level
+                  </label>
+                  <select
+                    value={globalSettings.thinkingLevel}
+                    onChange={(e) => setGlobalSettings({ ...globalSettings, thinkingLevel: e.target.value as "LOW" | "MEDIUM" | "HIGH" })}
+                    className="w-full bg-zinc-800 text-white rounded-lg px-4 py-2 border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="LOW">Low - Quick responses with minimal thinking</option>
+                    <option value="MEDIUM">Medium - Balanced thinking and speed</option>
+                    <option value="HIGH">High - Deep thinking for complex responses</option>
+                  </select>
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Controls how deeply the AI thinks before responding (affects response quality and speed)
+                  </p>
+                </>
+              )}
             </div>
           )}
 
@@ -1960,6 +1986,7 @@ export default function Chat() {
     "google-ai-studio": { type: "google-ai-studio", isEnabled: false, profiles: [], activeProfileId: null },
     "google-vertex": { type: "google-vertex", isEnabled: false, profiles: [], activeProfileId: null },
     "nvidia-nim": { type: "nvidia-nim", isEnabled: false, profiles: [], activeProfileId: null },
+    "pollinations": { type: "pollinations", isEnabled: false, profiles: [], activeProfileId: null },
   });
   
   // Provider-specific models (fetched from API after connection)
@@ -1967,11 +1994,13 @@ export default function Chat() {
     "google-ai-studio": [],
     "google-vertex": [],
     "nvidia-nim": [],
+    "pollinations": [],
   });
   const [modelsFetching, setModelsFetching] = useState<Record<LLMProviderType, boolean>>({
     "google-ai-studio": false,
     "google-vertex": false,
     "nvidia-nim": false,
+    "pollinations": false,
   });
   
   // Active provider state - default to Google AI Studio (not Puter)
@@ -2004,6 +2033,7 @@ export default function Chat() {
     "google-ai-studio": { status: "disconnected" },
     "google-vertex": { status: "disconnected" },
     "nvidia-nim": { status: "disconnected" },
+    "pollinations": { status: "disconnected" },
   });
 
   // Profile management functions - defined early so they're available throughout the component
@@ -2429,7 +2459,7 @@ export default function Chat() {
           }
           
           // Ensure all providers exist in loaded configs
-          const allProviders: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim"];
+          const allProviders: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim", "pollinations"];
           allProviders.forEach(key => {
             if (!configs[key]) {
               configs[key] = { type: key, isEnabled: false, profiles: [], activeProfileId: null };
@@ -2442,11 +2472,12 @@ export default function Chat() {
         }
       } else {
         // Check for old per-provider storage (for users upgrading from older versions)
-        const providers: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim"];
+        const providers: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim", "pollinations"];
         const migratedConfigs: Record<LLMProviderType, ProviderConfig> = {
           "google-ai-studio": { type: "google-ai-studio", isEnabled: false, profiles: [], activeProfileId: null },
           "google-vertex": { type: "google-vertex", isEnabled: false, profiles: [], activeProfileId: null },
           "nvidia-nim": { type: "nvidia-nim", isEnabled: false, profiles: [], activeProfileId: null },
+          "pollinations": { type: "pollinations", isEnabled: false, profiles: [], activeProfileId: null },
         };
         
         providers.forEach(providerType => {
@@ -2762,7 +2793,7 @@ export default function Chat() {
       }
 
       // Import active provider
-      if (json.activeProvider && ["google-ai-studio", "google-vertex", "nvidia-nim"].includes(json.activeProvider)) {
+      if (json.activeProvider && ["google-ai-studio", "google-vertex", "nvidia-nim", "pollinations"].includes(json.activeProvider)) {
         setActiveProvider(json.activeProvider);
       }
 
@@ -4460,6 +4491,7 @@ Write an engaging story segment. If this is a good point for player interaction,
             systemPrompt,
             enableThinking: globalSettings.enableThinking,
             thinkingLevel: globalSettings.thinkingLevel,
+            thinkingBudget: globalSettings.thinkingBudget,
           },
           (chunk) => {
             if (chunk.error) {
@@ -4506,6 +4538,7 @@ Write an engaging story segment. If this is a good point for player interaction,
             systemPrompt,
             enableThinking: globalSettings.enableThinking,
             thinkingLevel: globalSettings.thinkingLevel,
+            thinkingBudget: globalSettings.thinkingBudget,
           }
         );
         
@@ -4626,6 +4659,7 @@ Write an engaging story segment. If this is a good point for player interaction,
             systemPrompt,
             enableThinking: globalSettings.enableThinking,
             thinkingLevel: globalSettings.thinkingLevel,
+            thinkingBudget: globalSettings.thinkingBudget,
           },
           (chunk) => {
             if (chunk.error) {
@@ -4672,6 +4706,7 @@ Write an engaging story segment. If this is a good point for player interaction,
             systemPrompt,
             enableThinking: globalSettings.enableThinking,
             thinkingLevel: globalSettings.thinkingLevel,
+            thinkingBudget: globalSettings.thinkingBudget,
           }
         );
         
@@ -4767,6 +4802,7 @@ Write an engaging story segment. If this is a good point for player interaction,
             systemPrompt,
             enableThinking: globalSettings.enableThinking,
             thinkingLevel: globalSettings.thinkingLevel,
+            thinkingBudget: globalSettings.thinkingBudget,
           },
           (chunk) => {
             if (chunk.error) {
@@ -4816,6 +4852,7 @@ Write an engaging story segment. If this is a good point for player interaction,
             systemPrompt,
             enableThinking: globalSettings.enableThinking,
             thinkingLevel: globalSettings.thinkingLevel,
+            thinkingBudget: globalSettings.thinkingBudget,
           }
         );
         
@@ -4943,6 +4980,7 @@ Write an engaging story segment. If this is a good point for player interaction,
               systemPrompt,
               enableThinking: globalSettings.enableThinking,
               thinkingLevel: globalSettings.thinkingLevel,
+              thinkingBudget: globalSettings.thinkingBudget,
             },
             (chunk) => {
               if (chunk.error) {
@@ -4982,6 +5020,7 @@ Write an engaging story segment. If this is a good point for player interaction,
               systemPrompt,
               enableThinking: globalSettings.enableThinking,
               thinkingLevel: globalSettings.thinkingLevel,
+              thinkingBudget: globalSettings.thinkingBudget,
             }
           );
 
@@ -5790,11 +5829,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                               </div>
                             ) : (
                               <>
-                                {/* Thinking section - collapsible */}
-                                {thinkContent && (
-                                  <ThinkingSection content={thinkContent} />
-                                )}
-                                <FormattedText content={displayContent || (characterData.length > 0 ? "Here is the generated character:" : "")} />
+                                <FormattedText content={thinkContent ? `[Thinking: ${thinkContent}]\n\n${displayContent || (characterData.length > 0 ? "Here is the generated character:" : "")}` : (displayContent || (characterData.length > 0 ? "Here is the generated character:" : ""))} />
                               </>
                             )}
                           </div>
@@ -6352,11 +6387,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                               </div>
                             ) : (
                               <>
-                                {/* Thinking section - collapsible */}
-                                {thinkContent && (
-                                  <ThinkingSection content={thinkContent} />
-                                )}
-                                <FormattedText content={displayContent} />
+                                <FormattedText content={thinkContent ? `[Thinking: ${thinkContent}]\n\n${displayContent}` : displayContent} />
                               </>
                             )}
                           </div>
@@ -7540,15 +7571,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                               </div>
                             ) : (
                               <>
-                                {/* Thinking section - collapsible */}
-                                {thinkContent && selectedPersona && selectedCharacter && (
-                                  <ThinkingSection 
-                                    content={replaceMacros(thinkContent, selectedPersona.name, selectedCharacter.name)} 
-                                    signature={message.signature}
-                                    modelName={message.modelName}
-                                  />
-                                )}
-                                <FormattedText content={displayContent} />
+                                <FormattedText content={thinkContent && selectedPersona && selectedCharacter ? `[Thinking: ${replaceMacros(thinkContent, selectedPersona.name, selectedCharacter.name)}]\n\n${displayContent}` : displayContent} />
                               </>
                             )}
                           </div>
@@ -7639,14 +7662,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                         </span>
                       </div>
                       <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-zinc-800 text-zinc-100">
-                        {streamingThinking && selectedPersona && selectedCharacter && (
-                          <ThinkingSection 
-                            content={replaceMacros(streamingThinking, selectedPersona.name, selectedCharacter.name)} 
-                            signature={getThoughtSignature(globalSettings.modelId, activeProvider)?.signature}
-                            modelName={getThoughtSignature(globalSettings.modelId, activeProvider)?.modelName}
-                          />
-                        )}
-                        <FormattedText content={selectedPersona && selectedCharacter ? replaceMacros(streamingContent, selectedPersona.name, selectedCharacter.name) : streamingContent} />
+                        <FormattedText content={streamingThinking && selectedPersona && selectedCharacter ? `[Thinking: ${replaceMacros(streamingThinking, selectedPersona.name, selectedCharacter.name)}]\n\n${selectedPersona && selectedCharacter ? replaceMacros(streamingContent, selectedPersona.name, selectedCharacter.name) : streamingContent}` : (selectedPersona && selectedCharacter ? replaceMacros(streamingContent, selectedPersona.name, selectedCharacter.name) : streamingContent)} />
                         <span className="inline-block w-2 h-4 ml-1 bg-zinc-400 animate-pulse" />
                       </div>
                     </div>
