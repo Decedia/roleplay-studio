@@ -22,12 +22,8 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] Clean up unused state variables (showProviderConfig, providerDropdownRef) and related effect
 - [x] Create "Clean-Up" branch for UI simplification
 - [x] Create "feature-thought-signature" branch for Gemini thought signatures
-
-## Active Branches
-
-- `main` - Production branch with all merged features (includes thought signature)
-- [x] Remove Groq provider completely - was causing errors, removed from providers, API routes, and UI
-- [x] Update Pollinations AI models endpoint - now fetches from `https://gen.pollinations.ai/v1/models` when user clicks Configure in the configuration modal
+- [x] Add support for Gemini 2.5 and Gemini 3 models - added new models to Google AI Studio and Vertex AI providers, implemented thinking parameter logic: Gemini 2.5 uses thinkingBudget, Gemini 3 uses includeThoughts boolean, all synchronized with global enableThinking setting
+- [x] Fix Pollinations AI dropdown - models now fetched dynamically from API before testing connection
 - [x] Add top_k parameter to NVIDIA NIM - for better response control similar to other providers
 - [x] Fix Groq provider error when pressing Configure - added migration code to ensure groq is added to providerConfigs when loading from old localStorage data
 - [x] Add Groq as a free AI provider - fast inference with free tier, supports Llama 3.3, Llama 3.1, Mixtral, and Gemma models. API key required but has generous free credits.

@@ -54,6 +54,38 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
         maxTokens: 8192,
         supportsThinking: false,
       },
+      {
+        id: "gemini-2.5-pro",
+        name: "Gemini 2.5 Pro",
+        provider: "google-ai-studio",
+        contextWindow: 1048576,
+        maxTokens: 8192,
+        supportsThinking: true,
+      },
+      {
+        id: "gemini-2.5-flash",
+        name: "Gemini 2.5 Flash",
+        provider: "google-ai-studio",
+        contextWindow: 1048576,
+        maxTokens: 8192,
+        supportsThinking: true,
+      },
+      {
+        id: "gemini-3-pro",
+        name: "Gemini 3 Pro",
+        provider: "google-ai-studio",
+        contextWindow: 1048576,
+        maxTokens: 8192,
+        supportsThinking: true,
+      },
+      {
+        id: "gemini-3-flash",
+        name: "Gemini 3 Flash",
+        provider: "google-ai-studio",
+        contextWindow: 1048576,
+        maxTokens: 8192,
+        supportsThinking: true,
+      },
     ],
   },
   {
@@ -87,6 +119,38 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
         contextWindow: 1048576,
         maxTokens: 8192,
         supportsThinking: false,
+      },
+      {
+        id: "gemini-2.5-pro",
+        name: "Gemini 2.5 Pro",
+        provider: "google-vertex",
+        contextWindow: 1048576,
+        maxTokens: 8192,
+        supportsThinking: true,
+      },
+      {
+        id: "gemini-2.5-flash",
+        name: "Gemini 2.5 Flash",
+        provider: "google-vertex",
+        contextWindow: 1048576,
+        maxTokens: 8192,
+        supportsThinking: true,
+      },
+      {
+        id: "gemini-3-pro",
+        name: "Gemini 3 Pro",
+        provider: "google-vertex",
+        contextWindow: 1048576,
+        maxTokens: 8192,
+        supportsThinking: true,
+      },
+      {
+        id: "gemini-3-flash",
+        name: "Gemini 3 Flash",
+        provider: "google-vertex",
+        contextWindow: 1048576,
+        maxTokens: 8192,
+        supportsThinking: true,
       },
     ],
   },
@@ -195,11 +259,23 @@ export const chatWithGoogleAIStudio: ChatFunction = async (
       topK: options.topK,
     };
 
-    // Add thinking config for models that support it (Gemini 2.0+)
-    if (options.enableThinking) {
-      generationConfig.thinkingConfig = {
-        thinkingLevel: options.thinkingLevel || "HIGH"
-      };
+    // Add thinking config based on model version
+    if (options.enableThinking && config.selectedModel) {
+      const modelId = config.selectedModel.toLowerCase();
+      if (modelId.includes("gemini-3")) {
+        // Gemini 3 models use includeThoughts boolean
+        generationConfig.includeThoughts = true;
+      } else if (modelId.includes("gemini-2.5")) {
+        // Gemini 2.5 models use thinking_budget (tokens)
+        generationConfig.thinkingConfig = {
+          thinkingBudget: 8192 // Default to 8k tokens
+        };
+      } else {
+        // Legacy thinking config for Gemini 2.0 and earlier
+        generationConfig.thinkingConfig = {
+          thinkingLevel: options.thinkingLevel || "HIGH"
+        };
+      }
     }
 
     const response = await fetch(
@@ -273,11 +349,23 @@ export const streamWithGoogleAIStudio = async (
       topK: options.topK,
     };
 
-    // Add thinking config for models that support it (Gemini 2.0+)
-    if (options.enableThinking) {
-      generationConfig.thinkingConfig = {
-        thinkingLevel: options.thinkingLevel || "HIGH"
-      };
+    // Add thinking config based on model version
+    if (options.enableThinking && config.selectedModel) {
+      const modelId = config.selectedModel.toLowerCase();
+      if (modelId.includes("gemini-3")) {
+        // Gemini 3 models use includeThoughts boolean
+        generationConfig.includeThoughts = true;
+      } else if (modelId.includes("gemini-2.5")) {
+        // Gemini 2.5 models use thinking_budget (tokens)
+        generationConfig.thinkingConfig = {
+          thinkingBudget: 8192 // Default to 8k tokens
+        };
+      } else {
+        // Legacy thinking config for Gemini 2.0 and earlier
+        generationConfig.thinkingConfig = {
+          thinkingLevel: options.thinkingLevel || "HIGH"
+        };
+      }
     }
 
     const response = await fetch(
@@ -387,11 +475,23 @@ export const chatWithVertexAI: ChatFunction = async (
       topK: options.topK,
     };
 
-    // Add thinking config for models that support it (Gemini 2.0+)
-    if (options.enableThinking) {
-      generationConfig.thinkingConfig = {
-        thinkingLevel: options.thinkingLevel || "HIGH"
-      };
+    // Add thinking config based on model version
+    if (options.enableThinking && config.selectedModel) {
+      const modelId = config.selectedModel.toLowerCase();
+      if (modelId.includes("gemini-3")) {
+        // Gemini 3 models use includeThoughts boolean
+        generationConfig.includeThoughts = true;
+      } else if (modelId.includes("gemini-2.5")) {
+        // Gemini 2.5 models use thinking_budget (tokens)
+        generationConfig.thinkingConfig = {
+          thinkingBudget: 8192 // Default to 8k tokens
+        };
+      } else {
+        // Legacy thinking config for Gemini 2.0 and earlier
+        generationConfig.thinkingConfig = {
+          thinkingLevel: options.thinkingLevel || "HIGH"
+        };
+      }
     }
 
     // Use server-side proxy to avoid CORS issues
@@ -680,11 +780,23 @@ export const streamWithVertexAI = async (
       topK: options.topK,
     };
 
-    // Add thinking config for models that support it (Gemini 2.0+)
-    if (options.enableThinking) {
-      generationConfig.thinkingConfig = {
-        thinkingLevel: options.thinkingLevel || "HIGH"
-      };
+    // Add thinking config based on model version
+    if (options.enableThinking && config.selectedModel) {
+      const modelId = config.selectedModel.toLowerCase();
+      if (modelId.includes("gemini-3")) {
+        // Gemini 3 models use includeThoughts boolean
+        generationConfig.includeThoughts = true;
+      } else if (modelId.includes("gemini-2.5")) {
+        // Gemini 2.5 models use thinking_budget (tokens)
+        generationConfig.thinkingConfig = {
+          thinkingBudget: 8192 // Default to 8k tokens
+        };
+      } else {
+        // Legacy thinking config for Gemini 2.0 and earlier
+        generationConfig.thinkingConfig = {
+          thinkingLevel: options.thinkingLevel || "HIGH"
+        };
+      }
     }
 
     // Use server-side proxy to avoid CORS issues
