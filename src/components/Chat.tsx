@@ -859,7 +859,7 @@ function SettingsModal({
               <input
                 type="range"
                 min="100"
-                max={selectedModel?.max_tokens || 4000}
+                max={Math.max(selectedModel?.max_tokens || 4000, globalSettings.maxTokens)}
                 step="100"
                 value={globalSettings.maxTokens}
                 onChange={(e) => setGlobalSettings({ ...globalSettings, maxTokens: parseInt(e.target.value) })}
@@ -869,12 +869,10 @@ function SettingsModal({
               <input
                 type="number"
                 min="100"
-                max={selectedModel?.max_tokens || 4000}
                 value={globalSettings.maxTokens}
                 onChange={(e) => {
                   const value = parseInt(e.target.value);
-                  const max = selectedModel?.max_tokens || 4000;
-                  if (!isNaN(value) && value >= 100 && value <= max) {
+                  if (!isNaN(value) && value >= 100) {
                     setGlobalSettings({ ...globalSettings, maxTokens: value });
                   }
                 }}
@@ -904,7 +902,7 @@ function SettingsModal({
               <input
                 type="range"
                 min="1000"
-                max={selectedModel?.context || 128000}
+                max={Math.max(selectedModel?.context || 128000, globalSettings.maxContextTokens)}
                 step="1000"
                 value={globalSettings.maxContextTokens}
                 onChange={(e) => setGlobalSettings({ ...globalSettings, maxContextTokens: parseInt(e.target.value) })}
@@ -914,12 +912,10 @@ function SettingsModal({
               <input
                 type="number"
                 min="1000"
-                max={selectedModel?.context || 128000}
                 value={globalSettings.maxContextTokens}
                 onChange={(e) => {
                   const value = parseInt(e.target.value);
-                  const max = selectedModel?.context || 128000;
-                  if (!isNaN(value) && value >= 1000 && value <= max) {
+                  if (!isNaN(value) && value >= 1000) {
                     setGlobalSettings({ ...globalSettings, maxContextTokens: value });
                   }
                 }}
