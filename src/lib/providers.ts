@@ -139,62 +139,6 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
       },
     ],
   },
-  {
-    id: "pollinations",
-    name: "Pollinations AI",
-    description: "AI models via Pollinations AI - supports optional API key for more requests",
-    requiresApiKey: false,
-    models: [
-      {
-        id: "z.ai/glm5",
-        name: "GLM 5",
-        provider: "pollinations",
-        contextWindow: 131072,
-        maxTokens: 4096,
-        supportsThinking: false,
-      },
-      {
-        id: "qwen-2.5-72b-instruct",
-        name: "Qwen 2.5 72B",
-        provider: "pollinations",
-        contextWindow: 32768,
-        maxTokens: 8192,
-        supportsThinking: false,
-      },
-      {
-        id: "qwen-2.5-14b-instruct",
-        name: "Qwen 2.5 14B",
-        provider: "pollinations",
-        contextWindow: 32768,
-        maxTokens: 8192,
-        supportsThinking: false,
-      },
-      {
-        id: "mistral-nemo-instruct",
-        name: "Mistral Nemo",
-        provider: "pollinations",
-        contextWindow: 131072,
-        maxTokens: 4096,
-        supportsThinking: false,
-      },
-      {
-        id: "deepseek-coder-v2-instruct",
-        name: "DeepSeek Coder V2",
-        provider: "pollinations",
-        contextWindow: 163840,
-        maxTokens: 16384,
-        supportsThinking: false,
-      },
-      {
-        id: "flux",
-        name: "Flux (Image Gen)",
-        provider: "pollinations",
-        contextWindow: 1,
-        maxTokens: 1,
-        supportsThinking: false,
-      },
-    ],
-  },
 ];
 
 // Chat response interface
@@ -747,161 +691,6 @@ export const streamWithNvidiaNIM = async (
   }
 };
 
-// Pollinations AI chat implementation - uses direct API call (no API key required)
-export const chatWithPollinations: ChatFunction = async (
-  messages: Message[],
-  config: ProviderConfig,
-  options: {
-    temperature: number;
-    maxTokens: number;
-    topP: number;
-    topK: number;
-    systemPrompt?: string;
-    enableThinking?: boolean;
-  }
-): Promise<ChatResponse> => {
-  try {
-    const formattedMessages = messages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
-
-    const messagesWithSystem = options.systemPrompt
-      ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
-      : formattedMessages;
-
-    // Pollinations AI uses a direct URL with query parameters
-    const model = config.selectedModel || "z.ai/glm5";
-    const url = `https://text.pollinations.ai/`;
-    
-    // Build headers - API key is optional
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-    if (config.apiKey) {
-      headers["Authorization"] = `Bearer ${config.apiKey}`;
-    }
-    
-    const response = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        messages: messagesWithSystem,
-        model: model,
-        temperature: options.temperature,
-        max_tokens: options.maxTokens,
-        top_p: options.topP,
-        seed: Math.floor(Math.random() * 1000000),
-        secure: false,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      return { error: `HTTP ${response.status}: ${errorText}` };
-    }
-
-    const content = await response.text();
-    return { content };
-  } catch (error) {
-    return { error: error instanceof Error ? error.message : "Unknown error occurred" };
-  }
-};
-
-// Pollinations AI streaming implementation
-export const streamWithPollinations = async (
-  messages: Message[],
-  config: ProviderConfig,
-  options: {
-    temperature: number;
-    maxTokens: number;
-    topP: number;
-    topK: number;
-    systemPrompt?: string;
-    enableThinking?: boolean;
-  },
-  onChunk: StreamCallback
-): Promise<void> => {
-  try {
-    const formattedMessages = messages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
-
-    const messagesWithSystem = options.systemPrompt
-      ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
-      : formattedMessages;
-
-    // Pollinations AI uses a direct URL with query parameters
-    const model = config.selectedModel || "z.ai/glm5";
-    const url = `https://text.pollinations.ai/`;
-    
-    // Build headers - API key is optional
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      "Accept": "text/event-stream",
-    };
-    if (config.apiKey) {
-      headers["Authorization"] = `Bearer ${config.apiKey}`;
-    }
-    
-    const response = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        messages: messagesWithSystem,
-        model: model,
-        temperature: options.temperature,
-        max_tokens: options.maxTokens,
-        top_p: options.topP,
-        seed: Math.floor(Math.random() * 1000000),
-        secure: false,
-        stream: true,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      onChunk({ error: `HTTP ${response.status}: ${errorText}` });
-      return;
-    }
-
-    const reader = response.body?.getReader();
-    if (!reader) {
-      onChunk({ error: "Failed to get response stream" });
-      return;
-    }
-
-    const decoder = new TextDecoder();
-    let fullContent = "";
-    let buffer = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
-
-      for (const line of lines) {
-        if (line.startsWith("data: ")) {
-          const jsonStr = line.slice(6).trim();
-          if (!jsonStr) continue;
-
-          // Pollinations returns plain text, not JSON for streaming
-          fullContent += jsonStr;
-          onChunk({ content: fullContent });
-        }
-      }
-    }
-
-    onChunk({ content: fullContent, done: true });
-  } catch (error) {
-    onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
-  }
-};
-
 // Vertex AI streaming implementation - uses server-side proxy to avoid CORS
 export const streamWithVertexAI = async (
   messages: Message[],
@@ -1071,8 +860,6 @@ export const sendChatMessage = async (
       return chatWithVertexAI(messages, config, options);
     case "nvidia-nim":
       return chatWithNvidiaNIM(messages, config, options);
-    case "pollinations":
-      return chatWithPollinations(messages, config, options);
     default:
       return { error: `Unknown provider: ${config.type}` };
   }
@@ -1101,8 +888,6 @@ export const streamChatMessage = async (
       return streamWithVertexAI(messages, config, options, onChunk);
     case "nvidia-nim":
       return streamWithNvidiaNIM(messages, config, options, onChunk);
-    case "pollinations":
-      return streamWithPollinations(messages, config, options, onChunk);
     default:
       onChunk({ error: `Unknown provider: ${config.type}` });
       return;
@@ -1226,36 +1011,6 @@ export const testProviderConnection = async (
         }
         
         return { success: false, message: errorData.error || `HTTP ${response.status}` };
-      } catch (error) {
-        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
-      }
-    }
-    
-    case "pollinations": {
-      // Pollinations AI doesn't require an API key - it's free
-      try {
-        // Test with a minimal chat request
-        const model = config.selectedModel || "z.ai/glm5";
-        const response = await fetch("https://text.pollinations.ai/", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            messages: [{ role: "user", content: "Hi" }],
-            model: model,
-            max_tokens: 5,
-            seed: Math.floor(Math.random() * 1000000),
-            secure: false,
-          }),
-        });
-        
-        if (response.ok) {
-          return { success: true, message: "Pollinations AI connection successful!" };
-        }
-        
-        const errorText = await response.text();
-        return { success: false, message: `HTTP ${response.status}: ${errorText}` };
       } catch (error) {
         return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
       }
@@ -1512,47 +1267,6 @@ export const fetchModelsFromProvider = async (
         ];
 
         return { models: staticModels };
-      }
-
-      case "pollinations": {
-        // Fetch models from Pollinations AI API
-        // Supports optional API key for authenticated requests
-        try {
-          // Build URL with optional API key
-          let url = "/api/models?provider=pollinations";
-          if (config.apiKey) {
-            url += `&apiKey=${encodeURIComponent(config.apiKey)}`;
-          }
-          
-          const response = await fetch(url);
-          const data = await response.json();
-          
-          if (data.models && data.models.length > 0) {
-            return { models: data.models };
-          }
-          
-          // Fallback to static models if API fails
-          const staticModels: FetchedModel[] = [
-            { id: "z.ai/glm5", name: "GLM 5", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
-            { id: "qwen-2.5-72b-instruct", name: "Qwen 2.5 72B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
-            { id: "qwen-2.5-14b-instruct", name: "Qwen 2.5 14B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
-            { id: "mistral-nemo-instruct", name: "Mistral Nemo", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
-            { id: "deepseek-coder-v2-instruct", name: "DeepSeek Coder V2", provider: "pollinations", context: 163840, max_tokens: 16384, supportsThinking: false },
-            { id: "flux", name: "Flux (Image Gen)", provider: "pollinations", context: 1, max_tokens: 1, supportsThinking: false },
-          ];
-          return { models: staticModels };
-        } catch (error) {
-          // Return fallback models on error
-          const staticModels: FetchedModel[] = [
-            { id: "z.ai/glm5", name: "GLM 5", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
-            { id: "qwen-2.5-72b-instruct", name: "Qwen 2.5 72B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
-            { id: "qwen-2.5-14b-instruct", name: "Qwen 2.5 14B", provider: "pollinations", context: 32768, max_tokens: 8192, supportsThinking: false },
-            { id: "mistral-nemo-instruct", name: "Mistral Nemo", provider: "pollinations", context: 131072, max_tokens: 4096, supportsThinking: false },
-            { id: "deepseek-coder-v2-instruct", name: "DeepSeek Coder V2", provider: "pollinations", context: 163840, max_tokens: 16384, supportsThinking: false },
-            { id: "flux", name: "Flux (Image Gen)", provider: "pollinations", context: 1, max_tokens: 1, supportsThinking: false },
-          ];
-          return { models: staticModels };
-        }
       }
 
       default:

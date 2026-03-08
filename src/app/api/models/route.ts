@@ -202,57 +202,6 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ models, location });
       }
 
-      case "puter": {
-        // Puter.js models are fetched client-side
-        return NextResponse.json({ 
-          error: "Puter.js models must be fetched client-side",
-          models: [] 
-        });
-      }
-
-      case "pollinations": {
-        // Pollinations AI models - fetch from their API
-        try {
-          const response = await fetch("https://text.pollinations.ai/models", {
-            method: "GET",
-            headers: {
-              "Accept": "application/json",
-            },
-          });
-
-          if (!response.ok) {
-            const errorText = await response.text();
-            return NextResponse.json(
-              { error: `HTTP ${response.status}: ${errorText}` },
-              { status: response.status }
-            );
-          }
-
-          const data = await response.json();
-          
-          // Transform Pollinations models to our format
-          // The API returns an array of model objects
-          const models = (data.models || data || [])
-            .filter((m: { id?: string; name?: string; object?: string }) => m && (m.id || m.name))
-            .map((m: { id?: string; name?: string; description?: string }) => ({
-              id: m.id || m.name,
-              provider: "pollinations",
-              name: m.name || m.id,
-              context: 131072, // Default context window
-              max_tokens: 4096, // Default max tokens
-              supportsThinking: false,
-            }));
-
-          return NextResponse.json({ models });
-        } catch (error) {
-          console.error("Error fetching Pollinations models:", error);
-          return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Failed to fetch Pollinations models" },
-            { status: 500 }
-          );
-        }
-      }
-
       default:
         return NextResponse.json(
           { error: `Unknown provider: ${provider}` },

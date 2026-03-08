@@ -135,7 +135,7 @@ export interface BrainstormConversation {
 }
 
 // LLM Provider types
-export type LLMProviderType = "google-ai-studio" | "google-vertex" | "nvidia-nim" | "pollinations";
+export type LLMProviderType = "google-ai-studio" | "google-vertex" | "nvidia-nim";
 
 export interface LLMProvider {
   id: LLMProviderType;
@@ -230,37 +230,4 @@ export interface ModelCost {
   tokens?: number;
   input?: number;
   output?: number;
-}
-
-// Model from puter.ai.listModels()
-export interface Model {
-  id: string;
-  provider?: string;
-  name?: string;
-  aliases?: string[];
-  context?: number;
-  max_tokens?: number;
-  cost?: ModelCost;
-}
-
-// Puter.js types
-export interface PuterUser {
-  username: string;
-  email?: string;
-  uuid: string;
-}
-
-export interface PuterUsage {
-  ai_chat_tokens?: number;
-  ai_image_generations?: number;
-  storage_bytes?: number;
-  [key: string]: number | undefined;
-}
-
-export interface PuterAppUsage {
-  app_id?: string;
-  ai_chat_tokens?: number;
-  ai_image_generations?: number;
-  storage_bytes?: number;
-  [key: string]: string | number | undefined;
 }
