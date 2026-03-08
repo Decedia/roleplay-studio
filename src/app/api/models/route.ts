@@ -202,6 +202,51 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ models, location });
       }
 
+      case "groq": {
+        if (!apiKey) {
+          return NextResponse.json(
+            { error: "API key is required for Groq" },
+            { status: 400 }
+          );
+        }
+
+        // Fetch models from Groq API
+        const response = await fetch("https://api.groq.com/openai/v1/models", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Accept": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          return NextResponse.json(
+            { error: errorData.error?.message || `HTTP ${response.status}` },
+            { status: response.status }
+          );
+        }
+
+        const data = await response.json();
+        
+        // Transform Groq models to our format
+        const models = (data.data || [])
+          .filter((model: { id: string; object?: string }) => 
+            model.object === "model" && !model.id.startsWith("ft-")
+          )
+          .map((model: { id: string; created?: number }) => ({
+            id: model.id,
+            provider: "groq",
+            name: model.id,
+            // Default values - Groq doesn't provide context window in the list
+            context: 8192,
+            max_tokens: 8192,
+            supportsThinking: false,
+          }));
+
+        return NextResponse.json({ models });
+      }
+
       default:
         return NextResponse.json(
           { error: `Unknown provider: ${provider}` },
