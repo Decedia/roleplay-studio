@@ -135,7 +135,7 @@ export interface BrainstormConversation {
 }
 
 // LLM Provider types
-export type LLMProviderType = "google-ai-studio" | "google-vertex" | "nvidia-nim" | "pollinations" | "groq";
+export type LLMProviderType = "google-ai-studio" | "google-vertex" | "nvidia-nim" | "pollinations";
 
 export interface LLMProvider {
   id: LLMProviderType;
