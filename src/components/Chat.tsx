@@ -23,6 +23,9 @@ import { readCharacterFile, buildFullSystemPrompt } from "@/lib/character-import
 import { Character as CharacterType, CharacterBook, CharacterBookEntry, ProviderProfile, GeneratorConversation, BrainstormConversation } from "@/lib/types";
 import { parseRoleplayText, getSegmentClasses, TextSegment } from "@/lib/text-formatter";
 
+// Import from modular chat structure (components only - utilities are defined inline for now)
+import { ThinkingSection, CollapsibleTagSection, FormattedText } from "@/components/chat/components";
+
 // Types - using imported Message interface
 export interface Persona {
   id: string;
@@ -434,157 +437,14 @@ function getThoughtSignature(modelId: string, provider: LLMProviderType): { sign
   return { signature: "🔷 Gemini", modelName: "Gemini" };
 }
 
-// Thinking Section Component
-function ThinkingSection({ content, signature, modelName }: { content: string; signature?: string; modelName?: string }) {
-  const [isExpanded, setIsExpanded] = useState(false);
+// Thinking Section Component - NOW IMPORTED FROM MODULAR STRUCTURE
+// Removed inline - now using @/components/chat/components/ThinkingSection
 
-  return (
-    <div className="mb-3">
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-300 transition-colors"
-      >
-        <span className="text-base">💭</span>
-        <span>Thinking...</span>
-        {signature && (
-          <span className="px-2 py-0.5 bg-blue-900/50 text-blue-300 text-xs rounded-full border border-blue-800">
-            {signature}
-          </span>
-        )}
-        <svg 
-          className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`} 
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      {isExpanded && (
-        <div className="mt-2 p-3 bg-zinc-900/50 rounded-lg border border-zinc-700 text-sm text-zinc-400 italic whitespace-pre-wrap">
-          {modelName && (
-            <div className="text-xs text-blue-400 mb-2 pb-2 border-b border-zinc-700">
-              Thought process from {modelName}
-            </div>
-          )}
-          {content}
-        </div>
-      )}
-    </div>
-  );
-}
+// Collapsible Tag Section Component - NOW IMPORTED FROM MODULAR STRUCTURE
+// Removed inline - now using @/components/chat/components/CollapsibleTagSection
 
-// Collapsible Tag Section Component
-function CollapsibleTagSection({ tagName, content }: { tagName: string; content: string }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  return (
-    <div className="my-2">
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors"
-      >
-        <svg 
-          className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-90" : ""}`} 
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-        <span className="font-mono">&lt;{tagName}&gt;</span>
-        <span className="text-zinc-500">...</span>
-        <span className="font-mono">&lt;/{tagName}&gt;</span>
-      </button>
-      {isExpanded && (
-        <div className="mt-2 ml-4 p-3 bg-zinc-900/50 rounded-lg border border-zinc-700 text-sm text-zinc-300 whitespace-pre-wrap">
-          {content}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Formatted Text Component for roleplay styling
-function FormattedText({ content }: { content: string }) {
-  const segments = useMemo(() => parseRoleplayText(content), [content]);
-  
-  return (
-    <span className="whitespace-pre-wrap break-words">
-      {segments.map((segment, index) => {
-        const key = `${segment.type}-${index}`;
-        const classes = getSegmentClasses(segment.type);
-        
-        switch (segment.type) {
-          case "action":
-            return (
-              <span key={key} className={classes}>
-                <span className="text-zinc-500">*</span>
-                {segment.content}
-                <span className="text-zinc-500">*</span>
-              </span>
-            );
-          case "dialogue":
-            return (
-              <span key={key} className={classes}>
-                <span className="text-zinc-400">&ldquo;</span>
-                {segment.content}
-                <span className="text-zinc-400">&rdquo;</span>
-              </span>
-            );
-          case "thought":
-            return (
-              <span key={key} className={classes}>
-                <span className="text-zinc-500">(</span>
-                {segment.content}
-                <span className="text-zinc-500">)</span>
-              </span>
-            );
-          case "ooc":
-            return (
-              <span key={key} className={classes}>
-                <span className="text-amber-500">((</span>
-                {segment.content}
-                <span className="text-amber-500">))</span>
-              </span>
-            );
-          case "bold":
-            return (
-              <strong key={key} className={classes}>
-                {segment.content}
-              </strong>
-            );
-          case "code":
-            return (
-              <code key={key} className={classes}>
-                {segment.content}
-              </code>
-            );
-          case "codeblock":
-            return (
-              <pre key={key} className={classes}>
-                <code>{segment.content}</code>
-              </pre>
-            );
-          case "collapsible":
-            return (
-              <CollapsibleTagSection 
-                key={key} 
-                tagName={segment.tagName || "tag"} 
-                content={segment.content} 
-              />
-            );
-          default:
-            return (
-              <span key={key} className={classes}>
-                {segment.content}
-              </span>
-            );
-        }
-      })}
-    </span>
-  );
-}
+// Formatted Text Component for roleplay styling - NOW IMPORTED FROM MODULAR STRUCTURE
+// Removed inline - now using @/components/chat/components/FormattedText
 
 // Settings Modal Component with collapsible model dropdown
 function SettingsModal({
