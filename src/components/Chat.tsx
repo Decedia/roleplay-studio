@@ -4038,12 +4038,38 @@ export default function Chat() {
   
   // Apply instructions to global instructions
   const applyInstructions = (instructions: string) => {
+    // Prompt user for instruction name
+    const name = prompt("Enter instruction name:");
+    if (!name) return;
+    
+    // Prompt user for role selection
+    const roleInput = prompt("Role: 1=System, 2=User, 3=Assistant");
+    let role: "system" | "user" | "assistant" = "system";
+    if (roleInput === "2") role = "user";
+    else if (roleInput === "3") role = "assistant";
+    
+    // Prompt user for position selection
+    const positionInput = prompt("Position: 1=Before Context, 2=After Context");
+    let position: "before_context" | "after_context" = "after_context";
+    if (positionInput === "1") position = "before_context";
+    
+    // Create new instruction
+    const newInstruction: Instruction = {
+      id: `instruction_${Date.now()}`,
+      name: name.trim(),
+      content: instructions,
+      role,
+      position,
+      enabled: true,
+      order: (globalInstructions.instructions?.length || 0),
+    };
+    
+    // Add to instruction list
     setGlobalInstructions(prev => ({
       ...prev,
-      customInstructions: prev.customInstructions 
-        ? `${prev.customInstructions}\n\n${instructions}`
-        : instructions,
+      instructions: [...(prev.instructions || []), newInstruction],
     }));
+    
     // Mark as applied for visual feedback
     setAppliedInstructions(prev => new Set(prev).add(instructions));
     // Clear the applied status after 3 seconds
