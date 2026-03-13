@@ -961,7 +961,7 @@ function SettingsModal({
           {/* Global Instructions */}
           <div className="border-t border-zinc-700 pt-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-white">Global Instructions</h3>
+              <h3 className="text-sm font-medium text-white">Instructions</h3>
               <div className="flex gap-2">
                 <input
                   type="file"
