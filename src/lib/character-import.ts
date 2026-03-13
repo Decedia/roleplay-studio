@@ -280,22 +280,56 @@ const scanForLorebookEntries = (
 
 // Build full system prompt with lorebook support
 // Follows guideline: [Formatting] [Context] [Main instructions] [Negative constraints at end]
+// Always returns an object with systemPrompt string and instructionMessages array
 export const buildFullSystemPrompt = (
   character: Character,
   personaName: string,
   personaDescription: string,
   messages: Message[],
   globalInstructions?: GlobalInstructions
-): string => {
+): { systemPrompt: string; instructionMessages: Message[] } => {
   const formattingSections: string[] = [];
   const contextSections: string[] = [];
   const instructionSections: string[] = [];
   const constraintSections: string[] = [];
 
-  // === FORMATTING INSTRUCTIONS (sent before context) ===
+  // === PROCESS NEW INSTRUCTION LIST (SillyTavern-style) ===
+  
+  const beforeContextInstructions: Message[] = [];
+  const afterContextInstructions: Message[] = [];
+  
+  const hasInstructionList = globalInstructions?.instructions && globalInstructions.instructions.length > 0;
+  
+  if (globalInstructions?.instructions) {
+    // Sort instructions by position and order
+    const sortedInstructions = [...globalInstructions.instructions]
+      .filter(inst => inst.enabled)
+      .sort((a, b) => {
+        if (a.position !== b.position) {
+          return a.position === "before_context" ? -1 : 1;
+        }
+        return a.order - b.order;
+      });
+    
+    for (const instruction of sortedInstructions) {
+      const msg: Message = {
+        role: instruction.role,
+        content: instruction.content,
+      };
+      
+      if (instruction.position === "before_context") {
+        beforeContextInstructions.push(msg);
+      } else {
+        afterContextInstructions.push(msg);
+      }
+    }
+  }
 
+  // === FORMATTING INSTRUCTIONS (sent before context) - LEGACY SUPPORT ===
+  
   // Formatting prompt - guides how the AI formats responses
-  if (globalInstructions?.formattingPrompt) {
+  // Only use if not using the new instruction system
+  if (globalInstructions?.formattingPrompt && !hasInstructionList) {
     formattingSections.push(globalInstructions.formattingPrompt);
   }
 
@@ -365,7 +399,8 @@ export const buildFullSystemPrompt = (
   constraintSections.push("Format your responses with proper paragraph breaks, line spacing, and natural dialogue structure. Use separate paragraphs for different ideas, actions, and speech. Avoid walls of text.");
   
   // Jailbreak instructions (if enabled) - placed near end as it's a constraint
-  if (globalInstructions?.enableJailbreak && globalInstructions.jailbreakInstructions) {
+  // Only use if not using the new instruction system
+  if (globalInstructions?.enableJailbreak && globalInstructions.jailbreakInstructions && !hasInstructionList) {
     constraintSections.push(globalInstructions.jailbreakInstructions);
   }
   
@@ -373,5 +408,17 @@ export const buildFullSystemPrompt = (
   constraintSections.push("Stay in character at all times. Respond naturally and engage with the roleplay scenario. Do not break character or acknowledge that you are an AI.");
   
   // Combine: Formatting -> Context -> Instructions -> Constraints
-  return [...formattingSections, ...contextSections, ...instructionSections, ...constraintSections].join("\n\n");
+  const systemPromptContent = [...formattingSections, ...contextSections, ...instructionSections, ...constraintSections].join("\n\n");
+  
+  // Create system message
+  const systemMessage: Message = {
+    role: "system",
+    content: systemPromptContent,
+  };
+  
+  // Always return object with system prompt and instruction messages
+  return {
+    systemPrompt: systemPromptContent,
+    instructionMessages: [systemMessage, ...beforeContextInstructions, ...afterContextInstructions],
+  };
 };

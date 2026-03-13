@@ -209,6 +209,23 @@ export interface GlobalSettings {
   activeProvider: LLMProviderType;
 }
 
+// Instruction role type - who the instruction appears to be from
+export type InstructionRole = "system" | "user" | "assistant";
+
+// Instruction position type - where in the message flow it goes
+export type InstructionPosition = "before_context" | "after_context";
+
+// Individual instruction entry (SillyTavern-style)
+export interface Instruction {
+  id: string;
+  name: string; // User-friendly name for tracking
+  content: string; // The instruction text
+  role: InstructionRole; // Who this instruction appears to be from
+  position: InstructionPosition; // Before or after context
+  enabled: boolean; // Whether this instruction is active
+  order: number; // For sorting within position
+}
+
 // Global instructions with advanced fields
 export interface GlobalInstructions {
   // Basic instructions
@@ -222,6 +239,8 @@ export interface GlobalInstructions {
   continueInstruction?: string;
   // Formatting prompt - sent before context for formatting instructions
   formattingPrompt?: string;
+  // New instruction list (SillyTavern-style)
+  instructions: Instruction[];
 }
 
 // Model cost structure
