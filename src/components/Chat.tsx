@@ -23,8 +23,11 @@ import { readCharacterFile, buildFullSystemPrompt } from "@/lib/character-import
 import { Character as CharacterType, CharacterBook, CharacterBookEntry, ProviderProfile, GeneratorConversation, BrainstormConversation } from "@/lib/types";
 import { parseRoleplayText, getSegmentClasses, TextSegment } from "@/lib/text-formatter";
 
-// Import from modular chat structure (components only - utilities are defined inline for now)
+// Import from modular chat structure
 import { ThinkingSection, CollapsibleTagSection, FormattedText } from "@/components/chat/components";
+
+// Import UI styles
+import * as ui from "@/components/chat/styles";
 
 // Types - using imported Message interface
 export interface Persona {
@@ -5207,7 +5210,7 @@ Write an engaging story segment. If this is a good point for player interaction,
   }, [view, currentConversation, selectedCharacter, selectedPersona, globalInstructions]);
 
   return (
-    <div className="flex flex-col h-screen bg-black">
+    <div className={ui.layout.main}>
       {/* Header - Fixed on top for all views on mobile */}
       <header className={`flex-shrink-0 z-50 fixed top-0 left-0 right-0 bg-black/80 backdrop-blur-xl border-b border-zinc-800/50`}>
         <div className="max-w-4xl mx-auto px-4 py-4">
@@ -5301,10 +5304,10 @@ Write an engaging story segment. If this is a good point for player interaction,
 
       {/* Error Popup - Fixed below header, above main content */}
       {(error || generatorError || brainstormError || vnError) && (
-        <div className="fixed top-[73px] left-0 right-0 z-40 px-4 py-3">
+        <div className={ui.notifications.error.replace('px-4 py-3', '').trim()}>
           <div className="max-w-4xl mx-auto">
-            <div className="bg-red-900/80 border border-red-700 rounded-lg px-4 py-3 text-red-200 shadow-xl backdrop-blur-sm">
-              <div className="overflow-y-auto" style={{ maxHeight: '120px' }}>
+            <div className={ui.notifications.errorInner.replace('bg-red-900/80 border border-red-700 rounded-lg px-4 py-3 text-red-200 shadow-xl backdrop-blur-sm', '').trim()}>
+              <div className={ui.notifications.errorContent.replace('overflow-y-auto', '').trim()} style={{ maxHeight: '120px' }}>
                 <p className="whitespace-pre-wrap">{error || generatorError || brainstormError || vnError}</p>
               </div>
               <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-red-700/50">
@@ -5367,8 +5370,8 @@ Write an engaging story segment. If this is a good point for player interaction,
       )}
 
       {/* Main Content - Add top padding for fixed header */}
-      <div className="flex-1 overflow-y-auto pt-20">
-        <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className={ui.layout.content}>
+        <div className={ui.layout.contentContainer}>
           {/* Home View - Landing page with 4 big buttons */}
           {view === "home" && (
             <div className="space-y-6">
