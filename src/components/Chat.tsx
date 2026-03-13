@@ -6102,13 +6102,13 @@ Write an engaging story segment. If this is a good point for player interaction,
                         }}
                         placeholder="Describe the character you want to create..."
                         className="w-full bg-transparent text-white placeholder-zinc-500 px-3 py-2 resize-none focus:outline-none"
-                        style={{ minHeight: "24px", maxHeight: "80px" }}
+                        style={{ minHeight: "40px", maxHeight: "60px" }}
                         disabled={isGenerating}
                         rows={1}
                         onInput={(e) => {
                           const target = e.target as HTMLTextAreaElement;
                           target.style.height = "auto";
-                          target.style.height = Math.min(target.scrollHeight, 80) + "px";
+                          target.style.height = Math.min(target.scrollHeight, 60) + "px";
                         }}
                       />
                     </div>
@@ -6609,13 +6609,13 @@ Write an engaging story segment. If this is a good point for player interaction,
                         }}
                         placeholder="Describe the roleplay you want to play..."
                         className="w-full bg-transparent text-white placeholder-zinc-500 px-3 py-2 resize-none focus:outline-none"
-                        style={{ minHeight: "24px", maxHeight: "80px" }}
+                        style={{ minHeight: "40px", maxHeight: "60px" }}
                         disabled={isBrainstorming}
                         rows={1}
                         onInput={(e) => {
                           const target = e.target as HTMLTextAreaElement;
                           target.style.height = "auto";
-                          target.style.height = Math.min(target.scrollHeight, 80) + "px";
+                          target.style.height = Math.min(target.scrollHeight, 60) + "px";
                         }}
                       />
                     </div>
@@ -7762,7 +7762,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                     placeholder={`Message as ${selectedPersona?.name}...`}
                     rows={1}
                     className="w-full bg-transparent text-white placeholder-zinc-500 px-3 py-2 resize-none focus:outline-none"
-                    style={{ minHeight: "24px", maxHeight: "80px" }}
+                    style={{ minHeight: "40px", maxHeight: "60px" }}
                     disabled={isLoading}
                   />
                 </div>
