@@ -71,6 +71,14 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] Make AI continue response appear in same bubble (append to existing message)
 - [x] Add "Ding when unfocused" global setting - plays notification sound when AI finishes generating
 - [x] Fixed notification sound logic - removed window focus check
+- [x] Instruction List Rework - Implemented SillyTavern-style instruction list system:
+  - Added Instruction interface with id, name, content, role (system/user/assistant), position (before/after context), enabled, order
+  - Added instruction list UI in Settings Modal with full CRUD operations (add, edit, delete, reorder, enable/disable)
+  - Role dropdown per instruction to select who the instruction appears as (system/user/assistant)
+  - Position dropdown per instruction to select when to send (before_context/after_context)
+  - Default instructions: Formatting, Jailbreak, Continue - each with configurable name, role, position
+  - Modified applyInstructions to prompt for name, role, and position when applying from brainstorm/generator/VN
+  - Updated buildFullSystemPrompt to process instruction list with proper role/position handling
 - [x] Base Next.js 16 setup with App Router
 - [x] Tailwind CSS 4 integration
 - [x] ESLint configuration
