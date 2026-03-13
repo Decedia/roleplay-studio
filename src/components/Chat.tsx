@@ -5748,23 +5748,28 @@ Write an engaging story segment. If this is a good point for player interaction,
                 Chat with AI to create a character. Describe what you want, and the AI will generate a character profile for you.
               </div>
               
-              {/* Generator Instructions - always visible */}
+              {/* Generator Instructions - collapsible */}
               <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-zinc-300">📝 Generator Instructions</span>
-                  <button
-                    onClick={() => setShowGeneratorInstructionsEditor(!showGeneratorInstructionsEditor)}
-                    className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                <button
+                  onClick={() => setShowGeneratorInstructionsEditor(!showGeneratorInstructionsEditor)}
+                  className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-300 transition-colors w-full"
+                >
+                  <svg 
+                    className={`w-4 h-4 transition-transform ${showGeneratorInstructionsEditor ? "rotate-90" : ""}`} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
                   >
-                    {showGeneratorInstructionsEditor ? "Hide" : "Edit"}
-                  </button>
-                </div>
-                <p className="text-xs text-zinc-500 mb-3">
-                  These instructions tell the AI how to create characters.
-                </p>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  <span className="text-sm font-medium text-zinc-300">📝 Generator Instructions</span>
+                </button>
                 
                 {showGeneratorInstructionsEditor && (
-                  <div className="space-y-3">
+                  <div className="mt-3 space-y-3">
+                    <p className="text-xs text-zinc-500">
+                      These instructions tell the AI how to create characters.
+                    </p>
                     <textarea
                       value={generatorInstructions}
                       onChange={(e) => setGeneratorInstructions(e.target.value)}
@@ -6310,23 +6315,28 @@ Write an engaging story segment. If this is a good point for player interaction,
                 Chat with AI to brainstorm roleplay ideas. When ready, apply the generated instructions to your global settings.
               </div>
               
-              {/* Brainstorm Instructions - always visible */}
+              {/* Brainstorm Instructions - collapsible */}
               <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-zinc-300">📝 Instructions Generator</span>
-                  <button
-                    onClick={() => setShowBrainstormInstructionsEditor(!showBrainstormInstructionsEditor)}
-                    className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                <button
+                  onClick={() => setShowBrainstormInstructionsEditor(!showBrainstormInstructionsEditor)}
+                  className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-300 transition-colors w-full"
+                >
+                  <svg 
+                    className={`w-4 h-4 transition-transform ${showBrainstormInstructionsEditor ? "rotate-90" : ""}`} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
                   >
-                    {showBrainstormInstructionsEditor ? "Hide" : "Edit"}
-                  </button>
-                </div>
-                <p className="text-xs text-zinc-500 mb-3">
-                  These instructions tell the AI how to help you brainstorm roleplay ideas.
-                </p>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  <span className="text-sm font-medium text-zinc-300">📝 Instructions Generator</span>
+                </button>
                 
                 {showBrainstormInstructionsEditor && (
-                  <div className="space-y-3">
+                  <div className="mt-3 space-y-3">
+                    <p className="text-xs text-zinc-500">
+                      These instructions tell the AI how to help you brainstorm roleplay ideas.
+                    </p>
                     <textarea
                       value={brainstormInstructions}
                       onChange={(e) => setBrainstormInstructions(e.target.value)}
@@ -6757,20 +6767,25 @@ Write an engaging story segment. If this is a good point for player interaction,
                 <span>Play</span>
               </div>
               
-              {/* VN Instructions Editor */}
+              {/* VN Instructions Editor - collapsible */}
               <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
                 <button
                   onClick={() => setShowVnInstructionsEditor(!showVnInstructionsEditor)}
-                  className="flex items-center justify-between w-full text-left"
+                  className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-300 transition-colors w-full"
                 >
-                  <span className="text-sm font-medium text-zinc-300">📝 VN Generator Instructions</span>
-                  <svg className={`w-5 h-5 text-zinc-500 transition-transform ${showVnInstructionsEditor ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <svg 
+                    className={`w-4 h-4 transition-transform ${showVnInstructionsEditor ? "rotate-90" : ""}`} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
+                  <span className="text-sm font-medium text-zinc-300">📝 VN Generator Instructions</span>
                 </button>
                 
                 {showVnInstructionsEditor && (
-                  <div className="mt-4 space-y-3">
+                  <div className="mt-3 space-y-3">
                     <p className="text-xs text-zinc-500">
                       These instructions tell the AI how to create visual novels.
                     </p>
