@@ -986,8 +986,8 @@ function SettingsModal({
               </div>
             </div>
 
-            {/* Custom Instructions */}
-            <div className="mb-4">
+            {/* Custom Instructions - Hidden, use Instruction List instead */}
+            <div className="mb-4" style={{ display: 'none' }}>
               <label className="block text-sm font-medium text-zinc-400 mb-2">
                 Custom Instructions
               </label>
@@ -1003,8 +1003,8 @@ function SettingsModal({
               </p>
             </div>
 
-            {/* Advanced Instructions Toggle */}
-            <button
+            {/* Advanced Instructions Toggle - Hidden, use Instruction List instead */}
+            <button style={{ display: 'none' }}
               type="button"
               onClick={() => setShowAdvancedInstructions(!showAdvancedInstructions)}
               className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-300 transition-colors mb-4"
@@ -1020,8 +1020,8 @@ function SettingsModal({
               <span>Advanced Instructions</span>
             </button>
 
-            {/* Advanced Instructions Section */}
-            {showAdvancedInstructions && (
+            {/* Advanced Instructions Section - Hidden, use Instruction List instead */}
+            {false && (
               <div className="space-y-4 pl-4 border-l-2 border-zinc-700">
                 {/* Formatting Prompt */}
                 <div>
