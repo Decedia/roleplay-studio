@@ -1081,45 +1081,7 @@ function SettingsModal({
                   </p>
                 </div>
 
-                {/* System Prompt Override */}
-                <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">
-                    System Prompt Override
-                  </label>
-                  <textarea
-                    value={globalInstructions.systemPrompt || ""}
-                    onChange={(e) => setGlobalInstructions({ 
-                      ...globalInstructions, 
-                      systemPrompt: e.target.value 
-                    })}
-                    placeholder="Override the default system prompt for all characters..."
-                    rows={3}
-                    className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none text-sm"
-                  />
-                  <p className="text-xs text-zinc-500 mt-1">
-                    Replaces character&apos;s system prompt if set
-                  </p>
-                </div>
 
-                {/* Post-History Instructions */}
-                <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">
-                    Post-History Instructions
-                  </label>
-                  <textarea
-                    value={globalInstructions.postHistoryInstructions || ""}
-                    onChange={(e) => setGlobalInstructions({ 
-                      ...globalInstructions, 
-                      postHistoryInstructions: e.target.value 
-                    })}
-                    placeholder="Instructions applied after chat history..."
-                    rows={3}
-                    className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none text-sm"
-                  />
-                  <p className="text-xs text-zinc-500 mt-1">
-                    Added after the conversation history
-                  </p>
-                </div>
 
                 {/* Continue Instruction */}
                 <div className="mt-4">
