@@ -6089,7 +6089,7 @@ Write an engaging story segment. If this is a good point for player interaction,
               {/* Input area - fixed at bottom */}
               <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-800 bg-black/80 backdrop-blur-xl z-50">
                 <div className="max-w-4xl mx-auto px-4 py-4">
-                  <div className="flex items-end gap-3 bg-zinc-900 rounded-2xl border border-zinc-800 p-2">
+                  <div className="flex items-center gap-3 bg-zinc-900 rounded-2xl border border-zinc-800 p-2">
                     <div className="flex-1 relative">
                       <textarea
                         value={generatorInput}
@@ -6596,7 +6596,7 @@ Write an engaging story segment. If this is a good point for player interaction,
               {/* Input area - fixed at bottom */}
               <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-800 bg-black/80 backdrop-blur-xl z-50">
                 <div className="max-w-4xl mx-auto px-4 py-4">
-                  <div className="flex items-end gap-3 bg-zinc-900 rounded-2xl border border-zinc-800 p-2">
+                  <div className="flex items-center gap-3 bg-zinc-900 rounded-2xl border border-zinc-800 p-2">
                     <div className="flex-1 relative">
                       <textarea
                         value={brainstormInput}
@@ -7752,7 +7752,7 @@ Write an engaging story segment. If this is a good point for player interaction,
         <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-800 bg-black/80 backdrop-blur-xl z-50">
           <div className="max-w-4xl mx-auto px-4 py-4">
             <form onSubmit={handleSubmit}>
-              <div className="flex items-end gap-3 bg-zinc-900 rounded-2xl border border-zinc-800 p-2">
+              <div className="flex items-center gap-3 bg-zinc-900 rounded-2xl border border-zinc-800 p-2">
                 <div className="flex-1 relative">
                   <textarea
                     ref={inputRef}
