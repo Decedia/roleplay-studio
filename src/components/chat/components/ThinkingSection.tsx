@@ -15,17 +15,17 @@ export function ThinkingSection({ content, signature, modelName }: ThinkingSecti
     <div className="mb-3">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-300 transition-colors"
+        className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-300 transition-colors flex-wrap max-w-full"
       >
         <span className="text-base">💭</span>
         <span>Thinking...</span>
         {signature && (
-          <span className="px-2 py-0.5 bg-blue-900/50 text-blue-300 text-xs rounded-full border border-blue-800">
+          <span className="px-2 py-0.5 bg-blue-900/50 text-blue-300 text-xs rounded-full border border-blue-800 whitespace-nowrap">
             {signature}
           </span>
         )}
         <svg 
-          className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`} 
+          className={`w-4 h-4 transition-transform flex-shrink-0 ${isExpanded ? "rotate-180" : ""}`} 
           fill="none" 
           stroke="currentColor" 
           viewBox="0 0 24 24"
@@ -34,7 +34,7 @@ export function ThinkingSection({ content, signature, modelName }: ThinkingSecti
         </svg>
       </button>
       {isExpanded && (
-        <div className="mt-2 p-3 bg-zinc-900/50 rounded-lg border border-zinc-700 text-sm text-zinc-400 italic whitespace-pre-wrap">
+        <div className="mt-2 p-3 bg-zinc-900/50 rounded-lg border border-zinc-700 text-sm text-zinc-400 italic whitespace-pre-wrap break-words overflow-hidden">
           {modelName && (
             <div className="text-xs text-blue-400 mb-2 pb-2 border-b border-zinc-700">
               Thought process from {modelName}
