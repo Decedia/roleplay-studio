@@ -6089,30 +6089,33 @@ Write an engaging story segment. If this is a good point for player interaction,
               {/* Input area - fixed at bottom */}
               <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-800 bg-black/80 backdrop-blur-xl z-50">
                 <div className="max-w-4xl mx-auto px-4 py-4">
-                  <div className="flex gap-2">
-                    <textarea
-                      value={generatorInput}
-                      onChange={(e) => setGeneratorInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          sendGeneratorMessage();
-                        }
-                      }}
-                      placeholder="Describe the character you want to create..."
-                      className="flex-1 bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none min-h-[48px] max-h-[200px]"
-                      disabled={isGenerating}
-                      rows={1}
-                      onInput={(e) => {
-                        const target = e.target as HTMLTextAreaElement;
-                        target.style.height = "auto";
-                        target.style.height = Math.min(target.scrollHeight, 200) + "px";
-                      }}
-                    />
+                  <div className="flex items-end gap-3 bg-zinc-900 rounded-2xl border border-zinc-800 p-2">
+                    <div className="flex-1 relative">
+                      <textarea
+                        value={generatorInput}
+                        onChange={(e) => setGeneratorInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            sendGeneratorMessage();
+                          }
+                        }}
+                        placeholder="Describe the character you want to create..."
+                        className="w-full bg-transparent text-white placeholder-zinc-500 px-3 py-2 resize-none focus:outline-none"
+                        style={{ minHeight: "24px", maxHeight: "200px" }}
+                        disabled={isGenerating}
+                        rows={1}
+                        onInput={(e) => {
+                          const target = e.target as HTMLTextAreaElement;
+                          target.style.height = "auto";
+                          target.style.height = Math.min(target.scrollHeight, 200) + "px";
+                        }}
+                      />
+                    </div>
                     <button
                       onClick={sendGeneratorMessage}
                       disabled={isGenerating}
-                      className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors disabled:opacity-50"
+                      className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg shadow-purple-600/20 disabled:opacity-50"
                     >
                       {isGenerating ? (
                         <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -6127,7 +6130,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                     </button>
                   </div>
                   <p className="text-xs text-zinc-600 mt-2 text-center">
-                    Press Enter to send, Shift+Enter for new line. Empty message resends last.
+                    Press Enter to send, Shift+Enter for new line.
                   </p>
                 </div>
               </div>
@@ -6593,30 +6596,33 @@ Write an engaging story segment. If this is a good point for player interaction,
               {/* Input area - fixed at bottom */}
               <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-800 bg-black/80 backdrop-blur-xl z-50">
                 <div className="max-w-4xl mx-auto px-4 py-4">
-                  <div className="flex gap-2">
-                    <textarea
-                      value={brainstormInput}
-                      onChange={(e) => setBrainstormInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          sendBrainstormMessage();
-                        }
-                      }}
-                      placeholder="Describe the roleplay you want to play..."
-                      className="flex-1 bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500 border border-zinc-700 resize-none min-h-[48px] max-h-[200px]"
-                      disabled={isBrainstorming}
-                      rows={1}
-                      onInput={(e) => {
-                        const target = e.target as HTMLTextAreaElement;
-                        target.style.height = "auto";
-                        target.style.height = Math.min(target.scrollHeight, 200) + "px";
-                      }}
-                    />
+                  <div className="flex items-end gap-3 bg-zinc-900 rounded-2xl border border-zinc-800 p-2">
+                    <div className="flex-1 relative">
+                      <textarea
+                        value={brainstormInput}
+                        onChange={(e) => setBrainstormInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            sendBrainstormMessage();
+                          }
+                        }}
+                        placeholder="Describe the roleplay you want to play..."
+                        className="w-full bg-transparent text-white placeholder-zinc-500 px-3 py-2 resize-none focus:outline-none"
+                        style={{ minHeight: "24px", maxHeight: "200px" }}
+                        disabled={isBrainstorming}
+                        rows={1}
+                        onInput={(e) => {
+                          const target = e.target as HTMLTextAreaElement;
+                          target.style.height = "auto";
+                          target.style.height = Math.min(target.scrollHeight, 200) + "px";
+                        }}
+                      />
+                    </div>
                     <button
                       onClick={sendBrainstormMessage}
                       disabled={isBrainstorming}
-                      className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-colors disabled:opacity-50"
+                      className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl hover:from-amber-400 hover:to-orange-400 transition-all shadow-lg shadow-amber-500/20 disabled:opacity-50"
                     >
                       {isBrainstorming ? (
                         <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -6631,7 +6637,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                     </button>
                   </div>
                   <p className="text-xs text-zinc-600 mt-2 text-center">
-                    Press Enter to send, Shift+Enter for new line. Empty message resends last.
+                    Press Enter to send, Shift+Enter for new line.
                   </p>
                 </div>
               </div>
