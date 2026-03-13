@@ -107,27 +107,16 @@ export const DEFAULT_INSTRUCTIONS: Instruction[] = [
   },
 ];
 
-// Global instructions with advanced fields
+// Global instructions (SillyTavern-style)
 export interface GlobalInstructions {
-  customInstructions: string;
-  systemPrompt?: string;
-  postHistoryInstructions?: string;
-  jailbreakInstructions?: string;
-  enableJailbreak: boolean;
-  continueInstruction?: string;
-  imageGenerationInstructions?: string;
-  formattingPrompt?: string;
-  // New instruction list (SillyTavern-style)
+  // Instruction list (SillyTavern-style)
   instructions: Instruction[];
+  // Legacy field - image generation instructions (kept for compatibility)
+  imageGenerationInstructions?: string;
 }
 
 export const DEFAULT_GLOBAL_INSTRUCTIONS: GlobalInstructions = {
-  customInstructions: "",
-  jailbreakInstructions: DEFAULT_JAILBREAK_INSTRUCTION,
-  enableJailbreak: false,
-  continueInstruction: DEFAULT_CONTINUE_INSTRUCTION,
   imageGenerationInstructions: DEFAULT_IMAGE_GENERATION_INSTRUCTIONS,
-  formattingPrompt: DEFAULT_FORMATTING_PROMPT,
   instructions: DEFAULT_INSTRUCTIONS,
 };
 

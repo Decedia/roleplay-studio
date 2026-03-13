@@ -129,11 +129,25 @@ export const buildCharacterSystemPrompt = (
   const instructionSections: string[] = [];
   const constraintSections: string[] = [];
 
-  // === FORMATTING INSTRUCTIONS (sent before context) ===
-
-  // Formatting prompt - guides how the AI formats responses
-  if (globalInstructions?.formattingPrompt) {
-    formattingSections.push(globalInstructions.formattingPrompt);
+  // === INSTRUCTION LIST (SillyTavern-style) ===
+  
+  // Process instruction list if available
+  if (globalInstructions?.instructions && globalInstructions.instructions.length > 0) {
+    const enabledInstructions = globalInstructions.instructions.filter(inst => inst.enabled);
+    
+    for (const instruction of enabledInstructions) {
+      if (instruction.position === "before_context") {
+        formattingSections.push(instruction.content);
+      } else {
+        // after_context instructions
+        if (instruction.role === "system") {
+          instructionSections.push(instruction.content);
+        } else if (instruction.role === "user") {
+          constraintSections.push(instruction.content);
+        }
+        // assistant role is not added as it's used differently
+      }
+    }
   }
 
   // === CONTEXT AND SOURCE MATERIAL ===
@@ -161,33 +175,19 @@ export const buildCharacterSystemPrompt = (
   
   // === MAIN TASK INSTRUCTIONS ===
   
-  // Main system prompt - priority: global override > character override > default
-  if (globalInstructions?.systemPrompt) {
-    instructionSections.push(globalInstructions.systemPrompt);
-  } else if (character.systemPrompt) {
+  // Main system prompt - use character override or default
+  if (character.systemPrompt) {
     instructionSections.push(character.systemPrompt);
   } else {
     instructionSections.push(`You are ${character.name}.`);
   }
   
-  // Post-history instructions - priority: global > character
-  if (globalInstructions?.postHistoryInstructions) {
-    instructionSections.push(`[Instructions]\n${globalInstructions.postHistoryInstructions}`);
-  } else if (character.postHistoryInstructions) {
+  // Post-history instructions from character
+  if (character.postHistoryInstructions) {
     instructionSections.push(`[Instructions]\n${character.postHistoryInstructions}`);
   }
   
-  // Custom instructions
-  if (globalInstructions?.customInstructions) {
-    instructionSections.push(`[Additional Instructions]\n${globalInstructions.customInstructions}`);
-  }
-  
   // === NEGATIVE AND FORMATTING CONSTRAINTS (at the end) ===
-  
-  // Jailbreak instructions (if enabled) - placed near end as it's a constraint
-  if (globalInstructions?.enableJailbreak && globalInstructions.jailbreakInstructions) {
-    constraintSections.push(globalInstructions.jailbreakInstructions);
-  }
   
   // Final instruction - core constraint at the very end
   constraintSections.push("Stay in character at all times. Respond naturally and engage with the roleplay scenario. Do not break character or acknowledge that you are an AI.");
@@ -293,14 +293,12 @@ export const buildFullSystemPrompt = (
   const instructionSections: string[] = [];
   const constraintSections: string[] = [];
 
-  // === PROCESS NEW INSTRUCTION LIST (SillyTavern-style) ===
+  // === PROCESS INSTRUCTION LIST (SillyTavern-style) ===
   
   const beforeContextInstructions: Message[] = [];
   const afterContextInstructions: Message[] = [];
   
-  const hasInstructionList = globalInstructions?.instructions && globalInstructions.instructions.length > 0;
-  
-  if (globalInstructions?.instructions) {
+  if (globalInstructions?.instructions && globalInstructions.instructions.length > 0) {
     // Sort instructions by position and order
     const sortedInstructions = [...globalInstructions.instructions]
       .filter(inst => inst.enabled)
@@ -323,14 +321,6 @@ export const buildFullSystemPrompt = (
         afterContextInstructions.push(msg);
       }
     }
-  }
-
-  // === FORMATTING INSTRUCTIONS (sent before context) - LEGACY SUPPORT ===
-  
-  // Formatting prompt - guides how the AI formats responses
-  // Only use if not using the new instruction system
-  if (globalInstructions?.formattingPrompt && !hasInstructionList) {
-    formattingSections.push(globalInstructions.formattingPrompt);
   }
 
   // === CONTEXT AND SOURCE MATERIAL ===
@@ -372,37 +362,22 @@ export const buildFullSystemPrompt = (
   
   // === MAIN TASK INSTRUCTIONS ===
   
-  // Main system prompt - priority: global override > character override > default
-  if (globalInstructions?.systemPrompt) {
-    instructionSections.push(globalInstructions.systemPrompt);
-  } else if (character.systemPrompt) {
+  // Main system prompt - use character override or default
+  if (character.systemPrompt) {
     instructionSections.push(character.systemPrompt);
   } else {
     instructionSections.push(`You are ${character.name}.`);
   }
   
-  // Post-history instructions - priority: global > character
-  if (globalInstructions?.postHistoryInstructions) {
-    instructionSections.push(`[Instructions]\n${globalInstructions.postHistoryInstructions}`);
-  } else if (character.postHistoryInstructions) {
+  // Post-history instructions from character
+  if (character.postHistoryInstructions) {
     instructionSections.push(`[Instructions]\n${character.postHistoryInstructions}`);
-  }
-  
-  // Custom instructions
-  if (globalInstructions?.customInstructions) {
-    instructionSections.push(`[Additional Instructions]\n${globalInstructions.customInstructions}`);
   }
   
   // === NEGATIVE AND FORMATTING CONSTRAINTS (at the end) ===
   
   // Formatting instructions - ensures proper paragraph breaks and readability
   constraintSections.push("Format your responses with proper paragraph breaks, line spacing, and natural dialogue structure. Use separate paragraphs for different ideas, actions, and speech. Avoid walls of text.");
-  
-  // Jailbreak instructions (if enabled) - placed near end as it's a constraint
-  // Only use if not using the new instruction system
-  if (globalInstructions?.enableJailbreak && globalInstructions.jailbreakInstructions && !hasInstructionList) {
-    constraintSections.push(globalInstructions.jailbreakInstructions);
-  }
   
   // Final instruction - core constraint at the very end
   constraintSections.push("Stay in character at all times. Respond naturally and engage with the roleplay scenario. Do not break character or acknowledge that you are an AI.");

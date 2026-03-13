@@ -226,21 +226,12 @@ export interface Instruction {
   order: number; // For sorting within position
 }
 
-// Global instructions with advanced fields
+// Global instructions (SillyTavern-style)
 export interface GlobalInstructions {
-  // Basic instructions
-  customInstructions: string;
-  // Advanced instructions
-  systemPrompt?: string;
-  postHistoryInstructions?: string;
-  jailbreakInstructions?: string;
-  enableJailbreak: boolean;
-  // Continue instruction for incomplete responses
-  continueInstruction?: string;
-  // Formatting prompt - sent before context for formatting instructions
-  formattingPrompt?: string;
-  // New instruction list (SillyTavern-style)
+  // Instruction list (SillyTavern-style)
   instructions: Instruction[];
+  // Legacy field - image generation instructions (kept for compatibility)
+  imageGenerationInstructions?: string;
 }
 
 // Model cost structure
