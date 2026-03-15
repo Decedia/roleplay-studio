@@ -42,6 +42,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] Add character avatar feature - users can now upload character images (PNG, JPG, GIF up to 5MB) that display in character list and chat messages. Falls back to initial if no image uploaded.
 - [x] Add AI image generation for character avatars - users can generate character images using AI. Button in character modal uses the current LLM provider. Disabled when using providers that don't support image generation (NVIDIA NIM). Instructions configurable in global settings.
 - [x] Fix navigation back button: home no longer has back button, personas now has back button (goes to home), characters/generator/brainstorm/vn-generator now go back to main menu (home)
+- [x] Remove system prompt override and post history instruction fields from settings modal - simplified interface to only use instruction list
 - [x] Fix message duplication bug in generator/brainstorm when resending same message - removed duplicate message addition to state (only add new messages, not resends)
 - [x] Fix refresh/continue button showing on all assistant messages - now only shows on last assistant message
 - [x] Fix generator regenerate to keep last user message - changed slice to lastUserIdx + 1 to include the user message
