@@ -4665,7 +4665,7 @@ Write an engaging story segment. If this is a good point for player interaction,
       };
       
       // Build system prompt with lorebook support
-      const { systemPrompt } = buildFullSystemPrompt(
+      const { systemPrompt, instructionMessages } = buildFullSystemPrompt(
         selectedCharacter,
         selectedPersona.name,
         selectedPersona.description,
@@ -4681,18 +4681,21 @@ Write an engaging story segment. If this is a good point for player interaction,
         systemPromptTokens
       );
 
+      // Combine instruction messages with conversation messages
+      const messagesWithInstructions = [...instructionMessages, ...truncatedMessages];
+
       // Use streaming or non-streaming based on settings
       if (globalSettings.enableStreaming) {
         // Streaming mode for real-time responses
         await streamChatMessage(
-          truncatedMessages,
+          messagesWithInstructions,
           profileConfig,
           {
             temperature: globalSettings.temperature,
             maxTokens: globalSettings.maxTokens,
             topP: globalSettings.topP,
             topK: globalSettings.topK,
-            systemPrompt,
+            systemPrompt: "", // instructionMessages already includes system message
             enableThinking: globalSettings.enableThinking,
             thinkingLevel: globalSettings.thinkingLevel,
             thinkingBudget: globalSettings.thinkingBudget,
@@ -4735,14 +4738,14 @@ Write an engaging story segment. If this is a good point for player interaction,
       } else {
         // Non-streaming mode for stable responses
         const response = await sendChatMessage(
-          truncatedMessages,
+          messagesWithInstructions,
           profileConfig,
           {
             temperature: globalSettings.temperature,
             maxTokens: globalSettings.maxTokens,
             topP: globalSettings.topP,
             topK: globalSettings.topK,
-            systemPrompt,
+            systemPrompt: "", // instructionMessages already includes system message
             enableThinking: globalSettings.enableThinking,
             thinkingLevel: globalSettings.thinkingLevel,
             thinkingBudget: globalSettings.thinkingBudget,
@@ -4839,7 +4842,7 @@ Write an engaging story segment. If this is a good point for player interaction,
       };
       
       // Build system prompt with lorebook support
-      const { systemPrompt } = buildFullSystemPrompt(
+      const { systemPrompt, instructionMessages } = buildFullSystemPrompt(
         selectedCharacter,
         selectedPersona.name,
         selectedPersona.description,
@@ -4855,18 +4858,21 @@ Write an engaging story segment. If this is a good point for player interaction,
         systemPromptTokens
       );
 
+      // Combine instruction messages with conversation messages
+      const messagesWithInstructions = [...instructionMessages, ...truncatedMessages];
+
       // Use streaming or non-streaming based on settings
       if (globalSettings.enableStreaming) {
         // Streaming mode for real-time responses
         await streamChatMessage(
-          truncatedMessages,
+          messagesWithInstructions,
           profileConfig,
           {
             temperature: globalSettings.temperature,
             maxTokens: globalSettings.maxTokens,
             topP: globalSettings.topP,
             topK: globalSettings.topK,
-            systemPrompt,
+            systemPrompt: "", // instructionMessages already includes system message
             enableThinking: globalSettings.enableThinking,
             thinkingLevel: globalSettings.thinkingLevel,
             thinkingBudget: globalSettings.thinkingBudget,
@@ -4909,14 +4915,14 @@ Write an engaging story segment. If this is a good point for player interaction,
       } else {
         // Non-streaming mode for stable responses
         const response = await sendChatMessage(
-          truncatedMessages,
+          messagesWithInstructions,
           profileConfig,
           {
             temperature: globalSettings.temperature,
             maxTokens: globalSettings.maxTokens,
             topP: globalSettings.topP,
             topK: globalSettings.topK,
-            systemPrompt,
+            systemPrompt: "", // instructionMessages already includes system message
             enableThinking: globalSettings.enableThinking,
             thinkingLevel: globalSettings.thinkingLevel,
             thinkingBudget: globalSettings.thinkingBudget,
@@ -4989,7 +4995,7 @@ Write an engaging story segment. If this is a good point for player interaction,
         selectedModel: globalSettings.modelId || activeProfile?.selectedModel
       };
       // Build system prompt with lorebook support
-      const { systemPrompt } = buildFullSystemPrompt(
+      const { systemPrompt, instructionMessages } = buildFullSystemPrompt(
         selectedCharacter,
         selectedPersona.name,
         selectedPersona.description,
@@ -5005,18 +5011,21 @@ Write an engaging story segment. If this is a good point for player interaction,
         systemPromptTokens
       );
 
+      // Combine instruction messages with conversation messages
+      const messagesWithInstructions = [...instructionMessages, ...truncatedMessages];
+
       // Use streaming or non-streaming based on settings
       if (globalSettings.enableStreaming) {
         // Streaming mode for real-time responses
         await streamChatMessage(
-          truncatedMessages,
+          messagesWithInstructions,
           profileConfig,
           {
             temperature: globalSettings.temperature,
             maxTokens: globalSettings.maxTokens,
             topP: globalSettings.topP,
             topK: globalSettings.topK,
-            systemPrompt,
+            systemPrompt: "", // instructionMessages already includes system message
             enableThinking: globalSettings.enableThinking,
             thinkingLevel: globalSettings.thinkingLevel,
             thinkingBudget: globalSettings.thinkingBudget,
@@ -5072,14 +5081,14 @@ Write an engaging story segment. If this is a good point for player interaction,
       } else {
         // Non-streaming mode for stable responses
         const response = await sendChatMessage(
-          truncatedMessages,
+          messagesWithInstructions,
           profileConfig,
           {
             temperature: globalSettings.temperature,
             maxTokens: globalSettings.maxTokens,
             topP: globalSettings.topP,
             topK: globalSettings.topK,
-            systemPrompt,
+            systemPrompt: "", // instructionMessages already includes system message
             enableThinking: globalSettings.enableThinking,
             thinkingLevel: globalSettings.thinkingLevel,
             thinkingBudget: globalSettings.thinkingBudget,
@@ -5194,7 +5203,7 @@ Write an engaging story segment. If this is a good point for player interaction,
           selectedModel: globalSettings.modelId || activeProfile?.selectedModel
         };
         
-        const { systemPrompt } = buildFullSystemPrompt(
+        const { systemPrompt, instructionMessages } = buildFullSystemPrompt(
           selectedCharacter,
           selectedPersona.name,
           selectedPersona.description,
@@ -5209,18 +5218,21 @@ Write an engaging story segment. If this is a good point for player interaction,
           systemPromptTokens
         );
 
+        // Combine instruction messages with conversation messages
+        const messagesWithInstructions = [...instructionMessages, ...truncatedMessages];
+
         // Use streaming or non-streaming based on settings
         // Always enable streaming for NVIDIA NIM in VN generator
         if (globalSettings.enableStreaming || activeProvider === "nvidia-nim") {
           await streamChatMessage(
-            truncatedMessages,
+            messagesWithInstructions,
             profileConfig,
             {
               temperature: globalSettings.temperature,
               maxTokens: globalSettings.maxTokens,
               topP: globalSettings.topP,
               topK: globalSettings.topK,
-              systemPrompt,
+              systemPrompt: "", // instructionMessages already includes system message
               enableThinking: globalSettings.enableThinking,
               thinkingLevel: globalSettings.thinkingLevel,
               thinkingBudget: globalSettings.thinkingBudget,
@@ -5257,14 +5269,14 @@ Write an engaging story segment. If this is a good point for player interaction,
           );
         } else {
           const response = await sendChatMessage(
-            truncatedMessages,
+            messagesWithInstructions,
             profileConfig,
             {
               temperature: globalSettings.temperature,
               maxTokens: globalSettings.maxTokens,
               topP: globalSettings.topP,
               topK: globalSettings.topK,
-              systemPrompt,
+              systemPrompt: "", // instructionMessages already includes system message
               enableThinking: globalSettings.enableThinking,
               thinkingLevel: globalSettings.thinkingLevel,
               thinkingBudget: globalSettings.thinkingBudget,
@@ -5407,7 +5419,7 @@ Write an engaging story segment. If this is a good point for player interaction,
     }
     
     // Calculate system prompt tokens
-    const { systemPrompt } = buildFullSystemPrompt(
+    const { systemPrompt, instructionMessages } = buildFullSystemPrompt(
       selectedCharacter,
       selectedPersona.name,
       selectedPersona.description,
