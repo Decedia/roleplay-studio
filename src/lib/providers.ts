@@ -226,14 +226,20 @@ export const chatWithGoogleAIStudio: ChatFunction = async (
   }
 
   try {
-    const formattedMessages = messages.map((m) => ({
+    // Extract system messages from instruction messages for Gemini API
+    const systemMessages = messages.filter(m => m.role === "system");
+    const nonSystemMessages = messages.filter(m => m.role !== "system");
+    
+    // Format non-system messages for Gemini API
+    const formattedMessages = nonSystemMessages.map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
       parts: [{ text: m.content }],
     }));
 
-    // Add system prompt if provided
-    const systemInstruction = options.systemPrompt
-      ? { parts: [{ text: options.systemPrompt }] }
+    // Combine system instruction with any system messages from the instruction list
+    const systemInstructionContent = systemMessages.map(m => m.content).join("\n\n");
+    const systemInstruction = systemInstructionContent || options.systemPrompt
+      ? { parts: [{ text: systemInstructionContent || options.systemPrompt || "" }] }
       : undefined;
 
     // Build generation config
@@ -324,13 +330,20 @@ export const streamWithGoogleAIStudio = async (
   }
 
   try {
-    const formattedMessages = messages.map((m) => ({
+    // Extract system messages from instruction messages for Gemini API
+    const systemMessages = messages.filter(m => m.role === "system");
+    const nonSystemMessages = messages.filter(m => m.role !== "system");
+    
+    // Format non-system messages for Gemini API
+    const formattedMessages = nonSystemMessages.map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
       parts: [{ text: m.content }],
     }));
 
-    const systemInstruction = options.systemPrompt
-      ? { parts: [{ text: options.systemPrompt }] }
+    // Combine system instruction with any system messages from the instruction list
+    const systemInstructionContent = systemMessages.map(m => m.content).join("\n\n");
+    const systemInstruction = systemInstructionContent || options.systemPrompt
+      ? { parts: [{ text: systemInstructionContent || options.systemPrompt || "" }] }
       : undefined;
 
     // Build generation config with optional thinking
@@ -456,13 +469,20 @@ export const chatWithVertexAI: ChatFunction = async (
   }
   
   try {
-    const formattedMessages = messages.map((m) => ({
+    // Extract system messages from instruction messages for Gemini API
+    const systemMessages = messages.filter(m => m.role === "system");
+    const nonSystemMessages = messages.filter(m => m.role !== "system");
+    
+    // Format non-system messages for Gemini API
+    const formattedMessages = nonSystemMessages.map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
       parts: [{ text: m.content }],
     }));
 
-    const systemInstruction = options.systemPrompt
-      ? { parts: [{ text: options.systemPrompt }] }
+    // Combine system instruction with any system messages from the instruction list
+    const systemInstructionContent = systemMessages.map(m => m.content).join("\n\n");
+    const systemInstruction = systemInstructionContent || options.systemPrompt
+      ? { parts: [{ text: systemInstructionContent || options.systemPrompt || "" }] }
       : undefined;
 
     // Build generation config with optional thinking
@@ -933,13 +953,20 @@ export const streamWithVertexAI = async (
   }
 
   try {
-    const formattedMessages = messages.map((m) => ({
+    // Extract system messages from instruction messages for Gemini API
+    const systemMessages = messages.filter(m => m.role === "system");
+    const nonSystemMessages = messages.filter(m => m.role !== "system");
+    
+    // Format non-system messages for Gemini API
+    const formattedMessages = nonSystemMessages.map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
       parts: [{ text: m.content }],
     }));
 
-    const systemInstruction = options.systemPrompt
-      ? { parts: [{ text: options.systemPrompt }] }
+    // Combine system instruction with any system messages from the instruction list
+    const systemInstructionContent = systemMessages.map(m => m.content).join("\n\n");
+    const systemInstruction = systemInstructionContent || options.systemPrompt
+      ? { parts: [{ text: systemInstructionContent || options.systemPrompt || "" }] }
       : undefined;
 
     // Build generation config with optional thinking
