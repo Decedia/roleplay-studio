@@ -17,6 +17,7 @@ A chat application for roleplay conversations with multiple LLM provider support
   - Added Groq to fetchModels function with dynamic API fetching (falls back to static models on error)
   - Updated Chat.tsx state to include groq provider
   - Added groq-sdk dependency for potential future server-side usage
+- [x] Fix error popup styling - replaced ui.notifications references with inline Tailwind classes to ensure proper styling
 - [x] Wrap all thinking/reasoning content in `<think>` tags - removed `thinking` property from Message type, now thinking content is wrapped in `<think> tags</think>` and stored in message content for consistent format across all providers
 - [x] Remove includeThoughts from Gemini 3 models - removed the `includeThoughts` parameter from all Gemini 3 model configurations in providers.ts (4 locations: chatWithGoogleAIStudio, streamChatWithGoogleAIStudio, chatWithVertexAI, streamChatWithVertexAI)
 - [x] Fix delete button bug in chat views - Fixed issue where delete button was deleting wrong message due to index mismatch when filtering out continue messages. Applied fix to main chat, generator, and brainstorm views by preserving original index before filtering.
