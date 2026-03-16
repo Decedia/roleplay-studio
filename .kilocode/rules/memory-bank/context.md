@@ -18,6 +18,7 @@ A chat application for roleplay conversations with multiple LLM provider support
   - Updated Chat.tsx state to include groq provider
   - Added groq-sdk dependency for potential future server-side usage
 - [x] Fix error popup styling - replaced ui.notifications references with inline Tailwind classes to ensure proper styling
+- [x] Fix Advanced Instructions collapsible - Fixed bug where Advanced Instructions section was always visible. Changed `true &&` to `showAdvancedInstructions &&` to properly toggle visibility.
 - [x] Fix instruction list not being sent properly to AI - Fixed issue where instruction messages with role "system" were being converted to "user" role when sent to Google AI Studio and Vertex AI. Now system messages are properly extracted and passed via the `systemInstruction` parameter for Gemini APIs. Applied fix to all 4 provider functions (chatWithGoogleAIStudio, streamWithGoogleAIStudio, chatWithVertexAI, streamWithVertexAI).
 - [x] Wrap all thinking/reasoning content in `<think>` tags - removed `thinking` property from Message type, now thinking content is wrapped in `<think> tags</think>` and stored in message content for consistent format across all providers
 - [x] Remove includeThoughts from Gemini 3 models - removed the `includeThoughts` parameter from all Gemini 3 model configurations in providers.ts (4 locations: chatWithGoogleAIStudio, streamChatWithGoogleAIStudio, chatWithVertexAI, streamChatWithVertexAI)
