@@ -1021,7 +1021,7 @@ function SettingsModal({
             </button>
 
             {/* Advanced Instructions Section with Instruction List */}
-            {true && (
+            {showAdvancedInstructions && (
               <div className="space-y-4 pl-4 border-l-2 border-zinc-700">
                 {/* Formatting Prompt */}
                 <div>
