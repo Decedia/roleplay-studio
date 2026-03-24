@@ -1976,6 +1976,130 @@ function SettingsModal({
                 )}
               </div>
 
+              {/* Open Router */}
+              <div className="p-3 bg-zinc-800/50 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${
+                      connectionStatus["open-router"]?.status === "connected" ? "bg-green-500" :
+                      connectionStatus["open-router"]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
+                      connectionStatus["open-router"]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
+                    }`} />
+                    <span className="text-sm font-medium text-white">Open Router</span>
+                    {activeProvider === "open-router" && (
+                      <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingProvider(editingProvider === 'open-router' ? null : 'open-router')}
+                    className="text-xs text-blue-400 hover:text-blue-300"
+                  >
+                    {editingProvider === 'open-router' ? 'Hide' : 'Configure'}
+                  </button>
+                </div>
+                {connectionStatus["open-router"]?.message && (
+                  <p className={`text-xs mb-2 ${
+                    connectionStatus["open-router"]?.status === "connected" ? "text-green-400" :
+                    connectionStatus["open-router"]?.status === "error" ? "text-red-400" : "text-zinc-400"
+                  }`}>
+                    {connectionStatus["open-router"].message}
+                  </p>
+                )}
+                {editingProvider === 'open-router' && (
+                  <div className="mt-3 space-y-3">
+                    {/* Profile Selection */}
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-1">Profile</label>
+                      <div className="flex gap-2">
+                        <select
+                          value={providerConfigs["open-router"]?.activeProfileId || ""}
+                          onChange={(e) => {
+                            if (e.target.value === "__new__") {
+                              const name = prompt("Enter profile name (or leave empty for date/time):");
+                              if (name !== null) {
+                                createProfile("open-router", {
+                                  name: name.trim() || new Date().toLocaleString(),
+                                  apiKey: ""
+                                });
+                              }
+                            } else {
+                              selectProfile("open-router", e.target.value);
+                            }
+                          }}
+                          className="flex-1 bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                          <option value="">Select a profile...</option>
+                          {providerConfigs["open-router"]?.profiles.map(profile => (
+                            <option key={profile.id} value={profile.id}>{profile.name}</option>
+                          ))}
+                          <option value="__new__">+ Add New Profile</option>
+                        </select>
+                        {providerConfigs["open-router"]?.activeProfileId && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm("Delete this profile?")) {
+                                deleteProfile("open-router", providerConfigs["open-router"].activeProfileId!);
+                              }
+                            }}
+                            className="px-3 py-2 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* API Key - only show if profile is selected */}
+                    {providerConfigs["open-router"]?.activeProfileId && (
+                      <>
+                        <div>
+                          <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                          <input
+                            type="password"
+                            value={getActiveProfile("open-router")?.apiKey || ""}
+                            onChange={(e) => {
+                              const profileId = providerConfigs["open-router"].activeProfileId;
+                              if (!profileId) return;
+                              setProviderConfigs(prev => ({
+                                ...prev,
+                                "open-router": {
+                                  ...prev["open-router"],
+                                  profiles: prev["open-router"].profiles.map(p =>
+                                    p.id === profileId ? { ...p, apiKey: e.target.value } : p
+                                  )
+                                }
+                              }));
+                            }}
+                            placeholder="Enter your Open Router API key"
+                            className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onTestConnection("open-router")}
+                            disabled={connectionStatus["open-router"]?.status === "testing" || !getActiveProfile("open-router")?.apiKey}
+                            className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {connectionStatus["open-router"]?.status === "testing" ? "Testing..." : "Test Connection"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onConnect("open-router")}
+                            disabled={connectionStatus["open-router"]?.status !== "connected"}
+                            className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Connect
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
 
             </div>
           </div>
