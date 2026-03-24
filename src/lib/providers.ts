@@ -300,6 +300,7 @@ type ChatFunction = (
     enableThinking?: boolean;
     thinkingLevel?: ThinkingLevel;
     thinkingBudget?: ThinkingBudget;
+    abortController?: AbortController;
   }
 ) => Promise<ChatResponse>;
 
@@ -375,6 +376,7 @@ export const chatWithGoogleAIStudio: ChatFunction = async (
           systemInstruction,
           generationConfig,
         }),
+        signal: options.abortController?.signal,
       }
     );
 
@@ -409,6 +411,7 @@ export const streamWithGoogleAIStudio = async (
     enableThinking?: boolean;
     thinkingLevel?: ThinkingLevel;
     thinkingBudget?: ThinkingBudget;
+    abortController?: AbortController;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -479,6 +482,7 @@ export const streamWithGoogleAIStudio = async (
           systemInstruction,
           generationConfig,
         }),
+        signal: options.abortController?.signal,
       }
     );
 
@@ -622,6 +626,7 @@ export const chatWithVertexAI: ChatFunction = async (
           systemInstruction,
           generationConfig,
         },
+        signal: options.abortController?.signal,
       }),
     });
 
@@ -693,6 +698,7 @@ export const chatWithNvidiaNIM: ChatFunction = async (
           top_k: options.topK,
         },
       }),
+      signal: options.abortController?.signal,
     });
 
     const data = await response.json();
@@ -727,6 +733,7 @@ export const streamWithNvidiaNIM = async (
     topK: number;
     systemPrompt?: string;
     enableThinking?: boolean;
+    abortController?: AbortController;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -755,7 +762,7 @@ export const streamWithNvidiaNIM = async (
       ? [{ role: "system", content: systemContent }, ...formattedMessages]
       : formattedMessages;
 
-    // Use server-side proxy with streaming
+    // Use server-side proxy to avoid CORS issues
     const response = await fetch("/api/nvidia-nim", {
       method: "POST",
       headers: {
@@ -774,6 +781,7 @@ export const streamWithNvidiaNIM = async (
           stream: true,
         },
         stream: true,
+        signal: options.abortController?.signal,
       }),
     });
 
@@ -884,6 +892,7 @@ export const chatWithGroq: ChatFunction = async (
           max_tokens: options.maxTokens,
           top_p: options.topP,
         },
+        signal: options.abortController?.signal,
       }),
     });
 
@@ -916,6 +925,7 @@ export const streamWithGroq = async (
     topK: number;
     systemPrompt?: string;
     enableThinking?: boolean;
+    abortController?: AbortController;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -952,6 +962,7 @@ export const streamWithGroq = async (
           stream: true,
         },
         stream: true,
+        signal: options.abortController?.signal,
       }),
     });
 
@@ -1047,6 +1058,7 @@ export const chatWithOpenRouter: ChatFunction = async (
           max_tokens: options.maxTokens,
           top_p: options.topP,
         },
+        signal: options.abortController?.signal,
       }),
     });
 
@@ -1080,6 +1092,7 @@ export const streamWithOpenRouter = async (
     topK: number;
     systemPrompt?: string;
     enableThinking?: boolean;
+    abortController?: AbortController;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -1115,6 +1128,7 @@ export const streamWithOpenRouter = async (
           stream: true,
         },
         stream: true,
+        signal: options.abortController?.signal,
       }),
     });
 
@@ -1193,6 +1207,7 @@ export const streamWithVertexAI = async (
     enableThinking?: boolean;
     thinkingLevel?: ThinkingLevel;
     thinkingBudget?: ThinkingBudget;
+    abortController?: AbortController;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -1274,6 +1289,7 @@ export const streamWithVertexAI = async (
           systemInstruction,
           generationConfig,
         },
+        signal: options.abortController?.signal,
       }),
     });
 
@@ -1347,6 +1363,7 @@ export const sendChatMessage = async (
     enableThinking?: boolean;
     thinkingLevel?: ThinkingLevel;
     thinkingBudget?: ThinkingBudget;
+    abortController?: AbortController;
   }
 ): Promise<ChatResponse> => {
   switch (config.type) {
@@ -1378,6 +1395,7 @@ export const streamChatMessage = async (
     enableThinking?: boolean;
     thinkingLevel?: ThinkingLevel;
     thinkingBudget?: ThinkingBudget;
+    abortController?: AbortController;
   },
   onChunk: StreamCallback
 ): Promise<void> => {

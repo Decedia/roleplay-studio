@@ -2311,11 +2311,13 @@ export default function Chat() {
   // Chat state
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [streamingContent, setStreamingContent] = useState<string>("");
   const [streamingThinking, setStreamingThinking] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   
   // User menu state
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -4774,8 +4776,10 @@ Write an engaging story segment. If this is a good point for player interaction,
 
     updateConversationMessages(updatedMessages);
     setIsLoading(true);
+    setIsSending(true);
     setStreamingContent("");
     setStreamingThinking("");
+    abortControllerRef.current = new AbortController();
 
     try {
       // Get current provider config
@@ -4898,20 +4902,22 @@ Write an engaging story segment. If this is a good point for player interaction,
               modelName: thoughtSig?.modelName,
             },
           ];
-          updateConversationMessages(finalMessages);
+              updateConversationMessages(finalMessages);
+          }
         }
+      } catch (err) {
+        console.error("Chat error:", err);
+        setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
+      } finally {
+        setIsLoading(false);
+        setIsSending(false);
+        abortControllerRef.current = null;
+        playNotificationSound();
+        inputRef.current?.focus();
       }
-    } catch (err) {
-      console.error("Chat error:", err);
-      setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
-    } finally {
-      setIsLoading(false);
-      playNotificationSound();
-      inputRef.current?.focus();
-    }
-  };
+    };
 
-  const updateConversationMessages = (messages: Message[]) => {
+    const updateConversationMessages = (messages: Message[]) => {
     if (!currentConversation) return;
     
     const updated = {
@@ -5350,22 +5356,23 @@ Write an engaging story segment. If this is a good point for player interaction,
         // Combine instruction messages with conversation messages
         const messagesWithInstructions = [...instructionMessages, ...truncatedMessages];
 
-        // Use streaming or non-streaming based on settings
-        // Always enable streaming for NVIDIA NIM in VN generator
-        if (globalSettings.enableStreaming || activeProvider === "nvidia-nim") {
-          await streamChatMessage(
-            messagesWithInstructions,
-            profileConfig,
-            {
-              temperature: globalSettings.temperature,
-              maxTokens: globalSettings.maxTokens,
-              topP: globalSettings.topP,
-              topK: globalSettings.topK,
-              systemPrompt: "", // instructionMessages already includes system message
-              enableThinking: globalSettings.enableThinking,
-              thinkingLevel: globalSettings.thinkingLevel,
-              thinkingBudget: globalSettings.thinkingBudget,
-            },
+      // Use streaming or non-streaming based on settings
+      if (globalSettings.enableStreaming) {
+        // Streaming mode for real-time responses
+        await streamChatMessage(
+          messagesWithInstructions,
+          profileConfig,
+          {
+            temperature: globalSettings.temperature,
+            maxTokens: globalSettings.maxTokens,
+            topP: globalSettings.topP,
+            topK: globalSettings.topK,
+            systemPrompt: "", // instructionMessages already includes system message
+            enableThinking: globalSettings.enableThinking,
+            thinkingLevel: globalSettings.thinkingLevel,
+            thinkingBudget: globalSettings.thinkingBudget,
+            abortController: abortControllerRef.current ?? undefined,
+          },
             (chunk) => {
               if (chunk.error) {
                 setError(chunk.error);
@@ -5395,25 +5402,27 @@ Write an engaging story segment. If this is a good point for player interaction,
                 setStreamingThinking("");
               }
             }
-          );
-        } else {
-          const response = await sendChatMessage(
-            messagesWithInstructions,
-            profileConfig,
-            {
-              temperature: globalSettings.temperature,
-              maxTokens: globalSettings.maxTokens,
-              topP: globalSettings.topP,
-              topK: globalSettings.topK,
-              systemPrompt: "", // instructionMessages already includes system message
-              enableThinking: globalSettings.enableThinking,
-              thinkingLevel: globalSettings.thinkingLevel,
-              thinkingBudget: globalSettings.thinkingBudget,
-            }
-          );
-
-          if (response.error) {
-            setError(response.error);
+        );
+      } else {
+        // Non-streaming mode for stable responses
+        const response = await sendChatMessage(
+          messagesWithInstructions,
+          profileConfig,
+          {
+            temperature: globalSettings.temperature,
+            maxTokens: globalSettings.maxTokens,
+            topP: globalSettings.topP,
+            topK: globalSettings.topK,
+            systemPrompt: "", // instructionMessages already includes system message
+            enableThinking: globalSettings.enableThinking,
+            thinkingLevel: globalSettings.thinkingLevel,
+            thinkingBudget: globalSettings.thinkingBudget,
+            abortController: abortControllerRef.current ?? undefined,
+          }
+        );
+        
+        if (response.error) {
+          setError(response.error);
           } else {
             const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
             // Wrap thinking in <think> tags if present
@@ -8185,6 +8194,22 @@ Write an engaging story segment. If this is a good point for player interaction,
                     </svg>
                   )}
                 </button>
+                {isSending && !globalSettings.enableStreaming && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      abortControllerRef.current?.abort();
+                      setIsSending(false);
+                      setIsLoading(false);
+                    }}
+                    className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all"
+                    title="Cancel"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
               </div>
             </form>
             <p className="text-xs text-zinc-600 mt-2 text-center">
