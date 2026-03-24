@@ -8252,7 +8252,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                     </svg>
                   )}
                 </button>
-                {isSending && !globalSettings.enableStreaming && (
+                {isSending && (
                   <button
                     type="button"
                     onClick={() => {
