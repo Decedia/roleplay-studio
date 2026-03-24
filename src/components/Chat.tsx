@@ -4514,8 +4514,10 @@ Write an engaging story segment. If this is a good point for player interaction,
 
   // Generator session management
   const createGeneratorSession = () => {
+    const sessionCount = generatorSessions.length + 1;
     const newSession: GeneratorConversation = {
       id: `gen_${Date.now()}`,
+      name: `Session ${sessionCount}`,
       messages: [],
       createdAt: Date.now(),
       updatedAt: Date.now()
@@ -4554,8 +4556,10 @@ Write an engaging story segment. If this is a good point for player interaction,
 
   // Brainstorm session management
   const createBrainstormSession = () => {
+    const sessionCount = brainstormSessions.length + 1;
     const newSession: BrainstormConversation = {
       id: `brain_${Date.now()}`,
+      name: `Session ${sessionCount}`,
       messages: [],
       createdAt: Date.now(),
       updatedAt: Date.now()
@@ -5845,7 +5849,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                                 >
                                   <div className="flex-1 min-w-0">
                                     <p className="text-sm text-white truncate">
-                                      Session ({session.messages.length} msgs)
+                                      {session.name || `Session ${generatorSessions.indexOf(session) + 1}`} ({session.messages.length} msgs)
                                     </p>
                                     <p className="text-xs text-zinc-500">
                                       {new Date(session.updatedAt).toLocaleDateString()}
@@ -6460,7 +6464,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                                 >
                                   <div className="flex-1 min-w-0">
                                     <p className="text-sm text-white truncate">
-                                      Session ({session.messages.length} msgs)
+                                      {session.name || `Session ${brainstormSessions.indexOf(session) + 1}`} ({session.messages.length} msgs)
                                     </p>
                                     <p className="text-xs text-zinc-500">
                                       {new Date(session.updatedAt).toLocaleDateString()}

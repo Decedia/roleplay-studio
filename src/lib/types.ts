@@ -121,6 +121,7 @@ export interface Conversation {
 // Generator conversation (standalone session for character generation)
 export interface GeneratorConversation {
   id: string;
+  name?: string;
   messages: Array<{role: "user" | "assistant", content: string, isContinue?: boolean}>;
   createdAt: number;
   updatedAt: number;
@@ -129,6 +130,7 @@ export interface GeneratorConversation {
 // Brainstorm conversation (standalone session for instruction brainstorming)
 export interface BrainstormConversation {
   id: string;
+  name?: string;
   messages: Array<{role: "user" | "assistant", content: string, isContinue?: boolean}>;
   createdAt: number;
   updatedAt: number;
