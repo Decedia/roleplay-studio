@@ -6201,24 +6201,47 @@ Write an engaging story segment. If this is a good point for player interaction,
                                           <p className="text-xs text-amber-400 mt-1">+ {char.alternateGreetings.length} alternate greeting(s)</p>
                                         )}
                                       </div>
-                                      <div className="flex gap-2">
+                                      <div className="flex flex-wrap gap-2">
                                         <button
                                           onClick={() => {
-                                            const newChar: Character = {
-                                              id: crypto.randomUUID(),
-                                              name: char.name,
-                                              description: char.description,
-                                              firstMessage: char.firstMessage,
-                                              alternateGreetings: char.alternateGreetings,
-                                              scenario: char.scenario,
-                                              mesExample: char.mesExample,
-                                              createdAt: Date.now(),
-                                            };
-                                            importGeneratedCharacter(newChar, true);
-                                            setAppliedCharacters(prev => new Set(prev).add(char.name));
+                                            // Check if character with same name exists
+                                            const existingChar = characters.find(c => c.name.toLowerCase() === char.name.toLowerCase());
+                                            if (existingChar) {
+                                              // Update existing character
+                                              const updatedChar: Character = {
+                                                ...existingChar,
+                                                name: char.name,
+                                                description: char.description,
+                                                firstMessage: char.firstMessage,
+                                                alternateGreetings: char.alternateGreetings,
+                                                scenario: char.scenario,
+                                                mesExample: char.mesExample,
+                                                createdAt: existingChar.createdAt,
+                                              };
+                                              const updatedCharacters = characters.map(c => 
+                                                c.id === existingChar.id ? updatedChar : c
+                                              );
+                                              setCharacters(updatedCharacters);
+                                              localStorage.setItem(CHARACTERS_KEY, JSON.stringify(updatedCharacters));
+                                              setAppliedCharacters(prev => new Set(prev).add(char.name));
+                                            } else {
+                                              // Create new character
+                                              const newChar: Character = {
+                                                id: crypto.randomUUID(),
+                                                name: char.name,
+                                                description: char.description,
+                                                firstMessage: char.firstMessage,
+                                                alternateGreetings: char.alternateGreetings,
+                                                scenario: char.scenario,
+                                                mesExample: char.mesExample,
+                                                createdAt: Date.now(),
+                                              };
+                                              importGeneratedCharacter(newChar, true);
+                                              setAppliedCharacters(prev => new Set(prev).add(char.name));
+                                            }
                                           }}
                                           disabled={isApplied}
-                                          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                          className={`flex items-center gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-medium transition-colors ${
                                             isApplied
                                               ? "bg-green-600 text-white cursor-default"
                                               : "bg-green-600 text-white hover:bg-green-700"
@@ -6229,21 +6252,32 @@ Write an engaging story segment. If this is a good point for player interaction,
                                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                               </svg>
-                                              Imported
+                                              <span className="hidden sm:inline">Imported</span>
+                                              <span className="sm:hidden">✓</span>
                                             </>
                                           ) : (
                                             <>
                                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                                               </svg>
-                                              Create Character
+                                              <span className="hidden sm:inline">Create</span>
+                                              <span className="sm:hidden">+</span>
                                             </>
                                           )}
                                         </button>
                                         <button
                                           onClick={() => {
-                                            // Export character as JSON file
-                                            const characterJson = JSON.stringify(char, null, 2);
+                                            // Export character as JSON file with full character data
+                                            const exportData: Record<string, unknown> = {
+                                              name: char.name,
+                                              description: char.description,
+                                              firstMessage: char.firstMessage,
+                                            };
+                                            // Add optional fields if they exist
+                                            if (char.alternateGreetings) exportData.alternateGreetings = char.alternateGreetings;
+                                            if (char.scenario) exportData.scenario = char.scenario;
+                                            if (char.mesExample) exportData.mesExample = char.mesExample;
+                                            const characterJson = JSON.stringify(exportData, null, 2);
                                             const blob = new Blob([characterJson], { type: "application/json" });
                                             const url = URL.createObjectURL(blob);
                                             const a = document.createElement("a");
@@ -6254,12 +6288,13 @@ Write an engaging story segment. If this is a good point for player interaction,
                                             document.body.removeChild(a);
                                             URL.revokeObjectURL(url);
                                           }}
-                                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                                          className="flex items-center gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
                                         >
                                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                           </svg>
-                                          Export JSON
+                                          <span className="hidden sm:inline">Export JSON</span>
+                                          <span className="sm:hidden">Export</span>
                                         </button>
                                       </div>
                                     </div>
@@ -6756,20 +6791,21 @@ Write an engaging story segment. If this is a good point for player interaction,
                                   <div key={i} className={`bg-zinc-800 border rounded-lg overflow-hidden ${isApplied ? 'border-green-500' : 'border-zinc-700'}`}>
                                     <div className="bg-zinc-700/50 px-3 py-1.5 flex justify-between items-center gap-2">
                                       <span className="text-xs text-zinc-400">Instructions</span>
-                                      <div className="flex gap-2">
+                                      <div className="flex flex-wrap gap-2">
                                         <button
                                           onClick={() => {
                                             setBrainstormInput(`Please implement this instruction:\n\`\`\`\n${instr}\n\`\`\``);
                                           }}
                                           disabled={isBrainstorming}
-                                          className="text-xs px-3 py-1.5 rounded font-medium bg-blue-600 text-white hover:bg-blue-700 cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                          className="text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded font-medium bg-blue-600 text-white hover:bg-blue-700 cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                          Add to Next Response
+                                          <span className="hidden sm:inline">Add to Next Response</span>
+                                          <span className="sm:hidden">Add</span>
                                         </button>
                                         <button
                                           onClick={() => applyInstructions(instr)}
                                           disabled={isApplied}
-                                          className={`text-xs px-3 py-1.5 rounded font-medium transition-all ${
+                                          className={`text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded font-medium transition-all ${
                                             isApplied 
                                               ? 'bg-green-600 text-white cursor-default' 
                                               : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
@@ -6777,13 +6813,13 @@ Write an engaging story segment. If this is a good point for player interaction,
                                         >
                                           {isApplied ? (
                                             <span className="flex items-center gap-1">
-                                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                               </svg>
-                                              Applied!
+                                              <span className="hidden sm:inline">Applied!</span>
                                             </span>
                                           ) : (
-                                            'Apply to Global Instructions'
+                                            <span className="hidden sm:inline">Apply to Global Instructions</span>
                                           )}
                                         </button>
                                       </div>

@@ -50,6 +50,9 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] Fix message duplication bug in generator/brainstorm when resending same message - removed duplicate message addition to state (only add new messages, not resends)
 - [x] Fix refresh/continue button showing on all assistant messages - now only shows on last assistant message
 - [x] Fix generator regenerate to keep last user message - changed slice to lastUserIdx + 1 to include the user message
+- [x] Update button styling for mobile in generator and brainstorm views - made buttons smaller on mobile using responsive classes (px-2 sm:px-3, py-1 sm:py-1.5, hidden sm:inline)
+- [x] Update export JSON in character generator - now exports full character data including alternateGreetings and scenario when available
+- [x] Add Update Character functionality in character generator - button now checks for existing character with same name and updates it instead of creating duplicate, preserves original creation timestamp
 - [x] Add "Continue Last Session" button to home menu:
   - Stores last session state (view, persona, character, conversation) in localStorage
   - Shows "Continue Last Session" button on home page when valid session exists
