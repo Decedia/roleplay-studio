@@ -544,10 +544,17 @@ function SettingsModal({
     // Update global settings
     setGlobalSettings({ ...globalSettings, modelId, maxTokens: newMaxTokens, maxContextTokens: newMaxContext });
     
-    // Also update the provider config
+    // Also update the provider config and active profile
+    const config = providerConfigs[activeProvider];
     setProviderConfigs(prev => ({
       ...prev,
-      [activeProvider]: { ...prev[activeProvider], selectedModel: modelId }
+      [activeProvider]: { 
+        ...prev[activeProvider], 
+        selectedModel: modelId,
+        profiles: prev[activeProvider].profiles.map(p => 
+          p.id === config.activeProfileId ? { ...p, selectedModel: modelId } : p
+        )
+      }
     }));
     
     setShowModelDropdown(false);
@@ -618,33 +625,83 @@ function SettingsModal({
 
                   {showModelDropdown && (
                     <div className="absolute z-50 w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-lg max-h-80 overflow-y-auto shadow-xl">
-                      {activeProviderModels.map((model) => {
-                        const isSelected = model.id === globalSettings.modelId;
+                      {(() => {
+                        const freeModels = activeProviderModels.filter(m => m.id.toLowerCase().includes('free') || m.id.toLowerCase().includes('free:'));
+                        const paidModels = activeProviderModels.filter(m => !m.id.toLowerCase().includes('free') && !m.id.toLowerCase().includes('free:'));
+                        
                         return (
-                          <button
-                            key={model.id}
-                            type="button"
-                            onClick={() => selectModel(model.id)}
-                            className={`w-full px-4 py-2 text-left text-sm hover:bg-zinc-700 transition-colors ${
-                              isSelected ? "bg-blue-900/30 text-blue-300" : "text-zinc-300"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium">{model.name || model.id}</span>
-                              {isSelected && (
-                                <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                </svg>
-                              )}
-                            </div>
-                            {'context' in model && model.context && (
-                              <div className="text-xs text-zinc-500 mt-0.5">
-                                {model.context?.toLocaleString() || "?"} ctx | {getModelCostInfo(model)}
-                              </div>
+                          <>
+                            {freeModels.length > 0 && (
+                              <>
+                                <div className="px-4 py-1.5 text-xs font-semibold text-green-400 bg-green-900/20 border-b border-zinc-700">
+                                  FREE
+                                </div>
+                                {freeModels.map((model) => {
+                                  const isSelected = model.id === globalSettings.modelId;
+                                  return (
+                                    <button
+                                      key={model.id}
+                                      type="button"
+                                      onClick={() => selectModel(model.id)}
+                                      className={`w-full px-4 py-2 text-left text-sm hover:bg-zinc-700 transition-colors ${
+                                        isSelected ? "bg-blue-900/30 text-blue-300" : "text-zinc-300"
+                                      }`}
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-medium">{model.name || model.id}</span>
+                                        {isSelected && (
+                                          <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                          </svg>
+                                        )}
+                                      </div>
+                                      {'context' in model && model.context && (
+                                        <div className="text-xs text-zinc-500 mt-0.5">
+                                          {model.context?.toLocaleString() || "?"} ctx | {getModelCostInfo(model)}
+                                        </div>
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                              </>
                             )}
-                          </button>
+                            {paidModels.length > 0 && (
+                              <>
+                                <div className="px-4 py-1.5 text-xs font-semibold text-yellow-400 bg-yellow-900/20 border-b border-zinc-700">
+                                  PAID
+                                </div>
+                                {paidModels.map((model) => {
+                                  const isSelected = model.id === globalSettings.modelId;
+                                  return (
+                                    <button
+                                      key={model.id}
+                                      type="button"
+                                      onClick={() => selectModel(model.id)}
+                                      className={`w-full px-4 py-2 text-left text-sm hover:bg-zinc-700 transition-colors ${
+                                        isSelected ? "bg-blue-900/30 text-blue-300" : "text-zinc-300"
+                                      }`}
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-medium">{model.name || model.id}</span>
+                                        {isSelected && (
+                                          <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                          </svg>
+                                        )}
+                                      </div>
+                                      {'context' in model && model.context && (
+                                        <div className="text-xs text-zinc-500 mt-0.5">
+                                          {model.context?.toLocaleString() || "?"} ctx | {getModelCostInfo(model)}
+                                        </div>
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                              </>
+                            )}
+                          </>
                         );
-                      })}
+                      })()}
                     </div>
                   )}
                 </div>
@@ -2079,19 +2136,11 @@ function SettingsModal({
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            onClick={() => onTestConnection("open-router")}
-                            disabled={connectionStatus["open-router"]?.status === "testing" || !getActiveProfile("open-router")?.apiKey}
-                            className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {connectionStatus["open-router"]?.status === "testing" ? "Testing..." : "Test Connection"}
-                          </button>
-                          <button
-                            type="button"
                             onClick={() => onConnect("open-router")}
-                            disabled={!getActiveProfile("open-router")?.apiKey}
+                            disabled={!getActiveProfile("open-router")?.apiKey || modelsFetching["open-router"]}
                             className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            Connect
+                            {modelsFetching["open-router"] ? "Loading Models..." : "Connect & Load Models"}
                           </button>
                         </div>
                       </>
@@ -3235,20 +3284,29 @@ export default function Chat() {
     };
     
     // Fetch models for Vertex AI if not already fetched
-    if (providerType === "google-vertex" && models.length === 0 && activeProfile?.apiKey) {
+    if ((providerType === "google-vertex" || providerType === "open-router") && models.length === 0 && activeProfile?.apiKey) {
       setModelsFetching(prev => ({ ...prev, [providerType]: true }));
       const modelsResult = await fetchModelsFromProvider(providerType, profileConfig);
       setModelsFetching(prev => ({ ...prev, [providerType]: false }));
       
       if (modelsResult.models.length > 0) {
+        // Sort models: free first, then paid
+        const sortedModels = [...modelsResult.models].sort((a, b) => {
+          const aFree = a.id.toLowerCase().includes('free') || a.id.toLowerCase().includes('free:');
+          const bFree = b.id.toLowerCase().includes('free') || b.id.toLowerCase().includes('free:');
+          if (aFree && !bFree) return -1;
+          if (!aFree && bFree) return 1;
+          return 0;
+        });
+        
         setProviderModels(prev => ({
           ...prev,
-          [providerType]: modelsResult.models
+          [providerType]: sortedModels
         }));
         
         // Auto-select first model if no model is currently selected for this profile
-        if (!activeProfile?.selectedModel && modelsResult.models[0]) {
-          const firstModel = modelsResult.models[0];
+        if (!activeProfile?.selectedModel && sortedModels[0]) {
+          const firstModel = sortedModels[0];
           setProviderConfigs(prev => ({
             ...prev,
             [providerType]: {
