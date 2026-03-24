@@ -187,6 +187,94 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
       },
     ],
   },
+  {
+    id: "open-router",
+    name: "Open Router",
+    description: "Access to 300+ LLMs via Open Router API - supports OpenAI, Anthropic, Meta, and more",
+    requiresApiKey: true,
+    models: [
+      {
+        id: "anthropic/claude-3.5-sonnet",
+        name: "Claude 3.5 Sonnet",
+        provider: "open-router",
+        contextWindow: 200000,
+        maxTokens: 8192,
+        supportsThinking: false,
+      },
+      {
+        id: "anthropic/claude-3-opus",
+        name: "Claude 3 Opus",
+        provider: "open-router",
+        contextWindow: 200000,
+        maxTokens: 4096,
+        supportsThinking: false,
+      },
+      {
+        id: "openai/gpt-4o",
+        name: "GPT-4o",
+        provider: "open-router",
+        contextWindow: 128000,
+        maxTokens: 16384,
+        supportsThinking: false,
+      },
+      {
+        id: "openai/gpt-4o-mini",
+        name: "GPT-4o Mini",
+        provider: "open-router",
+        contextWindow: 128000,
+        maxTokens: 16384,
+        supportsThinking: false,
+      },
+      {
+        id: "meta-llama/llama-3.3-70b-instruct",
+        name: "Llama 3.3 70B",
+        provider: "open-router",
+        contextWindow: 128000,
+        maxTokens: 8192,
+        supportsThinking: false,
+      },
+      {
+        id: "deepseek/deepseek-chat",
+        name: "DeepSeek Chat",
+        provider: "open-router",
+        contextWindow: 64000,
+        maxTokens: 8192,
+        supportsThinking: false,
+      },
+      {
+        id: "deepseek/deepseek-reasoner",
+        name: "DeepSeek Reasoner",
+        provider: "open-router",
+        contextWindow: 64000,
+        maxTokens: 8192,
+        supportsThinking: true,
+      },
+      {
+        id: "google/gemini-2.0-flash",
+        name: "Gemini 2.0 Flash",
+        provider: "open-router",
+        contextWindow: 1048576,
+        maxTokens: 8192,
+        supportsThinking: true,
+      },
+      {
+        id: "mistralai/mistral-large",
+        name: "Mistral Large",
+        provider: "open-router",
+        contextWindow: 128000,
+        maxTokens: 8192,
+        supportsThinking: false,
+      },
+      {
+        id: "qwen/qwen2.5-72b-instruct",
+        name: "Qwen 2.5 72B",
+        provider: "open-router",
+        contextWindow: 32768,
+        maxTokens: 8192,
+        supportsThinking: false,
+      },
+    ],
+  },
 ];
 
 // Chat response interface
@@ -924,6 +1012,174 @@ export const streamWithGroq = async (
   }
 };
 
+// Open Router chat implementation - uses server-side proxy to avoid CORS
+export const chatWithOpenRouter: ChatFunction = async (
+  messages,
+  config,
+  options
+) => {
+  if (!config.apiKey) {
+    return { error: "Open Router API key is required" };
+  }
+
+  try {
+    const formattedMessages = messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    const messagesWithSystem = options.systemPrompt
+      ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
+      : formattedMessages;
+
+    const response = await fetch("/api/open-router", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        endpoint: "chat/completions",
+        apiKey: config.apiKey,
+        payload: {
+          model: config.selectedModel,
+          messages: messagesWithSystem,
+          temperature: options.temperature,
+          max_tokens: options.maxTokens,
+          top_p: options.topP,
+        },
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        error: data.error || `HTTP ${response.status}`,
+      };
+    }
+
+    const content = data.choices?.[0]?.message?.content || "";
+    const thinking = data.choices?.[0]?.message?.reasoning_content || "";
+
+    return { content, thinking };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+};
+
+// Open Router streaming implementation
+export const streamWithOpenRouter = async (
+  messages: Message[],
+  config: ProviderConfig,
+  options: {
+    temperature: number;
+    maxTokens: number;
+    topP: number;
+    topK: number;
+    systemPrompt?: string;
+    enableThinking?: boolean;
+  },
+  onChunk: StreamCallback
+): Promise<void> => {
+  if (!config.apiKey) {
+    onChunk({ error: "Open Router API key is required" });
+    return;
+  }
+
+  try {
+    const formattedMessages = messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    const messagesWithSystem = options.systemPrompt
+      ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
+      : formattedMessages;
+
+    const response = await fetch("/api/open-router", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        endpoint: "chat/completions",
+        apiKey: config.apiKey,
+        payload: {
+          model: config.selectedModel,
+          messages: messagesWithSystem,
+          temperature: options.temperature,
+          max_tokens: options.maxTokens,
+          top_p: options.topP,
+          stream: true,
+        },
+        stream: true,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      onChunk({ error: errorData.error || `HTTP ${response.status}` });
+      return;
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      onChunk({ error: "Failed to get response stream" });
+      return;
+    }
+
+    const decoder = new TextDecoder();
+    let fullContent = "";
+    let fullThinking = "";
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr || jsonStr === "[DONE]") continue;
+
+          try {
+            const data = JSON.parse(jsonStr);
+            
+            if (data.error) {
+              onChunk({ error: data.error });
+              return;
+            }
+            
+            const delta = data.choices?.[0]?.delta;
+            
+            if (delta?.reasoning_content) {
+              fullThinking += delta.reasoning_content;
+              onChunk({ thinking: fullThinking });
+            }
+            
+            if (delta?.content) {
+              fullContent += delta.content;
+              onChunk({ content: fullContent });
+            }
+          } catch {
+            // Skip invalid JSON
+          }
+        }
+      }
+    }
+
+    onChunk({ content: fullContent, thinking: fullThinking, done: true });
+  } catch (error) {
+    onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
+  }
+};
+
 // Vertex AI streaming implementation - uses server-side proxy to avoid CORS
 export const streamWithVertexAI = async (
   messages: Message[],
@@ -1102,6 +1358,8 @@ export const sendChatMessage = async (
       return chatWithNvidiaNIM(messages, config, options);
     case "groq":
       return chatWithGroq(messages, config, options);
+    case "open-router":
+      return chatWithOpenRouter(messages, config, options);
     default:
       return { error: `Unknown provider: ${config.type}` };
   }
@@ -1132,6 +1390,8 @@ export const streamChatMessage = async (
       return streamWithNvidiaNIM(messages, config, options, onChunk);
     case "groq":
       return streamWithGroq(messages, config, options, onChunk);
+    case "open-router":
+      return streamWithOpenRouter(messages, config, options, onChunk);
     default:
       onChunk({ error: `Unknown provider: ${config.type}` });
       return;
@@ -1284,6 +1544,38 @@ export const testProviderConnection = async (
         
         if (response.ok) {
           return { success: true, message: "Groq connection successful!" };
+        }
+        
+        const errorData = await response.json();
+        return { success: false, message: errorData.error || `HTTP ${response.status}` };
+      } catch (error) {
+        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
+      }
+    }
+    
+    case "open-router": {
+      if (!config.apiKey) {
+        return { success: false, message: "API key is required." };
+      }
+      try {
+        const response = await fetch("/api/open-router", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            endpoint: "chat/completions",
+            apiKey: config.apiKey,
+            payload: {
+              model: "anthropic/claude-3.5-sonnet",
+              messages: [{ role: "user", content: "Hi" }],
+              max_tokens: 5,
+            },
+          }),
+        });
+        
+        if (response.ok) {
+          return { success: true, message: "Open Router connection successful!" };
         }
         
         const errorData = await response.json();
@@ -1596,6 +1888,107 @@ export const fetchModelsFromProvider = async (
         if (config.apiKey) {
           try {
             const response = await fetch(`/api/models?provider=groq&apiKey=${encodeURIComponent(config.apiKey)}`);
+            if (response.ok) {
+              const data = await response.json();
+              if (data.models && data.models.length > 0) {
+                return { models: data.models };
+              }
+            }
+          } catch {
+            // Fall back to static models
+          }
+        }
+
+        return { models: staticModels };
+      }
+
+      case "open-router": {
+        const staticModels: FetchedModel[] = [
+          {
+            id: "anthropic/claude-3.5-sonnet",
+            name: "Claude 3.5 Sonnet",
+            provider: "open-router",
+            context: 200000,
+            max_tokens: 8192,
+            supportsThinking: false,
+          },
+          {
+            id: "anthropic/claude-3-opus",
+            name: "Claude 3 Opus",
+            provider: "open-router",
+            context: 200000,
+            max_tokens: 4096,
+            supportsThinking: false,
+          },
+          {
+            id: "openai/gpt-4o",
+            name: "GPT-4o",
+            provider: "open-router",
+            context: 128000,
+            max_tokens: 16384,
+            supportsThinking: false,
+          },
+          {
+            id: "openai/gpt-4o-mini",
+            name: "GPT-4o Mini",
+            provider: "open-router",
+            context: 128000,
+            max_tokens: 16384,
+            supportsThinking: false,
+          },
+          {
+            id: "meta-llama/llama-3.3-70b-instruct",
+            name: "Llama 3.3 70B",
+            provider: "open-router",
+            context: 128000,
+            max_tokens: 8192,
+            supportsThinking: false,
+          },
+          {
+            id: "deepseek/deepseek-chat",
+            name: "DeepSeek Chat",
+            provider: "open-router",
+            context: 64000,
+            max_tokens: 8192,
+            supportsThinking: false,
+          },
+          {
+            id: "deepseek/deepseek-reasoner",
+            name: "DeepSeek Reasoner",
+            provider: "open-router",
+            context: 64000,
+            max_tokens: 8192,
+            supportsThinking: true,
+          },
+          {
+            id: "google/gemini-2.0-flash",
+            name: "Gemini 2.0 Flash",
+            provider: "open-router",
+            context: 1048576,
+            max_tokens: 8192,
+            supportsThinking: true,
+          },
+          {
+            id: "mistralai/mistral-large",
+            name: "Mistral Large",
+            provider: "open-router",
+            context: 128000,
+            max_tokens: 8192,
+            supportsThinking: false,
+          },
+          {
+            id: "qwen/qwen2.5-72b-instruct",
+            name: "Qwen 2.5 72B",
+            provider: "open-router",
+            context: 32768,
+            max_tokens: 8192,
+            supportsThinking: false,
+          },
+        ];
+
+        if (config.apiKey) {
+          try {
+            const response = await fetch(`/api/models?provider=open-router&apiKey=${encodeURIComponent(config.apiKey)}`);
             if (response.ok) {
               const data = await response.json();
               if (data.models && data.models.length > 0) {

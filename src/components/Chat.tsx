@@ -2165,6 +2165,7 @@ export default function Chat() {
     "google-vertex": { type: "google-vertex", isEnabled: false, profiles: [], activeProfileId: null },
     "nvidia-nim": { type: "nvidia-nim", isEnabled: false, profiles: [], activeProfileId: null },
     "groq": { type: "groq", isEnabled: false, profiles: [], activeProfileId: null },
+    "open-router": { type: "open-router", isEnabled: false, profiles: [], activeProfileId: null },
   });
   
   // Provider-specific models (fetched from API after connection)
@@ -2173,12 +2174,14 @@ export default function Chat() {
     "google-vertex": [],
     "nvidia-nim": [],
     "groq": [],
+    "open-router": [],
   });
   const [modelsFetching, setModelsFetching] = useState<Record<LLMProviderType, boolean>>({
     "google-ai-studio": false,
     "google-vertex": false,
     "nvidia-nim": false,
     "groq": false,
+    "open-router": false,
   });
   
   // Active provider state - default to Google AI Studio (not Puter)
@@ -2212,6 +2215,7 @@ export default function Chat() {
     "google-vertex": { status: "disconnected" },
     "nvidia-nim": { status: "disconnected" },
     "groq": { status: "disconnected" },
+    "open-router": { status: "disconnected" },
   });
 
   // Profile management functions - defined early so they're available throughout the component
@@ -2637,7 +2641,7 @@ export default function Chat() {
           }
           
           // Ensure all providers exist in loaded configs
-          const allProviders: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim", "groq"];
+          const allProviders: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim", "groq", "open-router"];
           allProviders.forEach(key => {
             if (!configs[key]) {
               configs[key] = { type: key, isEnabled: false, profiles: [], activeProfileId: null };
@@ -2650,12 +2654,13 @@ export default function Chat() {
         }
       } else {
         // Check for old per-provider storage (for users upgrading from older versions)
-        const providers: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim", "groq"];
+        const providers: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim", "groq", "open-router"];
         const migratedConfigs: Record<LLMProviderType, ProviderConfig> = {
           "google-ai-studio": { type: "google-ai-studio", isEnabled: false, profiles: [], activeProfileId: null },
           "google-vertex": { type: "google-vertex", isEnabled: false, profiles: [], activeProfileId: null },
           "nvidia-nim": { type: "nvidia-nim", isEnabled: false, profiles: [], activeProfileId: null },
           "groq": { type: "groq", isEnabled: false, profiles: [], activeProfileId: null },
+          "open-router": { type: "open-router", isEnabled: false, profiles: [], activeProfileId: null },
         };
         
         providers.forEach(providerType => {

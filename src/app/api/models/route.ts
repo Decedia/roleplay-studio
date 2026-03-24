@@ -247,6 +247,48 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ models });
       }
 
+      case "open-router": {
+        if (!apiKey) {
+          return NextResponse.json(
+            { error: "API key is required for Open Router" },
+            { status: 400 }
+          );
+        }
+
+        // Fetch models from Open Router API
+        const response = await fetch("https://openrouter.ai/api/v1/models", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Accept": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          return NextResponse.json(
+            { error: errorData.error?.message || `HTTP ${response.status}` },
+            { status: response.status }
+          );
+        }
+
+        const data = await response.json();
+        
+        // Transform Open Router models to our format
+        const models = (data.data || [])
+          .map((model: { id: string; name?: string; context_length?: number; max_completion_tokens?: number }) => ({
+            id: model.id,
+            provider: "open-router",
+            name: model.name || model.id,
+            context: model.context_length || 128000,
+            max_tokens: model.max_completion_tokens || 8192,
+            // Some models like deepseek-reasoner support reasoning
+            supportsThinking: model.id.includes("reasoner") || model.id.includes("thinking"),
+          }));
+
+        return NextResponse.json({ models });
+      }
+
       default:
         return NextResponse.json(
           { error: `Unknown provider: ${provider}` },
