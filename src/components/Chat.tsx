@@ -2088,7 +2088,7 @@ function SettingsModal({
                           <button
                             type="button"
                             onClick={() => onConnect("open-router")}
-                            disabled={connectionStatus["open-router"]?.status !== "connected"}
+                            disabled={!getActiveProfile("open-router")?.apiKey}
                             className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             Connect

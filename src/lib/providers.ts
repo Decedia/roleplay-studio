@@ -1567,7 +1567,7 @@ export const testProviderConnection = async (
             endpoint: "chat/completions",
             apiKey: config.apiKey,
             payload: {
-              model: "anthropic/claude-3.5-sonnet",
+              model: "google/gemini-2.0-flash",
               messages: [{ role: "user", content: "Hi" }],
               max_tokens: 5,
             },
