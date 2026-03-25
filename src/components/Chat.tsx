@@ -2364,9 +2364,15 @@ export default function Chat() {
   const [error, setError] = useState<string | null>(null);
   const [streamingContent, setStreamingContent] = useState<string>("");
   const [streamingThinking, setStreamingThinking] = useState<string>("");
+  const [visibleMessageCount, setVisibleMessageCount] = useState<number>(20);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  
+  // Reset visible message count when conversation changes
+  useEffect(() => {
+    setVisibleMessageCount(20);
+  }, [currentConversation?.id]);
   
   // User menu state
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -8018,9 +8024,21 @@ Write an engaging story segment. If this is a good point for player interaction,
                 </div>
               ) : (
                 <div className="space-y-6">
+                  {/* Load More button when there are hidden messages */}
+                  {currentConversation.messages.filter(m => !m.isContinue).length > visibleMessageCount && (
+                    <div className="flex justify-center">
+                      <button
+                        onClick={() => setVisibleMessageCount(prev => prev + 20)}
+                        className="px-4 py-2 bg-zinc-800 text-zinc-400 rounded-lg hover:bg-zinc-700 transition-colors text-sm"
+                      >
+                        Load More ({currentConversation.messages.filter(m => !m.isContinue).length - visibleMessageCount} hidden)
+                      </button>
+                    </div>
+                  )}
                   {currentConversation.messages
+                    .filter(m => !m.isContinue)
+                    .slice(-visibleMessageCount)
                     .map((message, originalIndex) => ({ message, originalIndex }))
-                    .filter(({ message }) => !message.isContinue)
                     .map(({ message, originalIndex: index }) => {
                     // Get thinking content from content (wrapped in <think> tags)
                     const thinkContent = message.role === "assistant"
