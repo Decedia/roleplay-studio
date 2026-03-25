@@ -1057,6 +1057,7 @@ export const chatWithOpenRouter: ChatFunction = async (
           temperature: options.temperature,
           max_tokens: options.maxTokens,
           top_p: options.topP,
+          top_k: options.topK,
         },
         signal: options.abortController?.signal,
       }),
@@ -1125,6 +1126,7 @@ export const streamWithOpenRouter = async (
           temperature: options.temperature,
           max_tokens: options.maxTokens,
           top_p: options.topP,
+          top_k: options.topK,
           stream: true,
         },
         stream: true,
@@ -1588,6 +1590,7 @@ export const testProviderConnection = async (
               model: "google/gemini-2.0-flash",
               messages: [{ role: "user", content: "Hi" }],
               max_tokens: 5,
+              user: "chat-user",
             },
           }),
         });
