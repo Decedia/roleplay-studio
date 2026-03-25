@@ -4915,7 +4915,7 @@ Write an engaging story segment. If this is a good point for player interaction,
               const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
               // Wrap thinking in <think> tags if present
               const contentWithThinking = chunk.thinking
-                ? `<think>${chunk.thinking}</think>\n\n${chunk.content || ""}`
+                ? `<think>${chunk.thinking}\n\n${chunk.content || ""}`
                 : (chunk.content || "");
               const finalMessages: Message[] = [
                 ...updatedMessages,
@@ -4929,6 +4929,7 @@ Write an engaging story segment. If this is a good point for player interaction,
               updateConversationMessages(finalMessages);
               setStreamingContent("");
               setStreamingThinking("");
+              setIsLoading(false); // Also reset isLoading to properly hide cancel button
             }
           }
         );
@@ -8270,13 +8271,15 @@ Write an engaging story segment. If this is a good point for player interaction,
                     </svg>
                   )}
                 </button>
-                {isSending && (
+                {isLoading && (
                   <button
                     type="button"
                     onClick={() => {
                       abortControllerRef.current?.abort();
-                      setIsSending(false);
                       setIsLoading(false);
+                      setIsSending(false);
+                      setStreamingContent("");
+                      setStreamingThinking("");
                     }}
                     className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all"
                     title="Cancel"
