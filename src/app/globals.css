@@ -135,6 +135,3 @@ button {
 input:focus, textarea:focus, select:focus {
   box-shadow: 0 0 0 2px rgb(59 130 246 / 0.2);
 }
-    min-width: 44px;
-  }
-}
