@@ -113,9 +113,9 @@ img, video {
   height: auto;
 }
 
-/* Touch-friendly tap targets */
+/* Touch-friendly tap targets - only for larger interactive elements */
 @media (pointer: coarse) {
-  button, a, select, input[type="checkbox"], input[type="radio"] {
+  button:not([role="switch"]), a, select {
     min-height: 44px;
     min-width: 44px;
   }

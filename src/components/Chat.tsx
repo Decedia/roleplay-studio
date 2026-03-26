@@ -5717,18 +5717,18 @@ Write an engaging story segment. If this is a good point for player interaction,
 
       {/* Error Popup - Fixed below header, above main content */}
       {(error || generatorError || brainstormError || vnError) && (
-        <div className="fixed top-[73px] left-0 right-0 z-40 px-4 py-3">
+        <div className={ui.notifications.error}>
           <div className="max-w-4xl mx-auto">
-            <div className={`${ui.containers.error} shadow-xl backdrop-blur-sm`}>
-              <div className="overflow-y-auto whitespace-pre-wrap" style={{ maxHeight: '120px' }}>
+            <div className={ui.notifications.errorInner}>
+              <div className={ui.notifications.errorContent} style={{ maxHeight: '120px' }}>
                 <p className="whitespace-pre-wrap">{error || generatorError || brainstormError || vnError}</p>
               </div>
-              <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-red-800/50">
+              <div className={ui.notifications.errorActions}>
                 {error && (
                   <button
                     onClick={handleRetry}
                     disabled={isLoading}
-                    className={`${ui.buttons.secondary} text-red-300 hover:text-red-200 hover:bg-red-800/50`}
+                    className={`${ui.buttons.secondary} px-3 py-1.5 sm:px-4 sm:py-2 text-red-300 hover:text-red-200 hover:bg-red-800/50 border-red-700/50`}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -5743,7 +5743,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                     setBrainstormError(null);
                     setVnError(null);
                   }}
-                  className={`${ui.buttons.icon} text-red-300 hover:text-red-200 hover:bg-red-800/50`}
+                  className={`${ui.buttons.icon} p-1.5 sm:p-2 text-red-300 hover:text-red-200 hover:bg-red-800/50`}
                   title="Close"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

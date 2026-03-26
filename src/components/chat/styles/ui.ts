@@ -119,25 +119,25 @@ export const header = {
 
 export const buttons = {
   /** Primary button - solid background with subtle shadow */
-  primary: "px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:bg-blue-700 disabled:bg-zinc-600 rounded-lg shadow-sm hover:shadow-md focus:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:cursor-not-allowed transition-all",
+  primary: "inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:bg-blue-700 disabled:bg-zinc-600 rounded-lg shadow-sm hover:shadow-md focus:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:cursor-not-allowed transition-all",
 
   /** Secondary button - outlined style */
-  secondary: "px-4 py-2.5 text-sm font-medium text-zinc-300 bg-transparent border border-zinc-600 hover:border-zinc-500 hover:bg-zinc-800/50 focus:border-zinc-500 focus:bg-zinc-800/50 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-zinc-900 rounded-lg transition-all",
+  secondary: "inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-zinc-300 bg-transparent border border-zinc-600 hover:border-zinc-500 hover:bg-zinc-800/50 focus:border-zinc-500 focus:bg-zinc-800/50 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-zinc-900 rounded-lg transition-all",
 
   /** Ghost button - minimal style */
-  ghost: "px-3 py-2 text-sm font-medium text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800/50 focus:text-zinc-300 focus:bg-zinc-800/50 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-zinc-900 rounded-lg transition-all",
+  ghost: "inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800/50 focus:text-zinc-300 focus:bg-zinc-800/50 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-zinc-900 rounded-lg transition-all",
 
   /** Icon button - square with icon */
-  icon: "p-2 text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800/50 focus:text-zinc-300 focus:bg-zinc-800/50 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-zinc-900 rounded-lg transition-all",
+  icon: "inline-flex items-center justify-center p-2 text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800/50 focus:text-zinc-300 focus:bg-zinc-800/50 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-zinc-900 rounded-lg transition-all",
 
   /** Small button */
   small: "px-3 py-1.5 text-xs font-medium rounded-md",
 
   /** Danger button - red variants */
-  danger: "px-4 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:bg-red-700 disabled:bg-red-800 rounded-lg shadow-sm hover:shadow-md focus:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:cursor-not-allowed transition-all",
+  danger: "inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:bg-red-700 disabled:bg-red-800 rounded-lg shadow-sm hover:shadow-md focus:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:cursor-not-allowed transition-all",
 
   /** Success button - green variants */
-  success: "px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:bg-green-700 disabled:bg-green-800 rounded-lg shadow-sm hover:shadow-md focus:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:cursor-not-allowed transition-all",
+  success: "inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:bg-green-700 disabled:bg-green-800 rounded-lg shadow-sm hover:shadow-md focus:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:cursor-not-allowed transition-all",
 
   /** Loading spinner button */
   spinner: "w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin",
@@ -183,7 +183,10 @@ export const inputs = {
   select: "w-full bg-zinc-900 text-white rounded-lg px-4 py-2.5 border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900 focus:border-blue-500 transition-all appearance-none",
 
   /** Checkbox - modern design */
-  checkbox: "w-4 h-4 rounded border-2 border-zinc-600 bg-zinc-900 text-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900 transition-all checked:bg-blue-500 checked:border-blue-500",
+  checkbox: "w-5 h-5 rounded border-2 border-zinc-600 bg-zinc-900 text-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900 transition-all checked:bg-blue-500 checked:border-blue-500 cursor-pointer",
+
+  /** Radio button - modern design */
+  radio: "w-5 h-5 rounded-full border-2 border-zinc-600 bg-zinc-900 text-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900 transition-all checked:bg-blue-500 checked:border-blue-500 cursor-pointer",
 
   /** Range slider */
   range: "w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-blue-500",
@@ -547,14 +550,14 @@ export const loading = {
 
 export const notifications = {
   /** Error banner */
-  error: "fixed top-[73px] left-0 right-0 z-40 px-4 py-3",
-  errorInner: "bg-red-900/80 border border-red-700 rounded-lg px-4 py-3 text-red-200 shadow-xl backdrop-blur-sm",
+  error: "fixed top-[73px] left-0 right-0 z-40 px-4 py-3 pointer-events-none",
+  errorInner: "bg-red-900/80 border border-red-700 rounded-lg px-4 py-3 text-red-200 shadow-xl backdrop-blur-sm pointer-events-auto",
   errorContent: "overflow-y-auto whitespace-pre-wrap",
   errorActions: "flex justify-end gap-2 mt-3 pt-3 border-t border-red-700/50",
   
   /** Toast notification */
-  toast: "fixed bottom-20 left-0 right-0 z-40 px-4 py-3",
-  toastInner: "bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white shadow-xl backdrop-blur-sm flex items-center justify-between",
+  toast: "fixed bottom-20 left-0 right-0 z-40 px-4 py-3 pointer-events-none",
+  toastInner: "bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white shadow-xl backdrop-blur-sm flex items-center justify-between pointer-events-auto",
   toastContent: "flex items-center gap-3",
   
   /** Info notification */
