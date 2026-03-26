@@ -8,6 +8,13 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
+- [x] Responsive Design System Refactor - Implemented mobile-first responsive design:
+  - Added CSS design system with spacing variables, border radius, and transitions in globals.css
+  - Added responsive breakpoint utilities and overflow prevention
+  - Updated modals to use responsive max-widths (max-w-sm -> sm:max-w-md -> md:max-w-lg)
+  - Updated header with responsive padding and sizing
+  - Updated input components with responsive sizing
+  - Added touch-friendly tap targets for mobile
 - [x] Add Groq as new AI provider - implemented full Groq support including:
   - Added "groq" to LLMProviderType in types.ts
   - Added Groq to AVAILABLE_PROVIDERS with Llama 3.3, Llama 3.1, Mixtral, and Gemma models
