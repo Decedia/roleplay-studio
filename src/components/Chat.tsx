@@ -576,7 +576,7 @@ function SettingsModal({
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-md md:max-w-lg max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-semibold text-white mb-4">
           Global Settings
         </h2>
@@ -8314,7 +8314,7 @@ Write an engaging story segment. If this is a good point for player interaction,
 
       {showPersonaModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-md">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-md">
             <h2 className="text-xl font-semibold text-white mb-4">
               {editingPersona ? "Edit Persona" : "Create New Persona"}
             </h2>
@@ -8374,7 +8374,7 @@ Write an engaging story segment. If this is a good point for player interaction,
       {/* Character Modal */}
       {showCharacterModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-lg md:max-w-xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-semibold text-white mb-4">
               {editingCharacter ? "Edit Character" : "Create New Character"}
             </h2>
@@ -8654,8 +8654,8 @@ Write an engaging story segment. If this is a good point for player interaction,
       {/* Greeting Selection Modal */}
       {showGreetingSelection && pendingConversationCharacter && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto">
-            <div className="p-6">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-sm sm:max-w-lg max-h-[80vh] overflow-y-auto">
+            <div className="p-4 sm:p-6">
               <h2 className="text-xl font-semibold text-white mb-2">Start a New Chat</h2>
               <p className="text-zinc-400 text-sm mb-6">
                 {pendingConversationCharacter.name} has multiple greetings. Choose how to start:
@@ -8761,7 +8761,7 @@ Write an engaging story segment. If this is a good point for player interaction,
       {/* Conversation History Modal */}
       {showConversationHistory && viewingConversation && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm sm:max-w-2xl md:max-w-3xl max-h-[90vh] flex flex-col">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-4 border-b border-zinc-800">
               <div>

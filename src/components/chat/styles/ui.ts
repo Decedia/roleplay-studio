@@ -15,10 +15,10 @@ export const layout = {
   content: "flex-1 overflow-y-auto pt-20",
   
   /** Content container with max-width and padding */
-  contentContainer: "max-w-4xl mx-auto px-4 py-6",
+  contentContainer: "max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6",
   
   /** Content container for generator/brainstorm views (more bottom padding for input) */
-  contentContainerWithInput: "max-w-4xl mx-auto px-4 py-6 pb-32",
+  contentContainerWithInput: "max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-28 sm:pb-32",
 } as const;
 
 export const containers = {
@@ -32,16 +32,16 @@ export const containers = {
   modalOverlay: "fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50",
   
   /** Modal content - dark theme with border */
-  modal: "bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-md",
+  modal: "bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-md",
   
   /** Modal content - wider variant */
-  modalWide: "bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-lg",
+  modalWide: "bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-lg",
   
   /** Modal content - extra wide variant */
-  modalExtraWide: "bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col",
+  modalExtraWide: "bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm sm:max-w-2xl md:max-w-3xl max-h-[90vh] flex flex-col",
   
   /** Settings modal with scrolling */
-  modalScroll: "bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto",
+  modalScroll: "bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-md md:max-w-lg max-h-[90vh] overflow-y-auto",
   
   /** Section with top border */
   section: "border-t border-zinc-700 pt-6",
@@ -74,31 +74,31 @@ export const header = {
   main: "flex-shrink-0 z-50 fixed top-0 left-0 right-0 bg-black/80 backdrop-blur-xl border-b border-zinc-800/50",
   
   /** Header container */
-  container: "max-w-4xl mx-auto px-4 py-4",
+  container: "max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-4",
   
   /** Header inner - flex row with justify-between */
   inner: "flex items-center justify-between gap-2",
   
   /** Header left section - flex with gap and overflow */
-  left: "flex items-center gap-3 min-w-0 overflow-hidden",
+  left: "flex items-center gap-2 sm:gap-3 min-w-0 overflow-hidden",
   
   /** Header right section - flex with gap */
-  right: "flex items-center gap-2",
+  right: "flex items-center gap-1 sm:gap-2",
   
   /** Logo/app icon container */
-  logo: "w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0",
+  logo: "w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0",
   
   /** Title container with overflow */
   titleContainer: "min-w-0 flex-1 overflow-hidden",
   
   /** Title text */
-  title: "text-xl font-semibold text-white truncate",
+  title: "text-lg sm:text-xl font-semibold text-white truncate",
   
   /** Back button */
-  backButton: "p-2 hover:bg-zinc-800 rounded-lg transition-colors",
+  backButton: "p-1.5 sm:p-2 hover:bg-zinc-800 rounded-lg transition-colors",
   
   /** Back button icon */
-  backIcon: "w-5 h-5 text-zinc-400",
+  backIcon: "w-4 h-4 sm:w-5 sm:h-5 text-zinc-400",
 };
 
 // ============================================================================
@@ -107,25 +107,25 @@ export const header = {
 
 export const buttons = {
   /** Primary button - gradient background */
-  primary: "px-4 py-2 text-white rounded-lg transition-colors bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700",
+  primary: "px-3 sm:px-4 py-2 text-sm sm:text-base text-white rounded-lg transition-colors bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700",
   
   /** Secondary button - dark background */
-  secondary: "px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors",
+  secondary: "px-3 sm:px-4 py-2 text-sm sm:text-base bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors",
   
   /** Ghost button - transparent with hover */
-  ghost: "p-2 hover:bg-zinc-800 rounded-lg transition-colors text-zinc-400 hover:text-white",
+  ghost: "p-1.5 sm:p-2 hover:bg-zinc-800 rounded-lg transition-colors text-zinc-400 hover:text-white",
   
   /** Icon button - square with icon */
-  icon: "p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors",
+  icon: "p-1.5 sm:p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors",
   
   /** Small button */
-  small: "px-3 py-1.5 text-sm rounded-lg",
+  small: "px-2 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg",
   
   /** Danger button - red */
-  danger: "px-3 py-1 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700",
+  danger: "px-2 sm:px-3 py-1 text-xs sm:text-sm bg-red-600 text-white rounded-lg hover:bg-red-700",
   
   /** Success button - green */
-  success: "px-3 py-1 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700",
+  success: "px-2 sm:px-3 py-1 text-xs sm:text-sm bg-green-600 text-white rounded-lg hover:bg-green-700",
   
   /** Loading spinner button */
   spinner: "w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin",
