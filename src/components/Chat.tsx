@@ -5644,16 +5644,16 @@ Write an engaging story segment. If this is a good point for player interaction,
     <div className={ui.layout.main}>
       {/* Header - Fixed on top for all views on mobile */}
       <header className={`flex-shrink-0 z-50 fixed top-0 left-0 right-0 bg-black/80 backdrop-blur-xl border-b border-zinc-800/50`}>
-        <div className="max-w-4xl mx-auto px-4 py-4">
+        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-3 min-w-0 overflow-hidden">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 overflow-hidden">
               {view !== "home" && (
                 <button
                   onClick={goBack}
-                  className="p-2 hover:bg-zinc-800 rounded-lg transition-colors flex-shrink-0"
+                  className="p-1.5 sm:p-2 hover:bg-zinc-800 rounded-lg transition-colors flex-shrink-0"
                 >
                   <svg
-                    className="w-5 h-5 text-zinc-400"
+                    className="w-4 sm:w-5 h-4 sm:h-5 text-zinc-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -5667,9 +5667,9 @@ Write an engaging story segment. If this is a good point for player interaction,
                   </svg>
                 </button>
               )}
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+              <div className="w-8 sm:w-10 h-8 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
                 <svg
-                  className="w-6 h-6 text-white"
+                  className="w-5 sm:w-6 h-5 sm:h-6 text-white"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -5683,7 +5683,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                 </svg>
               </div>
               <div className="min-w-0 flex-1 overflow-hidden">
-                <h1 className="text-xl font-semibold text-white truncate">
+                <h1 className="text-lg sm:text-xl font-semibold text-white truncate">
                   {view === "home"
                     ? "Roleplay Studio"
                     : view === "chat" && selectedPersona && selectedCharacter
@@ -5719,10 +5719,10 @@ Write an engaging story segment. If this is a good point for player interaction,
             {/* Settings button - always visible */}
             <button
               onClick={openSettings}
-              className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+              className="p-1.5 sm:p-2 hover:bg-zinc-800 rounded-lg transition-colors"
               title="Global Settings"
             >
-              <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 sm:w-5 h-4 sm:h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>

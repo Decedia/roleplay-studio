@@ -48,14 +48,14 @@ export function ChatInput({
 
   return (
     <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-800 bg-black/80 backdrop-blur-xl z-50">
-      <div className="max-w-4xl mx-auto px-4 py-4">
+      <div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
         <form
           onSubmit={(e) => {
             e.preventDefault();
             onSubmit();
           }}
         >
-          <div className="flex items-end gap-3 bg-zinc-900 rounded-2xl border border-zinc-800 p-2">
+          <div className="flex items-end gap-2 sm:gap-3 bg-zinc-900 rounded-xl sm:rounded-2xl border border-zinc-800 p-1.5 sm:p-2">
             <div className="flex-1 relative">
               <textarea
                 ref={textareaRef}
@@ -73,7 +73,7 @@ export function ChatInput({
             <button
               type="submit"
               disabled={disabled || isLoading}
-              className={`flex-shrink-0 w-10 h-10 flex items-center justify-center text-white rounded-xl transition-all shadow-lg ${gradientClasses[accentColor]} ${accentColor === "blue" ? "shadow-blue-600/20" : accentColor === "purple" ? "shadow-purple-600/20" : "shadow-amber-600/20"} disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={`flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-white rounded-lg sm:rounded-xl transition-all shadow-lg ${gradientClasses[accentColor]} ${accentColor === "blue" ? "shadow-blue-600/20" : accentColor === "purple" ? "shadow-purple-600/20" : "shadow-amber-600/20"} disabled:opacity-50 disabled:cursor-not-allowed`}
               title={value.trim() ? "Send message" : "Resend last message"}
             >
               {isLoading ? (
