@@ -415,6 +415,30 @@ function removeThinkTags(content: string): string {
   return content.replace(/<think\s*>[\s\S]*?<\/think>/gi, "").trim();
 }
 
+// Auto-format response: add newline between formatted sections (*action* "dialogue")
+function formatResponse(content: string): string {
+  // Pattern: *text* immediately followed by "text" (or vice versa) without newline
+  // Also handles: "text" immediately followed by *text*
+  
+  let formatted = content;
+  
+  // Add newline between *action* and "dialogue" (no existing newline)
+  // Pattern: ends with * and starts with "
+  formatted = formatted.replace(/(\*[^*]+\*)(\s*)(?=[""])/g, (match, asteriskContent, space) => {
+    if (space.includes('\n')) return match;
+    return asteriskContent + '\n';
+  });
+  
+  // Add newline between "dialogue" and *action* (no existing newline)
+  // Pattern: ends with " and starts with *
+  formatted = formatted.replace(/([""][^""]*[""])(\s*)(?=\*)/g, (match, quoteContent, space) => {
+    if (space.includes('\n')) return match;
+    return quoteContent + '\n';
+  });
+  
+  return formatted;
+}
+
 // Macro replacement function - replaces {{user}} with persona name and {{char}} with character name
 function replaceMacros(content: string, personaName: string, characterName: string): string {
   return content
@@ -4930,10 +4954,12 @@ Write an engaging story segment. If this is a good point for player interaction,
             
             if (chunk.done) {
               const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
+              // Format the response content
+              const formattedContent = formatResponse(chunk.content || "");
               // Wrap thinking in <think> tags if present
               const contentWithThinking = chunk.thinking
-                ? `<think>${chunk.thinking}\n\n${chunk.content || ""}`
-                : (chunk.content || "");
+                ? `<think>${chunk.thinking}</think>\n\n${formattedContent}`
+                : formattedContent;
               const finalMessages: Message[] = [
                 ...updatedMessages,
                 {
@@ -4971,10 +4997,12 @@ Write an engaging story segment. If this is a good point for player interaction,
           setError(response.error);
         } else {
           const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
+          // Format the response content
+          const formattedContent = formatResponse(response.content || "");
           // Wrap thinking in <think> tags if present
           const contentWithThinking = response.thinking
-            ? `<think>${response.thinking}</think>\n\n${response.content || ""}`
-            : (response.content || "");
+            ? `<think>${response.thinking}</think>\n\n${formattedContent}`
+            : formattedContent;
           const finalMessages: Message[] = [
             ...updatedMessages,
             {
@@ -4984,20 +5012,20 @@ Write an engaging story segment. If this is a good point for player interaction,
               modelName: thoughtSig?.modelName,
             },
           ];
-              updateConversationMessages(finalMessages);
-          }
+          updateConversationMessages(finalMessages);
         }
-      } catch (err) {
-        console.error("Chat error:", err);
-        setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
-      } finally {
-        setIsLoading(false);
-        setIsSending(false);
-        abortControllerRef.current = null;
-        playNotificationSound();
-        inputRef.current?.focus();
       }
-    };
+    } catch (err) {
+      console.error("Chat error:", err);
+      setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
+      setIsSending(false);
+      abortControllerRef.current = null;
+      playNotificationSound();
+      inputRef.current?.focus();
+    }
+  };
 
     const updateConversationMessages = (messages: Message[]) => {
     if (!currentConversation) return;
@@ -5110,10 +5138,12 @@ Write an engaging story segment. If this is a good point for player interaction,
             
             if (chunk.done) {
               const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
+              // Format the response content
+              const formattedContent = formatResponse(chunk.content || "");
               // Wrap thinking in <think> tags if present
               const contentWithThinking = chunk.thinking
-                ? `<think>${chunk.thinking}</think>\n\n${chunk.content || ""}`
-                : (chunk.content || "");
+                ? `<think>${chunk.thinking}</think>\n\n${formattedContent}`
+                : formattedContent;
               const finalMessages: Message[] = [
                 ...messagesBeforeRetry,
                 {
@@ -5149,10 +5179,12 @@ Write an engaging story segment. If this is a good point for player interaction,
         if (response.error) {
           setError(response.error);
         } else {
+          // Format the response content
+          const formattedContent = formatResponse(response.content || "");
           // Wrap thinking in <think> tags if present
           const contentWithThinking = response.thinking
-            ? `<think>${response.thinking}</think>\n\n${response.content || ""}`
-            : (response.content || "");
+            ? `<think>${response.thinking}</think>\n\n${formattedContent}`
+            : formattedContent;
           const finalMessages: Message[] = [
             ...messagesBeforeRetry,
             { role: "assistant", content: contentWithThinking },
@@ -5271,11 +5303,12 @@ Write an engaging story segment. If this is a good point for player interaction,
                 const existingThinking = extractThinkContent(existingContent) || '';
                 const contentWithoutThink = removeThinkTags(existingContent);
                 
-                // Combine thinking and append content
+                // Format and combine thinking and append content
+                const formattedNewContent = formatResponse(chunk.content || '');
                 const combinedThinking = existingThinking + (chunk.thinking || '');
                 const newContent = combinedThinking
-                  ? `<think>${combinedThinking}</think>\n\n${contentWithoutThink}${chunk.content || ''}`
-                  : contentWithoutThink + (chunk.content || '');
+                  ? `<think>${combinedThinking}</think>\n\n${contentWithoutThink}${formattedNewContent}`
+                  : contentWithoutThink + formattedNewContent;
                 
                 // Append to existing message
                 existingMessages[lastAssistantIdx] = {
@@ -5284,9 +5317,10 @@ Write an engaging story segment. If this is a good point for player interaction,
                 };
               } else {
                 // Fallback: add new message if no existing assistant message
+                const formattedContent = formatResponse(chunk.content || '');
                 const contentWithThinking = chunk.thinking
-                  ? `<think>${chunk.thinking}</think>\n\n${chunk.content || ''}`
-                  : (chunk.content || '');
+                  ? `<think>${chunk.thinking}</think>\n\n${formattedContent}`
+                  : formattedContent;
                 existingMessages.push({ role: 'assistant', content: contentWithThinking });
               }
               updateConversationMessages(existingMessages);
@@ -5324,11 +5358,12 @@ Write an engaging story segment. If this is a good point for player interaction,
             const existingThinking = extractThinkContent(existingContent) || '';
             const contentWithoutThink = removeThinkTags(existingContent);
             
-            // Combine thinking and append content
+            // Format and combine thinking and append content
+            const formattedNewContent = formatResponse(response.content || '');
             const combinedThinking = existingThinking + (response.thinking || '');
             const newContent = combinedThinking
-              ? `<think>${combinedThinking}</think>\n\n${contentWithoutThink}${response.content || ''}`
-              : contentWithoutThink + (response.content || '');
+              ? `<think>${combinedThinking}</think>\n\n${contentWithoutThink}${formattedNewContent}`
+              : contentWithoutThink + formattedNewContent;
             
             // Append to existing message
             existingMessages[lastAssistantIdx] = {
@@ -5337,9 +5372,10 @@ Write an engaging story segment. If this is a good point for player interaction,
             };
           } else {
             // Fallback: add new message if no existing assistant message
+            const formattedContent = formatResponse(response.content || '');
             const contentWithThinking = response.thinking
-              ? `<think>${response.thinking}</think>\n\n${response.content || ''}`
-              : (response.content || '');
+              ? `<think>${response.thinking}</think>\n\n${formattedContent}`
+              : formattedContent;
             existingMessages.push({ role: 'assistant', content: contentWithThinking });
           }
           updateConversationMessages(existingMessages);
@@ -6575,7 +6611,7 @@ Write an engaging story segment. If this is a good point for player interaction,
               {view === "generator" && showScrollToBottom && (
                 <button
                   onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })}
-                  className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2 px-4 py-2 bg-zinc-800 text-white rounded-full shadow-lg hover:bg-zinc-700 transition-all opacity-90 hover:opacity-100"
+                  className="fixed bottom-36 sm:bottom-40 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2 px-4 py-2 bg-zinc-800 text-white rounded-full shadow-lg hover:bg-zinc-700 transition-all opacity-90 hover:opacity-100"
                   title="Scroll to bottom"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -7101,7 +7137,7 @@ Write an engaging story segment. If this is a good point for player interaction,
               {view === "brainstorm" && showScrollToBottom && (
                 <button
                   onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })}
-                  className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2 px-4 py-2 bg-zinc-800 text-white rounded-full shadow-lg hover:bg-zinc-700 transition-all opacity-90 hover:opacity-100"
+                  className="fixed bottom-36 sm:bottom-40 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2 px-4 py-2 bg-zinc-800 text-white rounded-full shadow-lg hover:bg-zinc-700 transition-all opacity-90 hover:opacity-100"
                   title="Scroll to bottom"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -8294,7 +8330,7 @@ Write an engaging story segment. If this is a good point for player interaction,
       {view === "chat" && currentConversation && showScrollToBottom && (
         <button
           onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })}
-          className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2 px-4 py-2 bg-zinc-800 text-white rounded-full shadow-lg hover:bg-zinc-700 transition-all opacity-90 hover:opacity-100"
+          className="fixed bottom-36 sm:bottom-40 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2 px-4 py-2 bg-zinc-800 text-white rounded-full shadow-lg hover:bg-zinc-700 transition-all opacity-90 hover:opacity-100"
           title="Scroll to bottom"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
