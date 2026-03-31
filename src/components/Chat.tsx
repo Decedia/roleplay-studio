@@ -5782,14 +5782,14 @@ Write an engaging story segment. If this is a good point for player interaction,
               </svg>
             </button>
             
-            {/* Thinking panel toggle - only in chat view */}
+            {/* Tags panel toggle - only in chat view */}
             {view === "chat" && currentConversation && (
               <button
                 onClick={() => setShowThinkingPanel(!showThinkingPanel)}
-                className={`p-1.5 sm:p-2 rounded-lg transition-colors ${showThinkingPanel ? 'bg-zinc-700 text-white' : 'hover:bg-zinc-800 text-zinc-400'}`}
-                title="Toggle AI Thinking Panel"
+                className={`p-1.5 sm:p-2 rounded-lg transition-colors text-xs font-mono ${showThinkingPanel ? 'bg-zinc-700 text-white' : 'hover:bg-zinc-800 text-zinc-400'}`}
+                title="Toggle Tags Panel"
               >
-                <span className="text-base">💭</span>
+                {"<>"}
               </button>
             )}
             
