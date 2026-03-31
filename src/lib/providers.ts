@@ -66,6 +66,54 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
     requiresServiceAccount: true,
     models: [
       {
+        id: "gemini-3.1-flash-lite-preview",
+        name: "Gemini 3.1 Flash-Lite Preview",
+        provider: "google-vertex",
+        contextWindow: 1048576,
+        maxTokens: 65536,
+        supportsThinking: false,
+      },
+      {
+        id: "gemini-3.1-pro-preview",
+        name: "Gemini 3.1 Pro Preview",
+        provider: "google-vertex",
+        contextWindow: 1048576,
+        maxTokens: 65536,
+        supportsThinking: true,
+      },
+      {
+        id: "gemini-3-flash-preview",
+        name: "Gemini 3 Flash Preview",
+        provider: "google-vertex",
+        contextWindow: 1048576,
+        maxTokens: 65536,
+        supportsThinking: true,
+      },
+      {
+        id: "gemini-2.5-pro",
+        name: "Gemini 2.5 Pro",
+        provider: "google-vertex",
+        contextWindow: 1048576,
+        maxTokens: 65536,
+        supportsThinking: true,
+      },
+      {
+        id: "gemini-2.5-flash",
+        name: "Gemini 2.5 Flash",
+        provider: "google-vertex",
+        contextWindow: 1048576,
+        maxTokens: 65536,
+        supportsThinking: true,
+      },
+      {
+        id: "gemini-2.5-flash-lite",
+        name: "Gemini 2.5 Flash-Lite",
+        provider: "google-vertex",
+        contextWindow: 1048576,
+        maxTokens: 65536,
+        supportsThinking: false,
+      },
+      {
         id: "gemini-2.0-flash",
         name: "Gemini 2.0 Flash",
         provider: "google-vertex",
@@ -1667,21 +1715,82 @@ export const fetchModelsFromProvider = async (
       }
 
       case "google-vertex": {
-        if (!config.apiKey) {
-          return { models: [], error: "API key is required" };
-        }
+        const vertexModels: FetchedModel[] = [
+          {
+            id: "gemini-3.1-flash-lite-preview",
+            name: "Gemini 3.1 Flash-Lite Preview",
+            provider: "google-vertex",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: false,
+          },
+          {
+            id: "gemini-3.1-pro-preview",
+            name: "Gemini 3.1 Pro Preview",
+            provider: "google-vertex",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-3-flash-preview",
+            name: "Gemini 3 Flash Preview",
+            provider: "google-vertex",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-2.5-pro",
+            name: "Gemini 2.5 Pro",
+            provider: "google-vertex",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-2.5-flash",
+            name: "Gemini 2.5 Flash",
+            provider: "google-vertex",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-2.5-flash-lite",
+            name: "Gemini 2.5 Flash-Lite",
+            provider: "google-vertex",
+            context: 1048576,
+            max_tokens: 65536,
+            supportsThinking: false,
+          },
+          {
+            id: "gemini-2.0-flash",
+            name: "Gemini 2.0 Flash",
+            provider: "google-vertex",
+            context: 1048576,
+            max_tokens: 8192,
+            supportsThinking: true,
+          },
+          {
+            id: "gemini-1.5-pro",
+            name: "Gemini 1.5 Pro",
+            provider: "google-vertex",
+            context: 2097152,
+            max_tokens: 8192,
+            supportsThinking: false,
+          },
+          {
+            id: "gemini-1.5-flash",
+            name: "Gemini 1.5 Flash",
+            provider: "google-vertex",
+            context: 1048576,
+            max_tokens: 8192,
+            supportsThinking: false,
+          },
+        ];
 
-        const projectId = config.projectId || "";
-        const location = config.vertexLocation || "global";
-        
-        const response = await fetch(`/api/models?provider=google-vertex&apiKey=${encodeURIComponent(config.apiKey)}&projectId=${encodeURIComponent(projectId)}&location=${encodeURIComponent(location)}`);
-        const data = await response.json();
-
-        if (!response.ok) {
-          return { models: [], error: data.error || `HTTP ${response.status}` };
-        }
-
-        return { models: data.models || [] };
+        return { models: vertexModels };
       }
 
       case "groq": {

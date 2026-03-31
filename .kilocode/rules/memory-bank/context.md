@@ -8,6 +8,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
+- [x] Fix Vertex AI model loading - Replaced broken dynamic API model fetching with static model list from Vertex AI console. Updated AVAILABLE_PROVIDERS, fetchModelsFromProvider, and api/models/route.ts to use hardcoded Gemini models (3.1, 3, 2.5, 2.0, 1.5 series). Removed unused API call to aiplatform.googleapis.com that was failing.
 - [x] Responsive Design System Refactor - Implemented mobile-first responsive design:
   - Added CSS design system with spacing variables, border radius, and transitions in globals.css
   - Added responsive breakpoint utilities and overflow prevention
