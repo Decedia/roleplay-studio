@@ -24,7 +24,7 @@ import { Character as CharacterType, CharacterBook, CharacterBookEntry, Provider
 import { parseRoleplayText, getSegmentClasses, TextSegment } from "@/lib/text-formatter";
 
 // Import from modular chat structure
-import { ThinkingSection, CollapsibleTagSection, FormattedText } from "@/components/chat/components";
+import { ThinkingSection, ThinkingPanel, CollapsibleTagSection, FormattedText } from "@/components/chat/components";
 
 // Import UI styles
 import * as ui from "@/components/chat/styles";
@@ -2293,6 +2293,7 @@ export default function Chat() {
   const [showCharacterModal, setShowCharacterModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showThinkingPanel, setShowThinkingPanel] = useState(false);
   const [showConversationHistory, setShowConversationHistory] = useState(false);
   const [viewingConversation, setViewingConversation] = useState<Conversation | null>(null);
   const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
@@ -5781,6 +5782,17 @@ Write an engaging story segment. If this is a good point for player interaction,
               </svg>
             </button>
             
+            {/* Thinking panel toggle - only in chat view */}
+            {view === "chat" && currentConversation && (
+              <button
+                onClick={() => setShowThinkingPanel(!showThinkingPanel)}
+                className={`p-1.5 sm:p-2 rounded-lg transition-colors ${showThinkingPanel ? 'bg-zinc-700 text-white' : 'hover:bg-zinc-800 text-zinc-400'}`}
+                title="Toggle AI Thinking Panel"
+              >
+                <span className="text-base">💭</span>
+              </button>
+            )}
+            
             {/* User menu and usage stats removed with Puter.js */}
           </div>
         </div>
@@ -8325,6 +8337,15 @@ Write an engaging story segment. If this is a good point for player interaction,
           )}
         </div>
       </div>
+
+      {/* Thinking Panel */}
+      {view === "chat" && currentConversation && (
+        <ThinkingPanel
+          messages={currentConversation.messages}
+          isOpen={showThinkingPanel}
+          onClose={() => setShowThinkingPanel(false)}
+        />
+      )}
 
       {/* Scroll to bottom button */}
       {view === "chat" && currentConversation && showScrollToBottom && (
