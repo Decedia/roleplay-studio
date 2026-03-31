@@ -1652,211 +1652,36 @@ export const fetchModelsFromProvider = async (
       }
 
       case "google-ai-studio": {
-        // Return static popular Google AI Studio models instead of fetching from API
-        const staticModels: FetchedModel[] = [
-          {
-            id: "gemini-3.1-pro-preview",
-            name: "Gemini 3.1 Pro Preview",
-            provider: "google-ai-studio",
-            context: 1048576,
-            max_tokens: 65536,
-            supportsThinking: true,
-          },
-          {
-            id: "gemini-3-flash-preview",
-            name: "Gemini 3 Flash Preview",
-            provider: "google-ai-studio",
-            context: 1048576,
-            max_tokens: 65536,
-            supportsThinking: true,
-          },
-          {
-            id: "gemini-3-pro-preview",
-            name: "Gemini 3 Pro Preview",
-            provider: "google-ai-studio",
-            context: 1048576,
-            max_tokens: 65536,
-            supportsThinking: true,
-          },
-          {
-            id: "gemini-3-pro-image-preview",
-            name: "Gemini 3 Pro Image Preview",
-            provider: "google-ai-studio",
-            context: 1048576,
-            max_tokens: 65536,
-            supportsThinking: false,
-          },
-          {
-            id: "gemini-2.5-pro",
-            name: "Gemini 2.5 Pro",
-            provider: "google-ai-studio",
-            context: 1048576,
-            max_tokens: 65536,
-            supportsThinking: true,
-          },
-          {
-            id: "gemini-2.5-flash-preview-09-2025",
-            name: "Gemini 2.5 Flash Preview",
-            provider: "google-ai-studio",
-            context: 1048576,
-            max_tokens: 65536,
-            supportsThinking: true,
-          },
-          {
-            id: "gemini-2.5-flash-lite-preview-09-2025",
-            name: "Gemini 2.5 Flash-Lite Preview",
-            provider: "google-ai-studio",
-            context: 1048576,
-            max_tokens: 65536,
-            supportsThinking: true,
-          },
-          {
-            id: "gemini-2.5-flash-image",
-            name: "Gemini 2.5 Flash Image",
-            provider: "google-ai-studio",
-            context: 1048576,
-            max_tokens: 65536,
-            supportsThinking: false,
-          },
-          {
-            id: "gemini-2.5-flash",
-            name: "Gemini 2.5 Flash",
-            provider: "google-ai-studio",
-            context: 1048576,
-            max_tokens: 65536,
-            supportsThinking: true,
-          },
-          {
-            id: "gemini-2.0-flash",
-            name: "Gemini 2.0 Flash",
-            provider: "google-ai-studio",
-            context: 1048576,
-            max_tokens: 8192,
-            supportsThinking: true,
-          },
-          {
-            id: "gemini-1.5-pro",
-            name: "Gemini 1.5 Pro",
-            provider: "google-ai-studio",
-            context: 2097152,
-            max_tokens: 8192,
-            supportsThinking: false,
-          },
-          {
-            id: "gemini-1.5-flash",
-            name: "Gemini 1.5 Flash",
-            provider: "google-ai-studio",
-            context: 1048576,
-            max_tokens: 8192,
-            supportsThinking: false,
-          },
-        ];
+        if (!config.apiKey) {
+          return { models: [], error: "API key is required" };
+        }
 
-        return { models: staticModels };
+        const response = await fetch(`/api/models?provider=google-ai-studio&apiKey=${encodeURIComponent(config.apiKey)}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          return { models: [], error: data.error || `HTTP ${response.status}` };
+        }
+
+        return { models: data.models || [] };
       }
 
       case "google-vertex": {
-        // Return static popular Google Vertex AI models instead of fetching from API
-        const staticModels: FetchedModel[] = [
-          {
-            id: "gemini-3.1-pro-preview",
-            name: "Gemini 3.1 Pro Preview",
-            provider: "google-vertex",
-            context: 1048576,
-            max_tokens: 65536,
-            supportsThinking: true,
-          },
-          {
-            id: "gemini-3-flash-preview",
-            name: "Gemini 3 Flash Preview",
-            provider: "google-vertex",
-            context: 1048576,
-            max_tokens: 65536,
-            supportsThinking: true,
-          },
-          {
-            id: "gemini-3-pro-preview",
-            name: "Gemini 3 Pro Preview",
-            provider: "google-vertex",
-            context: 1048576,
-            max_tokens: 65536,
-            supportsThinking: true,
-          },
-          {
-            id: "gemini-3-pro-image-preview",
-            name: "Gemini 3 Pro Image Preview",
-            provider: "google-vertex",
-            context: 1048576,
-            max_tokens: 65536,
-            supportsThinking: false,
-          },
-          {
-            id: "gemini-2.5-pro",
-            name: "Gemini 2.5 Pro",
-            provider: "google-vertex",
-            context: 1048576,
-            max_tokens: 65536,
-            supportsThinking: true,
-          },
-          {
-            id: "gemini-2.5-flash-preview-09-2025",
-            name: "Gemini 2.5 Flash Preview",
-            provider: "google-vertex",
-            context: 1048576,
-            max_tokens: 65536,
-            supportsThinking: true,
-          },
-          {
-            id: "gemini-2.5-flash-lite-preview-09-2025",
-            name: "Gemini 2.5 Flash-Lite Preview",
-            provider: "google-vertex",
-            context: 1048576,
-            max_tokens: 65536,
-            supportsThinking: true,
-          },
-          {
-            id: "gemini-2.5-flash-image",
-            name: "Gemini 2.5 Flash Image",
-            provider: "google-vertex",
-            context: 1048576,
-            max_tokens: 65536,
-            supportsThinking: false,
-          },
-          {
-            id: "gemini-2.5-flash",
-            name: "Gemini 2.5 Flash",
-            provider: "google-vertex",
-            context: 1048576,
-            max_tokens: 65536,
-            supportsThinking: true,
-          },
-          {
-            id: "gemini-2.0-flash",
-            name: "Gemini 2.0 Flash",
-            provider: "google-vertex",
-            context: 1048576,
-            max_tokens: 8192,
-            supportsThinking: true,
-          },
-          {
-            id: "gemini-1.5-pro",
-            name: "Gemini 1.5 Pro",
-            provider: "google-vertex",
-            context: 2097152,
-            max_tokens: 8192,
-            supportsThinking: false,
-          },
-          {
-            id: "gemini-1.5-flash",
-            name: "Gemini 1.5 Flash",
-            provider: "google-vertex",
-            context: 1048576,
-            max_tokens: 8192,
-            supportsThinking: false,
-          },
-        ];
+        if (!config.apiKey) {
+          return { models: [], error: "API key is required" };
+        }
 
-        return { models: staticModels };
+        const projectId = config.projectId || "";
+        const location = config.vertexLocation || "global";
+        
+        const response = await fetch(`/api/models?provider=google-vertex&apiKey=${encodeURIComponent(config.apiKey)}&projectId=${encodeURIComponent(projectId)}&location=${encodeURIComponent(location)}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          return { models: [], error: data.error || `HTTP ${response.status}` };
+        }
+
+        return { models: data.models || [] };
       }
 
       case "groq": {
