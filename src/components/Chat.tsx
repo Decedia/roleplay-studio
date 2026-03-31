@@ -6404,24 +6404,26 @@ Write an engaging story segment. If this is a good point for player interaction,
                               {characterData.map((char, i) => {
                                 const isApplied = appliedCharacters.has(char.name);
                                 return (
-                                  <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                                    {/* Character header */}
-                                    <div className="flex items-center gap-4 mb-4">
-                                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
-                                        <span className="text-xl text-white font-semibold">
-                                          {char.name.charAt(0).toUpperCase()}
-                                        </span>
+                                  <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 sm:p-4">
+                                    {/* Character header - responsive layout */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+                                      <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+                                          <span className="text-lg sm:text-xl text-white font-semibold">
+                                            {char.name.charAt(0).toUpperCase()}
+                                          </span>
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                          <h3 className="text-base sm:text-lg font-semibold text-white truncate">{char.name}</h3>
+                                          {char.scenario && (
+                                            <p className="text-xs text-zinc-500 line-clamp-1">{char.scenario}</p>
+                                          )}
+                                          {char.alternateGreetings && char.alternateGreetings.length > 0 && (
+                                            <p className="text-xs text-amber-400 mt-1">+ {char.alternateGreetings.length} alternate greeting(s)</p>
+                                          )}
+                                        </div>
                                       </div>
-                                      <div className="min-w-0 flex-1">
-                                        <h3 className="text-lg font-semibold text-white truncate">{char.name}</h3>
-                                        {char.scenario && (
-                                          <p className="text-xs text-zinc-500 line-clamp-1">{char.scenario}</p>
-                                        )}
-                                        {char.alternateGreetings && char.alternateGreetings.length > 0 && (
-                                          <p className="text-xs text-amber-400 mt-1">+ {char.alternateGreetings.length} alternate greeting(s)</p>
-                                        )}
-                                      </div>
-                                      <div className="flex flex-wrap gap-2">
+                                      <div className="flex flex-wrap gap-2 sm:flex-shrink-0">
                                         <button
                                           onClick={() => {
                                             // Check if character with same name exists
@@ -6461,7 +6463,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                                             }
                                           }}
                                           disabled={isApplied}
-                                          className={`flex items-center gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                          className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                                             isApplied
                                               ? "bg-green-600 text-white cursor-default"
                                               : "bg-green-600 text-white hover:bg-green-700"
@@ -6508,7 +6510,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                                             document.body.removeChild(a);
                                             URL.revokeObjectURL(url);
                                           }}
-                                          className="flex items-center gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                                          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
                                         >
                                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
