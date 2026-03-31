@@ -2365,14 +2365,31 @@ export default function Chat() {
   const [streamingContent, setStreamingContent] = useState<string>("");
   const [streamingThinking, setStreamingThinking] = useState<string>("");
   const [visibleMessageCount, setVisibleMessageCount] = useState<number>(20);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   // Reset visible message count when conversation changes
   useEffect(() => {
     setVisibleMessageCount(20);
   }, [currentConversation?.id]);
+
+  // Track scroll position to show/hide scroll-to-bottom button
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+      const isScrolledUp = scrollHeight - scrollTop - clientHeight > 200;
+      setShowScrollToBottom(isScrolledUp);
+    };
+
+    scrollContainer.addEventListener("scroll", handleScroll, { passive: true });
+    return () => scrollContainer.removeEventListener("scroll", handleScroll);
+  }, [view]);
   
   // User menu state
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -5801,7 +5818,7 @@ Write an engaging story segment. If this is a good point for player interaction,
       )}
 
       {/* Main Content - Add top padding for fixed header */}
-      <div className={ui.layout.content}>
+      <div ref={scrollContainerRef} className={ui.layout.content}>
         <div className={ui.layout.contentContainer}>
           {/* Home View - Landing page with 4 big buttons */}
           {view === "home" && (
@@ -6552,7 +6569,21 @@ Write an engaging story segment. If this is a good point for player interaction,
                 )}
               </div>
               
-              {/* Input area - fixed at bottom */}
+              {/* Scroll to bottom button for generator */}
+              {view === "generator" && showScrollToBottom && (
+                <button
+                  onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })}
+                  className="fixed bottom-24 sm:bottom-28 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-4 py-2 bg-zinc-800 text-white rounded-full shadow-lg hover:bg-zinc-700 transition-all"
+                  title="Scroll to bottom"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                  </svg>
+                  <span className="text-sm">Scroll to bottom</span>
+                </button>
+              )}
+              
+              {/* Input area - fixed at bottom for generator */}
               <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-800 bg-black/80 backdrop-blur-xl z-50">
                 <div className="max-w-4xl mx-auto px-4 py-4">
                   <div className="flex items-center gap-3 bg-zinc-900 rounded-2xl border border-zinc-800 p-2">
@@ -7064,7 +7095,21 @@ Write an engaging story segment. If this is a good point for player interaction,
                 )}
               </div>
               
-              {/* Input area - fixed at bottom */}
+              {/* Scroll to bottom button for brainstorm */}
+              {view === "brainstorm" && showScrollToBottom && (
+                <button
+                  onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })}
+                  className="fixed bottom-24 sm:bottom-28 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-4 py-2 bg-zinc-800 text-white rounded-full shadow-lg hover:bg-zinc-700 transition-all"
+                  title="Scroll to bottom"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                  </svg>
+                  <span className="text-sm">Scroll to bottom</span>
+                </button>
+              )}
+              
+              {/* Input area - fixed at bottom for brainstorm */}
               <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-800 bg-black/80 backdrop-blur-xl z-50">
                 <div className="max-w-4xl mx-auto px-4 py-4">
                   <div className="flex items-center gap-3 bg-zinc-900 rounded-2xl border border-zinc-800 p-2">
@@ -8242,6 +8287,20 @@ Write an engaging story segment. If this is a good point for player interaction,
           )}
         </div>
       </div>
+
+      {/* Scroll to bottom button */}
+      {view === "chat" && currentConversation && showScrollToBottom && (
+        <button
+          onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })}
+          className="fixed bottom-24 sm:bottom-28 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-4 py-2 bg-zinc-800 text-white rounded-full shadow-lg hover:bg-zinc-700 transition-all animate-fade-in"
+          title="Scroll to bottom"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+          </svg>
+          <span className="text-sm">Scroll to bottom</span>
+        </button>
+      )}
 
 
       {view === "chat" && currentConversation && (
