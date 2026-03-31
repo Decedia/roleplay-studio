@@ -6575,7 +6575,7 @@ Write an engaging story segment. If this is a good point for player interaction,
               {view === "generator" && showScrollToBottom && (
                 <button
                   onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })}
-                  className="fixed bottom-28 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2 bg-zinc-800 text-white rounded-full shadow-lg hover:bg-zinc-700 transition-all opacity-90 hover:opacity-100"
+                  className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2 px-4 py-2 bg-zinc-800 text-white rounded-full shadow-lg hover:bg-zinc-700 transition-all opacity-90 hover:opacity-100"
                   title="Scroll to bottom"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -7101,7 +7101,7 @@ Write an engaging story segment. If this is a good point for player interaction,
               {view === "brainstorm" && showScrollToBottom && (
                 <button
                   onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })}
-                  className="fixed bottom-28 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2 bg-zinc-800 text-white rounded-full shadow-lg hover:bg-zinc-700 transition-all opacity-90 hover:opacity-100"
+                  className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2 px-4 py-2 bg-zinc-800 text-white rounded-full shadow-lg hover:bg-zinc-700 transition-all opacity-90 hover:opacity-100"
                   title="Scroll to bottom"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -8294,7 +8294,7 @@ Write an engaging story segment. If this is a good point for player interaction,
       {view === "chat" && currentConversation && showScrollToBottom && (
         <button
           onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })}
-          className="fixed bottom-28 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2 bg-zinc-800 text-white rounded-full shadow-lg hover:bg-zinc-700 transition-all opacity-90 hover:opacity-100"
+          className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2 px-4 py-2 bg-zinc-800 text-white rounded-full shadow-lg hover:bg-zinc-700 transition-all opacity-90 hover:opacity-100"
           title="Scroll to bottom"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
