@@ -7020,9 +7020,13 @@ Write an engaging story segment. If this is a good point for player interaction,
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                               </svg>
                                               <span className="hidden sm:inline">Applied!</span>
+                                              <span className="sm:hidden">✓</span>
                                             </span>
                                           ) : (
-                                            <span className="hidden sm:inline">Apply to Global Instructions</span>
+                                            <span>
+                                              <span className="hidden sm:inline">Apply to Global Instructions</span>
+                                              <span className="sm:hidden">Apply</span>
+                                            </span>
                                           )}
                                         </button>
                                       </div>
