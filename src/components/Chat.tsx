@@ -747,7 +747,7 @@ function SettingsModal({
           </div>
 
           {/* Custom Size Toggle */}
-          <div className={`${ui.forms.toggleRow}`}>
+          <div className="flex items-center gap-3 mb-4">
             <input
               type="checkbox"
               id="useCustomSize"
@@ -756,8 +756,8 @@ function SettingsModal({
                 const useCustom = e.target.checked;
                 if (!useCustom && selectedModel) {
                   // Reset to model max when disabling custom size
-                  setGlobalSettings({
-                    ...globalSettings,
+                  setGlobalSettings({ 
+                    ...globalSettings, 
                     useCustomSize: false,
                     maxTokens: selectedModel.max_tokens || 4000,
                     maxContextTokens: selectedModel.context || 128000
@@ -766,9 +766,9 @@ function SettingsModal({
                   setGlobalSettings({ ...globalSettings, useCustomSize: useCustom });
                 }
               }}
-              className={`${ui.inputs.checkbox}`}
+              className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-purple-600 focus:ring-purple-500 focus:ring-offset-zinc-900"
             />
-            <label htmlFor="useCustomSize" className={`${ui.inputs.label}`}>
+            <label htmlFor="useCustomSize" className="text-sm text-zinc-300">
               Use custom output/context sizes
             </label>
           </div>
@@ -899,51 +899,69 @@ function SettingsModal({
 
           {/* Enable Thinking */}
           <div>
-            <div className={`${ui.forms.toggleRow}`}>
-              <label className={`${ui.inputs.label}`}>Enable Thinking</label>
-              <button
-                type="button"
-                onClick={() => setGlobalSettings({ ...globalSettings, enableThinking: !globalSettings.enableThinking })}
-                className={`${ui.forms.toggle} ${globalSettings.enableThinking ? ui.forms.toggleEnabled : ui.forms.toggleDisabled}`}
-              >
-                <span className={`${ui.forms.toggleKnob} ${globalSettings.enableThinking ? ui.forms.toggleKnobEnabled : ui.forms.toggleKnobDisabled}`} />
-              </button>
-            </div>
-            <p className={`${ui.forms.toggleDescription}`}>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">
+              Enable Thinking
+            </label>
+            <button
+              type="button"
+              onClick={() => setGlobalSettings({ ...globalSettings, enableThinking: !globalSettings.enableThinking })}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                globalSettings.enableThinking ? "bg-blue-600" : "bg-zinc-700"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  globalSettings.enableThinking ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+            <p className="text-xs text-zinc-500 mt-1">
               Allow AI to show its reasoning process (Gemini 2.0 only)
             </p>
           </div>
 
           {/* Enable Streaming */}
           <div>
-            <div className={`${ui.forms.toggleRow}`}>
-              <label className={`${ui.inputs.label}`}>Enable Streaming</label>
-              <button
-                type="button"
-                onClick={() => setGlobalSettings({ ...globalSettings, enableStreaming: !globalSettings.enableStreaming })}
-                className={`${ui.forms.toggle} ${globalSettings.enableStreaming ? ui.forms.toggleEnabled : ui.forms.toggleDisabled}`}
-              >
-                <span className={`${ui.forms.toggleKnob} ${globalSettings.enableStreaming ? ui.forms.toggleKnobEnabled : ui.forms.toggleKnobDisabled}`} />
-              </button>
-            </div>
-            <p className={`${ui.forms.toggleDescription}`}>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">
+              Enable Streaming
+            </label>
+            <button
+              type="button"
+              onClick={() => setGlobalSettings({ ...globalSettings, enableStreaming: !globalSettings.enableStreaming })}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                globalSettings.enableStreaming ? "bg-blue-600" : "bg-zinc-700"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  globalSettings.enableStreaming ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+            <p className="text-xs text-zinc-500 mt-1">
               Stream AI responses in real-time (disable for slower but more stable responses)
             </p>
           </div>
 
           {/* Ding When Unfocused */}
           <div>
-            <div className={`${ui.forms.toggleRow}`}>
-              <label className={`${ui.inputs.label}`}>Ding When Unfocused</label>
-              <button
-                type="button"
-                onClick={() => setGlobalSettings({ ...globalSettings, dingWhenUnfocused: !globalSettings.dingWhenUnfocused })}
-                className={`${ui.forms.toggle} ${globalSettings.dingWhenUnfocused ? ui.forms.toggleEnabled : ui.forms.toggleDisabled}`}
-              >
-                <span className={`${ui.forms.toggleKnob} ${globalSettings.dingWhenUnfocused ? ui.forms.toggleKnobEnabled : ui.forms.toggleKnobDisabled}`} />
-              </button>
-            </div>
-            <p className={`${ui.forms.toggleDescription}`}>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">
+              Ding When Unfocused
+            </label>
+            <button
+              type="button"
+              onClick={() => setGlobalSettings({ ...globalSettings, dingWhenUnfocused: !globalSettings.dingWhenUnfocused })}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                globalSettings.dingWhenUnfocused ? "bg-blue-600" : "bg-zinc-700"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  globalSettings.dingWhenUnfocused ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+            <p className="text-xs text-zinc-500 mt-1">
               Play a notification sound when AI finishes and window is not focused
             </p>
           </div>
@@ -5717,18 +5735,18 @@ Write an engaging story segment. If this is a good point for player interaction,
 
       {/* Error Popup - Fixed below header, above main content */}
       {(error || generatorError || brainstormError || vnError) && (
-        <div className={ui.notifications.error}>
+        <div className="fixed top-[73px] left-0 right-0 z-40 px-4 py-3 bg-red-900/90">
           <div className="max-w-4xl mx-auto">
-            <div className={ui.notifications.errorInner}>
-              <div className={ui.notifications.errorContent} style={{ maxHeight: '120px' }}>
+            <div className="bg-red-900/80 border border-red-700 rounded-lg px-4 py-3 text-red-200 shadow-xl backdrop-blur-sm">
+              <div className="overflow-y-auto whitespace-pre-wrap" style={{ maxHeight: '120px' }}>
                 <p className="whitespace-pre-wrap">{error || generatorError || brainstormError || vnError}</p>
               </div>
-              <div className={ui.notifications.errorActions}>
+              <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-red-700/50">
                 {error && (
                   <button
                     onClick={handleRetry}
                     disabled={isLoading}
-                    className={`${ui.buttons.secondary} px-3 py-1.5 sm:px-4 sm:py-2 text-red-300 hover:text-red-200 hover:bg-red-800/50 border-red-700/50`}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-800 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 text-sm"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -5743,7 +5761,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                     setBrainstormError(null);
                     setVnError(null);
                   }}
-                  className={`${ui.buttons.icon} p-1.5 sm:p-2 text-red-300 hover:text-red-200 hover:bg-red-800/50`}
+                  className="p-1.5 hover:bg-red-800 rounded-lg transition-colors"
                   title="Close"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -5816,9 +5834,9 @@ Write an engaging story segment. If this is a good point for player interaction,
                 {/* Roleplay with AI - Main feature */}
                 <button
                   onClick={() => setView("personas")}
-                  className={`${ui.buttons.homeAction} ${ui.buttons.homePrimary}`}
+                  className="w-full flex items-center gap-4 p-6 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-2xl hover:from-blue-700 hover:to-cyan-700 transition-all transform hover:scale-[1.02] shadow-lg"
                 >
-                  <div className="w-14 h-14 rounded-xl bg-white/20 flex items-center justify-center">
+                  <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
                     <span className="text-3xl">💬</span>
                   </div>
                   <div className="text-left">
@@ -5833,9 +5851,9 @@ Write an engaging story segment. If this is a good point for player interaction,
                 {/* Character Generator */}
                 <button
                   onClick={() => setView("generator")}
-                  className={`${ui.buttons.homeAction} bg-purple-600 hover:bg-purple-700`}
+                  className="w-full flex items-center gap-4 p-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-[1.02] shadow-lg"
                 >
-                  <div className="w-14 h-14 rounded-xl bg-white/20 flex items-center justify-center">
+                  <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
                     <span className="text-3xl">🎭</span>
                   </div>
                   <div className="text-left">
@@ -5850,9 +5868,9 @@ Write an engaging story segment. If this is a good point for player interaction,
                 {/* Instructions Generator */}
                 <button
                   onClick={() => setView("brainstorm")}
-                  className={`${ui.buttons.homeAction} bg-amber-500 hover:bg-amber-600`}
+                  className="w-full flex items-center gap-4 p-6 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl hover:from-amber-600 hover:to-orange-600 transition-all transform hover:scale-[1.02] shadow-lg"
                 >
-                  <div className="w-14 h-14 rounded-xl bg-white/20 flex items-center justify-center">
+                  <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
                     <span className="text-3xl">✨</span>
                   </div>
                   <div className="text-left">
@@ -5867,9 +5885,9 @@ Write an engaging story segment. If this is a good point for player interaction,
                 {/* VN Generator */}
                 <button
                   onClick={() => setView("vn-generator")}
-                  className={`${ui.buttons.homeAction} bg-indigo-600 hover:bg-indigo-700`}
+                  className="w-full flex items-center gap-4 p-6 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl hover:from-indigo-700 hover:to-purple-700 transition-all transform hover:scale-[1.02] shadow-lg"
                 >
-                  <div className="w-14 h-14 rounded-xl bg-white/20 flex items-center justify-center">
+                  <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
                     <span className="text-3xl">📖</span>
                   </div>
                   <div className="text-left">
@@ -8032,10 +8050,10 @@ Write an engaging story segment. If this is a good point for player interaction,
                     </div>
                   )}
                   {currentConversation.messages
-                    .filter(m => !m.isContinue)
+                    .map((message, idx) => ({ message, originalIndex: idx }))
+                    .filter(({ message }) => !message.isContinue)
                     .slice(-visibleMessageCount)
-                    .map((message, originalIndex) => ({ message, originalIndex }))
-                    .map(({ message, originalIndex: index }) => {
+                    .map(({ message, originalIndex }) => {
                     // Get thinking content from content (wrapped in <think> tags)
                     const thinkContent = message.role === "assistant"
                       ? extractThinkContent(message.content)
@@ -8048,13 +8066,13 @@ Write an engaging story segment. If this is a good point for player interaction,
                       ? replaceMacros(rawContent, selectedPersona.name, selectedCharacter.name)
                       : rawContent;
                     
-                    const isEditing = editingMessageIndex === index;
-                    const isLastMessage = index === currentConversation.messages.length - 1;
+                    const isEditing = editingMessageIndex === originalIndex;
+                    const isLastMessage = originalIndex === currentConversation.messages.length - 1;
                     const isLastAssistantMessage = message.role === "assistant" && isLastMessage;
 
                     return (
                       <div
-                        key={index}
+                        key={originalIndex}
                         className={`flex gap-4 ${
                           message.role === "user" ? "justify-end" : "justify-start"
                         }`}
@@ -8099,7 +8117,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                                     Cancel
                                   </button>
                                   <button
-                                    onClick={() => handleSaveEdit(index)}
+                                    onClick={() => handleSaveEdit(originalIndex)}
                                     className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                                   >
                                     Save & {message.role === "user" ? "Regenerate" : "Update"}
@@ -8126,7 +8144,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                             <div className={`flex gap-1 mt-1 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
                               {/* Edit button */}
                               <button
-                                onClick={() => handleStartEditMessage(index)}
+                                onClick={() => handleStartEditMessage(originalIndex)}
                                 className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors"
                                 title="Edit message"
                               >
@@ -8136,7 +8154,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                               </button>
                               {/* Delete button */}
                               <button
-                                onClick={() => handleDeleteMessage(index)}
+                                onClick={() => handleDeleteMessage(originalIndex)}
                                 className="p-1 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded transition-colors"
                                 title="Delete message"
                               >
