@@ -8560,18 +8560,17 @@ Write an engaging story segment. If this is a good point for player interaction,
       {/* Unified Utility Panel - Tags & Summarization */}
       {view === "chat" && currentConversation && (
         <>
-          {/* Backdrop for mobile */}
+          {/* Backdrop */}
           {showUtilityPanel && (
             <div
-              className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+              className="fixed inset-0 bg-black/60 z-[999]"
               onClick={() => setShowUtilityPanel(false)}
             />
           )}
           <div
-            className={`fixed right-0 w-full sm:w-96 bg-zinc-900 border-l border-zinc-800 z-40 transform transition-transform duration-200 ease-in-out ${
+            className={`fixed inset-0 w-full bg-zinc-900 z-[1000] transform transition-transform duration-200 ease-in-out ${
               showUtilityPanel ? 'translate-x-0' : 'translate-x-full'
             }`}
-            style={{ top: '73px', bottom: '140px' }}
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
