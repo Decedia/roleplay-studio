@@ -100,6 +100,9 @@ interface SummarizationSettings {
   tokenThreshold: number;
   periodicInterval: number;
   recentMessagesCount: number;
+  provider?: string;
+  modelId?: string;
+  instructions?: string;
 }
 
 // Global settings (applied to all conversations)
