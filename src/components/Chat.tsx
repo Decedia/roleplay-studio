@@ -1051,182 +1051,9 @@ function SettingsModal({
             </p>
           </div>
 
-          {/* Summarization Settings */}
-          <div className="border-t border-zinc-700 pt-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-white">Conversation Summarization</h3>
-              <button
-                type="button"
-                onClick={() => setGlobalSettings({
-                  ...globalSettings,
-                  summarization: { ...globalSettings.summarization, enabled: !globalSettings.summarization.enabled }
-                })}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  globalSettings.summarization.enabled ? "bg-blue-600" : "bg-zinc-700"
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    globalSettings.summarization.enabled ? "translate-x-6" : "translate-x-1"
-                  }`}
-                />
-              </button>
-            </div>
-
-            {globalSettings.summarization.enabled && (
-              <div className="space-y-4">
-                {/* Trigger Mode */}
-                <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">Trigger Mode</label>
-                  <select
-                    value={globalSettings.summarization.trigger}
-                    onChange={(e) => setGlobalSettings({
-                      ...globalSettings,
-                      summarization: { ...globalSettings.summarization, trigger: e.target.value as SummarizationTrigger }
-                    })}
-                    className="w-full bg-zinc-800 text-white rounded-lg px-4 py-2 border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="manual">Manual only</option>
-                    <option value="auto-length">Auto (length/token based)</option>
-                    <option value="periodic">Periodic (every N messages)</option>
-                  </select>
-                </div>
-
-                {/* Quality Level */}
-                <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">Summary Quality</label>
-                  <select
-                    value={globalSettings.summarization.quality}
-                    onChange={(e) => setGlobalSettings({
-                      ...globalSettings,
-                      summarization: { ...globalSettings.summarization, quality: e.target.value as SummarizationQuality }
-                    })}
-                    className="w-full bg-zinc-800 text-white rounded-lg px-4 py-2 border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="fast">Fast - Compact summaries</option>
-                    <option value="balanced">Balanced - Good detail</option>
-                    <option value="detailed">Detailed - Comprehensive</option>
-                  </select>
-                </div>
-
-                {/* Recent messages to keep */}
-                <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">
-                    Recent Messages to Keep: {globalSettings.summarization.recentMessagesCount}
-                  </label>
-                  <input
-                    type="range"
-                    min="2"
-                    max="20"
-                    step="1"
-                    value={globalSettings.summarization.recentMessagesCount}
-                    onChange={(e) => setGlobalSettings({
-                      ...globalSettings,
-                      summarization: { ...globalSettings.summarization, recentMessagesCount: parseInt(e.target.value) }
-                    })}
-                    className="w-full"
-                  />
-                  <p className="text-xs text-zinc-500 mt-1">
-                    Number of recent messages kept untouched during summarization
-                  </p>
-                </div>
-
-                {/* Auto-length: message threshold */}
-                {globalSettings.summarization.trigger === "auto-length" && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-zinc-400 mb-2">
-                        Message Threshold: {globalSettings.summarization.messageThreshold}
-                      </label>
-                      <input
-                        type="range"
-                        min="10"
-                        max="100"
-                        step="5"
-                        value={globalSettings.summarization.messageThreshold}
-                        onChange={(e) => setGlobalSettings({
-                          ...globalSettings,
-                          summarization: { ...globalSettings.summarization, messageThreshold: parseInt(e.target.value) }
-                        })}
-                        className="w-full"
-                      />
-                      <p className="text-xs text-zinc-500 mt-1">
-                        Trigger summarization after this many unsummarized messages
-                      </p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-zinc-400 mb-2">
-                        Token Threshold: {globalSettings.summarization.tokenThreshold.toLocaleString()}
-                      </label>
-                      <input
-                        type="range"
-                        min="2000"
-                        max="40000"
-                        step="1000"
-                        value={globalSettings.summarization.tokenThreshold}
-                        onChange={(e) => setGlobalSettings({
-                          ...globalSettings,
-                          summarization: { ...globalSettings.summarization, tokenThreshold: parseInt(e.target.value) }
-                        })}
-                        className="w-full"
-                      />
-                      <p className="text-xs text-zinc-500 mt-1">
-                        Trigger summarization when estimated tokens exceed this
-                      </p>
-                    </div>
-                  </>
-                )}
-
-                {/* Periodic: interval */}
-                {globalSettings.summarization.trigger === "periodic" && (
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-400 mb-2">
-                      Summarize Every: {globalSettings.summarization.periodicInterval} messages
-                    </label>
-                    <input
-                      type="range"
-                      min="2"
-                      max="30"
-                      step="1"
-                      value={globalSettings.summarization.periodicInterval}
-                      onChange={(e) => setGlobalSettings({
-                        ...globalSettings,
-                        summarization: { ...globalSettings.summarization, periodicInterval: parseInt(e.target.value) }
-                      })}
-                      className="w-full"
-                    />
-                    <p className="text-xs text-zinc-500 mt-1">
-                      Summarize conversation every N new messages
-                    </p>
-                  </div>
-                )}
-
-                {/* Override Model */}
-                <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">
-                    Summarization Model Override <span className="text-zinc-600">(optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={globalSettings.summarization.overrideModel}
-                    onChange={(e) => setGlobalSettings({
-                      ...globalSettings,
-                      summarization: { ...globalSettings.summarization, overrideModel: e.target.value }
-                    })}
-                    placeholder="Leave empty to use current model"
-                    className="w-full bg-zinc-800 text-white placeholder-zinc-600 rounded-lg px-4 py-2 border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
-                  <p className="text-xs text-zinc-500 mt-1">
-                    Use a cheaper/faster model for summarization (uses current model if empty)
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <p className="text-xs text-zinc-500 mt-3">
-              Summarization compresses older conversation context to save tokens while preserving key plot points and character dynamics.
-            </p>
-          </div>
+          <p className="text-xs text-zinc-500 mt-3">
+            Configure your AI model, temperature, and other generation settings.
+          </p>
 
           {/* Thinking Level/Budget - Only for Google providers */}
           {(activeProvider === "google-ai-studio" || activeProvider === "google-vertex") && globalSettings.enableThinking && (
@@ -8731,329 +8558,416 @@ Write an engaging story segment. If this is a good point for player interaction,
 
       {/* Unified Utility Panel - Tags & Summarization */}
       {view === "chat" && currentConversation && (
-        <div
-          className={`fixed top-[73px] right-0 bottom-0 w-80 bg-zinc-900 border-l border-zinc-800 z-40 transform transition-transform duration-200 ${
-            showUtilityPanel ? 'translate-x-0' : 'translate-x-full'
-          }`}
-        >
-          {/* Header with tabs */}
-          <div className="flex items-center justify-between p-4 border-b border-zinc-800">
-            <div className="flex gap-2 flex-1">
+        <>
+          {/* Backdrop for mobile */}
+          {showUtilityPanel && (
+            <div
+              className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+              onClick={() => setShowUtilityPanel(false)}
+            />
+          )}
+          <div
+            className={`fixed top-[73px] right-0 bottom-0 w-full sm:w-96 bg-zinc-900 border-l border-zinc-800 z-40 transform transition-transform duration-200 ease-in-out ${
+              showUtilityPanel ? 'translate-x-0' : 'translate-x-full'
+            }`}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+              <h3 className="text-sm font-semibold text-white">Utilities</h3>
+              <button
+                onClick={() => setShowUtilityPanel(false)}
+                className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors"
+              >
+                <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-1 px-4 py-2 border-b border-zinc-800">
               <button
                 onClick={() => setUtilityPanelTab('tags')}
-                className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
+                className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
                   utilityPanelTab === 'tags'
-                    ? 'bg-zinc-700 text-white'
-                    : 'text-zinc-500 hover:text-zinc-300'
+                    ? 'bg-zinc-800 text-white'
+                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50'
                 }`}
               >
-                {"<>"} Tags
+                <span className="flex items-center justify-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                  </svg>
+                  Tags
+                </span>
               </button>
-              {globalSettings.summarization.enabled && (
-                <button
-                  onClick={() => setUtilityPanelTab('summarization')}
-                  className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
-                    utilityPanelTab === 'summarization'
-                      ? 'bg-zinc-700 text-white'
-                      : 'text-zinc-500 hover:text-zinc-300'
-                  }`}
-                >
-                  Summarization
-                </button>
-              )}
+              <button
+                onClick={() => setUtilityPanelTab('summarization')}
+                className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                  utilityPanelTab === 'summarization'
+                    ? 'bg-zinc-800 text-white'
+                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50'
+                }`}
+              >
+                <span className="flex items-center justify-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Summarize
+                </span>
+              </button>
             </div>
-            <button
-              onClick={() => setShowUtilityPanel(false)}
-              className="p-1 hover:bg-zinc-800 rounded-lg transition-colors"
-            >
-              <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
 
-          <div className="p-4 overflow-y-auto" style={{ height: 'calc(100% - 56px)' }}>
-            {/* Tags Section */}
-            {utilityPanelTab === 'tags' && (
-              <div className="space-y-3">
-                {(() => {
-                  const allTags: Array<{ messageIndex: number; tagName: string; content: string }> = [];
-                  currentConversation.messages.forEach((msg, idx) => {
-                    if (msg.role === 'assistant') {
-                      const tags = extractAllTags(msg.content);
-                      tags.forEach(tag => {
-                        allTags.push({ messageIndex: idx, tagName: tag.tagName, content: tag.content });
-                      });
+            {/* Content */}
+            <div className="overflow-y-auto p-4" style={{ height: 'calc(100% - 104px)' }}>
+              {/* Tags Section */}
+              {utilityPanelTab === 'tags' && (
+                <div className="space-y-3">
+                  {(() => {
+                    const allTags: Array<{ messageIndex: number; tagName: string; content: string }> = [];
+                    currentConversation.messages.forEach((msg, idx) => {
+                      if (msg.role === 'assistant') {
+                        const tags = extractAllTags(msg.content);
+                        tags.forEach(tag => {
+                          allTags.push({ messageIndex: idx, tagName: tag.tagName, content: tag.content });
+                        });
+                      }
+                    });
+
+                    if (allTags.length === 0) {
+                      return (
+                        <div className="flex flex-col items-center justify-center py-16 text-center">
+                          <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center mb-3">
+                            <svg className="w-6 h-6 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                            </svg>
+                          </div>
+                          <p className="text-sm text-zinc-500">No tags found</p>
+                          <p className="text-xs text-zinc-600 mt-1">Custom tags from AI responses appear here</p>
+                        </div>
+                      );
                     }
-                  });
 
-                  if (allTags.length === 0) {
-                    return (
-                      <div className="flex flex-col items-center justify-center h-full text-center py-12">
-                        <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center mb-3">
-                          <span className="text-xl text-zinc-400">{"<>"}</span>
-                        </div>
-                        <p className="text-sm text-zinc-500">No tags found yet</p>
-                        <p className="text-xs text-zinc-600 mt-1">Custom tags from AI responses will appear here</p>
-                      </div>
-                    );
-                  }
-
-                  return allTags.map((tag, idx) => (
-                    <div key={idx} className="bg-zinc-800/50 rounded-lg border border-zinc-700 overflow-hidden">
-                      <div className="px-3 py-2">
-                        <div className="inline-block px-2 py-1 bg-purple-900/50 text-purple-300 text-xs rounded-md border border-purple-800 mb-2">
-                          &lt;{tag.tagName}&gt;
-                        </div>
-                        <div className="text-xs text-zinc-400 mt-2">From message {tag.messageIndex + 1}</div>
-                        <div className="whitespace-pre-wrap text-xs text-zinc-300 leading-relaxed mt-2">
-                          {tag.content}
+                    return allTags.map((tag, idx) => (
+                      <div key={idx} className="bg-zinc-800/50 rounded-lg border border-zinc-700/50 overflow-hidden">
+                        <div className="px-3 py-2.5">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="px-2 py-0.5 bg-purple-900/50 text-purple-300 text-xs rounded-md border border-purple-800/50 font-mono">
+                              &lt;{tag.tagName}&gt;
+                            </span>
+                            <span className="text-xs text-zinc-600">msg {tag.messageIndex + 1}</span>
+                          </div>
+                          <div className="whitespace-pre-wrap text-xs text-zinc-300 leading-relaxed">
+                            {tag.content}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ));
-                })()}
-              </div>
-            )}
-
-            {/* Summarization Section */}
-            {utilityPanelTab === 'summarization' && (
-              <div className="space-y-4">
-                {/* Enable/Disable Toggle */}
-                <div className="flex items-center justify-between bg-zinc-800/50 p-3 rounded-lg border border-zinc-700">
-                  <label className="text-sm font-medium text-white">Enable Summarization</label>
-                  <button
-                    onClick={() => {
-                      setGlobalSettings(prev => ({
-                        ...prev,
-                        summarization: {
-                          ...prev.summarization,
-                          enabled: !prev.summarization.enabled
-                        }
-                      }));
-                    }}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      globalSettings.summarization.enabled ? 'bg-blue-600' : 'bg-zinc-700'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        globalSettings.summarization.enabled ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
+                    ));
+                  })()}
                 </div>
+              )}
 
-                {globalSettings.summarization.enabled && (
-                  <>
-                    {/* Configuration Section */}
-                    <div className="space-y-3 bg-zinc-800/30 p-3 rounded-lg border border-zinc-700">
-                      <h5 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Configuration</h5>
-                      
-                      {/* Custom Instructions */}
-                      <div>
-                        <label className="block text-xs font-medium text-zinc-300 mb-2">Instructions</label>
-                        <textarea
-                          value={globalSettings.summarization.instructions || ''}
-                          onChange={(e) => {
-                            setGlobalSettings(prev => ({
-                              ...prev,
-                              summarization: {
-                                ...prev.summarization,
-                                instructions: e.target.value
-                              }
-                            }));
-                          }}
-                          placeholder="Custom instructions for summarization..."
-                          className="w-full bg-zinc-900 text-white placeholder-zinc-600 rounded px-2 py-2 text-xs border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
-                          rows={3}
-                        />
-                      </div>
-
-                      {/* Provider Selection */}
-                      <div>
-                        <label className="block text-xs font-medium text-zinc-300 mb-2">Provider</label>
-                        <select
-                          value={globalSettings.summarization.provider || ''}
-                          onChange={(e) => {
-                            setGlobalSettings(prev => ({
-                              ...prev,
-                              summarization: {
-                                ...prev.summarization,
-                                provider: e.target.value,
-                                modelId: '' // Reset model when provider changes
-                              }
-                            }));
-                          }}
-                          className="w-full bg-zinc-900 text-white rounded px-2 py-2 text-xs border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        >
-                          <option value="">Use Global Provider</option>
-                          {AVAILABLE_PROVIDERS.map(provider => (
-                            <option key={provider.id} value={provider.id}>
-                              {provider.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* Model Selection */}
-                      <div>
-                        <label className="block text-xs font-medium text-zinc-300 mb-2">Model</label>
-                        <select
-                          value={globalSettings.summarization.modelId || ''}
-                          onChange={(e) => {
-                            setGlobalSettings(prev => ({
-                              ...prev,
-                              summarization: {
-                                ...prev.summarization,
-                                modelId: e.target.value
-                              }
-                            }));
-                          }}
-                          className="w-full bg-zinc-900 text-white rounded px-2 py-2 text-xs border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        >
-                          <option value="">Use Global Model</option>
-                          {(() => {
-                            const selectedProvider = (globalSettings.summarization.provider || activeProvider) as LLMProviderType;
-                            const models = getModelsForProvider(selectedProvider);
-                            return models.map(model => (
-                              <option key={model.id} value={model.id}>
-                                {model.name}
-                              </option>
-                            ));
-                          })()}
-                        </select>
-                      </div>
-
-                      {/* Quality Selection */}
-                      <div>
-                        <label className="block text-xs font-medium text-zinc-300 mb-2">Quality</label>
-                        <select
-                          value={globalSettings.summarization.quality}
-                          onChange={(e) => {
-                            setGlobalSettings(prev => ({
-                              ...prev,
-                              summarization: {
-                                ...prev.summarization,
-                                quality: e.target.value as any
-                              }
-                            }));
-                          }}
-                          className="w-full bg-zinc-900 text-white rounded px-2 py-2 text-xs border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        >
-                          <option value="fast">Fast</option>
-                          <option value="balanced">Balanced</option>
-                          <option value="detailed">Detailed</option>
-                        </select>
-                      </div>
-
-                      {/* Trigger Selection */}
-                      <div>
-                        <label className="block text-xs font-medium text-zinc-300 mb-2">Trigger</label>
-                        <select
-                          value={globalSettings.summarization.trigger}
-                          onChange={(e) => {
-                            setGlobalSettings(prev => ({
-                              ...prev,
-                              summarization: {
-                                ...prev.summarization,
-                                trigger: e.target.value as any
-                              }
-                            }));
-                          }}
-                          className="w-full bg-zinc-900 text-white rounded px-2 py-2 text-xs border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        >
-                          <option value="manual">Manual</option>
-                          <option value="auto-length">Auto (by length)</option>
-                          <option value="periodic">Periodic</option>
-                        </select>
-                      </div>
+              {/* Summarization Section */}
+              {utilityPanelTab === 'summarization' && (
+                <div className="space-y-4">
+                  {/* Enable/Disable Toggle */}
+                  <div className="flex items-center justify-between bg-zinc-800/50 p-3 rounded-xl border border-zinc-700/50">
+                    <div>
+                      <p className="text-sm font-medium text-white">Summarization</p>
+                      <p className="text-xs text-zinc-500 mt-0.5">Compress context to save tokens</p>
                     </div>
+                    <button
+                      onClick={() => {
+                        setGlobalSettings(prev => ({
+                          ...prev,
+                          summarization: {
+                            ...prev.summarization,
+                            enabled: !prev.summarization.enabled
+                          }
+                        }));
+                      }}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        globalSettings.summarization.enabled ? 'bg-blue-600' : 'bg-zinc-700'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          globalSettings.summarization.enabled ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
 
-                    {/* Summary Display */}
-                    <div className="space-y-3">
-                      <h5 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Summary Memory</h5>
-                      {currentConversation.summaryMemory ? (
-                        <div className="space-y-3">
-                          <div className="text-xs text-zinc-500">
-                            {currentConversation.messages.length} active messages
-                            {currentConversation.messages.length > 0 && ` • ~${estimateTokens(currentConversation.messages.map(m => m.content).join('\n')).toLocaleString()} tokens`}
+                  {globalSettings.summarization.enabled ? (
+                    <>
+                      {/* Quick Actions */}
+                      <div className="bg-zinc-800/30 rounded-xl border border-zinc-700/50 p-3">
+                        <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Quick Actions</p>
+                        <button
+                          onClick={handleSummarize}
+                          disabled={isSummarizing || isLoading || currentConversation.messages.length <= (globalSettings.summarization.recentMessagesCount ?? 10)}
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-xs text-white disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                        >
+                          {isSummarizing ? (
+                            <>
+                              <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                              </svg>
+                              Summarizing...
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                              </svg>
+                              {currentConversation.summaryMemory ? 'Update Summary' : 'Create Summary'}
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Summary Memory */}
+                      {currentConversation.summaryMemory && (
+                        <div className="bg-zinc-800/30 rounded-xl border border-zinc-700/50 p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Summary Memory</p>
+                            <span className="text-xs text-zinc-600">
+                              {currentConversation.messages.length} msgs
+                            </span>
                           </div>
-                          <div className="bg-zinc-800/50 rounded-lg p-3 border border-zinc-700 max-h-40 overflow-y-auto">
-                            <div className="whitespace-pre-wrap text-xs text-zinc-300 leading-relaxed">
+                          <div className="bg-zinc-900/50 rounded-lg p-3 max-h-48 overflow-y-auto">
+                            <p className="whitespace-pre-wrap text-xs text-zinc-300 leading-relaxed">
                               {currentConversation.summaryMemory}
-                            </div>
+                            </p>
                           </div>
-                          <button
-                            onClick={handleSummarize}
-                            disabled={isSummarizing || isLoading || currentConversation.messages.length <= (globalSettings.summarization.recentMessagesCount ?? 10)}
-                            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-xs text-white disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                          >
-                            {isSummarizing ? (
-                              <>
-                                <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                                </svg>
-                                Summarizing...
-                              </>
-                            ) : (
-                              <>
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                </svg>
-                                Update Summary
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="text-center py-6">
-                          <svg className="w-7 h-7 text-zinc-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                          <p className="text-xs text-zinc-500 mb-3">No summary yet</p>
-                          <button
-                            onClick={handleSummarize}
-                            disabled={isSummarizing || isLoading}
-                            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-xs text-white disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                          >
-                            {isSummarizing ? (
-                              <>
-                                <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                                </svg>
-                                Summarizing...
-                              </>
-                            ) : (
-                              <>
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                </svg>
-                                Create Summary
-                              </>
-                            )}
-                          </button>
                         </div>
                       )}
-                    </div>
-                  </>
-                )}
 
-                {!globalSettings.summarization.enabled && (
-                  <div className="text-center py-8">
-                    <svg className="w-8 h-8 text-zinc-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    <p className="text-sm text-zinc-500">Summarization is disabled</p>
-                    <p className="text-xs text-zinc-600 mt-1">Enable it above to configure and use</p>
-                  </div>
-                )}
-              </div>
-            )}
+                      {/* Configuration */}
+                      <div className="bg-zinc-800/30 rounded-xl border border-zinc-700/50 p-3 space-y-3">
+                        <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Settings</p>
+
+                        {/* Quality */}
+                        <div>
+                          <label className="block text-xs font-medium text-zinc-400 mb-1.5">Quality</label>
+                          <select
+                            value={globalSettings.summarization.quality}
+                            onChange={(e) => {
+                              setGlobalSettings(prev => ({
+                                ...prev,
+                                summarization: {
+                                  ...prev.summarization,
+                                  quality: e.target.value as any
+                                }
+                              }));
+                            }}
+                            className="w-full bg-zinc-900 text-white rounded-lg px-2.5 py-2 text-xs border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          >
+                            <option value="fast">Fast - Compact</option>
+                            <option value="balanced">Balanced - Good detail</option>
+                            <option value="detailed">Detailed - Comprehensive</option>
+                          </select>
+                        </div>
+
+                        {/* Trigger */}
+                        <div>
+                          <label className="block text-xs font-medium text-zinc-400 mb-1.5">Trigger</label>
+                          <select
+                            value={globalSettings.summarization.trigger}
+                            onChange={(e) => {
+                              setGlobalSettings(prev => ({
+                                ...prev,
+                                summarization: {
+                                  ...prev.summarization,
+                                  trigger: e.target.value as any
+                                }
+                              }));
+                            }}
+                            className="w-full bg-zinc-900 text-white rounded-lg px-2.5 py-2 text-xs border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          >
+                            <option value="manual">Manual only</option>
+                            <option value="auto-length">Auto (by length)</option>
+                            <option value="periodic">Periodic</option>
+                          </select>
+                        </div>
+
+                        {/* Recent messages to keep */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <label className="text-xs font-medium text-zinc-400">Keep recent messages</label>
+                            <span className="text-xs text-zinc-500">{globalSettings.summarization.recentMessagesCount}</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="2"
+                            max="20"
+                            step="1"
+                            value={globalSettings.summarization.recentMessagesCount}
+                            onChange={(e) => setGlobalSettings({
+                              ...globalSettings,
+                              summarization: { ...globalSettings.summarization, recentMessagesCount: parseInt(e.target.value) }
+                            })}
+                            className="w-full accent-blue-600"
+                          />
+                        </div>
+
+                        {/* Auto-length options */}
+                        {globalSettings.summarization.trigger === "auto-length" && (
+                          <>
+                            <div>
+                              <div className="flex items-center justify-between mb-1.5">
+                                <label className="text-xs font-medium text-zinc-400">Message threshold</label>
+                                <span className="text-xs text-zinc-500">{globalSettings.summarization.messageThreshold}</span>
+                              </div>
+                              <input
+                                type="range"
+                                min="10"
+                                max="100"
+                                step="5"
+                                value={globalSettings.summarization.messageThreshold}
+                                onChange={(e) => setGlobalSettings({
+                                  ...globalSettings,
+                                  summarization: { ...globalSettings.summarization, messageThreshold: parseInt(e.target.value) }
+                                })}
+                                className="w-full accent-blue-600"
+                              />
+                            </div>
+                            <div>
+                              <div className="flex items-center justify-between mb-1.5">
+                                <label className="text-xs font-medium text-zinc-400">Token threshold</label>
+                                <span className="text-xs text-zinc-500">{globalSettings.summarization.tokenThreshold.toLocaleString()}</span>
+                              </div>
+                              <input
+                                type="range"
+                                min="2000"
+                                max="40000"
+                                step="1000"
+                                value={globalSettings.summarization.tokenThreshold}
+                                onChange={(e) => setGlobalSettings({
+                                  ...globalSettings,
+                                  summarization: { ...globalSettings.summarization, tokenThreshold: parseInt(e.target.value) }
+                                })}
+                                className="w-full accent-blue-600"
+                              />
+                            </div>
+                          </>
+                        )}
+
+                        {/* Periodic options */}
+                        {globalSettings.summarization.trigger === "periodic" && (
+                          <div>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <label className="text-xs font-medium text-zinc-400">Summarize every</label>
+                              <span className="text-xs text-zinc-500">{globalSettings.summarization.periodicInterval} msgs</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="2"
+                              max="30"
+                              step="1"
+                              value={globalSettings.summarization.periodicInterval}
+                              onChange={(e) => setGlobalSettings({
+                                ...globalSettings,
+                                summarization: { ...globalSettings.summarization, periodicInterval: parseInt(e.target.value) }
+                              })}
+                              className="w-full accent-blue-600"
+                            />
+                          </div>
+                        )}
+
+                        {/* Provider */}
+                        <div>
+                          <label className="block text-xs font-medium text-zinc-400 mb-1.5">Provider</label>
+                          <select
+                            value={globalSettings.summarization.provider || ''}
+                            onChange={(e) => {
+                              setGlobalSettings(prev => ({
+                                ...prev,
+                                summarization: {
+                                  ...prev.summarization,
+                                  provider: e.target.value,
+                                  modelId: ''
+                                }
+                              }));
+                            }}
+                            className="w-full bg-zinc-900 text-white rounded-lg px-2.5 py-2 text-xs border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          >
+                            <option value="">Use global provider</option>
+                            {AVAILABLE_PROVIDERS.map(provider => (
+                              <option key={provider.id} value={provider.id}>
+                                {provider.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Model */}
+                        <div>
+                          <label className="block text-xs font-medium text-zinc-400 mb-1.5">Model</label>
+                          <select
+                            value={globalSettings.summarization.modelId || ''}
+                            onChange={(e) => {
+                              setGlobalSettings(prev => ({
+                                ...prev,
+                                summarization: {
+                                  ...prev.summarization,
+                                  modelId: e.target.value
+                                }
+                              }));
+                            }}
+                            className="w-full bg-zinc-900 text-white rounded-lg px-2.5 py-2 text-xs border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          >
+                            <option value="">Use global model</option>
+                            {(() => {
+                              const selectedProvider = (globalSettings.summarization.provider || activeProvider) as LLMProviderType;
+                              const models = getModelsForProvider(selectedProvider);
+                              return models.map(model => (
+                                <option key={model.id} value={model.id}>
+                                  {model.name}
+                                </option>
+                              ));
+                            })()}
+                          </select>
+                        </div>
+
+                        {/* Custom Instructions */}
+                        <div>
+                          <label className="block text-xs font-medium text-zinc-400 mb-1.5">Custom instructions</label>
+                          <textarea
+                            value={globalSettings.summarization.instructions || ''}
+                            onChange={(e) => {
+                              setGlobalSettings(prev => ({
+                                ...prev,
+                                summarization: {
+                                  ...prev.summarization,
+                                  instructions: e.target.value
+                                }
+                              }));
+                            }}
+                            placeholder="Optional custom instructions for summarization..."
+                            className="w-full bg-zinc-900 text-white placeholder-zinc-600 rounded-lg px-2.5 py-2 text-xs border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+                            rows={2}
+                          />
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center mb-3">
+                        <svg className="w-6 h-6 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <p className="text-sm text-zinc-500">Summarization disabled</p>
+                      <p className="text-xs text-zinc-600 mt-1">Toggle on to compress context</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        </>
       )}
 
 
