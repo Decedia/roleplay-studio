@@ -103,6 +103,7 @@ interface SummarizationSettings {
   provider?: string;
   modelId?: string;
   instructions?: string;
+  summaryLength?: number;
 }
 
 // Global settings (applied to all conversations)
@@ -8567,9 +8568,10 @@ Write an engaging story segment. If this is a good point for player interaction,
             />
           )}
           <div
-            className={`fixed top-[73px] right-0 bottom-0 w-full sm:w-96 bg-zinc-900 border-l border-zinc-800 z-40 transform transition-transform duration-200 ease-in-out ${
+            className={`fixed right-0 w-full sm:w-96 bg-zinc-900 border-l border-zinc-800 z-40 transform transition-transform duration-200 ease-in-out ${
               showUtilityPanel ? 'translate-x-0' : 'translate-x-full'
             }`}
+            style={{ top: '73px', bottom: '140px' }}
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
@@ -8807,6 +8809,26 @@ Write an engaging story segment. If this is a good point for player interaction,
                             onChange={(e) => setGlobalSettings({
                               ...globalSettings,
                               summarization: { ...globalSettings.summarization, recentMessagesCount: parseInt(e.target.value) }
+                            })}
+                            className="w-full accent-blue-600"
+                          />
+                        </div>
+
+                        {/* Summary length */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <label className="text-xs font-medium text-zinc-400">Summary length</label>
+                            <span className="text-xs text-zinc-500">{['Brief', 'Short', 'Medium', 'Long', 'Detailed'][(globalSettings.summarization.summaryLength ?? 3) - 1]}</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="1"
+                            max="5"
+                            step="1"
+                            value={globalSettings.summarization.summaryLength ?? 3}
+                            onChange={(e) => setGlobalSettings({
+                              ...globalSettings,
+                              summarization: { ...globalSettings.summarization, summaryLength: parseInt(e.target.value) }
                             })}
                             className="w-full accent-blue-600"
                           />
