@@ -8914,7 +8914,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                         >
                           <option value="">Use Global Model</option>
                           {(() => {
-                            const selectedProvider = globalSettings.summarization.provider || activeProvider;
+                            const selectedProvider = (globalSettings.summarization.provider || activeProvider) as LLMProviderType;
                             const models = getModelsForProvider(selectedProvider);
                             return models.map(model => (
                               <option key={model.id} value={model.id}>
