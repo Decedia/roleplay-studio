@@ -5327,7 +5327,7 @@ Write an engaging story segment. If this is a good point for player interaction,
 
     try {
       // Determine which provider to use for summarization
-      const providerForSummarization = sumConfig.provider || activeProvider;
+      const providerForSummarization = (sumConfig.provider || activeProvider) as LLMProviderType;
       const currentConfig = providerConfigs[providerForSummarization];
       const activeProfile = currentConfig?.profiles.find(p => p.id === currentConfig?.activeProfileId);
 
