@@ -2837,7 +2837,21 @@ export default function Chat() {
       }
     }
     if (storedSettings) {
-      setGlobalSettings(JSON.parse(storedSettings));
+      try {
+        const parsed = JSON.parse(storedSettings);
+        // Merge with defaults to handle new fields
+        setGlobalSettings({
+          ...DEFAULT_GLOBAL_SETTINGS,
+          ...parsed,
+          summarization: {
+            ...DEFAULT_GLOBAL_SETTINGS.summarization,
+            ...(parsed.summarization || {}),
+          },
+        });
+      } catch (e) {
+        console.error("Failed to parse global settings:", e);
+        setGlobalSettings(DEFAULT_GLOBAL_SETTINGS);
+      }
     }
     if (storedActiveProvider) {
       setActiveProvider(storedActiveProvider as LLMProviderType);
@@ -2864,9 +2878,15 @@ export default function Chat() {
     const storedAutoExport = localStorage.getItem(AUTO_EXPORT_KEY);
     if (storedAutoExport) {
       try {
-        setAutoExport(JSON.parse(storedAutoExport));
+        const parsed = JSON.parse(storedAutoExport);
+        // Merge with defaults to handle new fields
+        setAutoExport({
+          ...DEFAULT_AUTO_EXPORT,
+          ...parsed,
+        });
       } catch (e) {
         console.error("Failed to parse auto-export settings:", e);
+        setAutoExport(DEFAULT_AUTO_EXPORT);
       }
     }
     
