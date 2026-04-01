@@ -19,6 +19,14 @@ import {
   fetchModelsFromProvider,
   FetchedModel,
 } from "@/lib/providers";
+import {
+  summarizeConversation,
+  shouldTriggerSummarization,
+  getMessagesToSummarize,
+  getNewSummarizedIndex,
+  type SummarizationConfig,
+  type SummarizationResult,
+} from "@/lib/summarization";
 import { readCharacterFile, buildFullSystemPrompt } from "@/lib/character-import";
 import { Character as CharacterType, CharacterBook, CharacterBookEntry, ProviderProfile, GeneratorConversation, BrainstormConversation, Instruction, InstructionRole, InstructionPosition } from "@/lib/types";
 import { parseRoleplayText, getSegmentClasses, TextSegment } from "@/lib/text-formatter";
@@ -78,6 +86,22 @@ interface Model {
 // Default model preference - try to find GLM 5 first, then fall back
 const DEFAULT_MODEL_PREFERENCES = ["glm-5", "gpt-4o-mini", "gpt-4o"];
 
+// Summarization trigger modes
+type SummarizationTrigger = "manual" | "auto-length" | "periodic";
+type SummarizationQuality = "fast" | "balanced" | "detailed";
+
+interface SummarizationSettings {
+  enabled: boolean;
+  trigger: SummarizationTrigger;
+  quality: SummarizationQuality;
+  overrideModel: string;
+  temperature: number;
+  messageThreshold: number;
+  tokenThreshold: number;
+  periodicInterval: number;
+  recentMessagesCount: number;
+}
+
 // Global settings (applied to all conversations)
 interface GlobalSettings {
   temperature: number;
@@ -92,6 +116,7 @@ interface GlobalSettings {
   useCustomSize: boolean; // Enable custom context/output sizes
   enableStreaming: boolean; // Enable/disable streaming for all AI responses
   dingWhenUnfocused: boolean; // Play notification sound when AI finishes and window is unfocused
+  summarization: SummarizationSettings; // Summarization configuration
 }
 
 // Global instructions with advanced fields
@@ -159,6 +184,8 @@ interface Conversation {
   messages: Message[];
   createdAt: number;
   updatedAt: number;
+  summaryMemory?: string;
+  lastSummarizedIndex?: number;
 }
 
 
@@ -355,6 +382,17 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   useCustomSize: false, // By default, use model max sizes
   enableStreaming: true, // Streaming enabled by default for better UX
   dingWhenUnfocused: false, // Disabled by default
+  summarization: {
+    enabled: false,
+    trigger: "manual",
+    quality: "balanced",
+    overrideModel: "",
+    temperature: 0,
+    messageThreshold: 30,
+    tokenThreshold: 12000,
+    periodicInterval: 10,
+    recentMessagesCount: 10,
+  },
 };
 
 // Estimate token count for text (rough approximation: ~4 chars per token)
@@ -987,6 +1025,183 @@ function SettingsModal({
             </button>
             <p className="text-xs text-zinc-500 mt-1">
               Play a notification sound when AI finishes and window is not focused
+            </p>
+          </div>
+
+          {/* Summarization Settings */}
+          <div className="border-t border-zinc-700 pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-medium text-white">Conversation Summarization</h3>
+              <button
+                type="button"
+                onClick={() => setGlobalSettings({
+                  ...globalSettings,
+                  summarization: { ...globalSettings.summarization, enabled: !globalSettings.summarization.enabled }
+                })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  globalSettings.summarization.enabled ? "bg-blue-600" : "bg-zinc-700"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    globalSettings.summarization.enabled ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+
+            {globalSettings.summarization.enabled && (
+              <div className="space-y-4">
+                {/* Trigger Mode */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-2">Trigger Mode</label>
+                  <select
+                    value={globalSettings.summarization.trigger}
+                    onChange={(e) => setGlobalSettings({
+                      ...globalSettings,
+                      summarization: { ...globalSettings.summarization, trigger: e.target.value as SummarizationTrigger }
+                    })}
+                    className="w-full bg-zinc-800 text-white rounded-lg px-4 py-2 border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="manual">Manual only</option>
+                    <option value="auto-length">Auto (length/token based)</option>
+                    <option value="periodic">Periodic (every N messages)</option>
+                  </select>
+                </div>
+
+                {/* Quality Level */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-2">Summary Quality</label>
+                  <select
+                    value={globalSettings.summarization.quality}
+                    onChange={(e) => setGlobalSettings({
+                      ...globalSettings,
+                      summarization: { ...globalSettings.summarization, quality: e.target.value as SummarizationQuality }
+                    })}
+                    className="w-full bg-zinc-800 text-white rounded-lg px-4 py-2 border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="fast">Fast - Compact summaries</option>
+                    <option value="balanced">Balanced - Good detail</option>
+                    <option value="detailed">Detailed - Comprehensive</option>
+                  </select>
+                </div>
+
+                {/* Recent messages to keep */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-2">
+                    Recent Messages to Keep: {globalSettings.summarization.recentMessagesCount}
+                  </label>
+                  <input
+                    type="range"
+                    min="2"
+                    max="20"
+                    step="1"
+                    value={globalSettings.summarization.recentMessagesCount}
+                    onChange={(e) => setGlobalSettings({
+                      ...globalSettings,
+                      summarization: { ...globalSettings.summarization, recentMessagesCount: parseInt(e.target.value) }
+                    })}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Number of recent messages kept untouched during summarization
+                  </p>
+                </div>
+
+                {/* Auto-length: message threshold */}
+                {globalSettings.summarization.trigger === "auto-length" && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-400 mb-2">
+                        Message Threshold: {globalSettings.summarization.messageThreshold}
+                      </label>
+                      <input
+                        type="range"
+                        min="10"
+                        max="100"
+                        step="5"
+                        value={globalSettings.summarization.messageThreshold}
+                        onChange={(e) => setGlobalSettings({
+                          ...globalSettings,
+                          summarization: { ...globalSettings.summarization, messageThreshold: parseInt(e.target.value) }
+                        })}
+                        className="w-full"
+                      />
+                      <p className="text-xs text-zinc-500 mt-1">
+                        Trigger summarization after this many unsummarized messages
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-400 mb-2">
+                        Token Threshold: {globalSettings.summarization.tokenThreshold.toLocaleString()}
+                      </label>
+                      <input
+                        type="range"
+                        min="2000"
+                        max="40000"
+                        step="1000"
+                        value={globalSettings.summarization.tokenThreshold}
+                        onChange={(e) => setGlobalSettings({
+                          ...globalSettings,
+                          summarization: { ...globalSettings.summarization, tokenThreshold: parseInt(e.target.value) }
+                        })}
+                        className="w-full"
+                      />
+                      <p className="text-xs text-zinc-500 mt-1">
+                        Trigger summarization when estimated tokens exceed this
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {/* Periodic: interval */}
+                {globalSettings.summarization.trigger === "periodic" && (
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-400 mb-2">
+                      Summarize Every: {globalSettings.summarization.periodicInterval} messages
+                    </label>
+                    <input
+                      type="range"
+                      min="2"
+                      max="30"
+                      step="1"
+                      value={globalSettings.summarization.periodicInterval}
+                      onChange={(e) => setGlobalSettings({
+                        ...globalSettings,
+                        summarization: { ...globalSettings.summarization, periodicInterval: parseInt(e.target.value) }
+                      })}
+                      className="w-full"
+                    />
+                    <p className="text-xs text-zinc-500 mt-1">
+                      Summarize conversation every N new messages
+                    </p>
+                  </div>
+                )}
+
+                {/* Override Model */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-2">
+                    Summarization Model Override <span className="text-zinc-600">(optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={globalSettings.summarization.overrideModel}
+                    onChange={(e) => setGlobalSettings({
+                      ...globalSettings,
+                      summarization: { ...globalSettings.summarization, overrideModel: e.target.value }
+                    })}
+                    placeholder="Leave empty to use current model"
+                    className="w-full bg-zinc-800 text-white placeholder-zinc-600 rounded-lg px-4 py-2 border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Use a cheaper/faster model for summarization (uses current model if empty)
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <p className="text-xs text-zinc-500 mt-3">
+              Summarization compresses older conversation context to save tokens while preserving key plot points and character dynamics.
             </p>
           </div>
 
@@ -2294,6 +2509,8 @@ export default function Chat() {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showThinkingPanel, setShowThinkingPanel] = useState(false);
+  const [showSummaryPanel, setShowSummaryPanel] = useState(false);
+  const [isSummarizing, setIsSummarizing] = useState(false);
   const [showConversationHistory, setShowConversationHistory] = useState(false);
   const [viewingConversation, setViewingConversation] = useState<Conversation | null>(null);
   const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
@@ -4903,15 +5120,16 @@ Write an engaging story segment. If this is a good point for player interaction,
         selectedModel: globalSettings.modelId || activeProfile?.selectedModel
       };
       
-      // Build system prompt with lorebook support
+      // Build system prompt with lorebook support and summary memory
       const { systemPrompt, instructionMessages } = buildFullSystemPrompt(
         selectedCharacter,
         selectedPersona.name,
         selectedPersona.description,
         updatedMessages,
-        globalInstructions
+        globalInstructions,
+        currentConversation.summaryMemory
       );
-      
+
       // Estimate system prompt tokens and truncate messages if needed
       const systemPromptTokens = estimateTokens(systemPrompt);
       const truncatedMessages = truncateMessagesToContext(
@@ -5025,6 +5243,8 @@ Write an engaging story segment. If this is a good point for player interaction,
       abortControllerRef.current = null;
       playNotificationSound();
       inputRef.current?.focus();
+      // Check if auto-summarization should trigger
+      setTimeout(() => checkAndAutoSummarize(), 500);
     }
   };
 
@@ -5042,6 +5262,109 @@ Write an engaging story segment. If this is a good point for player interaction,
       prev.map((c) => (c.id === currentConversation.id ? updated : c))
     );
   };
+
+  const handleSummarize = useCallback(async () => {
+    if (!currentConversation || isSummarizing || isLoading) return;
+
+    const msgs = currentConversation.messages;
+    const sumConfig = globalSettings.summarization;
+    if (!sumConfig.enabled) return;
+
+    const lastIdx = currentConversation.lastSummarizedIndex ?? 0;
+    const recentCount = sumConfig.recentMessagesCount ?? 10;
+    const messagesToSummarize = getMessagesToSummarize(msgs, lastIdx, recentCount);
+
+    if (messagesToSummarize.length === 0) {
+      setError("No messages to summarize yet.");
+      return;
+    }
+
+    setIsSummarizing(true);
+    setError(null);
+
+    try {
+      const currentConfig = providerConfigs[activeProvider];
+      const activeProfile = currentConfig.profiles.find(p => p.id === currentConfig.activeProfileId);
+
+      const profileConfig: ProviderConfig = {
+        ...currentConfig,
+        apiKey: activeProfile?.apiKey || "",
+        projectId: activeProfile?.projectId || "",
+        serviceAccountJson: activeProfile?.serviceAccountJson,
+        vertexMode: activeProfile?.vertexMode,
+        vertexLocation: activeProfile?.vertexLocation,
+        selectedModel: sumConfig.overrideModel || globalSettings.modelId || activeProfile?.selectedModel,
+      };
+
+      const sumConfigForService: SummarizationConfig = {
+        enabled: sumConfig.enabled,
+        trigger: sumConfig.trigger,
+        quality: sumConfig.quality,
+        overrideModel: sumConfig.overrideModel || undefined,
+        temperature: sumConfig.temperature > 0 ? sumConfig.temperature : undefined,
+        messageThreshold: sumConfig.messageThreshold,
+        tokenThreshold: sumConfig.tokenThreshold,
+        periodicInterval: sumConfig.periodicInterval,
+        recentMessagesCount: sumConfig.recentMessagesCount,
+      };
+
+      const result: SummarizationResult = await summarizeConversation({
+        messages: messagesToSummarize,
+        previousSummary: currentConversation.summaryMemory || null,
+        config: sumConfigForService,
+        providerConfig: profileConfig,
+      });
+
+      if (result.error) {
+        console.error("Summarization error:", result.error);
+        setError(`Summarization failed: ${result.error}`);
+        return;
+      }
+
+      const newIdx = getNewSummarizedIndex(msgs, recentCount);
+      const remainingMessages = msgs.slice(newIdx);
+
+      const updated = {
+        ...currentConversation,
+        messages: remainingMessages,
+        summaryMemory: result.summary,
+        lastSummarizedIndex: 0,
+        updatedAt: Date.now(),
+      };
+
+      setCurrentConversation(updated);
+      setConversations((prev) =>
+        prev.map((c) => (c.id === currentConversation.id ? updated : c))
+      );
+    } catch (err) {
+      console.error("Summarization error:", err);
+      setError(err instanceof Error ? err.message : "Summarization failed.");
+    } finally {
+      setIsSummarizing(false);
+    }
+  }, [currentConversation, isSummarizing, isLoading, globalSettings.summarization, globalSettings.modelId, providerConfigs, activeProvider]);
+
+  const checkAndAutoSummarize = useCallback(() => {
+    if (!currentConversation || isSummarizing || isLoading) return;
+
+    const sumConfig = globalSettings.summarization;
+    if (!sumConfig.enabled) return;
+
+    const msgs = currentConversation.messages;
+    const lastIdx = currentConversation.lastSummarizedIndex ?? 0;
+
+    if (shouldTriggerSummarization(msgs, lastIdx, {
+      enabled: sumConfig.enabled,
+      trigger: sumConfig.trigger,
+      quality: sumConfig.quality,
+      messageThreshold: sumConfig.messageThreshold,
+      tokenThreshold: sumConfig.tokenThreshold,
+      periodicInterval: sumConfig.periodicInterval,
+      recentMessagesCount: sumConfig.recentMessagesCount,
+    })) {
+      handleSummarize();
+    }
+  }, [currentConversation, isSummarizing, isLoading, globalSettings.summarization, handleSummarize]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -5087,15 +5410,16 @@ Write an engaging story segment. If this is a good point for player interaction,
         selectedModel: globalSettings.modelId || activeProfile?.selectedModel
       };
       
-      // Build system prompt with lorebook support
+      // Build system prompt with lorebook support and summary memory
       const { systemPrompt, instructionMessages } = buildFullSystemPrompt(
         selectedCharacter,
         selectedPersona.name,
         selectedPersona.description,
         messagesBeforeRetry,
-        globalInstructions
+        globalInstructions,
+        currentConversation.summaryMemory
       );
-      
+
       // Estimate system prompt tokens and truncate messages if needed
       const systemPromptTokens = estimateTokens(systemPrompt);
       const truncatedMessages = truncateMessagesToContext(
@@ -5790,6 +6114,40 @@ Write an engaging story segment. If this is a good point for player interaction,
                 title="Toggle Tags Panel"
               >
                 {"<>"}
+              </button>
+            )}
+
+            {/* Summary panel toggle - only in chat view */}
+            {view === "chat" && currentConversation && globalSettings.summarization.enabled && (
+              <button
+                onClick={() => setShowSummaryPanel(!showSummaryPanel)}
+                className={`p-1.5 sm:p-2 rounded-lg transition-colors text-xs ${showSummaryPanel ? 'bg-zinc-700 text-white' : 'hover:bg-zinc-800 text-zinc-400'}`}
+                title="Toggle Summary"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </button>
+            )}
+
+            {/* Summarize button - only in chat view */}
+            {view === "chat" && currentConversation && globalSettings.summarization.enabled && (
+              <button
+                onClick={handleSummarize}
+                disabled={isSummarizing || isLoading}
+                className={`p-1.5 sm:p-2 rounded-lg transition-colors ${isSummarizing ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-zinc-800 text-zinc-400 hover:text-white'} disabled:opacity-50`}
+                title={isSummarizing ? "Summarizing..." : "Summarize conversation"}
+              >
+                {isSummarizing ? (
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                )}
               </button>
             )}
             
@@ -8345,6 +8703,148 @@ Write an engaging story segment. If this is a good point for player interaction,
           isOpen={showThinkingPanel}
           onClose={() => setShowThinkingPanel(false)}
         />
+      )}
+
+      {/* Summary Panel */}
+      {view === "chat" && currentConversation && globalSettings.summarization.enabled && (
+        <div
+          className={`fixed top-[73px] right-0 bottom-0 w-80 bg-zinc-900 border-l border-zinc-800 z-40 transform transition-transform duration-200 ${
+            showSummaryPanel ? 'translate-x-0' : 'translate-x-full'
+          }`}
+        >
+          <div className="flex items-center justify-between p-4 border-b border-zinc-800">
+            <h3 className="text-sm font-medium text-white flex items-center gap-2">
+              <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Conversation Summary
+            </h3>
+            <button
+              onClick={() => setShowSummaryPanel(false)}
+              className="p-1 hover:bg-zinc-800 rounded-lg transition-colors"
+            >
+              <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="p-4 overflow-y-auto" style={{ height: 'calc(100% - 56px)' }}>
+            {currentConversation.summaryMemory ? (
+              <div className="space-y-4">
+                <div className="text-xs text-zinc-500">
+                  {currentConversation.messages.length} active messages
+                  {currentConversation.messages.length > 0 && ` • ~${estimateTokens(currentConversation.messages.map(m => m.content).join('\n')).toLocaleString()} tokens`}
+                </div>
+                <div className="bg-zinc-800/50 rounded-lg p-3">
+                  <div className="whitespace-pre-wrap text-sm text-zinc-300 leading-relaxed">
+                    {currentConversation.summaryMemory}
+                  </div>
+                </div>
+                <button
+                  onClick={handleSummarize}
+                  disabled={isSummarizing || isLoading || currentConversation.messages.length <= (globalSettings.summarization.recentMessagesCount ?? 10)}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors text-sm text-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSummarizing ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Summarizing...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Update Summary
+                    </>
+                  )}
+                </button>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <svg className="w-8 h-8 text-zinc-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p className="text-sm text-zinc-500 mb-2">No summary yet</p>
+                <p className="text-xs text-zinc-600">Click the refresh button in the header to summarize the conversation</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Summary Panel */}
+      {view === "chat" && currentConversation && globalSettings.summarization.enabled && (
+        <div
+          className={`fixed top-[73px] right-0 bottom-0 w-80 bg-zinc-900 border-l border-zinc-800 z-40 transform transition-transform duration-200 ${
+            showSummaryPanel ? 'translate-x-0' : 'translate-x-full'
+          }`}
+        >
+          <div className="flex items-center justify-between p-4 border-b border-zinc-800">
+            <h3 className="text-sm font-medium text-white flex items-center gap-2">
+              <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Conversation Summary
+            </h3>
+            <button
+              onClick={() => setShowSummaryPanel(false)}
+              className="p-1 hover:bg-zinc-800 rounded-lg transition-colors"
+            >
+              <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="p-4 overflow-y-auto" style={{ height: 'calc(100% - 56px)' }}>
+            {currentConversation.summaryMemory ? (
+              <div className="space-y-4">
+                <div className="text-xs text-zinc-500">
+                  {currentConversation.messages.length} active messages
+                  {currentConversation.messages.length > 0 && ` • ~${estimateTokens(currentConversation.messages.map(m => m.content).join('\n')).toLocaleString()} tokens`}
+                </div>
+                <div className="bg-zinc-800/50 rounded-lg p-3">
+                  <div className="whitespace-pre-wrap text-sm text-zinc-300 leading-relaxed">
+                    {currentConversation.summaryMemory}
+                  </div>
+                </div>
+                <button
+                  onClick={handleSummarize}
+                  disabled={isSummarizing || isLoading || currentConversation.messages.length <= (globalSettings.summarization.recentMessagesCount ?? 10)}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors text-sm text-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSummarizing ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Summarizing...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Update Summary
+                    </>
+                  )}
+                </button>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <svg className="w-8 h-8 text-zinc-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p className="text-sm text-zinc-500 mb-2">No summary yet</p>
+                <p className="text-xs text-zinc-600">Click the refresh button in the header to summarize the conversation</p>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Scroll to bottom button */}

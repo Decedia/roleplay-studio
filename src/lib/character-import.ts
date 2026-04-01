@@ -286,7 +286,8 @@ export const buildFullSystemPrompt = (
   personaName: string,
   personaDescription: string,
   messages: Message[],
-  globalInstructions?: GlobalInstructions
+  globalInstructions?: GlobalInstructions,
+  summaryMemory?: string
 ): { systemPrompt: string; instructionMessages: Message[] } => {
   const formattingSections: string[] = [];
   const contextSections: string[] = [];
@@ -383,7 +384,12 @@ export const buildFullSystemPrompt = (
   constraintSections.push("Stay in character at all times. Respond naturally and engage with the roleplay scenario. Do not break character or acknowledge that you are an AI.");
   
   // Combine: Formatting -> Context -> Instructions -> Constraints
-  const systemPromptContent = [...formattingSections, ...contextSections, ...instructionSections, ...constraintSections].join("\n\n");
+  const basePrompt = [...formattingSections, ...contextSections, ...instructionSections, ...constraintSections].join("\n\n");
+  
+  // Prepend summary memory if available
+  const systemPromptContent = summaryMemory
+    ? `[Conversation Summary]\n${summaryMemory}\n\n${basePrompt}`
+    : basePrompt;
   
   // Create system message
   const systemMessage: Message = {

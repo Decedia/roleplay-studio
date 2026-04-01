@@ -1,3 +1,34 @@
+// Summarization trigger modes
+export type SummarizationTrigger = "manual" | "auto-length" | "periodic";
+
+// Summarization quality levels
+export type SummarizationQuality = "fast" | "balanced" | "detailed";
+
+// Summarization settings (embedded in global settings)
+export interface SummarizationSettings {
+  enabled: boolean;
+  trigger: SummarizationTrigger;
+  quality: SummarizationQuality;
+  overrideModel: string; // Optional model override for summarization
+  temperature: number; // Override temperature for summarization (0 = use quality default)
+  messageThreshold: number; // For auto-length: trigger after N unsummarized messages
+  tokenThreshold: number; // For auto-length: trigger after N estimated tokens
+  periodicInterval: number; // For periodic: summarize every N messages
+  recentMessagesCount: number; // Keep last N messages untouched
+}
+
+export const DEFAULT_SUMMARIZATION_SETTINGS: SummarizationSettings = {
+  enabled: false,
+  trigger: "manual",
+  quality: "balanced",
+  overrideModel: "",
+  temperature: 0,
+  messageThreshold: 30,
+  tokenThreshold: 12000,
+  periodicInterval: 10,
+  recentMessagesCount: 10,
+};
+
 // Default global settings
 export interface GlobalSettings {
   temperature: number;
@@ -12,6 +43,7 @@ export interface GlobalSettings {
   useCustomSize: boolean;
   enableStreaming: boolean;
   dingWhenUnfocused: boolean;
+  summarization: SummarizationSettings;
 }
 
 export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
@@ -27,6 +59,7 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   useCustomSize: false,
   enableStreaming: true,
   dingWhenUnfocused: false,
+  summarization: DEFAULT_SUMMARIZATION_SETTINGS,
 };
 
 // Default model preferences - try to find GLM 5 first, then fall back

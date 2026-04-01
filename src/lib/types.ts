@@ -116,6 +116,9 @@ export interface Conversation {
   messages: Message[];
   createdAt: number;
   updatedAt: number;
+  // Summarization fields
+  summaryMemory?: string; // Compressed past context from summarization
+  lastSummarizedIndex?: number; // Index of last message included in summary
 }
 
 // Generator conversation (standalone session for character generation)
