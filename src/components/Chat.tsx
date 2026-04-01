@@ -103,7 +103,7 @@ interface SummarizationSettings {
   provider?: string;
   modelId?: string;
   instructions?: string;
-  summaryLength?: number;
+  summaryLength?: number; // Max tokens for summary output
 }
 
 // Global settings (applied to all conversations)
@@ -8816,21 +8816,43 @@ Write an engaging story segment. If this is a good point for player interaction,
                         {/* Summary length */}
                         <div>
                           <div className="flex items-center justify-between mb-1.5">
-                            <label className="text-xs font-medium text-zinc-400">Summary length</label>
-                            <span className="text-xs text-zinc-500">{['Brief', 'Short', 'Medium', 'Long', 'Detailed'][(globalSettings.summarization.summaryLength ?? 3) - 1]}</span>
+                            <label className="text-xs font-medium text-zinc-400">Max summary tokens</label>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                min="200"
+                                max="4000"
+                                step="100"
+                                value={globalSettings.summarization.summaryLength ?? 1000}
+                                onChange={(e) => {
+                                  const val = parseInt(e.target.value);
+                                  if (!isNaN(val) && val >= 200 && val <= 4000) {
+                                    setGlobalSettings({
+                                      ...globalSettings,
+                                      summarization: { ...globalSettings.summarization, summaryLength: val }
+                                    });
+                                  }
+                                }}
+                                className="w-20 bg-zinc-900 text-white text-xs rounded px-2 py-1 border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500 text-center"
+                              />
+                            </div>
                           </div>
                           <input
                             type="range"
-                            min="1"
-                            max="5"
-                            step="1"
-                            value={globalSettings.summarization.summaryLength ?? 3}
+                            min="200"
+                            max="4000"
+                            step="100"
+                            value={globalSettings.summarization.summaryLength ?? 1000}
                             onChange={(e) => setGlobalSettings({
                               ...globalSettings,
                               summarization: { ...globalSettings.summarization, summaryLength: parseInt(e.target.value) }
                             })}
                             className="w-full accent-blue-600"
                           />
+                          <div className="flex justify-between text-xs text-zinc-600 mt-1">
+                            <span>200</span>
+                            <span>4000</span>
+                          </div>
                         </div>
 
                         {/* Auto-length options */}

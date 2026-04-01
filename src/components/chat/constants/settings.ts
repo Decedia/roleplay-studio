@@ -18,7 +18,7 @@ export interface SummarizationSettings {
   provider?: string; // Custom provider for summarization (uses global API key)
   modelId?: string; // Custom model for summarization
   instructions?: string; // Custom instructions for summarization
-  summaryLength?: number; // Target length for summary (1-5 scale: 1=brief, 5=comprehensive)
+  summaryLength?: number; // Target max tokens for summary output (default 1000)
 }
 
 export const DEFAULT_SUMMARIZATION_SETTINGS: SummarizationSettings = {
@@ -34,7 +34,7 @@ export const DEFAULT_SUMMARIZATION_SETTINGS: SummarizationSettings = {
   provider: "",
   modelId: "",
   instructions: "Focus on preserving key plot developments, character dynamics, emotional undertones, and unresolved story threads. Maintain character names, relationships, and important decisions. Write in present tense. Keep the summary dense with information while remaining readable.",
-  summaryLength: 3,
+  summaryLength: 1000,
 };
 
 // Default global settings
