@@ -5001,10 +5001,16 @@ Write an engaging story segment. If this is a good point for player interaction,
         currentConversation.summaryMemory
       );
 
+      // When summary exists, only send messages after lastSummarizedIndex to API
+      const lastSummarizedIdx = currentConversation.lastSummarizedIndex ?? 0;
+      const messagesForApi = currentConversation.summaryMemory && lastSummarizedIdx > 0
+        ? updatedMessages.slice(lastSummarizedIdx)
+        : updatedMessages;
+
       // Estimate system prompt tokens and truncate messages if needed
       const systemPromptTokens = estimateTokens(systemPrompt);
       const truncatedMessages = truncateMessagesToContext(
-        updatedMessages,
+        messagesForApi,
         globalSettings.maxContextTokens,
         systemPromptTokens
       );
@@ -5196,13 +5202,12 @@ Write an engaging story segment. If this is a good point for player interaction,
       }
 
       const newIdx = getNewSummarizedIndex(msgs, recentCount);
-      const remainingMessages = msgs.slice(newIdx);
 
       const updated = {
         ...currentConversation,
-        messages: remainingMessages,
+        messages: msgs,
         summaryMemory: result.summary,
-        lastSummarizedIndex: 0,
+        lastSummarizedIndex: newIdx,
         updatedAt: Date.now(),
       };
 
@@ -5294,10 +5299,16 @@ Write an engaging story segment. If this is a good point for player interaction,
         currentConversation.summaryMemory
       );
 
+      // When summary exists, only send messages after lastSummarizedIndex to API
+      const lastSummarizedIdx = currentConversation.lastSummarizedIndex ?? 0;
+      const messagesForApi = currentConversation.summaryMemory && lastSummarizedIdx > 0
+        ? messagesBeforeRetry.slice(lastSummarizedIdx)
+        : messagesBeforeRetry;
+
       // Estimate system prompt tokens and truncate messages if needed
       const systemPromptTokens = estimateTokens(systemPrompt);
       const truncatedMessages = truncateMessagesToContext(
-        messagesBeforeRetry,
+        messagesForApi,
         globalSettings.maxContextTokens,
         systemPromptTokens
       );
@@ -5442,19 +5453,26 @@ Write an engaging story segment. If this is a good point for player interaction,
         vertexLocation: activeProfile?.vertexLocation,
         selectedModel: globalSettings.modelId || activeProfile?.selectedModel
       };
-      // Build system prompt with lorebook support
+      // Build system prompt with lorebook support and summary memory
       const { systemPrompt, instructionMessages } = buildFullSystemPrompt(
         selectedCharacter,
         selectedPersona.name,
         selectedPersona.description,
         messagesWithContinue,
-        globalInstructions
+        globalInstructions,
+        currentConversation.summaryMemory
       );
-      
+
+      // When summary exists, only send messages after lastSummarizedIndex to API
+      const lastSummarizedIdx = currentConversation.lastSummarizedIndex ?? 0;
+      const messagesForApi = currentConversation.summaryMemory && lastSummarizedIdx > 0
+        ? messagesWithContinue.slice(lastSummarizedIdx)
+        : messagesWithContinue;
+
       // Estimate system prompt tokens and truncate messages if needed
       const systemPromptTokens = estimateTokens(systemPrompt);
       const truncatedMessages = truncateMessagesToContext(
-        messagesWithContinue,
+        messagesForApi,
         globalSettings.maxContextTokens,
         systemPromptTokens
       );
@@ -5660,12 +5678,19 @@ Write an engaging story segment. If this is a good point for player interaction,
           selectedPersona.name,
           selectedPersona.description,
           messagesAfterEdit,
-          globalInstructions
+          globalInstructions,
+          currentConversation.summaryMemory
         );
-        
+
+        // When summary exists, only send messages after lastSummarizedIndex to API
+        const lastSummarizedIdx = currentConversation.lastSummarizedIndex ?? 0;
+        const messagesForApi = currentConversation.summaryMemory && lastSummarizedIdx > 0
+          ? messagesAfterEdit.slice(lastSummarizedIdx)
+          : messagesAfterEdit;
+
         const systemPromptTokens = estimateTokens(systemPrompt);
         const truncatedMessages = truncateMessagesToContext(
-          messagesAfterEdit,
+          messagesForApi,
           globalSettings.maxContextTokens,
           systemPromptTokens
         );
