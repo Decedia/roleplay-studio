@@ -106,11 +106,13 @@ export async function summarizeConversation({
   previousSummary,
   config,
   providerConfig,
+  customInstructions,
 }: {
   messages: Message[];
   previousSummary: string | null;
   config: SummarizationConfig;
   providerConfig: ProviderConfig;
+  customInstructions?: string;
 }): Promise<SummarizationResult> {
   if (messages.length === 0) {
     return { summary: previousSummary || "", messagesSummarized: 0 };
@@ -119,7 +121,13 @@ export async function summarizeConversation({
   const quality = config.quality || "balanced";
   const qualitySettings = QUALITY_SETTINGS[quality];
 
-  const systemPrompt = buildSummarizationSystemPrompt(quality);
+  let systemPrompt = buildSummarizationSystemPrompt(quality);
+  
+  // Append custom instructions if provided
+  if (customInstructions?.trim()) {
+    systemPrompt += `\n\n[Custom Instructions]\n${customInstructions}`;
+  }
+  
   const userInput = formatMessagesForSummary(messages, previousSummary);
 
   const summarizationMessages: Message[] = [

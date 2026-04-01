@@ -15,6 +15,9 @@ export interface SummarizationSettings {
   tokenThreshold: number; // For auto-length: trigger after N estimated tokens
   periodicInterval: number; // For periodic: summarize every N messages
   recentMessagesCount: number; // Keep last N messages untouched
+  provider?: string; // Custom provider for summarization (uses global API key)
+  modelId?: string; // Custom model for summarization
+  instructions?: string; // Custom instructions for summarization
 }
 
 export const DEFAULT_SUMMARIZATION_SETTINGS: SummarizationSettings = {
@@ -27,6 +30,9 @@ export const DEFAULT_SUMMARIZATION_SETTINGS: SummarizationSettings = {
   tokenThreshold: 12000,
   periodicInterval: 10,
   recentMessagesCount: 10,
+  provider: "",
+  modelId: "",
+  instructions: "",
 };
 
 // Default global settings
