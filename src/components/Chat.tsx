@@ -2360,7 +2360,8 @@ export default function Chat() {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showUtilityPanel, setShowUtilityPanel] = useState(false);
-  const [utilityPanelTab, setUtilityPanelTab] = useState<'tags' | 'summarization'>('tags');
+  const [utilityPanelTab, setUtilityPanelTab] = useState<'tags' | 'summarization' | 'debug'>('tags');
+  const [apiDebugPayload, setApiDebugPayload] = useState<string | null>(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [showConversationHistory, setShowConversationHistory] = useState(false);
   const [viewingConversation, setViewingConversation] = useState<Conversation | null>(null);
@@ -5696,8 +5697,22 @@ Write an engaging story segment. If this is a good point for player interaction,
           systemPromptTokens
         );
 
-        // Combine instruction messages with conversation messages
-        const messagesWithInstructions = [...instructionMessages, ...truncatedMessages];
+      // Combine instruction messages with conversation messages
+      const messagesWithInstructions = [...instructionMessages, ...truncatedMessages];
+
+      // Capture debug payload for utility panel
+      setApiDebugPayload(JSON.stringify({
+        model: profileConfig.selectedModel,
+        system: instructionMessages[0]?.content || '',
+        messages: truncatedMessages.map(m => ({ role: m.role, content: m.content.substring(0, 200) + (m.content.length > 200 ? '...[truncated]' : '') })),
+        options: {
+          temperature: globalSettings.temperature,
+          maxTokens: globalSettings.maxTokens,
+          topP: globalSettings.topP,
+          topK: globalSettings.topK,
+          enableThinking: globalSettings.enableThinking,
+        }
+      }, null, 2));
 
       // Use streaming or non-streaming based on settings
       if (globalSettings.enableStreaming) {
@@ -8643,6 +8658,21 @@ Write an engaging story segment. If this is a good point for player interaction,
                   Summarize
                 </span>
               </button>
+              <button
+                onClick={() => setUtilityPanelTab('debug')}
+                className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                  utilityPanelTab === 'debug'
+                    ? 'bg-zinc-800 text-white'
+                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50'
+                }`}
+              >
+                <span className="flex items-center justify-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                  </svg>
+                  Debug
+                </span>
+              </button>
             </div>
 
             {/* Content */}
@@ -9030,6 +9060,47 @@ Write an engaging story segment. If this is a good point for player interaction,
                       </div>
                       <p className="text-sm text-zinc-500">Summarization disabled</p>
                       <p className="text-xs text-zinc-600 mt-1">Toggle on to compress context</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Debug Section */}
+              {utilityPanelTab === 'debug' && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">API Payload Preview</p>
+                    {apiDebugPayload && (
+                      <button
+                        onClick={() => setApiDebugPayload(null)}
+                        className="text-xs text-zinc-500 hover:text-zinc-300"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  
+                  {!apiDebugPayload ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                      <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center mb-3">
+                        <svg className="w-6 h-6 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                        </svg>
+                      </div>
+                      <p className="text-sm text-zinc-500">No debug data</p>
+                      <p className="text-xs text-zinc-600 mt-1">Send a message to see the API payload</p>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <pre className="bg-zinc-950 text-zinc-300 text-xs p-3 rounded-lg border border-zinc-700 overflow-x-auto max-h-96 whitespace-pre-wrap">
+                        {apiDebugPayload}
+                      </pre>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(apiDebugPayload || '')}
+                        className="absolute top-2 right-2 px-2 py-1 bg-zinc-800 text-zinc-400 text-xs rounded hover:bg-zinc-700 transition-colors"
+                      >
+                        Copy
+                      </button>
                     </div>
                   )}
                 </div>
