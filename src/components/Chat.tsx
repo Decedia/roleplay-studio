@@ -5185,6 +5185,7 @@ Write an engaging story segment. If this is a good point for player interaction,
         tokenThreshold: sumConfig.tokenThreshold,
         periodicInterval: sumConfig.periodicInterval,
         recentMessagesCount: sumConfig.recentMessagesCount,
+        summaryLength: sumConfig.summaryLength,
       };
 
       const result: SummarizationResult = await summarizeConversation({

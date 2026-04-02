@@ -27,6 +27,8 @@ export interface SummarizationConfig {
   periodicInterval?: number; // Summarize every N messages
   // How many recent messages to keep untouched
   recentMessagesCount?: number;
+  // Max tokens for summary output (overrides quality default)
+  summaryLength?: number;
 }
 
 // Summarization result
@@ -55,7 +57,7 @@ const QUALITY_SETTINGS: Record<SummarizationQuality, { maxTokens: number; temper
 };
 
 // Build the summarization system prompt
-function buildSummarizationSystemPrompt(quality: SummarizationQuality): string {
+function buildSummarizationSystemPrompt(quality: SummarizationQuality, maxTokens: number): string {
   const depthMap: Record<SummarizationQuality, string> = {
     fast: "Create a very concise summary focusing only on the most critical plot points and character developments.",
     balanced: "Create a balanced summary that captures important plot points, character relationships, emotional context, and key decisions while remaining compact.",
@@ -68,8 +70,13 @@ function buildSummarizationSystemPrompt(quality: SummarizationQuality): string {
 - Emotional context and atmosphere
 - Key actions, decisions, and their consequences
 - Unresolved threads and ongoing tensions
+- Character voice and speaking patterns
+- Important world-building details established in the conversation
+- Any instructions or constraints the User has given to the Character
 
 ${depthMap[quality]}
+
+CRITICAL: The summary must maintain enough detail that the Character can continue responding in full context, following all previously given instructions. Do not summarize away important details that would cause the Character to act inconsistently with established dynamics.
 
 Format the output as structured paragraphs. Be information-dense. Avoid filler, repetition, or obvious statements. Write in present tense. Refer to characters by name.`;
 }
@@ -113,6 +120,7 @@ export async function summarizeConversation({
   config: SummarizationConfig;
   providerConfig: ProviderConfig;
   customInstructions?: string;
+  summaryLength?: number; // Max tokens for summary output
 }): Promise<SummarizationResult> {
   if (messages.length === 0) {
     return { summary: previousSummary || "", messagesSummarized: 0 };
@@ -120,8 +128,11 @@ export async function summarizeConversation({
 
   const quality = config.quality || "balanced";
   const qualitySettings = QUALITY_SETTINGS[quality];
+  
+  // Override max tokens with summaryLength if provided
+  const maxSummaryTokens = config.summaryLength ?? qualitySettings.maxTokens;
 
-  let systemPrompt = buildSummarizationSystemPrompt(quality);
+  let systemPrompt = buildSummarizationSystemPrompt(quality, maxSummaryTokens);
   
   // Append custom instructions if provided
   if (customInstructions?.trim()) {
@@ -151,7 +162,7 @@ export async function summarizeConversation({
       effectiveConfig,
       {
         temperature: effectiveTemperature,
-        maxTokens: qualitySettings.maxTokens,
+        maxTokens: maxSummaryTokens,
         topP: 0.9,
         topK: 40,
         systemPrompt,
