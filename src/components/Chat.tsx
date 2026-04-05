@@ -2357,6 +2357,7 @@ export default function Chat() {
   const [generatorInstructions, setGeneratorInstructions] = useState<string>(DEFAULT_GENERATOR_INSTRUCTIONS);
   const [showGeneratorInstructionsEditor, setShowGeneratorInstructionsEditor] = useState(false);
   const [showCharacterModal, setShowCharacterModal] = useState(false);
+  const [characterSortOrder, setCharacterSortOrder] = useState<'added' | 'lastChat' | 'name'>('added');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showUtilityPanel, setShowUtilityPanel] = useState(false);
@@ -8097,6 +8098,25 @@ Write an engaging story segment. If this is a good point for player interaction,
                 </div>
               )}
 
+              {/* Sort Controls */}
+              {characters.length > 0 && (
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm text-zinc-400">{characters.length} characters</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-zinc-500">Sort by:</span>
+                    <select
+                      value={characterSortOrder}
+                      onChange={(e) => setCharacterSortOrder(e.target.value as 'added' | 'lastChat' | 'name')}
+                      className="bg-zinc-800 text-white text-xs rounded px-2 py-1 border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    >
+                      <option value="added">Date Added</option>
+                      <option value="lastChat">Last Chat</option>
+                      <option value="name">Name</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
               {characters.length === 0 ? (
                 <div className="text-center py-16">
                   <div className="w-16 h-16 rounded-2xl bg-zinc-800 flex items-center justify-center mx-auto mb-4">
@@ -8117,7 +8137,19 @@ Write an engaging story segment. If this is a good point for player interaction,
                 </div>
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {characters.map((character) => (
+                  {(() => {
+                    const sortedCharacters = [...characters].sort((a, b) => {
+                      if (characterSortOrder === 'name') {
+                        return a.name.localeCompare(b.name);
+                      } else if (characterSortOrder === 'lastChat') {
+                        const convA = conversations.find(c => c.characterId === a.id);
+                        const convB = conversations.find(c => c.characterId === b.id);
+                        return (convB?.updatedAt ?? 0) - (convA?.updatedAt ?? 0);
+                      } else {
+                        return (b.createdAt ?? 0) - (a.createdAt ?? 0);
+                      }
+                    });
+                    return sortedCharacters.map((character) => (
                     <div
                       key={character.id}
                       className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition-colors"
@@ -8168,7 +8200,8 @@ Write an engaging story segment. If this is a good point for player interaction,
                         Select Character
                       </button>
                     </div>
-                  ))}
+                  ));
+                  })()}
                 </div>
               )}
             </div>
