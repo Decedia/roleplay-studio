@@ -662,7 +662,15 @@ function SettingsModal({
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-md md:max-w-lg max-h-[90vh] overflow-y-auto">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-md md:max-w-lg max-h-[90vh] overflow-y-auto relative">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-1 hover:bg-zinc-800 rounded-lg transition-colors"
+        >
+          <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
         <h2 className="text-xl font-semibold text-white mb-4">
           Global Settings
         </h2>
@@ -9233,7 +9241,18 @@ Write an engaging story segment. If this is a good point for player interaction,
 
       {showPersonaModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-md">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-md relative">
+            <button
+              onClick={() => {
+                setShowPersonaModal(false);
+                setEditingPersona(null);
+              }}
+              className="absolute top-4 right-4 p-1 hover:bg-zinc-800 rounded-lg transition-colors"
+            >
+              <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
             <h2 className="text-xl font-semibold text-white mb-4">
               {editingPersona ? "Edit Persona" : "Create New Persona"}
             </h2>
@@ -9293,7 +9312,27 @@ Write an engaging story segment. If this is a good point for player interaction,
       {/* Character Modal */}
       {showCharacterModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-lg md:max-w-xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-lg md:max-w-xl max-h-[90vh] overflow-y-auto relative">
+            <button
+              onClick={() => {
+                setShowCharacterModal(false);
+                setEditingCharacter(null);
+                setCharacterName("");
+                setCharacterDescription("");
+                setCharacterFirstMessage("");
+                setCharacterScenario("");
+                setCharacterSystemPrompt("");
+                setCharacterPostHistoryInstructions("");
+                setCharacterMesExample("");
+                setCharacterAvatar("");
+                setCharacterAlternateGreetings([]);
+              }}
+              className="absolute top-4 right-4 p-1 hover:bg-zinc-800 rounded-lg transition-colors"
+            >
+              <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
             <h2 className="text-xl font-semibold text-white mb-4">
               {editingCharacter ? "Edit Character" : "Create New Character"}
             </h2>
