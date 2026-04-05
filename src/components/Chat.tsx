@@ -2365,6 +2365,7 @@ export default function Chat() {
   const [generatorInstructions, setGeneratorInstructions] = useState<string>(DEFAULT_GENERATOR_INSTRUCTIONS);
   const [showGeneratorInstructionsEditor, setShowGeneratorInstructionsEditor] = useState(false);
   const [showCharacterModal, setShowCharacterModal] = useState(false);
+  const [showCharacterCardModal, setShowCharacterCardModal] = useState(false);
   const [characterSortOrder, setCharacterSortOrder] = useState<'added' | 'lastChat' | 'name'>('added');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -6030,6 +6031,19 @@ Write an engaging story segment. If this is a good point for player interaction,
               </svg>
             </button>
             
+            {/* Character Card button - visible in chat view when character is selected */}
+            {view === "chat" && selectedCharacter && (
+              <button
+                onClick={() => setShowCharacterCardModal(true)}
+                className="p-1.5 sm:p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                title="View Character Card"
+              >
+                <svg className="w-4 sm:w-5 h-4 sm:h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </button>
+            )}
+            
             {/* Utility panel toggle - only in chat view */}
             {view === "chat" && currentConversation && (
               <button
@@ -9681,6 +9695,164 @@ Write an engaging story segment. If this is a good point for player interaction,
                   Cancel
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Character Card Modal - View/Edit Character */}
+      {showCharacterCardModal && selectedCharacter && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-lg md:max-w-xl max-h-[90vh] overflow-y-auto relative">
+            <button
+              onClick={() => setShowCharacterCardModal(false)}
+              className="absolute top-4 right-4 p-1 hover:bg-zinc-800 rounded-lg transition-colors"
+            >
+              <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            
+            <div className="flex items-center gap-4 mb-6">
+              {selectedCharacter.avatar ? (
+                <img 
+                  src={selectedCharacter.avatar} 
+                  alt={selectedCharacter.name}
+                  className="w-16 h-16 rounded-xl object-cover border-2 border-purple-500"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                  <span className="text-2xl text-white font-semibold">
+                    {selectedCharacter.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              )}
+              <div>
+                <h2 className="text-xl font-semibold text-white">{selectedCharacter.name}</h2>
+                {selectedCharacter.tags && selectedCharacter.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {selectedCharacter.tags.slice(0, 3).map((tag, idx) => (
+                      <span key={idx} className="px-2 py-0.5 bg-zinc-800 text-zinc-400 rounded text-xs">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-1">Description</label>
+                <div className="bg-zinc-800 text-zinc-200 rounded-lg px-4 py-3 text-sm whitespace-pre-wrap">
+                  {selectedCharacter.description || "No description"}
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-1">Scenario</label>
+                <div className="bg-zinc-800 text-zinc-200 rounded-lg px-4 py-3 text-sm whitespace-pre-wrap">
+                  {selectedCharacter.scenario || "No scenario"}
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-1">First Message</label>
+                <div className="bg-zinc-800 text-zinc-200 rounded-lg px-4 py-3 text-sm whitespace-pre-wrap">
+                  {selectedCharacter.firstMessage}
+                </div>
+              </div>
+              
+              {selectedCharacter.systemPrompt && (
+                <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-1">System Prompt</label>
+                  <div className="bg-zinc-800 text-zinc-200 rounded-lg px-4 py-3 text-sm whitespace-pre-wrap max-h-32 overflow-y-auto">
+                    {selectedCharacter.systemPrompt}
+                  </div>
+                </div>
+              )}
+              
+              {selectedCharacter.postHistoryInstructions && (
+                <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-1">Post-History Instructions</label>
+                  <div className="bg-zinc-800 text-zinc-200 rounded-lg px-4 py-3 text-sm whitespace-pre-wrap max-h-32 overflow-y-auto">
+                    {selectedCharacter.postHistoryInstructions}
+                  </div>
+                </div>
+              )}
+              
+              {selectedCharacter.mesExample && (
+                <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-1">Example Dialogue</label>
+                  <div className="bg-zinc-800 text-zinc-200 rounded-lg px-4 py-3 text-sm whitespace-pre-wrap max-h-32 overflow-y-auto">
+                    {selectedCharacter.mesExample}
+                  </div>
+                </div>
+              )}
+              
+              {selectedCharacter.alternateGreetings && selectedCharacter.alternateGreetings.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-1">Alternate Greetings ({selectedCharacter.alternateGreetings.length})</label>
+                  <div className="space-y-2">
+                    {selectedCharacter.alternateGreetings.map((greeting, idx) => (
+                      <div key={idx} className="bg-zinc-800 text-zinc-200 rounded-lg px-4 py-2 text-sm">
+                        {greeting}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {selectedCharacter.characterBook && selectedCharacter.characterBook.entries && selectedCharacter.characterBook.entries.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-1">Character Book ({selectedCharacter.characterBook.entries.length} entries)</label>
+                  <div className="space-y-2">
+                    {selectedCharacter.characterBook.entries.slice(0, 5).map((entry, idx) => (
+                      <div key={idx} className="bg-zinc-800 text-zinc-200 rounded-lg px-4 py-2 text-sm">
+                        <div className="flex flex-wrap gap-1 mb-1">
+                          {entry.keys.map((key, keyIdx) => (
+                            <span key={keyIdx} className="px-1.5 py-0.5 bg-purple-900/50 text-purple-300 rounded text-xs">
+                              {key}
+                            </span>
+                          ))}
+                        </div>
+                        <p className="text-zinc-400 text-xs line-clamp-2">{entry.content}</p>
+                      </div>
+                    ))}
+                    {selectedCharacter.characterBook.entries.length > 5 && (
+                      <p className="text-xs text-zinc-500">+{selectedCharacter.characterBook.entries.length - 5} more entries</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex gap-3 mt-6 pt-4 border-t border-zinc-800">
+              <button
+                onClick={() => {
+                  setShowCharacterCardModal(false);
+                  setEditingCharacter(selectedCharacter);
+                  setCharacterName(selectedCharacter.name);
+                  setCharacterDescription(selectedCharacter.description);
+                  setCharacterFirstMessage(selectedCharacter.firstMessage);
+                  setCharacterScenario(selectedCharacter.scenario || "");
+                  setCharacterSystemPrompt(selectedCharacter.systemPrompt || "");
+                  setCharacterPostHistoryInstructions(selectedCharacter.postHistoryInstructions || "");
+                  setCharacterMesExample(selectedCharacter.mesExample || "");
+                  setCharacterAvatar(selectedCharacter.avatar || "");
+                  setCharacterAlternateGreetings(selectedCharacter.alternateGreetings || []);
+                  setShowCharacterModal(true);
+                }}
+                className="flex-1 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                Edit Character
+              </button>
+              <button
+                onClick={() => setShowCharacterCardModal(false)}
+                className="flex-1 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
