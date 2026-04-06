@@ -8211,9 +8211,11 @@ Write an engaging story segment. If this is a good point for player interaction,
                       if (characterSortOrder === 'name') {
                         return a.name.localeCompare(b.name);
                       } else if (characterSortOrder === 'lastChat') {
-                        const convA = conversations.find(c => c.characterId === a.id);
-                        const convB = conversations.find(c => c.characterId === b.id);
-                        return (convB?.updatedAt ?? 0) - (convA?.updatedAt ?? 0);
+                        const convsA = conversations.filter(c => c.characterId === a.id).sort((x, y) => y.updatedAt - x.updatedAt);
+                        const convsB = conversations.filter(c => c.characterId === b.id).sort((x, y) => y.updatedAt - x.updatedAt);
+                        const lastA = convsA[0]?.updatedAt ?? 0;
+                        const lastB = convsB[0]?.updatedAt ?? 0;
+                        return lastB - lastA;
                       } else {
                         return (b.createdAt ?? 0) - (a.createdAt ?? 0);
                       }
