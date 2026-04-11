@@ -5030,6 +5030,22 @@ Write an engaging story segment. If this is a good point for player interaction,
       // Combine instruction messages with conversation messages
       const messagesWithInstructions = [...instructionMessages, ...truncatedMessages];
 
+      // Capture debug payload for utility panel (sendMessage)
+      captureDebugPayload(
+        profileConfig.selectedModel || globalSettings.modelId,
+        instructionMessages[0]?.content || '',
+        truncatedMessages,
+        {
+          temperature: globalSettings.temperature,
+          maxTokens: globalSettings.maxTokens,
+          topP: globalSettings.topP,
+          topK: globalSettings.topK,
+          enableThinking: globalSettings.enableThinking,
+          thinkingLevel: globalSettings.thinkingLevel,
+          thinkingBudget: globalSettings.thinkingBudget,
+        }
+      );
+
       // Use streaming or non-streaming based on settings
       if (globalSettings.enableStreaming) {
         // Streaming mode for real-time responses
@@ -5150,6 +5166,29 @@ Write an engaging story segment. If this is a good point for player interaction,
     setConversations((prev) =>
       prev.map((c) => (c.id === currentConversation.id ? updated : c))
     );
+  };
+
+  // Helper function to capture debug payload for utility panel
+  const captureDebugPayload = (
+    model: string,
+    systemPrompt: string,
+    messages: Message[],
+    options: {
+      temperature: number;
+      maxTokens: number;
+      topP: number;
+      topK: number;
+      enableThinking: boolean;
+      thinkingLevel?: string;
+      thinkingBudget?: string;
+    }
+  ) => {
+    setApiDebugPayload(JSON.stringify({
+      model,
+      system: systemPrompt.substring(0, 500) + (systemPrompt.length > 500 ? '...[truncated]' : ''),
+      messages: messages.map(m => ({ role: m.role, content: m.content.substring(0, 200) + (m.content.length > 200 ? '...[truncated]' : '') })),
+      options
+    }, null, 2));
   };
 
   const handleSummarize = useCallback(async () => {
@@ -5329,6 +5368,22 @@ Write an engaging story segment. If this is a good point for player interaction,
       // Combine instruction messages with conversation messages
       const messagesWithInstructions = [...instructionMessages, ...truncatedMessages];
 
+      // Capture debug payload for utility panel (handleRetry)
+      captureDebugPayload(
+        profileConfig.selectedModel || globalSettings.modelId,
+        instructionMessages[0]?.content || '',
+        truncatedMessages,
+        {
+          temperature: globalSettings.temperature,
+          maxTokens: globalSettings.maxTokens,
+          topP: globalSettings.topP,
+          topK: globalSettings.topK,
+          enableThinking: globalSettings.enableThinking,
+          thinkingLevel: globalSettings.thinkingLevel,
+          thinkingBudget: globalSettings.thinkingBudget,
+        }
+      );
+
       // Use streaming or non-streaming based on settings
       if (globalSettings.enableStreaming) {
         // Streaming mode for real-time responses
@@ -5492,6 +5547,22 @@ Write an engaging story segment. If this is a good point for player interaction,
 
       // Combine instruction messages with conversation messages
       const messagesWithInstructions = [...instructionMessages, ...truncatedMessages];
+
+      // Capture debug payload for utility panel (handleContinue)
+      captureDebugPayload(
+        profileConfig.selectedModel || globalSettings.modelId,
+        instructionMessages[0]?.content || '',
+        truncatedMessages,
+        {
+          temperature: globalSettings.temperature,
+          maxTokens: globalSettings.maxTokens,
+          topP: globalSettings.topP,
+          topK: globalSettings.topK,
+          enableThinking: globalSettings.enableThinking,
+          thinkingLevel: globalSettings.thinkingLevel,
+          thinkingBudget: globalSettings.thinkingBudget,
+        }
+      );
 
       // Use streaming or non-streaming based on settings
       if (globalSettings.enableStreaming) {
