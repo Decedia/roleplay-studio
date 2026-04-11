@@ -3814,7 +3814,8 @@ export default function Chat() {
       
       setApiDebugPayload(JSON.stringify({
         model: profileConfig.selectedModel,
-        system: systemPrompt.substring(0, 500) + (systemPrompt.length > 500 ? '...[truncated]' : ''),
+        characterContext: systemPrompt.substring(0, 500) + (systemPrompt.length > 500 ? '...[truncated]' : ''),
+        instructions: [],
         messages: messages.map(m => ({ role: m.role, content: m.content.substring(0, 200) + (m.content.length > 200 ? '...[truncated]' : '') })),
         options: {
           temperature: 0.8,
@@ -4042,7 +4043,8 @@ export default function Chat() {
         
         setApiDebugPayload(JSON.stringify({
           model: profileConfig.selectedModel,
-          system: systemPrompt.substring(0, 500) + (systemPrompt.length > 500 ? '...[truncated]' : ''),
+          characterContext: systemPrompt.substring(0, 500) + (systemPrompt.length > 500 ? '...[truncated]' : ''),
+          instructions: [],
           messages: messages.map(m => ({ role: m.role, content: m.content.substring(0, 200) + (m.content.length > 200 ? '...[truncated]' : '') })),
           options: {
             temperature: 0.8,
@@ -5030,7 +5032,7 @@ Write an engaging story segment. If this is a good point for player interaction,
       };
       
       // Build system prompt with lorebook support and summary memory
-      const { systemPrompt, instructionMessages } = buildFullSystemPrompt(
+      const { systemPrompt, instructionMessages, characterContext } = buildFullSystemPrompt(
         selectedCharacter,
         selectedPersona.name,
         selectedPersona.description,
@@ -5053,13 +5055,14 @@ Write an engaging story segment. If this is a good point for player interaction,
         systemPromptTokens
       );
 
-      // Combine instruction messages with conversation messages
-      const messagesWithInstructions = [...instructionMessages, ...truncatedMessages];
+      // Combine character context, instruction messages, and conversation messages
+      const messagesWithInstructions = [characterContext, ...instructionMessages, ...truncatedMessages];
 
       // Capture debug payload for utility panel (sendMessage)
       captureDebugPayload(
         profileConfig.selectedModel || globalSettings.modelId,
-        instructionMessages.map(m => m.content).join('\n\n===INSTRUCTION===\n\n'),
+        characterContext.content,
+        instructionMessages,
         truncatedMessages,
         {
           temperature: globalSettings.temperature,
@@ -5197,8 +5200,9 @@ Write an engaging story segment. If this is a good point for player interaction,
   // Helper function to capture debug payload for utility panel
   const captureDebugPayload = (
     model: string,
-    systemPrompt: string,
-    messages: Message[],
+    characterContext: string,
+    instructions: Message[],
+    conversationMessages: Message[],
     options: {
       temperature: number;
       maxTokens: number;
@@ -5211,8 +5215,9 @@ Write an engaging story segment. If this is a good point for player interaction,
   ) => {
     setApiDebugPayload(JSON.stringify({
       model,
-      system: systemPrompt.substring(0, 500) + (systemPrompt.length > 500 ? '...[truncated]' : ''),
-      messages: messages.map(m => ({ role: m.role, content: m.content.substring(0, 200) + (m.content.length > 200 ? '...[truncated]' : '') })),
+      characterContext: characterContext.substring(0, 500) + (characterContext.length > 500 ? '...[truncated]' : ''),
+      instructions: instructions.map(m => ({ role: m.role, content: m.content.substring(0, 200) + (m.content.length > 200 ? '...[truncated]' : '') })),
+      messages: conversationMessages.map(m => ({ role: m.role, content: m.content.substring(0, 200) + (m.content.length > 200 ? '...[truncated]' : '') })),
       options
     }, null, 2));
   };
@@ -5267,7 +5272,8 @@ Write an engaging story segment. If this is a good point for player interaction,
 
       setApiDebugPayload(JSON.stringify({
         model: profileConfig.selectedModel,
-        system: sumConfig.instructions || '',
+        characterContext: '',
+        instructions: [{ role: "system", content: sumConfig.instructions || '' }],
         messages: messagesToSummarize.map(m => ({ role: m.role, content: m.content.substring(0, 200) + (m.content.length > 200 ? '...[truncated]' : '') })),
         options: {
           temperature: sumConfig.temperature,
@@ -5381,7 +5387,7 @@ Write an engaging story segment. If this is a good point for player interaction,
       };
       
       // Build system prompt with lorebook support and summary memory
-      const { systemPrompt, instructionMessages } = buildFullSystemPrompt(
+      const { systemPrompt, instructionMessages, characterContext } = buildFullSystemPrompt(
         selectedCharacter,
         selectedPersona.name,
         selectedPersona.description,
@@ -5404,13 +5410,14 @@ Write an engaging story segment. If this is a good point for player interaction,
         systemPromptTokens
       );
 
-      // Combine instruction messages with conversation messages
-      const messagesWithInstructions = [...instructionMessages, ...truncatedMessages];
+      // Combine character context, instruction messages, and conversation messages
+      const messagesWithInstructions = [characterContext, ...instructionMessages, ...truncatedMessages];
 
       // Capture debug payload for utility panel (handleRetry)
       captureDebugPayload(
         profileConfig.selectedModel || globalSettings.modelId,
-        instructionMessages.map(m => m.content).join('\n\n===INSTRUCTION===\n\n'),
+        characterContext.content,
+        instructionMessages,
         truncatedMessages,
         {
           temperature: globalSettings.temperature,
@@ -5561,7 +5568,7 @@ Write an engaging story segment. If this is a good point for player interaction,
         selectedModel: globalSettings.modelId || activeProfile?.selectedModel
       };
       // Build system prompt with lorebook support and summary memory
-      const { systemPrompt, instructionMessages } = buildFullSystemPrompt(
+      const { systemPrompt, instructionMessages, characterContext } = buildFullSystemPrompt(
         selectedCharacter,
         selectedPersona.name,
         selectedPersona.description,
@@ -5584,13 +5591,14 @@ Write an engaging story segment. If this is a good point for player interaction,
         systemPromptTokens
       );
 
-      // Combine instruction messages with conversation messages
-      const messagesWithInstructions = [...instructionMessages, ...truncatedMessages];
+      // Combine character context, instruction messages, and conversation messages
+      const messagesWithInstructions = [characterContext, ...instructionMessages, ...truncatedMessages];
 
       // Capture debug payload for utility panel (handleContinue)
       captureDebugPayload(
         profileConfig.selectedModel || globalSettings.modelId,
-        instructionMessages.map(m => m.content).join('\n\n===INSTRUCTION===\n\n'),
+        characterContext.content,
+        instructionMessages,
         truncatedMessages,
         {
           temperature: globalSettings.temperature,
@@ -5796,7 +5804,7 @@ Write an engaging story segment. If this is a good point for player interaction,
           selectedModel: globalSettings.modelId || activeProfile?.selectedModel
         };
         
-        const { systemPrompt, instructionMessages } = buildFullSystemPrompt(
+        const { systemPrompt, instructionMessages, characterContext } = buildFullSystemPrompt(
           selectedCharacter,
           selectedPersona.name,
           selectedPersona.description,
@@ -5818,13 +5826,14 @@ Write an engaging story segment. If this is a good point for player interaction,
           systemPromptTokens
         );
 
-      // Combine instruction messages with conversation messages
-      const messagesWithInstructions = [...instructionMessages, ...truncatedMessages];
+      // Combine character context, instruction messages, and conversation messages
+      const messagesWithInstructions = [characterContext, ...instructionMessages, ...truncatedMessages];
 
       // Capture debug payload for utility panel
       setApiDebugPayload(JSON.stringify({
         model: profileConfig.selectedModel,
-        system: instructionMessages.map(m => m.content).join('\n\n===INSTRUCTION===\n\n'),
+        characterContext: characterContext.content,
+        instructions: instructionMessages,
         messages: truncatedMessages.map(m => ({ role: m.role, content: m.content.substring(0, 200) + (m.content.length > 200 ? '...[truncated]' : '') })),
         options: {
           temperature: globalSettings.temperature,
@@ -6036,7 +6045,7 @@ Write an engaging story segment. If this is a good point for player interaction,
     }
     
     // Calculate system prompt tokens
-    const { systemPrompt, instructionMessages } = buildFullSystemPrompt(
+    const { systemPrompt, instructionMessages, characterContext } = buildFullSystemPrompt(
       selectedCharacter,
       selectedPersona.name,
       selectedPersona.description,
