@@ -477,11 +477,9 @@ export const streamWithGoogleAIStudio = async (
       parts: [{ text: m.content }],
     }));
 
-    // Combine system instruction with any system messages from the instruction list
-    const systemInstructionContent = systemMessages.map(m => m.content).join("\n\n");
-    const systemInstruction = systemInstructionContent || options.systemPrompt
-      ? { parts: [{ text: systemInstructionContent || options.systemPrompt || "" }] }
-      : undefined;
+    // Send system messages as separate entries for Gemini API
+    const systemInstructions = systemMessages.map(m => ({ parts: [{ text: m.content }] }));
+    const systemInstruction = systemInstructions.length > 0 ? systemInstructions : undefined;
 
     // Build generation config with optional thinking
     const generationConfig: Record<string, unknown> = {
@@ -1284,11 +1282,9 @@ export const streamWithVertexAI = async (
       parts: [{ text: m.content }],
     }));
 
-    // Combine system instruction with any system messages from the instruction list
-    const systemInstructionContent = systemMessages.map(m => m.content).join("\n\n");
-    const systemInstruction = systemInstructionContent || options.systemPrompt
-      ? { parts: [{ text: systemInstructionContent || options.systemPrompt || "" }] }
-      : undefined;
+    // Send system messages as separate entries for Gemini API
+    const systemInstructions = systemMessages.map(m => ({ parts: [{ text: m.content }] }));
+    const systemInstruction = systemInstructions.length > 0 ? systemInstructions : undefined;
 
     // Build generation config with optional thinking
     const generationConfig: Record<string, unknown> = {
