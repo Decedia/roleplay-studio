@@ -5059,7 +5059,7 @@ Write an engaging story segment. If this is a good point for player interaction,
       // Capture debug payload for utility panel (sendMessage)
       captureDebugPayload(
         profileConfig.selectedModel || globalSettings.modelId,
-        instructionMessages[0]?.content || '',
+        instructionMessages.map(m => m.content).join('\n\n===INSTRUCTION===\n\n'),
         truncatedMessages,
         {
           temperature: globalSettings.temperature,
@@ -5410,7 +5410,7 @@ Write an engaging story segment. If this is a good point for player interaction,
       // Capture debug payload for utility panel (handleRetry)
       captureDebugPayload(
         profileConfig.selectedModel || globalSettings.modelId,
-        instructionMessages[0]?.content || '',
+        instructionMessages.map(m => m.content).join('\n\n===INSTRUCTION===\n\n'),
         truncatedMessages,
         {
           temperature: globalSettings.temperature,
@@ -5590,7 +5590,7 @@ Write an engaging story segment. If this is a good point for player interaction,
       // Capture debug payload for utility panel (handleContinue)
       captureDebugPayload(
         profileConfig.selectedModel || globalSettings.modelId,
-        instructionMessages[0]?.content || '',
+        instructionMessages.map(m => m.content).join('\n\n===INSTRUCTION===\n\n'),
         truncatedMessages,
         {
           temperature: globalSettings.temperature,
@@ -5824,7 +5824,7 @@ Write an engaging story segment. If this is a good point for player interaction,
       // Capture debug payload for utility panel
       setApiDebugPayload(JSON.stringify({
         model: profileConfig.selectedModel,
-        system: instructionMessages[0]?.content || '',
+        system: instructionMessages.map(m => m.content).join('\n\n===INSTRUCTION===\n\n'),
         messages: truncatedMessages.map(m => ({ role: m.role, content: m.content.substring(0, 200) + (m.content.length > 200 ? '...[truncated]' : '') })),
         options: {
           temperature: globalSettings.temperature,
