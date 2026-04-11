@@ -280,7 +280,7 @@ const scanForLorebookEntries = (
 
 // Build full system prompt with lorebook support
 // Follows guideline: [Formatting] [Context] [Main instructions] [Negative constraints at end]
-// Always returns an object with systemPrompt string, characterContext, and instructionMessages array
+// Always returns an object with systemPrompt string, characterContext, and separate before/after instructions
 export const buildFullSystemPrompt = (
   character: Character,
   personaName: string,
@@ -288,7 +288,12 @@ export const buildFullSystemPrompt = (
   messages: Message[],
   globalInstructions?: GlobalInstructions,
   summaryMemory?: string
-): { systemPrompt: string; instructionMessages: Message[]; characterContext: Message } => {
+): { 
+  systemPrompt: string; 
+  characterContext: Message;
+  beforeContextInstructions: Message[];
+  afterContextInstructions: Message[];
+} => {
   const formattingSections: string[] = [];
   const contextSections: string[] = [];
   const instructionSections: string[] = [];
@@ -400,10 +405,11 @@ export const buildFullSystemPrompt = (
     content: systemPromptContent,
   };
   
-  // Always return object with character context and instruction messages separate
+  // Always return object with character context and separate before/after instructions
   return {
     systemPrompt: systemPromptContent,
-    instructionMessages: [...beforeContextInstructions, ...afterContextInstructions],
     characterContext: systemMessage,
+    beforeContextInstructions,
+    afterContextInstructions,
   };
 };
