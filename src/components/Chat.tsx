@@ -3812,6 +3812,19 @@ export default function Chat() {
         { role: "user" as const, content: messageToSend }
       ];
       
+      setApiDebugPayload(JSON.stringify({
+        model: profileConfig.selectedModel,
+        system: systemPrompt.substring(0, 500) + (systemPrompt.length > 500 ? '...[truncated]' : ''),
+        messages: messages.map(m => ({ role: m.role, content: m.content.substring(0, 200) + (m.content.length > 200 ? '...[truncated]' : '') })),
+        options: {
+          temperature: 0.8,
+          maxTokens: 2000,
+          topP: 0.9,
+          topK: 40,
+          enableThinking: false,
+        }
+      }, null, 2));
+      
       let responseText: string;
       
       const configWithModel = profileConfig;
@@ -4026,6 +4039,19 @@ export default function Chat() {
           })),
           { role: "user", content: messageToSend }
         ];
+        
+        setApiDebugPayload(JSON.stringify({
+          model: profileConfig.selectedModel,
+          system: systemPrompt.substring(0, 500) + (systemPrompt.length > 500 ? '...[truncated]' : ''),
+          messages: messages.map(m => ({ role: m.role, content: m.content.substring(0, 200) + (m.content.length > 200 ? '...[truncated]' : '') })),
+          options: {
+            temperature: 0.8,
+            maxTokens: 2000,
+            topP: 0.9,
+            topK: 40,
+            enableThinking: false,
+          }
+        }, null, 2));
         
         let responseText: string;
         const configWithModel = profileConfig;
@@ -5238,6 +5264,19 @@ Write an engaging story segment. If this is a good point for player interaction,
         recentMessagesCount: sumConfig.recentMessagesCount,
         summaryLength: sumConfig.summaryLength,
       };
+
+      setApiDebugPayload(JSON.stringify({
+        model: profileConfig.selectedModel,
+        system: sumConfig.instructions || '',
+        messages: messagesToSummarize.map(m => ({ role: m.role, content: m.content.substring(0, 200) + (m.content.length > 200 ? '...[truncated]' : '') })),
+        options: {
+          temperature: sumConfig.temperature,
+          maxTokens: undefined,
+          topP: undefined,
+          topK: undefined,
+          enableThinking: false,
+        }
+      }, null, 2));
 
       const result: SummarizationResult = await summarizeConversation({
         messages: messagesToSummarize,
