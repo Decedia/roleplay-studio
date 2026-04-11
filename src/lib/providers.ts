@@ -708,24 +708,17 @@ export const chatWithNvidiaNIM: ChatFunction = async (
   }
 
   try {
-    const formattedMessages = messages.map((m) => ({
+    const systemMessages = messages.filter(m => m.role === "system");
+    const nonSystemMessages = messages.filter(m => m.role !== "system");
+    
+    const formattedMessages = nonSystemMessages.map((m) => ({
       role: m.role,
       content: m.content,
     }));
 
-    // Build structured system prompt following Gemini-style hierarchy:
-    // 1. Instructions (system prompt)
-    // 2. Context (conversation history handled in messages)
-    // 3. Limitations (included in system prompt)
-    let systemContent = "";
-    if (options.systemPrompt) {
-      // Format system prompt with clear sections
-      systemContent = options.systemPrompt;
-    }
-
-    // Add system message if we have system content
-    const messagesWithSystem = systemContent
-      ? [{ role: "system", content: systemContent }, ...formattedMessages]
+    const systemContent = systemMessages.map(m => m.content).join("\n\n");
+    const messagesWithSystem = systemContent || options.systemPrompt
+      ? [{ role: "system", content: systemContent || options.systemPrompt || "" }, ...formattedMessages]
       : formattedMessages;
 
     // Use server-side proxy to avoid CORS issues
@@ -791,23 +784,17 @@ export const streamWithNvidiaNIM = async (
   }
 
   try {
-    const formattedMessages = messages.map((m) => ({
+    const systemMessages = messages.filter(m => m.role === "system");
+    const nonSystemMessages = messages.filter(m => m.role !== "system");
+    
+    const formattedMessages = nonSystemMessages.map((m) => ({
       role: m.role,
       content: m.content,
     }));
 
-    // Build structured system prompt following Gemini-style hierarchy:
-    // 1. Instructions (system prompt)
-    // 2. Context (conversation history handled in messages)
-    // 3. Limitations (included in system prompt)
-    let systemContent = "";
-    if (options.systemPrompt) {
-      systemContent = options.systemPrompt;
-    }
-
-    // Add system message if we have system content
-    const messagesWithSystem = systemContent
-      ? [{ role: "system", content: systemContent }, ...formattedMessages]
+    const systemContent = systemMessages.map(m => m.content).join("\n\n");
+    const messagesWithSystem = systemContent || options.systemPrompt
+      ? [{ role: "system", content: systemContent || options.systemPrompt || "" }, ...formattedMessages]
       : formattedMessages;
 
     // Use server-side proxy to avoid CORS issues
@@ -914,14 +901,17 @@ export const chatWithGroq: ChatFunction = async (
   }
 
   try {
-    const formattedMessages = messages.map((m) => ({
+    const systemMessages = messages.filter(m => m.role === "system");
+    const nonSystemMessages = messages.filter(m => m.role !== "system");
+    
+    const formattedMessages = nonSystemMessages.map((m) => ({
       role: m.role,
       content: m.content,
     }));
 
-    // Add system prompt if provided
-    const messagesWithSystem = options.systemPrompt
-      ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
+    const systemContent = systemMessages.map(m => m.content).join("\n\n");
+    const messagesWithSystem = systemContent || options.systemPrompt
+      ? [{ role: "system", content: systemContent || options.systemPrompt || "" }, ...formattedMessages]
       : formattedMessages;
 
     // Use server-side proxy to avoid CORS issues
@@ -983,13 +973,17 @@ export const streamWithGroq = async (
   }
 
   try {
-    const formattedMessages = messages.map((m) => ({
+    const systemMessages = messages.filter(m => m.role === "system");
+    const nonSystemMessages = messages.filter(m => m.role !== "system");
+    
+    const formattedMessages = nonSystemMessages.map((m) => ({
       role: m.role,
       content: m.content,
     }));
 
-    const messagesWithSystem = options.systemPrompt
-      ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
+    const systemContent = systemMessages.map(m => m.content).join("\n\n");
+    const messagesWithSystem = systemContent || options.systemPrompt
+      ? [{ role: "system", content: systemContent || options.systemPrompt || "" }, ...formattedMessages]
       : formattedMessages;
 
     // Use server-side proxy with streaming
@@ -1082,13 +1076,17 @@ export const chatWithOpenRouter: ChatFunction = async (
   }
 
   try {
-    const formattedMessages = messages.map((m) => ({
+    const systemMessages = messages.filter(m => m.role === "system");
+    const nonSystemMessages = messages.filter(m => m.role !== "system");
+    
+    const formattedMessages = nonSystemMessages.map((m) => ({
       role: m.role,
       content: m.content,
     }));
 
-    const messagesWithSystem = options.systemPrompt
-      ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
+    const systemContent = systemMessages.map(m => m.content).join("\n\n");
+    const messagesWithSystem = systemContent || options.systemPrompt
+      ? [{ role: "system", content: systemContent || options.systemPrompt || "" }, ...formattedMessages]
       : formattedMessages;
 
     const response = await fetch("/api/open-router", {
@@ -1151,13 +1149,17 @@ export const streamWithOpenRouter = async (
   }
 
   try {
-    const formattedMessages = messages.map((m) => ({
+    const systemMessages = messages.filter(m => m.role === "system");
+    const nonSystemMessages = messages.filter(m => m.role !== "system");
+    
+    const formattedMessages = nonSystemMessages.map((m) => ({
       role: m.role,
       content: m.content,
     }));
 
-    const messagesWithSystem = options.systemPrompt
-      ? [{ role: "system", content: options.systemPrompt }, ...formattedMessages]
+    const systemContent = systemMessages.map(m => m.content).join("\n\n");
+    const messagesWithSystem = systemContent || options.systemPrompt
+      ? [{ role: "system", content: systemContent || options.systemPrompt || "" }, ...formattedMessages]
       : formattedMessages;
 
     const response = await fetch("/api/open-router", {
