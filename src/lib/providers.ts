@@ -362,7 +362,7 @@ export const chatWithGoogleAIStudio: ChatFunction = async (
     return { error: "Google AI Studio API key is required" };
   }
 
-  try {
+try {
     // Extract system messages from instruction messages for Gemini API
     const systemMessages = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -373,13 +373,11 @@ export const chatWithGoogleAIStudio: ChatFunction = async (
       parts: [{ text: m.content }],
     }));
 
-    // Combine system instruction with any system messages from the instruction list
-    const systemInstructionContent = systemMessages.map(m => m.content).join("\n\n");
-    const systemInstruction = systemInstructionContent || options.systemPrompt
-      ? { parts: [{ text: systemInstructionContent || options.systemPrompt || "" }] }
-      : undefined;
+    // Send system messages as separate entries for Gemini API
+    const systemInstructions = systemMessages.map(m => ({ parts: [{ text: m.content }] }));
+    const systemInstruction = systemInstructions.length > 0 ? systemInstructions : undefined;
 
-    // Build generation config
+    // Build generation config with optional thinking
     const generationConfig: Record<string, unknown> = {
       temperature: options.temperature,
       maxOutputTokens: options.maxTokens,
