@@ -5067,7 +5067,8 @@ Write an engaging story segment. If this is a good point for player interaction,
       captureDebugPayload(
         profileConfig.selectedModel || globalSettings.modelId,
         characterContext.content,
-        [...beforeContextInstructions, ...afterContextInstructions],
+        beforeContextInstructions,
+        afterContextInstructions,
         truncatedMessages,
         {
           temperature: globalSettings.temperature,
@@ -5206,7 +5207,8 @@ Write an engaging story segment. If this is a good point for player interaction,
   const captureDebugPayload = (
     model: string,
     characterContext: string,
-    instructions: Message[],
+    beforeContextInstructions: Message[],
+    afterContextInstructions: Message[],
     conversationMessages: Message[],
     options: {
       temperature: number;
@@ -5221,8 +5223,9 @@ Write an engaging story segment. If this is a good point for player interaction,
     setApiDebugPayload(JSON.stringify({
       model,
       characterContext: characterContext.substring(0, 500) + (characterContext.length > 500 ? '...[truncated]' : ''),
-      instructions: instructions.map(m => ({ role: m.role, content: m.content.substring(0, 200) + (m.content.length > 200 ? '...[truncated]' : '') })),
+      beforeContextInstructions: beforeContextInstructions.map(m => ({ role: m.role, content: m.content.substring(0, 200) + (m.content.length > 200 ? '...[truncated]' : '') })),
       messages: conversationMessages.map(m => ({ role: m.role, content: m.content.substring(0, 200) + (m.content.length > 200 ? '...[truncated]' : '') })),
+      afterContextInstructions: afterContextInstructions.map(m => ({ role: m.role, content: m.content.substring(0, 200) + (m.content.length > 200 ? '...[truncated]' : '') })),
       options
     }, null, 2));
   };
@@ -5427,7 +5430,8 @@ Write an engaging story segment. If this is a good point for player interaction,
       captureDebugPayload(
         profileConfig.selectedModel || globalSettings.modelId,
         characterContext.content,
-        [...beforeContextInstructions, ...afterContextInstructions],
+        beforeContextInstructions,
+        afterContextInstructions,
         truncatedMessages,
         {
           temperature: globalSettings.temperature,
@@ -5613,7 +5617,8 @@ Write an engaging story segment. If this is a good point for player interaction,
       captureDebugPayload(
         profileConfig.selectedModel || globalSettings.modelId,
         characterContext.content,
-        [...beforeContextInstructions, ...afterContextInstructions],
+        beforeContextInstructions,
+        afterContextInstructions,
         truncatedMessages,
         {
           temperature: globalSettings.temperature,
@@ -5853,8 +5858,9 @@ Write an engaging story segment. If this is a good point for player interaction,
       setApiDebugPayload(JSON.stringify({
         model: profileConfig.selectedModel,
         characterContext: characterContext.content,
-        instructions: [...beforeContextInstructions, ...afterContextInstructions],
+        beforeContextInstructions: beforeContextInstructions.map(m => ({ role: m.role, content: m.content.substring(0, 200) + (m.content.length > 200 ? '...[truncated]' : '') })),
         messages: truncatedMessages.map(m => ({ role: m.role, content: m.content.substring(0, 200) + (m.content.length > 200 ? '...[truncated]' : '') })),
+        afterContextInstructions: afterContextInstructions.map(m => ({ role: m.role, content: m.content.substring(0, 200) + (m.content.length > 200 ? '...[truncated]' : '') })),
         options: {
           temperature: globalSettings.temperature,
           maxTokens: globalSettings.maxTokens,
