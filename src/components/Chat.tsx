@@ -3976,6 +3976,8 @@ export default function Chat() {
         ],
         createdAt: Date.now(),
         updatedAt: Date.now(),
+        summaryMemory: undefined,
+        lastSummarizedIndex: 0,
       };
       setConversations((prev) => [...prev, newConversation]);
       setSelectedCharacter(character);
@@ -4835,6 +4837,8 @@ Write an engaging story segment. If this is a good point for player interaction,
       ],
       createdAt: Date.now(),
       updatedAt: Date.now(),
+      summaryMemory: undefined,
+      lastSummarizedIndex: 0,
     };
     
     setConversations((prev) => [...prev, newConversation]);
@@ -5043,7 +5047,11 @@ Write an engaging story segment. If this is a good point for player interaction,
 
       // When summary exists, only send messages after lastSummarizedIndex to API
       const lastSummarizedIdx = currentConversation.lastSummarizedIndex ?? 0;
-      const messagesForApi = currentConversation.summaryMemory && lastSummarizedIdx > 0
+      const hasValidSummary = currentConversation.summaryMemory 
+        && currentConversation.summaryMemory.trim().length > 0 
+        && lastSummarizedIdx > 0;
+      
+      const messagesForApi = hasValidSummary
         ? updatedMessages.slice(lastSummarizedIdx)
         : updatedMessages;
 
@@ -5406,7 +5414,11 @@ Write an engaging story segment. If this is a good point for player interaction,
 
       // When summary exists, only send messages after lastSummarizedIndex to API
       const lastSummarizedIdx = currentConversation.lastSummarizedIndex ?? 0;
-      const messagesForApi = currentConversation.summaryMemory && lastSummarizedIdx > 0
+      const hasValidSummary = currentConversation.summaryMemory 
+        && currentConversation.summaryMemory.trim().length > 0 
+        && lastSummarizedIdx > 0;
+      
+      const messagesForApi = hasValidSummary
         ? messagesBeforeRetry.slice(lastSummarizedIdx)
         : messagesBeforeRetry;
 
@@ -5593,7 +5605,11 @@ Write an engaging story segment. If this is a good point for player interaction,
 
       // When summary exists, only send messages after lastSummarizedIndex to API
       const lastSummarizedIdx = currentConversation.lastSummarizedIndex ?? 0;
-      const messagesForApi = currentConversation.summaryMemory && lastSummarizedIdx > 0
+      const hasValidSummary = currentConversation.summaryMemory 
+        && currentConversation.summaryMemory.trim().length > 0 
+        && lastSummarizedIdx > 0;
+      
+      const messagesForApi = hasValidSummary
         ? messagesWithContinue.slice(lastSummarizedIdx)
         : messagesWithContinue;
 
@@ -5835,7 +5851,11 @@ Write an engaging story segment. If this is a good point for player interaction,
 
         // When summary exists, only send messages after lastSummarizedIndex to API
         const lastSummarizedIdx = currentConversation.lastSummarizedIndex ?? 0;
-        const messagesForApi = currentConversation.summaryMemory && lastSummarizedIdx > 0
+        const hasValidSummary = currentConversation.summaryMemory 
+          && currentConversation.summaryMemory.trim().length > 0 
+          && lastSummarizedIdx > 0;
+        
+        const messagesForApi = hasValidSummary
           ? messagesAfterEdit.slice(lastSummarizedIdx)
           : messagesAfterEdit;
 
