@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 
 // Import our custom types and utilities
 import {
@@ -842,12 +844,10 @@ function SettingsModal({
 
           {/* Custom Size Toggle */}
           <div className="flex items-center gap-3 mb-4">
-            <input
-              type="checkbox"
+            <Checkbox
               id="useCustomSize"
               checked={globalSettings.useCustomSize}
-              onChange={(e) => {
-                const useCustom = e.target.checked;
+              onCheckedChange={(useCustom) => {
                 if (!useCustom && selectedModel) {
                   // Reset to model max when disabling custom size
                   setGlobalSettings({ 
@@ -857,12 +857,12 @@ function SettingsModal({
                     maxContextTokens: selectedModel.context || 128000
                   });
                 } else {
-                  setGlobalSettings({ ...globalSettings, useCustomSize: useCustom });
+                  setGlobalSettings({ ...globalSettings, useCustomSize: useCustom as boolean });
                 }
               }}
-              className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-purple-600 focus:ring-purple-500 focus:ring-offset-zinc-900"
+              className="data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
             />
-            <label htmlFor="useCustomSize" className="text-sm text-zinc-300">
+            <label htmlFor="useCustomSize" className="text-sm text-zinc-300 cursor-pointer">
               Use custom output/context sizes
             </label>
           </div>
@@ -996,19 +996,11 @@ function SettingsModal({
             <label className="block text-sm font-medium text-zinc-400 mb-2">
               Enable Thinking
             </label>
-            <button
-              type="button"
-              onClick={() => setGlobalSettings({ ...globalSettings, enableThinking: !globalSettings.enableThinking })}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                globalSettings.enableThinking ? "bg-blue-600" : "bg-zinc-700"
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  globalSettings.enableThinking ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
+            <Switch
+              checked={globalSettings.enableThinking}
+              onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, enableThinking: checked })}
+              className="data-[state=checked]:bg-blue-600"
+            />
             <p className="text-xs text-zinc-500 mt-1">
               Allow AI to show its reasoning process (Gemini 2.0 only)
             </p>
@@ -1019,19 +1011,11 @@ function SettingsModal({
             <label className="block text-sm font-medium text-zinc-400 mb-2">
               Enable Streaming
             </label>
-            <button
-              type="button"
-              onClick={() => setGlobalSettings({ ...globalSettings, enableStreaming: !globalSettings.enableStreaming })}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                globalSettings.enableStreaming ? "bg-blue-600" : "bg-zinc-700"
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  globalSettings.enableStreaming ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
+            <Switch
+              checked={globalSettings.enableStreaming}
+              onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, enableStreaming: checked })}
+              className="data-[state=checked]:bg-blue-600"
+            />
             <p className="text-xs text-zinc-500 mt-1">
               Stream AI responses in real-time (disable for slower but more stable responses)
             </p>
@@ -1042,19 +1026,11 @@ function SettingsModal({
             <label className="block text-sm font-medium text-zinc-400 mb-2">
               Ding When Unfocused
             </label>
-            <button
-              type="button"
-              onClick={() => setGlobalSettings({ ...globalSettings, dingWhenUnfocused: !globalSettings.dingWhenUnfocused })}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                globalSettings.dingWhenUnfocused ? "bg-blue-600" : "bg-zinc-700"
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  globalSettings.dingWhenUnfocused ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
+            <Switch
+              checked={globalSettings.dingWhenUnfocused}
+              onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, dingWhenUnfocused: checked })}
+              className="data-[state=checked]:bg-blue-600"
+            />
             <p className="text-xs text-zinc-500 mt-1">
               Play a notification sound when AI finishes and window is not focused
             </p>
@@ -2291,14 +2267,13 @@ function SettingsModal({
             {/* Auto-export settings */}
             <div className="mt-4 p-3 bg-zinc-800 rounded-lg">
               <div className="flex items-center gap-3 mb-3">
-                <input
-                  type="checkbox"
+                <Checkbox
                   id="autoExport"
                   checked={autoExport.enabled}
-                  onChange={(e) => setAutoExport(prev => ({ ...prev, enabled: e.target.checked }))}
-                  className="w-4 h-4 rounded border-zinc-600 bg-zinc-700 text-blue-500 focus:ring-blue-500 focus:ring-offset-zinc-900"
+                  onCheckedChange={(checked) => setAutoExport(prev => ({ ...prev, enabled: checked as boolean }))}
+                  className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                 />
-                <label htmlFor="autoExport" className="text-sm text-white">
+                <label htmlFor="autoExport" className="text-sm text-white cursor-pointer">
                   Auto-export every
                 </label>
                 <input
