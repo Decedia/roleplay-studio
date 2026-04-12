@@ -2,20 +2,6 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 
-// Import available shadcn/ui components
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
 // Import our custom types and utilities
 import {
   LLMProviderType,
@@ -672,13 +658,22 @@ function SettingsModal({
     return "Pricing N/A";
   };
 
+  if (!show) return null;
+
   return (
-    <Dialog open={show} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-zinc-900 border-zinc-800 sm:max-w-lg max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle className="text-white text-xl">Global Settings</DialogTitle>
-        </DialogHeader>
-        <ScrollArea className="max-h-[calc(90vh-120px)] pr-4">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-md md:max-w-lg max-h-[90vh] overflow-y-auto relative">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-1 hover:bg-zinc-800 rounded-lg transition-colors"
+        >
+          <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        <h2 className="text-xl font-semibold text-white mb-4">
+          Global Settings
+        </h2>
         
         <div className="space-y-6">
           {/* Model Selection */}
@@ -2328,16 +2323,15 @@ function SettingsModal({
         </div>
 
         <div className="flex gap-3 mt-6">
-          <Button
+          <button
             onClick={onClose}
-            className="flex-1"
+            className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             Done
-          </Button>
+          </button>
         </div>
-        </ScrollArea>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }
 
