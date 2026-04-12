@@ -1,6 +1,11 @@
 "use client";
 
 import React from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { RefreshCw, ChevronRight, Trash2, Save, X } from "lucide-react";
 import { ThinkingSection } from "./ThinkingSection";
 import { FormattedText } from "./FormattedText";
 import { getThoughtSignature } from "../utils";
@@ -72,150 +77,157 @@ export function ChatMessage({
   // If editing, show edit form
   if (isEditing) {
     return (
-      <div className={`flex gap-4 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+      <div className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
         {message.role === "assistant" && (
-          avatarUrl ? (
-            <img src={avatarUrl} alt={senderName} className="w-8 h-8 rounded-lg object-cover" />
-          ) : (
-            <div className={`flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br ${gradientClass} flex items-center justify-center`}>
-              <span className="text-sm text-white font-semibold">
-                {senderInitial?.charAt(0).toUpperCase()}
-              </span>
-            </div>
-          )
+          <Avatar className="h-8 w-8 flex-shrink-0">
+            <AvatarImage src={avatarUrl} alt={senderName} className="object-cover" />
+            <AvatarFallback className={`bg-gradient-to-br ${gradientClass} text-white text-sm font-semibold`}>
+              {senderInitial?.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
         )}
-        <div className={`max-w-[80%] ${message.role === "user" ? "order-first" : ""}`}>
-          <div className="rounded-2xl px-4 py-3 bg-zinc-800 text-white">
-            <textarea
+        <div className={`max-w-[85%] sm:max-w-[75%] ${message.role === "user" ? "order-first" : ""}`}>
+          <div className="rounded-xl px-3 py-3 bg-zinc-800 border border-zinc-700">
+            <Textarea
               value={editingMessageContent}
               onChange={(e) => onEditMessage?.(e.target.value)}
-              className="w-full bg-transparent text-white resize-none focus:outline-none"
-              rows={3}
+              className="w-full bg-transparent border-none resize-none focus-visible:ring-0 focus-visible:ring-offset-0 min-h-[80px] text-sm text-white"
               autoFocus
             />
             <div className="flex gap-2 mt-2">
-              <button
-                onClick={() => {
-                  // Save edit - handled by parent
-                }}
-                className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
-              >
+              <Button size="sm" className="h-7 px-3" onClick={() => onEditMessage?.(editingMessageContent ?? "")}>
+                <Save className="h-3.5 w-3.5 mr-1" />
                 Save
-              </button>
-              <button
-                onClick={onCancelEdit}
-                className="px-3 py-1 bg-zinc-600 text-white rounded-lg text-sm hover:bg-zinc-500"
-              >
+              </Button>
+              <Button size="sm" variant="secondary" className="h-7 px-3" onClick={onCancelEdit}>
+                <X className="h-3.5 w-3.5 mr-1" />
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         </div>
         {message.role === "user" && (
-          <div className={`flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br ${gradientClass} flex items-center justify-center`}>
-            <span className="text-sm text-white font-semibold">
+          <Avatar className="h-8 w-8 flex-shrink-0">
+            <AvatarFallback className={`bg-gradient-to-br ${gradientClass} text-white text-sm font-semibold`}>
               {senderInitial?.charAt(0).toUpperCase()}
-            </span>
-          </div>
+            </AvatarFallback>
+          </Avatar>
         )}
       </div>
     );
   }
 
   return (
-    <div
-      className={`flex gap-4 ${
-        message.role === "user" ? "justify-end" : "justify-start"
-      }`}
-    >
-      {message.role === "assistant" && (
-        avatarUrl ? (
-          <img src={avatarUrl} alt={senderName} className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
-        ) : (
-          <div className={`flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br ${gradientClass} flex items-center justify-center`}>
-            <span className="text-sm text-white font-semibold">
+    <TooltipProvider>
+      <div
+        className={`flex gap-3 py-1 ${
+          message.role === "user" ? "justify-end" : "justify-start"
+        }`}
+      >
+        {message.role === "assistant" && (
+          <Avatar className="h-8 w-8 flex-shrink-0 mt-1">
+            <AvatarImage src={avatarUrl} alt={senderName} className="object-cover" />
+            <AvatarFallback className={`bg-gradient-to-br ${gradientClass} text-white text-sm font-semibold`}>
               {senderInitial?.charAt(0).toUpperCase()}
-            </span>
-          </div>
-        )
-      )}
-      <div className={`max-w-[80%] ${message.role === "user" ? "order-first" : ""}`}>
-        {/* Show thinking section for assistant messages */}
-        {thinkContent && (
-          <ThinkingSection 
-            content={thinkContent} 
-            signature={thoughtSignature?.signature}
-            modelName={thoughtSignature?.modelName}
-          />
+            </AvatarFallback>
+          </Avatar>
         )}
-        
-        <div
-          className={`rounded-2xl px-4 py-3 ${
-            message.role === "user"
-              ? "bg-zinc-700 text-white"
-              : "bg-zinc-800 text-zinc-100"
-          }`}
-        >
-          {isGeneratorView ? (
-            <div className="whitespace-pre-wrap text-sm">{rawContent}</div>
-          ) : (
-            <FormattedText content={rawContent} />
+        <div className={`max-w-[85%] sm:max-w-[75%] ${message.role === "user" ? "order-first" : ""}`}>
+          {/* Show thinking section for assistant messages */}
+          {thinkContent && (
+            <ThinkingSection 
+              content={thinkContent} 
+              signature={thoughtSignature?.signature}
+              modelName={thoughtSignature?.modelName}
+            />
           )}
-        </div>
-        
-        <div className="flex items-center gap-2 mt-1">
-          <p className="text-xs text-zinc-500">
-            {message.role === "user" ? senderName : senderName || "AI"}
-          </p>
           
-          {/* Action buttons for last messages */}
-          {isLastAssistantMessage && (
-            <div className="flex gap-1 ml-2">
-              {onRegenerate && (
-                <button
-                  onClick={onRegenerate}
-                  className="p-1 text-zinc-500 hover:text-zinc-300 transition-colors"
-                  title="Regenerate"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                </button>
-              )}
-              {onContinue && (
-                <button
-                  onClick={onContinue}
-                  className="p-1 text-zinc-500 hover:text-zinc-300 transition-colors"
-                  title="Continue"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                  </svg>
-                </button>
-              )}
-              {onDeleteMessage && (
-                <button
-                  onClick={onDeleteMessage}
-                  className="p-1 text-zinc-500 hover:text-red-400 transition-colors"
-                  title="Delete"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
-              )}
-            </div>
-          )}
+          <div
+            className={`rounded-xl px-3 py-2.5 transition-all duration-200 ${
+              message.role === "user"
+                ? "bg-primary/90 text-primary-foreground"
+                : "bg-zinc-800 text-zinc-100 border border-zinc-700/50"
+            }`}
+          >
+            {isGeneratorView ? (
+              <div className="whitespace-pre-wrap text-sm leading-relaxed">{rawContent}</div>
+            ) : (
+              <FormattedText content={rawContent} />
+            )}
+          </div>
+          
+          <div className="flex items-center gap-2 mt-1 pl-1">
+            <p className="text-[11px] text-zinc-500">
+              {message.role === "user" ? senderName : senderName || "AI"}
+            </p>
+            
+            {/* Action buttons for last messages */}
+            {isLastAssistantMessage && (
+              <div className="flex gap-0.5 ml-2 opacity-70 hover:opacity-100 transition-opacity">
+                {onRegenerate && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 hover:bg-zinc-700/50"
+                        onClick={onRegenerate}
+                      >
+                        <RefreshCw className="h-3.5 w-3.5 text-zinc-400 hover:text-zinc-200" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">
+                      Regenerate
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                {onContinue && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 hover:bg-zinc-700/50"
+                        onClick={onContinue}
+                      >
+                        <ChevronRight className="h-3.5 w-3.5 text-zinc-400 hover:text-zinc-200" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">
+                      Continue
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                {onDeleteMessage && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 hover:bg-red-900/30"
+                        onClick={onDeleteMessage}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-zinc-400 hover:text-red-400" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">
+                      Delete
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </div>
+            )}
+          </div>
         </div>
+        {message.role === "user" && (
+          <Avatar className="h-8 w-8 flex-shrink-0 mt-1">
+            <AvatarFallback className={`bg-gradient-to-br ${gradientClass} text-white text-sm font-semibold`}>
+              {senderInitial?.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+        )}
       </div>
-      {message.role === "user" && (
-        <div className={`flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br ${gradientClass} flex items-center justify-center`}>
-          <span className="text-sm text-white font-semibold">
-            {senderInitial?.charAt(0).toUpperCase()}
-          </span>
-        </div>
-      )}
-    </div>
+    </TooltipProvider>
   );
 }
 

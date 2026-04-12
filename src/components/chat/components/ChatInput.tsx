@@ -1,6 +1,9 @@
 "use client";
 
 import React from "react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, Send } from "lucide-react";
 
 interface ChatInputProps {
   value: string;
@@ -47,7 +50,7 @@ export function ChatInput({
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-800 bg-black/80 backdrop-blur-xl z-50">
+    <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 backdrop-blur-xl z-50">
       <div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
         <form
           onSubmit={(e) => {
@@ -55,9 +58,9 @@ export function ChatInput({
             onSubmit();
           }}
         >
-          <div className="flex items-end gap-2 sm:gap-3 bg-zinc-900 rounded-xl sm:rounded-2xl border border-zinc-800 p-1.5 sm:p-2">
+          <div className="flex items-end gap-2 bg-muted/30 rounded-xl border border-border p-1.5 sm:p-2">
             <div className="flex-1 relative">
-              <textarea
+              <Textarea
                 ref={textareaRef}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
@@ -65,40 +68,26 @@ export function ChatInput({
                 onInput={handleInput}
                 placeholder={placeholder}
                 rows={1}
-                className="w-full bg-transparent text-white placeholder-zinc-500 px-3 py-2 resize-none focus:outline-none"
+                className="w-full bg-transparent border-none resize-none focus-visible:ring-0 focus-visible:ring-offset-0 px-2 py-1.5 text-sm min-h-[28px]"
                 style={{ minHeight: "24px", maxHeight: "200px" }}
                 disabled={disabled}
               />
             </div>
-            <button
+            <Button
               type="submit"
               disabled={disabled || isLoading}
-              className={`flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-white rounded-lg sm:rounded-xl transition-all shadow-lg ${gradientClasses[accentColor]} ${accentColor === "blue" ? "shadow-blue-600/20" : accentColor === "purple" ? "shadow-purple-600/20" : "shadow-amber-600/20"} disabled:opacity-50 disabled:cursor-not-allowed`}
+              size="icon"
+              className={`h-9 w-9 sm:h-10 sm:w-10 rounded-lg transition-all shadow-lg ${disabled ? "opacity-50 cursor-not-allowed" : "hover:scale-105"}`}
               title={value.trim() ? "Send message" : "Resend last message"}
             >
               {isLoading ? (
-                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
+                <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                  />
-                </svg>
+                <Send className="w-5 h-5" />
               )}
-            </button>
+            </Button>
           </div>
-          <p className="text-xs text-zinc-600 mt-2 text-center">
+          <p className="text-xs text-muted-foreground mt-2 text-center">
             Press Enter to send, Shift+Enter for new line. Empty message resends last.
           </p>
         </form>
@@ -138,7 +127,7 @@ export function ChatButtonInput({
   return (
     <div className="space-y-2">
       <div className="flex gap-2">
-        <textarea
+        <Textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => {
@@ -150,7 +139,7 @@ export function ChatButtonInput({
             }
           }}
           placeholder={placeholder}
-          className="flex-1 bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 border border-zinc-700 resize-none min-h-[48px] max-h-[200px]"
+          className="flex-1 min-h-[48px] max-h-[200px]"
           disabled={disabled}
           rows={1}
           onInput={(e) => {
@@ -159,24 +148,19 @@ export function ChatButtonInput({
             target.style.height = Math.min(target.scrollHeight, 200) + "px";
           }}
         />
-        <button
+        <Button
           onClick={onSubmit}
           disabled={disabled || isLoading}
-          className={`px-6 py-3 text-white rounded-lg transition-colors disabled:opacity-50 ${gradientClasses[accentColor]}`}
+          className="px-6 py-3 h-auto"
         >
           {isLoading ? (
-            <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
+            <Loader2 className="w-5 h-5 animate-spin" />
           ) : (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-            </svg>
+            <Send className="w-5 h-5" />
           )}
-        </button>
+        </Button>
       </div>
-      <p className="text-xs text-zinc-600 mt-2 text-center">
+      <p className="text-xs text-muted-foreground mt-2 text-center">
         Press Enter to send, Shift+Enter for new line. Empty message resends last.
       </p>
     </div>
