@@ -6290,7 +6290,7 @@ Write an engaging story segment. If this is a good point for player interaction,
 
       {/* Undo Toast */}
       {showUndoToast && deletedItem && (
-        <div className="fixed bottom-20 left-0 right-0 z-40 px-4 py-3">
+        <div className="fixed bottom-32 left-0 right-0 z-[1000] px-4 py-3">
           <div className="max-w-4xl mx-auto">
             <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white shadow-xl backdrop-blur-sm flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -6625,7 +6625,7 @@ Write an engaging story segment. If this is a good point for player interaction,
               
               {/* Mobile menu dropdown for generator */}
               {showMobileMenu && view === "generator" && (
-                <div className="md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2">
+                <div className={ui.containers.mobileMenu}>
                   <button
                     onClick={() => {
                       setView("home");

@@ -62,7 +62,7 @@ export const containers = {
   buttonGroup: "flex gap-3 mt-6",
   
   /** Mobile menu dropdown */
-  mobileMenu: "md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2",
+  mobileMenu: "md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2 absolute left-0 right-0 top-full mt-2 z-[49]",
 };
 
 // ============================================================================
@@ -409,7 +409,7 @@ export const notifications = {
   errorActions: "flex justify-end gap-2 mt-3 pt-3 border-t border-red-700/50",
   
   /** Toast notification */
-  toast: "fixed bottom-20 left-0 right-0 z-40 px-4 py-3",
+  toast: "fixed bottom-32 left-0 right-0 z-[1000] px-4 py-3",
   toastInner: "bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white shadow-xl backdrop-blur-sm flex items-center justify-between",
   toastContent: "flex items-center gap-3",
   
