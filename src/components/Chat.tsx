@@ -603,7 +603,8 @@ function SettingsModal({
   const [modelSearchQuery, setModelSearchQuery] = useState("");
   const modelSearchInputRef = useRef<HTMLInputElement>(null);
   const [editingProvider, setEditingProvider] = useState<LLMProviderType | null>(null);
-  const [showAdvancedInstructions, setShowAdvancedInstructions] = useState(initialTab === "instructions");
+  const [showAdvancedInstructions, setShowAdvancedInstructions] = useState(true);
+  const [activeInstructionsTab, setActiveInstructionsTab] = useState<"chat" | "generator" | "brainstorm" | "vn">("chat");
   const dropdownRef = useRef<HTMLDivElement>(null);
   const instructionsFileInputRef = useRef<HTMLInputElement>(null);
   const dataImportInputRef = useRef<HTMLInputElement>(null);
