@@ -2454,6 +2454,9 @@ export default function Chat() {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showModelsModal, setShowModelsModal] = useState(false);
   const [showInstructionsModal, setShowInstructionsModal] = useState(false);
+  const [showInstructionModal, setShowInstructionModal] = useState(false);
+  const [activeInstructionTab, setActiveInstructionTab] = useState<'chat' | 'generator' | 'brainstorm' | 'vn'>('chat');
+  const [chatInstructions, setChatInstructions] = useState<string>('');
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showHeaderActions, setShowHeaderActions] = useState(false);
   const [showUtilityPanel, setShowUtilityPanel] = useState(false);
@@ -6333,12 +6336,26 @@ Write an engaging story segment. If this is a good point for player interaction,
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                     <div>
-                      <div className="text-sm text-white">Utilities</div>
-                      <div className="text-xs text-zinc-500">Tags, summarize, debug</div>
-                    </div>
-                  </button>
-                  
-                  {/* Character Card - only in chat view with character */}
+                     <div className="text-sm text-white">Utilities</div>
+                       <div className="text-xs text-zinc-500">Tags, summarize, debug</div>
+                     </div>
+                   </button>
+
+                   {/* Dedicated Instructions Button */}
+                   <button
+                     onClick={() => setShowInstructionModal(true)}
+                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800 transition-colors text-left"
+                   >
+                     <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.333.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.333.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.333.477-4.5 1.253" />
+                     </svg>
+                     <div>
+                       <div className="text-sm text-white">Instructions</div>
+                       <div className="text-xs text-zinc-500">Chat, Generator, Brainstorm, VN</div>
+                     </div>
+                   </button>
+
+                   {/* Character Card - only in chat view with character */}
                   {view === "chat" && selectedCharacter && (
                     <button
                       onClick={() => {
@@ -10255,10 +10272,207 @@ Write an engaging story segment. If this is a good point for player interaction,
           initialTab="instructions"
           showModelsSection={false}
           showInstructionsSection={true}
-        />
-      )}
+         />
+       )}
 
-      {/* Conversation History Modal */}
+       {/* Instruction Modal with Tabbed Navigation */}
+       {showInstructionModal && (
+         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+             {/* Modal Header */}
+             <div className="flex items-center justify-between p-4 border-b border-zinc-800">
+               <div>
+                 <h2 className="text-lg font-semibold text-white">Instructions</h2>
+                 <p className="text-sm text-zinc-500">Exclusive to each mode - Chat, Generator, Brainstorm, VN</p>
+               </div>
+               <button
+                 onClick={() => setShowInstructionModal(false)}
+                 className="p-2 hover:bg-zinc-800 rounded transition-colors"
+               >
+                 <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                 </svg>
+               </button>
+             </div>
+
+             {/* Tabbed Navigation */}
+             <div className="flex-shrink-0 border-b border-zinc-800">
+               <div className="flex gap-0">
+                 {['chat', 'generator', 'brainstorm', 'vn'].map((mode) => (
+                   <button
+                     key={mode}
+                     onClick={() => setActiveInstructionTab(mode as any)}
+                     className={`px-6 py-3 text-sm font-medium transition-all ${
+                       activeInstructionTab === mode
+                         ? 'text-blue-400 border-b-2 border-blue-500'
+                         : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                     }`}
+                   >
+                     {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                   </button>
+                 ))}
+             </div>
+           </div>
+
+           {/* Tab Content - Instruction Inputs */}
+           <div className="flex-1 overflow-y-auto p-6 space-y-6">
+             {/* Chat Instructions Tab */}
+             {activeInstructionTab === 'chat' && (
+               <div className="space-y-4">
+                 <h3 className="text-sm font-semibold text-white">Chat / General Instructions</h3>
+                 <textarea
+                   value={brainstormInstructions}
+                   onChange={(e) => setBrainstormInstructions(e.target.value)}
+                   placeholder="Enter chat instructions that apply to all conversations..."
+                   className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
+                   rows={4}
+                 />
+               </div>
+             )}
+
+             {/* Generator Instructions Tab */}
+             {activeInstructionTab === 'generator' && (
+               <div className="space-y-4">
+                 <h3 className="text-sm font-semibold text-white">Character Generator Instructions</h3>
+                 <textarea
+                   value={generatorInstructions}
+                   onChange={(e) => setGeneratorInstructions(e.target.value)}
+                   placeholder="Enter character creator instructions..."
+                   className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
+                   rows={6}
+                 />
+               </div>
+             )}
+
+             {/* Brainstorm Instructions Tab */}
+             {activeInstructionTab === 'brainstorm' && (
+               <div className="space-y-4">
+                 <h3 className="text-sm font-semibold text-white">Brainstorm Instructions</h3>
+                 <textarea
+                   value={brainstormInstructions}
+                   onChange={(e) => setBrainstormInstructions(e.target.value)}
+                   placeholder="Enter brainstorm assistant instructions..."
+                   className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
+                   rows={6}
+                 />
+               </div>
+             )}
+
+             {/* VN Generator Instructions Tab */}
+             {activeInstructionTab === 'vn' && (
+               <div className="space-y-4">
+                 <h3 className="text-sm font-semibold text-white">VN Generator Instructions</h3>
+                 <textarea
+                   value={vnInstructions}
+                   onChange={(e) => setVnInstructions(e.target.value)}
+                   placeholder="Enter visual novel generator instructions..."
+                   className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
+                   rows={6}
+                 />
+               </div>
+             )}
+             {/* Modal Footer */}
+             <div className="flex-shrink-0 p-4 border-t border-zinc-800 flex gap-3">
+               <button
+                 onClick={() => {
+                   // Apply all instruction changes
+                   setShowInstructionModal(false);
+                 }}
+                 className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+               >
+                 Save All
+               </button>
+               <button
+                 onClick={() => setShowInstructionModal(false)}
+                 className="flex-1 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors font-medium"
+               >
+                 Cancel
+               </button>
+             </div>
+             </div>
+
+             {/* Tab Content - Instruction Inputs */}
+             <div className="flex-1 overflow-y-auto p-6 space-y-6">
+               {/* Chat Instructions Tab */}
+               {activeInstructionTab === 'chat' && (
+                 <div className="space-y-4">
+                   <h3 className="text-sm font-semibold text-white">Chat / General Instructions</h3>
+                   <textarea
+                     value={chatInstructions}
+                     onChange={(e) => setChatInstructions(e.target.value)}
+                     placeholder="Enter chat instructions that apply to all conversations..."
+                     className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
+                     rows={4}
+                   />
+                 </div>
+               )}
+
+               {/* Generator Instructions Tab */}
+               {activeInstructionTab === 'generator' && (
+                 <div className="space-y-4">
+                   <h3 className="text-sm font-semibold text-white">Character Generator Instructions</h3>
+                   <textarea
+                     value={generatorInstructions}
+                     onChange={(e) => setGeneratorInstructions(e.target.value)}
+                     placeholder="Enter character creator instructions..."
+                     className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
+                     rows={6}
+                   />
+                 </div>
+               )}
+
+               {/* Brainstorm Instructions Tab */}
+               {activeInstructionTab === 'brainstorm' && (
+                 <div className="space-y-4">
+                   <h3 className="text-sm font-semibold text-white">Brainstorm Instructions</h3>
+                   <textarea
+                     value={brainstormInstructions}
+                     onChange={(e) => setBrainstormInstructions(e.target.value)}
+                     placeholder="Enter brainstorm assistant instructions..."
+                     className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
+                     rows={6}
+                   />
+                 </div>
+               )}
+
+               {/* VN Generator Instructions Tab */}
+               {activeInstructionTab === 'vn' && (
+                 <div className="space-y-4">
+                   <h3 className="text-sm font-semibold text-white">VN Generator Instructions</h3>
+                   <textarea
+                     value={vnInstructions}
+                     onChange={(e) => setVnInstructions(e.target.value)}
+                     placeholder="Enter visual novel generator instructions..."
+                     className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
+                     rows={6}
+                   />
+                 </div>
+               )}
+             </div>
+
+             {/* Modal Footer */}
+             <div className="flex-shrink-0 p-4 border-t border-zinc-800 flex gap-3">
+               <button
+                 onClick={() => {
+                   // Apply all instruction changes
+                   setShowInstructionModal(false);
+                 }}
+                 className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+               >
+                 Save All
+               </button>
+               <button
+                 onClick={() => setShowInstructionModal(false)}
+                 className="flex-1 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors font-medium"
+               >
+                 Cancel
+               </button>
+             </div>
+           </div>
+         </div>
+       )}
+
+       {/* Conversation History Modal */}
       {showConversationHistory && viewingConversation && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm sm:max-w-2xl md:max-w-3xl max-h-[90vh] flex flex-col">
