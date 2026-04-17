@@ -388,7 +388,6 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   useCustomSize: false, // By default, use model max sizes
   enableStreaming: true, // Streaming enabled by default for better UX
   dingWhenUnfocused: false, // Disabled by default
-  activeProvider: "open-router",
   instructionInjectionPosition: "start",
   instructionCustomInjectionIndex: 0,
   summarization: {
