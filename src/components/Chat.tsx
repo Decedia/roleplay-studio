@@ -571,6 +571,8 @@ function SettingsModal({
   deleteProfile,
   getActiveProfile,
   initialTab = "settings",
+  showModelsSection = true,
+  showInstructionsSection = true,
 }: {
   show: boolean;
   onClose: () => void;
@@ -597,6 +599,8 @@ function SettingsModal({
   deleteProfile: (providerType: LLMProviderType, profileId: string) => void;
   getActiveProfile: (providerType: LLMProviderType) => ProviderProfile | undefined;
   initialTab?: "settings" | "models" | "instructions";
+  showModelsSection?: boolean;
+  showInstructionsSection?: boolean;
 }) {
   const [expandedProviders, setExpandedProviders] = useState<Record<string, boolean>>({});
   const [showModelDropdown, setShowModelDropdown] = useState(initialTab === "models");
@@ -692,6 +696,7 @@ function SettingsModal({
         
         <div className="space-y-6">
           {/* Model Selection */}
+          {showModelsSection && (
           <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
               Model ({AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || activeProvider})
@@ -879,9 +884,11 @@ function SettingsModal({
                 )}
               </>
             )}
-          </div>
+           </div>
+          )}
 
            {/* Instruction Injection Position */}
+          {showInstructionsSection && (
           <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
               Instruction Injection Position
@@ -920,7 +927,8 @@ function SettingsModal({
             <div className="mt-2 text-xs text-zinc-500">
               Controls where system instructions are placed in the chat history sent to AI
             </div>
-          </div>
+           </div>
+          )}
 
           {/* Temperature */}
           <div>
@@ -1185,6 +1193,7 @@ function SettingsModal({
           )}
 
           {/* Global Instructions */}
+          {showInstructionsSection && (
           <div className="border-t border-zinc-700 pt-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-medium text-white">Instructions</h3>
@@ -1575,7 +1584,8 @@ function SettingsModal({
                 </div>
               </div>
             )}
-          </div>
+           </div>
+          )}
 
           {/* Provider API Keys Configuration */}
           <div className="border-t border-zinc-700 pt-6">
@@ -6310,10 +6320,10 @@ Write an engaging story segment. If this is a good point for player interaction,
                     </div>
                   </button>
 
-                  {/* Settings */}
+                  {/* Utilities */}
                   <button
                     onClick={() => {
-                      openSettings();
+                      setShowUtilityPanel(true);
                       setShowHeaderActions(false);
                     }}
                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800 transition-colors text-left"
@@ -6323,8 +6333,8 @@ Write an engaging story segment. If this is a good point for player interaction,
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                     <div>
-                      <div className="text-sm text-white">Settings</div>
-                      <div className="text-xs text-zinc-500">Temperature, generation settings</div>
+                      <div className="text-sm text-white">Utilities</div>
+                      <div className="text-xs text-zinc-500">Tags, summarize, debug</div>
                     </div>
                   </button>
                   
@@ -10210,6 +10220,8 @@ Write an engaging story segment. If this is a good point for player interaction,
           deleteProfile={deleteProfile}
           getActiveProfile={getActiveProfile}
           initialTab="models"
+          showModelsSection={true}
+          showInstructionsSection={false}
         />
       )}
 
@@ -10241,6 +10253,8 @@ Write an engaging story segment. If this is a good point for player interaction,
           deleteProfile={deleteProfile}
           getActiveProfile={getActiveProfile}
           initialTab="instructions"
+          showModelsSection={false}
+          showInstructionsSection={true}
         />
       )}
 
