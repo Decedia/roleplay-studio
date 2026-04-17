@@ -10162,8 +10162,8 @@ Write an engaging story segment. If this is a good point for player interaction,
           activeProvider={activeProvider}
           setActiveProvider={setActiveProvider}
           connectionStatus={connectionStatus}
-          onTestConnection={testConnection}
-          onConnect={connectProvider}
+          onTestConnection={handleTestConnection}
+          onConnect={handleConnectProvider}
           providerModels={providerModels}
           modelsFetching={modelsFetching}
           onImportInstructions={handleImportInstructions}
@@ -10193,8 +10193,8 @@ Write an engaging story segment. If this is a good point for player interaction,
           activeProvider={activeProvider}
           setActiveProvider={setActiveProvider}
           connectionStatus={connectionStatus}
-          onTestConnection={testConnection}
-          onConnect={connectProvider}
+          onTestConnection={handleTestConnection}
+          onConnect={handleConnectProvider}
           providerModels={providerModels}
           modelsFetching={modelsFetching}
           onImportInstructions={handleImportInstructions}
