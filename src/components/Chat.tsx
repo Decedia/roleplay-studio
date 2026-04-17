@@ -388,6 +388,9 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   useCustomSize: false, // By default, use model max sizes
   enableStreaming: true, // Streaming enabled by default for better UX
   dingWhenUnfocused: false, // Disabled by default
+  activeProvider: "open-router",
+  instructionInjectionPosition: "start",
+  instructionCustomInjectionIndex: 0,
   summarization: {
     enabled: false,
     trigger: "manual",
@@ -872,6 +875,47 @@ function SettingsModal({
                 )}
               </>
             )}
+          </div>
+
+           {/* Instruction Injection Position */}
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">
+              Instruction Injection Position
+            </label>
+            <select
+              value={globalSettings.instructionInjectionPosition}
+              onChange={(e) => setGlobalSettings({ 
+                ...globalSettings, 
+                instructionInjectionPosition: e.target.value as any 
+              })}
+              className="w-full bg-zinc-800 text-white px-4 py-2 rounded-lg border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="start">At start (default)</option>
+              <option value="before-last">Before last message</option>
+              <option value="custom-index">Custom message index</option>
+            </select>
+            
+            {globalSettings.instructionInjectionPosition === "custom-index" && (
+              <div className="mt-3">
+                <label className="block text-xs text-zinc-500 mb-1">
+                  Inject instructions before message index (0 = first message)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={globalSettings.instructionCustomInjectionIndex}
+                  onChange={(e) => setGlobalSettings({ 
+                    ...globalSettings, 
+                    instructionCustomInjectionIndex: Math.max(0, parseInt(e.target.value) || 0)
+                  })}
+                  className="w-full bg-zinc-800 text-white px-4 py-2 rounded-lg border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            )}
+            
+            <div className="mt-2 text-xs text-zinc-500">
+              Controls where system instructions are placed in the chat history sent to AI
+            </div>
           </div>
 
           {/* Temperature */}

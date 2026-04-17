@@ -37,6 +37,9 @@ export const DEFAULT_SUMMARIZATION_SETTINGS: SummarizationSettings = {
   summaryLength: 1000,
 };
 
+// Instruction injection position for system prompts
+export type InstructionInjectionPosition = "start" | "before-last" | "custom-index";
+
 // Default global settings
 export interface GlobalSettings {
   temperature: number;
@@ -52,6 +55,8 @@ export interface GlobalSettings {
   enableStreaming: boolean;
   dingWhenUnfocused: boolean;
   summarization: SummarizationSettings;
+  instructionInjectionPosition: InstructionInjectionPosition;
+  instructionCustomInjectionIndex: number;
 }
 
 export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
@@ -68,6 +73,8 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   enableStreaming: true,
   dingWhenUnfocused: false,
   summarization: DEFAULT_SUMMARIZATION_SETTINGS,
+  instructionInjectionPosition: "start",
+  instructionCustomInjectionIndex: 0,
 };
 
 // Default model preferences - try to find GLM 5 first, then fall back
