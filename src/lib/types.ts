@@ -201,6 +201,9 @@ export interface ProviderConfig {
 export type ThinkingLevel = "LOW" | "MEDIUM" | "HIGH";
 export type ThinkingBudget = "NONE" | "LOW" | "MEDIUM" | "HIGH";
 
+// Instruction injection position for system prompts
+export type InstructionInjectionPosition = "start" | "before-last" | "custom-index";
+
 // Global settings
 export interface GlobalSettings {
   temperature: number;
@@ -212,6 +215,8 @@ export interface GlobalSettings {
   thinkingLevel: ThinkingLevel; // Thinking level for Gemini models (LOW/MEDIUM/HIGH)
   thinkingBudget: ThinkingBudget; // Thinking budget for Gemini 2.5 models
   activeProvider: LLMProviderType;
+  instructionInjectionPosition: InstructionInjectionPosition;
+  instructionCustomInjectionIndex: number;
 }
 
 // Instruction role type - who the instruction appears to be from
