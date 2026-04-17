@@ -215,7 +215,7 @@ export interface GlobalSettings {
   thinkingLevel: ThinkingLevel; // Thinking level for Gemini models (LOW/MEDIUM/HIGH)
   thinkingBudget: ThinkingBudget; // Thinking budget for Gemini 2.5 models
   activeProvider: LLMProviderType;
-  instructionInjectionPosition: InstructionInjectionPosition;
+  instructionInjectionPosition: "start" | "before-last" | "custom-index";
   instructionCustomInjectionIndex: number;
 }
 
