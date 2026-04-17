@@ -570,6 +570,7 @@ function SettingsModal({
   selectProfile,
   deleteProfile,
   getActiveProfile,
+  initialTab = "settings",
 }: {
   show: boolean;
   onClose: () => void;
@@ -595,13 +596,14 @@ function SettingsModal({
   selectProfile: (providerType: LLMProviderType, profileId: string) => void;
   deleteProfile: (providerType: LLMProviderType, profileId: string) => void;
   getActiveProfile: (providerType: LLMProviderType) => ProviderProfile | undefined;
+  initialTab?: "settings" | "models" | "instructions";
 }) {
   const [expandedProviders, setExpandedProviders] = useState<Record<string, boolean>>({});
-  const [showModelDropdown, setShowModelDropdown] = useState(false);
+  const [showModelDropdown, setShowModelDropdown] = useState(initialTab === "models");
   const [modelSearchQuery, setModelSearchQuery] = useState("");
   const modelSearchInputRef = useRef<HTMLInputElement>(null);
   const [editingProvider, setEditingProvider] = useState<LLMProviderType | null>(null);
-  const [showAdvancedInstructions, setShowAdvancedInstructions] = useState(false);
+  const [showAdvancedInstructions, setShowAdvancedInstructions] = useState(initialTab === "instructions");
   const dropdownRef = useRef<HTMLDivElement>(null);
   const instructionsFileInputRef = useRef<HTMLInputElement>(null);
   const dataImportInputRef = useRef<HTMLInputElement>(null);
@@ -2439,6 +2441,8 @@ export default function Chat() {
   const [showCharacterCardModal, setShowCharacterCardModal] = useState(false);
   const [characterSortOrder, setCharacterSortOrder] = useState<'added' | 'lastChat' | 'name'>('added');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showModelsModal, setShowModelsModal] = useState(false);
+  const [showInstructionsModal, setShowInstructionsModal] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showHeaderActions, setShowHeaderActions] = useState(false);
   const [showUtilityPanel, setShowUtilityPanel] = useState(false);
@@ -10143,11 +10147,11 @@ Write an engaging story segment. If this is a good point for player interaction,
         </div>
       )}
 
-      {/* Settings Modal */}
-      {showSettingsModal && (
+      {/* Models Modal */}
+      {showModelsModal && (
         <SettingsModal
-          show={showSettingsModal}
-          onClose={() => setShowSettingsModal(false)}
+          show={showModelsModal}
+          onClose={() => setShowModelsModal(false)}
           globalSettings={globalSettings}
           setGlobalSettings={setGlobalSettings}
           globalInstructions={globalInstructions}
@@ -10157,8 +10161,8 @@ Write an engaging story segment. If this is a good point for player interaction,
           activeProvider={activeProvider}
           setActiveProvider={setActiveProvider}
           connectionStatus={connectionStatus}
-          onTestConnection={handleTestConnection}
-          onConnect={handleConnectProvider}
+          onTestConnection={testConnection}
+          onConnect={connectProvider}
           providerModels={providerModels}
           modelsFetching={modelsFetching}
           onImportInstructions={handleImportInstructions}
@@ -10170,6 +10174,38 @@ Write an engaging story segment. If this is a good point for player interaction,
           selectProfile={selectProfile}
           deleteProfile={deleteProfile}
           getActiveProfile={getActiveProfile}
+          initialTab="models"
+        />
+      )}
+
+      {/* Instructions Modal */}
+      {showInstructionsModal && (
+        <SettingsModal
+          show={showInstructionsModal}
+          onClose={() => setShowInstructionsModal(false)}
+          globalSettings={globalSettings}
+          setGlobalSettings={setGlobalSettings}
+          globalInstructions={globalInstructions}
+          setGlobalInstructions={setGlobalInstructions}
+          providerConfigs={providerConfigs}
+          setProviderConfigs={setProviderConfigs}
+          activeProvider={activeProvider}
+          setActiveProvider={setActiveProvider}
+          connectionStatus={connectionStatus}
+          onTestConnection={testConnection}
+          onConnect={connectProvider}
+          providerModels={providerModels}
+          modelsFetching={modelsFetching}
+          onImportInstructions={handleImportInstructions}
+          onExportData={handleExportData}
+          onImportData={handleImportData}
+          autoExport={autoExport}
+          setAutoExport={setAutoExport}
+          createProfile={createProfile}
+          selectProfile={selectProfile}
+          deleteProfile={deleteProfile}
+          getActiveProfile={getActiveProfile}
+          initialTab="instructions"
         />
       )}
 
