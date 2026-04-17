@@ -374,8 +374,9 @@ try {
     }));
 
     // Send system messages as separate entries for Gemini API
-    const systemInstructions = systemMessages.map(m => ({ parts: [{ text: m.content }] }));
-    const systemInstruction = systemInstructions.length > 0 ? systemInstructions : undefined;
+    // Send system messages as merged single entry for Gemini API (does not accept array)
+    const systemInstructionText = systemMessages.map(m => m.content).join("\n\n");
+    const systemInstruction = systemInstructionText ? { parts: [{ text: systemInstructionText }] } : undefined;
 
     // Build generation config with optional thinking
     const generationConfig: Record<string, unknown> = {
@@ -478,8 +479,9 @@ export const streamWithGoogleAIStudio = async (
     }));
 
     // Send system messages as separate entries for Gemini API
-    const systemInstructions = systemMessages.map(m => ({ parts: [{ text: m.content }] }));
-    const systemInstruction = systemInstructions.length > 0 ? systemInstructions : undefined;
+    // Send system messages as merged single entry for Gemini API (does not accept array)
+    const systemInstructionText = systemMessages.map(m => m.content).join("\n\n");
+    const systemInstruction = systemInstructionText ? { parts: [{ text: systemInstructionText }] } : undefined;
 
     // Build generation config with optional thinking
     const generationConfig: Record<string, unknown> = {
@@ -1283,8 +1285,9 @@ export const streamWithVertexAI = async (
     }));
 
     // Send system messages as separate entries for Gemini API
-    const systemInstructions = systemMessages.map(m => ({ parts: [{ text: m.content }] }));
-    const systemInstruction = systemInstructions.length > 0 ? systemInstructions : undefined;
+    // Send system messages as merged single entry for Gemini API (does not accept array)
+    const systemInstructionText = systemMessages.map(m => m.content).join("\n\n");
+    const systemInstruction = systemInstructionText ? { parts: [{ text: systemInstructionText }] } : undefined;
 
     // Build generation config with optional thinking
     const generationConfig: Record<string, unknown> = {
