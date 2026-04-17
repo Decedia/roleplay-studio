@@ -57,6 +57,7 @@ export interface GlobalSettings {
   summarization: SummarizationSettings;
   instructionInjectionPosition: InstructionInjectionPosition;
   instructionCustomInjectionIndex: number;
+  activeProvider: string;
 }
 
 export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
@@ -75,6 +76,7 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   summarization: DEFAULT_SUMMARIZATION_SETTINGS,
   instructionInjectionPosition: "start",
   instructionCustomInjectionIndex: 0,
+  activeProvider: "open-router",
 };
 
 // Default model preferences - try to find GLM 5 first, then fall back
