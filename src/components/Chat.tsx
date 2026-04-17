@@ -123,6 +123,8 @@ interface GlobalSettings {
   enableStreaming: boolean; // Enable/disable streaming for all AI responses
   dingWhenUnfocused: boolean; // Play notification sound when AI finishes and window is unfocused
   summarization: SummarizationSettings; // Summarization configuration
+  instructionInjectionPosition: "start" | "before-last" | "custom-index";
+  instructionCustomInjectionIndex: number;
 }
 
 // Global instructions with advanced fields
