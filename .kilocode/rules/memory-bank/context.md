@@ -80,6 +80,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] Add alternate greetings feature - characters can have multiple greetings, users can choose which one to start chat with
 - [x] Remove disabled state from all send buttons in all modes - send buttons are now always enabled
 - [x] Enable send button in brainstorm when last message is from user - allows resending last message when input is empty
+- [x] Fix duplicate instruction tab content in settings modal - removed incorrect duplicate tab section that was using brainstormInstructions for chat tab instead of chatInstructions
 - [x] Added Service Account JSON input field for Vertex AI Full mode - users can now enter service account credentials when using Full mode
 - [x] Added proper validation for Test Connection and Connect buttons based on selected mode (Express requires API key, Full requires service account JSON)
 - [x] Add continue button for generator and brainstorm views
