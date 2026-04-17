@@ -594,6 +594,8 @@ function SettingsModal({
 }) {
   const [expandedProviders, setExpandedProviders] = useState<Record<string, boolean>>({});
   const [showModelDropdown, setShowModelDropdown] = useState(false);
+  const [modelSearchQuery, setModelSearchQuery] = useState("");
+  const modelSearchInputRef = useRef<HTMLInputElement>(null);
   const [editingProvider, setEditingProvider] = useState<LLMProviderType | null>(null);
   const [showAdvancedInstructions, setShowAdvancedInstructions] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -609,14 +611,18 @@ function SettingsModal({
   const selectedModel = activeProviderModels.find(m => m.id === globalSettings.modelId);
 
   // Close dropdown when clicking outside
+  const handleClickOutside = (e: MouseEvent) => {
+    if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      setShowModelDropdown(false);
+    }
+  };
+
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setShowModelDropdown(false);
-      }
-    };
     if (showModelDropdown) {
       document.addEventListener("mousedown", handleClickOutside);
+      setTimeout(() => modelSearchInputRef.current?.focus(), 50);
+    } else {
+      setModelSearchQuery("");
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showModelDropdown]);
@@ -721,12 +727,52 @@ function SettingsModal({
 
                   {showModelDropdown && (
                     <div className="absolute z-50 w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-lg max-h-80 overflow-y-auto shadow-xl">
+                      <div className="p-2 border-b border-zinc-700">
+                        <input
+                          ref={modelSearchInputRef}
+                          type="text"
+                          placeholder="Search models or enter custom model ID..."
+                          value={modelSearchQuery}
+                          onChange={(e) => setModelSearchQuery(e.target.value)}
+                          className="w-full bg-zinc-900 text-white px-3 py-2 rounded-lg border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && modelSearchQuery.trim()) {
+                              selectModel(modelSearchQuery.trim());
+                            }
+                          }}
+                        />
+                      </div>
                       {(() => {
-                        const freeModels = activeProviderModels.filter(m => m.id.toLowerCase().includes('free') || m.id.toLowerCase().includes('free:'));
-                        const paidModels = activeProviderModels.filter(m => !m.id.toLowerCase().includes('free') && !m.id.toLowerCase().includes('free:'));
+                        const query = modelSearchQuery.toLowerCase().trim();
+                        const filteredModels = activeProviderModels.filter(m => 
+                          m.id.toLowerCase().includes(query) || 
+                          (m.name && m.name.toLowerCase().includes(query))
+                        );
+                        
+                        const freeModels = filteredModels.filter(m => m.id.toLowerCase().includes('free') || m.id.toLowerCase().includes('free:'));
+                        const paidModels = filteredModels.filter(m => !m.id.toLowerCase().includes('free') && !m.id.toLowerCase().includes('free:'));
+                        
+                        const hasCustomMatch = query && !filteredModels.some(m => m.id.toLowerCase() === query);
                         
                         return (
                           <>
+                            {hasCustomMatch && (
+                              <button
+                                type="button"
+                                onClick={() => selectModel(modelSearchQuery.trim())}
+                                className="w-full px-4 py-2 text-left text-sm hover:bg-zinc-700 transition-colors text-amber-400 border-b border-zinc-700"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                  </svg>
+                                  <span className="font-medium">Use custom model: "{modelSearchQuery.trim()}"</span>
+                                </div>
+                                <div className="text-xs text-zinc-500 mt-0.5">
+                                  Press Enter or click to use this model
+                                </div>
+                              </button>
+                            )}
                             {freeModels.length > 0 && (
                               <>
                                 <div className="px-4 py-1.5 text-xs font-semibold text-green-400 bg-green-900/20 border-b border-zinc-700">
@@ -794,6 +840,11 @@ function SettingsModal({
                                   );
                                 })}
                               </>
+                            )}
+                            {filteredModels.length === 0 && !hasCustomMatch && modelSearchQuery && (
+                              <div className="px-4 py-3 text-center text-zinc-500 text-sm">
+                                No models found. Press Enter to use "{modelSearchQuery}" as custom model.
+                              </div>
                             )}
                           </>
                         );
