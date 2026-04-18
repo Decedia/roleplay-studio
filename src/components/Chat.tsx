@@ -1331,53 +1331,55 @@ export default function Chat() {
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-4 border-b border-zinc-800">
-              <div>
-                <h2 className="text-lg font-semibold text-white">Utilities</h2>
-                <p className="text-sm text-zinc-500">Tags, summarize, debug</p>
-              </div>
-              <button
-                onClick={() => setShowUtilitiesModal(false)}
-                className="p-2 hover:bg-zinc-800 rounded transition-colors"
-              >
-                <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+              <h2 className="text-lg font-semibold text-white">Utilities</h2>
+              <button onClick={() => setShowUtilitiesModal(false)} className="p-2 hover:bg-zinc-800 rounded">
+                ✕
               </button>
             </div>
 
             <div className="flex gap-1 px-4 py-2 border-b border-zinc-800">
-              <button
-                onClick={() => setUtilityPanelTab('tags')}
-                className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
-                  utilityPanelTab === 'tags' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50'
-                }`}
-              >
+              <button onClick={() => setUtilityPanelTab('tags')} className={`flex-1 px-3 py-2 text-xs rounded-lg ${utilityPanelTab === 'tags' ? 'bg-zinc-800 text-white' : 'text-zinc-500'}`}>
                 Tags
               </button>
-              <button
-                onClick={() => setUtilityPanelTab('summarization')}
-                className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
-                  utilityPanelTab === 'summarization' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50'
-                }`}
-              >
+              <button onClick={() => setUtilityPanelTab('summarization')} className={`flex-1 px-3 py-2 text-xs rounded-lg ${utilityPanelTab === 'summarization' ? 'bg-zinc-800 text-white' : 'text-zinc-500'}`}>
                 Summarize
               </button>
-              <button
-                onClick={() => setUtilityPanelTab('debug')}
-                className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
-                  utilityPanelTab === 'debug' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50'
-                }`}
-              >
+              <button onClick={() => setUtilityPanelTab('debug')} className={`flex-1 px-3 py-2 text-xs rounded-lg ${utilityPanelTab === 'debug' ? 'bg-zinc-800 text-white' : 'text-zinc-500'}`}>
                 Debug
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4">
-              {utilityPanelTab === 'tags' && (
-                <div className="text-center py-8">
-                  <p className="text-zinc-500">Tags functionality</p>
+            <div className="flex-1 p-4">
+              {utilityPanelTab === 'tags' && <div className="text-center py-8"><p>Tags functionality</p></div>}
+              {utilityPanelTab === 'summarization' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between bg-zinc-800/50 p-3 rounded-xl">
+                    <div><p className="text-sm font-medium text-white">Summarization</p></div>
+                    <button
+                      onClick={() => setGlobalSettings(prev => ({ ...prev, summarization: { ...prev.summarization, enabled: !prev.summarization.enabled } }))}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full ${globalSettings.summarization.enabled ? 'bg-blue-600' : 'bg-zinc-700'}`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${globalSettings.summarization.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                  {globalSettings.summarization.enabled && (
+                    <button onClick={handleSummarize} disabled={isSummarizing} className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50">
+                      {isSummarizing ? 'Summarizing...' : 'Create Summary'}
+                    </button>
+                  )}
                 </div>
               )}
+              {utilityPanelTab === 'debug' && <div className="text-center py-8"><p>Debug functionality</p></div>}
+            </div>
+
+            <div className="p-4 border-t border-zinc-800 flex justify-end">
+              <button onClick={() => setShowUtilitiesModal(false)} className="px-4 py-2 bg-zinc-700 text-white rounded-lg">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
               {utilityPanelTab === 'summarization' && (
                 <div className="space-y-4">
@@ -1439,91 +1441,7 @@ export default function Chat() {
         </div>
       )}
 
-              {utilityPanelTab === 'summarization' && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between bg-zinc-800/50 p-3 rounded-xl">
-                    <div>
-                      <p className="text-sm font-medium text-white">Summarization</p>
-                      <p className="text-xs text-zinc-500">Compress context to save tokens</p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setGlobalSettings(prev => ({
-                          ...prev,
-                          summarization: {
-                            ...prev.summarization,
-                            enabled: !prev.summarization.enabled
-                          }
-                        }));
-                      }}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        globalSettings.summarization.enabled ? 'bg-blue-600' : 'bg-zinc-700'
-                      }`}
-                    >
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        globalSettings.summarization.enabled ? 'translate-x-6' : 'translate-x-1'
-                      }`} />
-                    </button>
-                  </div>
-
-                  {globalSettings.summarization.enabled && (
-                    <div className="bg-zinc-800/30 rounded-xl p-3">
-                      <button
-                        onClick={handleSummarize}
-                        disabled={isSummarizing}
-                        className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white text-sm disabled:opacity-50"
-                      >
-                        {isSummarizing ? 'Summarizing...' : 'Create Summary'}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {utilityPanelTab === 'debug' && (
-                <div className="text-center py-8">
-                  <p className="text-zinc-500">Debug functionality</p>
-                </div>
-              )}
-            </div>
-                          <p className="text-sm text-zinc-500">No tags found</p>
-                          <p className="text-xs text-zinc-600 mt-1">Custom tags from AI responses appear here</p>
-                        </div>
-                      );
-                    }
-
-                    return allTags.map((tag, idx) => (
-                      <div key={idx} className="bg-zinc-800/50 rounded-lg border border-zinc-700/50 overflow-hidden">
-                        <div className="px-3 py-2.5">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="px-2 py-0.5 bg-purple-900/50 text-purple-300 text-xs rounded-md border border-purple-800/50 font-mono">
-                              &lt;{tag.tagName}&gt;
-                            </span>
-                            <span className="text-xs text-zinc-600">msg {tag.messageIndex + 1}</span>
-                          </div>
-                          <div className="whitespace-pre-wrap text-xs text-zinc-300 leading-relaxed">
-                            {tag.content}
-                          </div>
-                        </div>
-                      </div>
-                    ));
-                  })()}
-                </div>
-              )}
-
-              {/* Summarization Section */}
-              {utilityPanelTab === 'summarization' && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between bg-zinc-800/50 p-3 rounded-xl border border-zinc-700/50">
-                    <div>
-                      <p className="text-sm font-medium text-white">Summarization</p>
-                      <p className="text-xs text-zinc-500 mt-0.5">Compress context to save tokens</p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setGlobalSettings(prev => ({
-                          ...prev,
-                          summarization: {
+      {showInstructionModal && (
                             ...prev.summarization,
                             enabled: !prev.summarization.enabled
                           }
