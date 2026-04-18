@@ -2098,9 +2098,7 @@ export default function Chat() {
   const [isBrainstorming, setIsBrainstorming] = useState(false);
   const [appliedInstructions, setAppliedInstructions] = useState<Set<string>>(new Set());
   const [brainstormInstructions, setBrainstormInstructions] = useState<string>(DEFAULT_BRAINSTORM_INSTRUCTIONS);
-  const [showBrainstormInstructionsEditor, setShowBrainstormInstructionsEditor] = useState(false);
   const [generatorInstructions, setGeneratorInstructions] = useState<string>(DEFAULT_GENERATOR_INSTRUCTIONS);
-  const [showGeneratorInstructionsEditor, setShowGeneratorInstructionsEditor] = useState(false);
   const [showCharacterModal, setShowCharacterModal] = useState(false);
   const [showCharacterCardModal, setShowCharacterCardModal] = useState(false);
   const [characterSortOrder, setCharacterSortOrder] = useState<'added' | 'lastChat' | 'name'>('added');
@@ -2389,7 +2387,7 @@ export default function Chat() {
   const [vnInstructions, setVnInstructions] = useState<string>(DEFAULT_VN_INSTRUCTIONS);
   const [vnPremiseResponse, setVnPremiseResponse] = useState<string>("");
   const [vnPlotResponse, setVnPlotResponse] = useState<string>("");
-  const [showVnInstructionsEditor, setShowVnInstructionsEditor] = useState(false);
+
   
   // Message editing state
   const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
@@ -5994,43 +5992,57 @@ Write an engaging story segment. If this is a good point for player interaction,
                      </div>
                    </button>
 
-                   {/* Character Card - only in chat view with character */}
-                  {view === "chat" && selectedCharacter && (
-                    <button
-                      onClick={() => {
+                   {/* Character Card */}
+                  <button
+                    onClick={() => {
+                      if (view === "chat" && selectedCharacter) {
                         setShowCharacterCardModal(true);
                         setShowHeaderActions(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800 transition-colors text-left"
-                    >
-                      <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                      <div>
-                        <div className="text-sm text-white">Character Card</div>
-                        <div className="text-xs text-zinc-500">View & edit info</div>
+                      }
+                    }}
+                    disabled={view !== "chat" || !selectedCharacter}
+                    className={`w-full flex items-center gap-3 px-4 py-3 transition-colors text-left ${
+                      view === "chat" && selectedCharacter
+                        ? "hover:bg-zinc-800 text-white"
+                        : "opacity-50 cursor-not-allowed"
+                    }`}
+                  >
+                    <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <div>
+                      <div className="text-sm text-white">Character Card</div>
+                      <div className="text-xs text-zinc-500">
+                        {view === "chat" && selectedCharacter ? "View & edit info" : "Only available in chat"}
                       </div>
-                    </button>
-                  )}
-                  
-                  {/* Utility Panel - only in chat view with conversation */}
-                  {view === "chat" && currentConversation && (
-                    <button
-                      onClick={() => {
+                    </div>
+                  </button>
+
+                  {/* Utility Panel */}
+                  <button
+                    onClick={() => {
+                      if (view === "chat" && currentConversation) {
                         setShowUtilityPanel(!showUtilityPanel);
                         setShowHeaderActions(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800 transition-colors text-left"
-                    >
-                      <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                      </svg>
-                      <div>
-                        <div className="text-sm text-white">Utilities</div>
-                        <div className="text-xs text-zinc-500">Tags, summarize, debug</div>
+                      }
+                    }}
+                    disabled={view !== "chat" || !currentConversation}
+                    className={`w-full flex items-center gap-3 px-4 py-3 transition-colors text-left ${
+                      view === "chat" && currentConversation
+                        ? "hover:bg-zinc-800 text-white"
+                        : "opacity-50 cursor-not-allowed"
+                    }`}
+                  >
+                    <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                    </svg>
+                    <div>
+                      <div className="text-sm text-white">Utilities</div>
+                      <div className="text-xs text-zinc-500">
+                        {view === "chat" && currentConversation ? "Tags, summarize, debug" : "Only available in chat"}
                       </div>
-                    </button>
-                  )}
+                    </div>
+                  </button>
                 </div>
               )}
               
@@ -6494,46 +6506,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                 Chat with AI to create a character. Describe what you want, and the AI will generate a character profile for you.
               </div>
               
-              {/* Generator Instructions - collapsible */}
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
-                <button
-                  onClick={() => setShowGeneratorInstructionsEditor(!showGeneratorInstructionsEditor)}
-                  className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-300 transition-colors w-full"
-                >
-                  <svg 
-                    className={`w-4 h-4 transition-transform ${showGeneratorInstructionsEditor ? "rotate-90" : ""}`} 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                  <span className="text-sm font-medium text-zinc-300">📝 Generator Instructions</span>
-                </button>
-                
-                {showGeneratorInstructionsEditor && (
-                  <div className="mt-3 space-y-3">
-                    <p className="text-xs text-zinc-500">
-                      These instructions tell the AI how to create characters.
-                    </p>
-                    <textarea
-                      value={generatorInstructions}
-                      onChange={(e) => setGeneratorInstructions(e.target.value)}
-                      className="w-full h-32 bg-zinc-800 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-200 font-mono resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                      placeholder="Enter instructions for the character generator AI..."
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setGeneratorInstructions(DEFAULT_GENERATOR_INSTRUCTIONS)}
-                        className="px-3 py-1.5 text-xs bg-zinc-700 text-zinc-300 rounded-lg hover:bg-zinc-600 transition-colors"
-                      >
-                        Reset to Default
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
+
               {/* Chat messages */}
               <div className="space-y-4 bg-zinc-900/50 rounded-xl p-4 min-h-[400px] max-h-[500px] overflow-y-auto">
                 {generatorMessages.length === 0 ? (
@@ -7115,46 +7088,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                 Chat with AI to brainstorm roleplay ideas. When ready, apply the generated instructions to your global settings.
               </div>
               
-              {/* Brainstorm Instructions - collapsible */}
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
-                <button
-                  onClick={() => setShowBrainstormInstructionsEditor(!showBrainstormInstructionsEditor)}
-                  className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-300 transition-colors w-full"
-                >
-                  <svg 
-                    className={`w-4 h-4 transition-transform ${showBrainstormInstructionsEditor ? "rotate-90" : ""}`} 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                  <span className="text-sm font-medium text-zinc-300">📝 Instructions Generator</span>
-                </button>
-                
-                {showBrainstormInstructionsEditor && (
-                  <div className="mt-3 space-y-3">
-                    <p className="text-xs text-zinc-500">
-                      These instructions tell the AI how to help you brainstorm roleplay ideas.
-                    </p>
-                    <textarea
-                      value={brainstormInstructions}
-                      onChange={(e) => setBrainstormInstructions(e.target.value)}
-                      className="w-full h-32 bg-zinc-800 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-200 font-mono resize-none focus:outline-none focus:ring-2 focus:ring-amber-500/50"
-                      placeholder="Enter instructions for the brainstorm AI..."
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setBrainstormInstructions(DEFAULT_BRAINSTORM_INSTRUCTIONS)}
-                        className="px-3 py-1.5 text-xs bg-zinc-700 text-zinc-300 rounded-lg hover:bg-zinc-600 transition-colors"
-                      >
-                        Reset to Default
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
+
               {/* Chat messages */}
               <div className="space-y-4 bg-zinc-900/50 rounded-xl p-4 min-h-[400px] max-h-[500px] overflow-y-auto">
                 {brainstormMessages.length === 0 ? (
@@ -7589,46 +7523,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                 <span>Play</span>
               </div>
               
-              {/* VN Instructions Editor - collapsible */}
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
-                <button
-                  onClick={() => setShowVnInstructionsEditor(!showVnInstructionsEditor)}
-                  className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-300 transition-colors w-full"
-                >
-                  <svg 
-                    className={`w-4 h-4 transition-transform ${showVnInstructionsEditor ? "rotate-90" : ""}`} 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                  <span className="text-sm font-medium text-zinc-300">📝 VN Generator Instructions</span>
-                </button>
-                
-                {showVnInstructionsEditor && (
-                  <div className="mt-3 space-y-3">
-                    <p className="text-xs text-zinc-500">
-                      These instructions tell the AI how to create visual novels.
-                    </p>
-                    <textarea
-                      value={vnInstructions}
-                      onChange={(e) => setVnInstructions(e.target.value)}
-                      className="w-full h-64 bg-zinc-800 border border-zinc-700 rounded-lg p-3 text-sm text-zinc-200 font-mono resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                      placeholder="Enter instructions for the VN generator AI..."
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setVnInstructions(DEFAULT_VN_INSTRUCTIONS)}
-                        className="px-3 py-1.5 text-xs bg-zinc-700 text-zinc-300 rounded-lg hover:bg-zinc-600 transition-colors"
-                      >
-                        Reset to Default
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
+
               {/* Error display */}
               {vnError && (
                 <div className="bg-red-900/30 border border-red-700 rounded-lg p-3 text-sm text-red-300">
