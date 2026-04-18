@@ -653,6 +653,7 @@ function SettingsModal({
   const [expandedProviders, setExpandedProviders] = useState<Record<string, boolean>>({});
   const [showModelDropdown, setShowModelDropdown] = useState(initialTab === "models");
   const [modelSearchQuery, setModelSearchQuery] = useState("");
+  const [activeSettingsTab, setActiveSettingsTab] = useState<'models' | 'settings'>(initialTab === "models" ? "models" : "settings");
   const modelSearchInputRef = useRef<HTMLInputElement>(null);
   const [editingProvider, setEditingProvider] = useState<LLMProviderType | null>(null);
   const [showAdvancedInstructions, setShowAdvancedInstructions] = useState(true);
@@ -729,22 +730,53 @@ function SettingsModal({
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-md md:max-w-lg max-h-[90vh] overflow-y-auto relative">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-1 hover:bg-zinc-800 rounded-lg transition-colors"
-        >
-          <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-        <h2 className="text-xl font-semibold text-white mb-4">
-          Global Settings
-        </h2>
-        
-        <div className="space-y-6">
-          {/* Model Selection */}
-          {showModelsSection && (
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between p-4 border-b border-zinc-800">
+          <div>
+            <h2 className="text-lg font-semibold text-white">Models & Settings</h2>
+            <p className="text-sm text-zinc-500">Configure AI providers, models, and global settings</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-zinc-800 rounded transition-colors"
+          >
+            <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Tabbed Navigation */}
+        <div className="flex-shrink-0 border-b border-zinc-800">
+          <div className="flex gap-0">
+            {[
+              { id: 'models', label: 'Models', icon: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
+              { id: 'settings', label: 'Settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveSettingsTab(tab.id as 'models' | 'settings')}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                  activeSettingsTab === tab.id
+                    ? 'border-b-2 border-blue-500 text-blue-500'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tab.icon} />
+                </svg>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Modal Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="space-y-6">
+            {/* Models Tab */}
+            {activeSettingsTab === 'models' && showModelsSection && (
           <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
               Model ({AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || activeProvider})
@@ -1238,55 +1270,118 @@ function SettingsModal({
                 </>
               )}
             </div>
-          )}
+            )}
 
-          {/* Global Instructions */}
-          {showInstructionsSection && (
-            <div className="border-t border-zinc-700 pt-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-medium text-white">Instructions</h3>
-                <div className="flex gap-2">
+            {/* Settings Tab */}
+            {activeSettingsTab === 'settings' && (
+              <>
+                {/* Temperature */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                    Temperature: {globalSettings.temperature.toFixed(2)}
+                  </label>
                   <input
-                    type="file"
-                    ref={instructionsFileInputRef}
-                    accept=".json"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        onImportInstructions(file);
-                        e.target.value = "";
-                      }
-                    }}
-                    className="hidden"
+                    type="range"
+                    min="0"
+                    max="2"
+                    step="0.1"
+                    value={globalSettings.temperature}
+                    onChange={(e) => setGlobalSettings({ ...globalSettings, temperature: parseFloat(e.target.value) })}
+                    className="w-full"
                   />
-                  <button
-                    type="button"
-                    onClick={() => instructionsFileInputRef.current?.click()}
-                    className="text-xs px-3 py-1 bg-zinc-700 text-zinc-300 rounded hover:bg-zinc-600 transition-colors"
-                  >
-                    Import JSON
-                  </button>
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Lower = more focused, Higher = more creative
+                  </p>
                 </div>
-              </div>
 
-              {/* Custom Instructions - Hidden, use Instruction List instead */}
-              <div className="mb-4" style={{ display: 'none' }}>
-                <label className="block text-sm font-medium text-zinc-400 mb-2">
-                  Custom Instructions
-                </label>
-                <textarea
-                  value={globalInstructions.customInstructions}
-                  onChange={(e) => setGlobalInstructions({ ...globalInstructions, customInstructions: e.target.value })}
-                  placeholder="Add specific instructions for how the AI should behave (e.g., 'Speak in a formal tone', 'Keep responses under 100 words')..."
-                  rows={3}
-                  className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
-                />
-                <p className="text-xs text-zinc-500 mt-1">
-                  Applied to all conversations globally
-                </p>
-              </div>
-            </div>
-          )}
+                {/* Max Tokens */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                    Max Tokens: {globalSettings.maxTokens}
+                  </label>
+                  <input
+                    type="range"
+                    min="100"
+                    max="4000"
+                    step="50"
+                    value={globalSettings.maxTokens}
+                    onChange={(e) => setGlobalSettings({ ...globalSettings, maxTokens: parseInt(e.target.value) })}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Maximum response length
+                  </p>
+                </div>
+
+                {/* Top P */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                    Top P: {globalSettings.topP.toFixed(2)}
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={globalSettings.topP}
+                    onChange={(e) => setGlobalSettings({ ...globalSettings, topP: parseFloat(e.target.value) })}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Nucleus sampling - controls response diversity
+                  </p>
+                </div>
+
+                {/* Top K */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                    Top K: {globalSettings.topK}
+                  </label>
+                  <input
+                    type="range"
+                    min="1"
+                    max="100"
+                    step="1"
+                    value={globalSettings.topK}
+                    onChange={(e) => setGlobalSettings({ ...globalSettings, topK: parseInt(e.target.value) })}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Limits token selection to top K choices
+                  </p>
+                </div>
+
+                {/* Enable Thinking */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                    Enable Thinking
+                  </label>
+                  <Switch
+                    checked={globalSettings.enableThinking}
+                    onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, enableThinking: checked })}
+                    className="data-[state=checked]:bg-blue-600"
+                  />
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Show AI reasoning process (Gemini models only)
+                  </p>
+                </div>
+
+                {/* Enable Streaming */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                    Enable Streaming
+                  </label>
+                  <Switch
+                    checked={globalSettings.enableStreaming}
+                    onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, enableStreaming: checked })}
+                    className="data-[state=checked]:bg-blue-600"
+                  />
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Stream AI responses in real-time
+                  </p>
+                </div>
+              </>
+            )}
 
           {/* Provider API Keys Configuration */}
           <div className="border-t border-zinc-700 pt-6">
