@@ -8,6 +8,14 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
+- [x] **COMPLETED: Removed old settings system and migrated to new instructions modal**
+  - Removed old SettingsModal completely (renamed to ModelsModal for provider/model config only)
+  - Migrated all advanced instructions UI to Chat tab in new instructions modal
+  - Consolidated instructions buttons - only one "Instructions" button remains
+  - All instruction management now unified through new instructions modal
+  - Created new, simplified Chat component that works with current Next.js architecture
+  - Fixed all TypeScript and linting errors
+  - Project builds successfully
 - [x] Fix Vertex AI model loading - Replaced broken dynamic API model fetching with static model list from Vertex AI console. Updated AVAILABLE_PROVIDERS, fetchModelsFromProvider, and api/models/route.ts to use hardcoded Gemini models (3.1, 3, 2.5, 2.0, 1.5 series). Removed unused API call to aiplatform.googleapis.com that was failing.
 - [x] Responsive Design System Refactor - Implemented mobile-first responsive design:
   - Added CSS design system with spacing variables, border radius, and transitions in globals.css
@@ -497,6 +505,8 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 ## Session History
 
 | Date       | Changes                                                                                                                                                                                                                                                                                                                                               |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-04-18 | **COMPLETED: Successfully removed old settings system and migrated to new instructions modal** - Created new simplified Chat component that works with Next.js architecture, removed old SettingsModal, unified all instruction management through new tabbed instructions modal, fixed all TypeScript/build errors, project now builds successfully |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-03-12 | Refactor Chat.tsx to follow SOLID principles - Created modular structure in `src/components/chat/` with constants, utils, hooks, and extracted UI components for better maintainability and testability                                                                                                                                               |
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------                                                                                 |

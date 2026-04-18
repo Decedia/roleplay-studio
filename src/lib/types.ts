@@ -101,11 +101,13 @@ export interface SillyTavernCharacterCard {
 
 // Chat message
 export interface Message {
+  id?: string; // Optional ID for tracking
   role: "system" | "user" | "assistant";
   content: string;
   isContinue?: boolean; // Flag for continue instruction messages (hidden in UI)
   signature?: string; // Model signature (e.g., "Gemini Flash")
   modelName?: string; // Full model name for display
+  timestamp?: number; // Message timestamp
 }
 
 // Conversation between a persona and character
@@ -217,6 +219,13 @@ export interface GlobalSettings {
   activeProvider: LLMProviderType;
   instructionInjectionPosition: "start" | "before-last" | "custom-index";
   instructionCustomInjectionIndex: number;
+  // Legacy properties for compatibility
+  provider?: LLMProviderType;
+  summarization?: {
+    enabled: boolean;
+    maxContextLength: number;
+    summaryTrigger: number;
+  };
 }
 
 // Instruction role type - who the instruction appears to be from
@@ -242,6 +251,15 @@ export interface GlobalInstructions {
   instructions: Instruction[];
   // Legacy field - image generation instructions (kept for compatibility)
   imageGenerationInstructions?: string;
+  // Advanced instruction fields
+  formattingPrompt?: string;
+  enableJailbreak?: boolean;
+  jailbreakInstructions?: string;
+  continueInstruction?: string;
+  // Mode-specific instructions
+  generatorInstructions?: string;
+  brainstormInstructions?: string;
+  vnInstructions?: string;
 }
 
 // Model cost structure
@@ -250,4 +268,33 @@ export interface ModelCost {
   tokens?: number;
   input?: number;
   output?: number;
+}
+
+// Missing types for Chat component
+export type ViewType = "home" | "chat" | "generator" | "brainstorm" | "vn";
+
+export interface FetchedModel {
+  id: string;
+  name: string;
+  contextWindow?: number;
+  maxTokens?: number;
+  supportsThinking?: boolean;
+}
+
+export interface ConnectionStatus {
+  status: "disconnected" | "connecting" | "connected" | "error";
+  message?: string;
+}
+
+export interface AutoExportSettings {
+  enabled: boolean;
+  intervalMinutes: number;
+  includeConversations: boolean;
+  includeCharacters: boolean;
+  includePersonas: boolean;
+}
+
+export interface LastSession {
+  conversationId: string;
+  timestamp: number;
 }

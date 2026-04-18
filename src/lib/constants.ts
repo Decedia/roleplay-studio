@@ -1,0 +1,13 @@
+// Default instruction constants
+export const DEFAULT_FORMATTING_PROMPT = "Format your response naturally and engagingly.";
+
+export const DEFAULT_CONTINUE_INSTRUCTION = "Continue the story naturally from the previous message.";
+
+export const DEFAULT_IMAGE_GENERATION_INSTRUCTIONS = "Generate high-quality, detailed images that match the scene description.";
+
+// Default instructions for different modes
+export const DEFAULT_GENERATOR_INSTRUCTIONS = "You are a character generator. Create detailed, compelling character profiles with rich backstories and personalities.";
+
+export const DEFAULT_BRAINSTORM_INSTRUCTIONS = "You are a creative brainstorming assistant. Help generate ideas and explore concepts in depth.";
+
+export const DEFAULT_VN_INSTRUCTIONS = "You are a visual novel writer. Create engaging, interactive stories with vivid descriptions and character-driven narratives.";
