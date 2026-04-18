@@ -1327,6 +1327,7 @@ export default function Chat() {
         </div>
       )}
 
+{/* Utilities Modal */}
       {showUtilitiesModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
@@ -1337,7 +1338,7 @@ export default function Chat() {
               </button>
             </div>
 
-            <div className="flex gap-1 px-4 py-2 border-b border-zinc-800">
+            <div className="flex gap-0 px-4 py-2 border-b border-zinc-800">
               <button onClick={() => setUtilityPanelTab('tags')} className={`flex-1 px-3 py-2 text-xs rounded-lg ${utilityPanelTab === 'tags' ? 'bg-zinc-800 text-white' : 'text-zinc-500'}`}>
                 Tags
               </button>
@@ -1350,43 +1351,39 @@ export default function Chat() {
             </div>
 
             <div className="flex-1 p-4">
-              {utilityPanelTab === 'tags' && <div className="text-center py-8"><p>Tags functionality</p></div>}
-              {utilityPanelTab === 'summarization' && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between bg-zinc-800/50 p-3 rounded-xl">
-                    <div><p className="text-sm font-medium text-white">Summarization</p></div>
-                    <button
-                      onClick={() => setGlobalSettings(prev => ({ ...prev, summarization: { ...prev.summarization, enabled: !prev.summarization.enabled } }))}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full ${globalSettings.summarization.enabled ? 'bg-blue-600' : 'bg-zinc-700'}`}
-                    >
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${globalSettings.summarization.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
-                    </button>
-                  </div>
-                  {globalSettings.summarization.enabled && (
-                    <button onClick={handleSummarize} disabled={isSummarizing} className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50">
-                      {isSummarizing ? 'Summarizing...' : 'Create Summary'}
-                    </button>
+              {utilityPanelTab === 'tags' && (
+                <div className="space-y-3">
+                  {getTagsFromMessages().length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-sm text-zinc-500">No tags found</p>
+                      <p className="text-xs text-zinc-600 mt-1">Custom tags from AI responses appear here</p>
+                    </div>
+                  ) : (
+                    getTagsFromMessages().map((tag, idx) => (
+                      <div key={idx} className="bg-zinc-800/50 rounded-lg border border-zinc-700/50 overflow-hidden">
+                        <div className="px-3 py-2.5">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="px-2 py-0.5 bg-purple-900/50 text-purple-300 text-xs rounded-md border border-purple-800/50 font-mono">
+                              &lt;{tag.tagName}&gt;
+                            </span>
+                            <span className="text-xs text-zinc-600">msg {tag.messageIndex + 1}</span>
+                          </div>
+                          <div className="whitespace-pre-wrap text-xs text-zinc-300 leading-relaxed">
+                            {tag.content}
+                          </div>
+                        </div>
+                      </div>
+                    ))
                   )}
                 </div>
               )}
-              {utilityPanelTab === 'debug' && <div className="text-center py-8"><p>Debug functionality</p></div>}
-            </div>
-
-            <div className="p-4 border-t border-zinc-800 flex justify-end">
-              <button onClick={() => setShowUtilitiesModal(false)} className="px-4 py-2 bg-zinc-700 text-white rounded-lg">
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
               {utilityPanelTab === 'summarization' && (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between bg-zinc-800/50 p-3 rounded-xl">
+                  <div className="flex items-center justify-between bg-zinc-800/50 p-3 rounded-xl border border-zinc-700/50">
                     <div>
                       <p className="text-sm font-medium text-white">Summarization</p>
-                      <p className="text-xs text-zinc-500">Compress context to save tokens</p>
+                      <p className="text-xs text-zinc-500 mt-0.5">Compress context to save tokens</p>
                     </div>
                     <button
                       onClick={() => {
@@ -1408,78 +1405,9 @@ export default function Chat() {
                     </button>
                   </div>
 
-                  {globalSettings.summarization.enabled && (
-                    <div className="bg-zinc-800/30 rounded-xl p-3">
-                      <button
-                        onClick={handleSummarize}
-                        disabled={isSummarizing}
-                        className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white text-sm disabled:opacity-50"
-                      >
-                        {isSummarizing ? 'Summarizing...' : 'Create Summary'}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {utilityPanelTab === 'debug' && (
-                <div className="text-center py-8">
-                  <p className="text-zinc-500">Debug functionality</p>
-                </div>
-              )}
-            </div>
-
-            <div className="p-4 border-t border-zinc-800 flex justify-end">
-              <button
-                onClick={() => setShowUtilitiesModal(false)}
-                className="px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors font-medium"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showInstructionModal && (
-                            ...prev.summarization,
-                            enabled: !prev.summarization.enabled
-                          }
-                        }));
-                      }}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        globalSettings.summarization.enabled ? 'bg-blue-600' : 'bg-zinc-700'
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          globalSettings.summarization.enabled ? 'translate-x-6' : 'translate-x-1'
-                        }`}
-                      />
-                    </button>
-                  </div>
-
                   {globalSettings.summarization.enabled ? (
-                    <div className="bg-zinc-800/30 rounded-xl border border-zinc-700/50 p-3">
-                      <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Quick Actions</p>
-                      <button
-                        onClick={handleSummarize}
-                        disabled={isSummarizing}
-                        className="w-full px-3 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-xs text-white disabled:opacity-50 font-medium"
-                      >
-                        {isSummarizing ? 'Summarizing...' : 'Create Summary'}
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <p className="text-sm text-zinc-500">Summarization disabled</p>
-                      <p className="text-xs text-zinc-600 mt-1">Toggle on to compress context</p>
-                    </div>
-                  )}
-                </div>
-              )}
-                        </button>
-                      </div>
+                    <div className="bg-zinc-800/30 rounded-xl border border-zinc-700/50 p-3 space-y-3">
+                      <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Settings</p>
 
                       {/* Summary Memory */}
                       {currentConversation?.summaryMemory && (
@@ -1498,10 +1426,7 @@ export default function Chat() {
                         </div>
                       )}
 
-                      {/* Configuration */}
-                      <div className="bg-zinc-800/30 rounded-xl border border-zinc-700/50 p-3 space-y-3">
-                        <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Settings</p>
-
+                      <div className="space-y-3">
                         {/* Quality */}
                         <div>
                           <label className="block text-xs font-medium text-zinc-400 mb-1.5">Quality</label>
@@ -1546,21 +1471,29 @@ export default function Chat() {
                           </select>
                         </div>
                       </div>
-                    </>
+
+                      <button
+                        onClick={handleSummarize}
+                        disabled={isSummarizing}
+                        className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white text-sm disabled:opacity-50"
+                      >
+                        {isSummarizing ? 'Summarizing...' : 'Create Summary'}
+                      </button>
+                    </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center mb-3">
                         <svg className="w-6 h-6 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      <p className="text-sm text-zinc-500">Summarization disabled</p>
-                      <p className="text-xs text-zinc-600 mt-1">Toggle on to compress context</p>
+                        </svg>
+                        <p className="text-sm text-zinc-500">Summarization disabled</p>
+                        <p className="text-xs text-zinc-600 mt-1">Toggle on to compress context</p>
+                      </div>
                     </div>
                   )}
                 </div>
               )}
 
-              {/* Debug Section */}
               {utilityPanelTab === 'debug' && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -1596,10 +1529,455 @@ export default function Chat() {
               )}
             </div>
 
-            {/* Modal Footer */}
             <div className="p-4 border-t border-zinc-800 flex justify-end">
               <button
                 onClick={() => setShowUtilitiesModal(false)}
+                className="px-4 py-2 bg-zinc-700 text-white rounded-lg"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Instruction Modal */}
+      {showInstructionModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-zinc-800">
+              <div>
+                <h2 className="text-lg font-semibold text-white">Instructions</h2>
+                <p className="text-sm text-zinc-500">Exclusive to each mode - Chat, Generator, Brainstorm, VN</p>
+              </div>
+              <button
+                onClick={() => setShowInstructionModal(false)}
+                className="p-2 hover:bg-zinc-800 rounded transition-colors"
+              >
+                <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Tabbed Navigation */}
+            <div className="flex-shrink-0 border-b border-zinc-800">
+              <div className="flex gap-0">
+                {['chat', 'generator', 'brainstorm', 'vn'].map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setActiveInstructionTab(mode as any)}
+                    className={`px-6 py-3 text-sm font-medium transition-all ${
+                      activeInstructionTab === mode
+                        ? 'text-blue-400 border-b-2 border-blue-500'
+                        : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                    }`}
+                  >
+                    {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tab Content - Instruction Inputs */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Chat Instructions Tab */}
+              {activeInstructionTab === 'chat' && (
+                <div className="space-y-4">
+                  {/* Formatting Prompt */}
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-400 mb-2">
+                      Formatting Prompt
+                    </label>
+                    <textarea
+                      value={globalInstructions.formattingPrompt || DEFAULT_FORMATTING_PROMPT}
+                      onChange={(e) => setGlobalInstructions({
+                        ...globalInstructions,
+                        formattingPrompt: e.target.value
+                      })}
+                      placeholder="Instructions for how the AI should format responses (actions, dialogue, thoughts...)"
+                      rows={5}
+                      className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none text-sm"
+                    />
+                    <p className="text-xs text-zinc-500 mt-1">
+                      Sent before context to guide response formatting (actions, speech, thoughts)
+                    </p>
+                  </div>
+
+                  {/* Jailbreak Instructions */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-zinc-400">
+                        Jailbreak Instructions
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setGlobalInstructions({
+                          ...globalInstructions,
+                          enableJailbreak: !globalInstructions.enableJailbreak
+                        })}
+                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                          globalInstructions.enableJailbreak ? "bg-amber-600" : "bg-zinc-700"
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                            globalInstructions.enableJailbreak ? "translate-x-5" : "translate-x-1"
+                          }`}
+                        />
+                      </button>
+                    </div>
+                    <textarea
+                      value={globalInstructions.jailbreakInstructions || ""}
+                      onChange={(e) => setGlobalInstructions({
+                        ...globalInstructions,
+                        jailbreakInstructions: e.target.value
+                      })}
+                      placeholder="Jailbreak instructions to bypass content restrictions..."
+                      rows={4}
+                      className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 border border-zinc-700 resize-none text-sm"
+                    />
+                    <p className="text-xs text-amber-500/70 mt-1">
+                      ⚠️ Enable to include jailbreak instructions in prompts
+                    </p>
+                  </div>
+
+                  {/* Continue Instruction */}
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-zinc-400 mb-2">
+                      Continue Instruction
+                    </label>
+                    <textarea
+                      value={globalInstructions.continueInstruction || DEFAULT_CONTINUE_INSTRUCTION}
+                      onChange={(e) => setGlobalInstructions({
+                        ...globalInstructions,
+                        continueInstruction: e.target.value
+                      })}
+                      placeholder="Continue your previous response..."
+                      rows={2}
+                      className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none text-sm"
+                    />
+                    <p className="text-xs text-zinc-500 mt-1">
+                      Used when clicking continue button to complete incomplete responses
+                    </p>
+                  </div>
+
+                  {/* Image Generation Instructions */}
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-zinc-400 mb-2">
+                      Image Generation Instructions
+                    </label>
+                    <textarea
+                      value={globalInstructions.imageGenerationInstructions || DEFAULT_IMAGE_GENERATION_INSTRUCTIONS}
+                      onChange={(e) => setGlobalInstructions({
+                        ...globalInstructions,
+                        imageGenerationInstructions: e.target.value
+                      })}
+                      placeholder="Instructions for generating character images..."
+                      rows={3}
+                      className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none text-sm"
+                    />
+                    <p className="text-xs text-zinc-500 mt-1">
+                      Used when generating character avatar images. Describe the style, quality, and composition you want.
+                    </p>
+                  </div>
+
+                  {/* Instruction List Section (SillyTavern-style) */}
+                  <div className="mt-6 pt-4 border-t border-zinc-700">
+                    <div className="flex items-center justify-between mb-4">
+                      <label className="block text-sm font-medium text-zinc-400">
+                        Instruction List
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newInstruction: Instruction = {
+                            id: `instruction_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                            name: "New Instruction",
+                            content: "",
+                            role: "system",
+                            position: "after_context",
+                            enabled: true,
+                            order: globalInstructions.instructions?.length || 0,
+                          };
+                          setGlobalInstructions({
+                            ...globalInstructions,
+                            instructions: [...(globalInstructions.instructions || []), newInstruction],
+                          });
+                        }}
+                        className="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition-colors"
+                      >
+                        + Add Instruction
+                      </button>
+                    </div>
+
+                    <p className="text-xs text-zinc-500 mb-4">
+                      Manage multiple instructions with custom roles and positions (SillyTavern-style)
+                    </p>
+
+                    {/* Instruction List */}
+                    <div className="space-y-3">
+                      {(globalInstructions.instructions || []).map((instruction, index) => (
+                        <div
+                          key={instruction.id}
+                          className={`p-3 rounded-lg border ${
+                            instruction.enabled
+                              ? "bg-zinc-800/50 border-zinc-700"
+                              : "bg-zinc-900/50 border-zinc-800 opacity-60"
+                          }`}
+                        >
+                          {/* Instruction Header */}
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              {/* Reorder Buttons */}
+                              <div className="flex flex-col">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (index === 0) return;
+                                    const newList = [...(globalInstructions.instructions || [])];
+                                    [newList[index - 1], newList[index]] = [newList[index], newList[index - 1]];
+                                    // Update order values
+                                    newList.forEach((inst, i) => { inst.order = i; });
+                                    setGlobalInstructions({
+                                      ...globalInstructions,
+                                      instructions: newList,
+                                    });
+                                  }}
+                                  disabled={index === 0}
+                                  className={`p-0.5 ${index === 0 ? 'text-zinc-600' : 'text-zinc-400 hover:text-white'} transition-colors`}
+                                >
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                  </svg>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (index === (globalInstructions.instructions || []).length - 1) return;
+                                    const newList = [...(globalInstructions.instructions || [])];
+                                    [newList[index], newList[index + 1]] = [newList[index + 1], newList[index]];
+                                    // Update order values
+                                    newList.forEach((inst, i) => { inst.order = i; });
+                                    setGlobalInstructions({
+                                      ...globalInstructions,
+                                      instructions: newList,
+                                    });
+                                  }}
+                                  disabled={index === (globalInstructions.instructions || []).length - 1}
+                                  className={`p-0.5 ${index === (globalInstructions.instructions || []).length - 1 ? 'text-zinc-600' : 'text-zinc-400 hover:text-white'} transition-colors`}
+                                >
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                  </svg>
+                                </button>
+                              </div>
+
+                              {/* Name Input */}
+                              <input
+                                type="text"
+                                value={instruction.name}
+                                onChange={(e) => {
+                                  const newList = [...(globalInstructions.instructions || [])];
+                                  newList[index] = { ...instruction, name: e.target.value };
+                                  setGlobalInstructions({
+                                    ...globalInstructions,
+                                    instructions: newList,
+                                  });
+                                }}
+                                className="bg-transparent text-white text-sm font-medium border-none focus:outline-none focus:ring-0 w-32"
+                                placeholder="Instruction name"
+                              />
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              {/* Enable/Disable Toggle */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newList = [...(globalInstructions.instructions || [])];
+                                  newList[index] = { ...instruction, enabled: !instruction.enabled };
+                                  setGlobalInstructions({
+                                    ...globalInstructions,
+                                    instructions: newList,
+                                  });
+                                }}
+                                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                                  instruction.enabled ? "bg-amber-600" : "bg-zinc-700"
+                                }`}
+                              >
+                                <span
+                                  className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                                    instruction.enabled ? "translate-x-5" : "translate-x-1"
+                                  }`}
+                                />
+                              </button>
+
+                              {/* Delete Button */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newList = [...(globalInstructions.instructions || [])];
+                                  setGlobalInstructions({
+                                    ...globalInstructions,
+                                    instructions: newList.filter((_, i) => i !== index),
+                                  });
+                                }}
+                                className="text-zinc-500 hover:text-red-400 transition-colors"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Role and Position */}
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-xs text-zinc-500 mb-1">Role</label>
+                              <select
+                                value={instruction.role}
+                                onChange={(e) => {
+                                  const newList = [...(globalInstructions.instructions || [])];
+                                  newList[index] = { ...instruction, role: e.target.value as any };
+                                  setGlobalInstructions({
+                                    ...globalInstructions,
+                                    instructions: newList,
+                                  });
+                                }}
+                                className="w-full bg-zinc-900 text-white rounded px-2 py-1 text-xs border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              >
+                                <option value="system">System</option>
+                                <option value="user">User</option>
+                                <option value="assistant">Assistant</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-xs text-zinc-500 mb-1">Position</label>
+                              <select
+                                value={instruction.position}
+                                onChange={(e) => {
+                                  const newList = [...(globalInstructions.instructions || [])];
+                                  newList[index] = { ...instruction, position: e.target.value as any };
+                                  setGlobalInstructions({
+                                    ...globalInstructions,
+                                    instructions: newList,
+                                  });
+                                }}
+                                className="w-full bg-zinc-900 text-white rounded px-2 py-1 text-xs border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              >
+                                <option value="before_context">Before Context</option>
+                                <option value="after_context">After Context</option>
+                                <option value="before_response">Before Response</option>
+                                <option value="after_response">After Response</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          {/* Content */}
+                          <div>
+                            <label className="block text-xs text-zinc-500 mb-1">Content</label>
+                            <textarea
+                              value={instruction.content}
+                              onChange={(e) => {
+                                const newList = [...(globalInstructions.instructions || [])];
+                                newList[index] = { ...instruction, content: e.target.value };
+                                setGlobalInstructions({
+                                  ...globalInstructions,
+                                  instructions: newList,
+                                });
+                              }}
+                              placeholder="Instruction content..."
+                              rows={3}
+                              className="w-full bg-zinc-900 text-white rounded px-2 py-1 text-xs border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Generator Instructions Tab */}
+              {activeInstructionTab === 'generator' && (
+                <div className="space-y-4">
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-zinc-400 mb-2">
+                      Generator Instructions
+                    </label>
+                    <textarea
+                      value={globalInstructions.generatorInstructions || DEFAULT_GENERATOR_INSTRUCTIONS}
+                      onChange={(e) => setGlobalInstructions({
+                        ...globalInstructions,
+                        generatorInstructions: e.target.value
+                      })}
+                      placeholder="Instructions for the generator mode..."
+                      rows={10}
+                      className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none text-sm"
+                    />
+                    <p className="text-xs text-zinc-500 mt-1">
+                      These instructions guide the AI when generating character responses in generator mode
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Brainstorm Instructions Tab */}
+              {activeInstructionTab === 'brainstorm' && (
+                <div className="space-y-4">
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-zinc-400 mb-2">
+                      Brainstorm Instructions
+                    </label>
+                    <textarea
+                      value={globalInstructions.brainstormInstructions || DEFAULT_BRAINSTORM_INSTRUCTIONS}
+                      onChange={(e) => setGlobalInstructions({
+                        ...globalInstructions,
+                        brainstormInstructions: e.target.value
+                      })}
+                      placeholder="Instructions for brainstorm mode..."
+                      rows={10}
+                      className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none text-sm"
+                    />
+                    <p className="text-xs text-zinc-500 mt-1">
+                      These instructions guide the AI when brainstorming ideas or scenarios
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* VN Instructions Tab */}
+              {activeInstructionTab === 'vn' && (
+                <div className="space-y-4">
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-zinc-400 mb-2">
+                      Visual Novel Instructions
+                    </label>
+                    <textarea
+                      value={globalInstructions.vnInstructions || DEFAULT_VN_INSTRUCTIONS}
+                      onChange={(e) => setGlobalInstructions({
+                        ...globalInstructions,
+                        vnInstructions: e.target.value
+                      })}
+                      placeholder="Instructions for visual novel mode..."
+                      rows={10}
+                      className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none text-sm"
+                    />
+                    <p className="text-xs text-zinc-500 mt-1">
+                      These instructions guide the AI when generating visual novel style responses
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-zinc-800 flex justify-end">
+              <button
+                onClick={() => setShowInstructionModal(false)}
                 className="px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors font-medium"
               >
                 Close
@@ -1609,11 +1987,30 @@ export default function Chat() {
         </div>
       )}
 
-      {/* Backdrop */}
-      {showHeaderActions && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setShowHeaderActions(false)}
+      {/* Models Modal */}
+      {showModelsModal && (
+        <ModelsModal
+          show={showModelsModal}
+          onClose={() => setShowModelsModal(false)}
+          globalSettings={globalSettings}
+          setGlobalSettings={setGlobalSettings}
+          providerConfigs={providerConfigs}
+          setProviderConfigs={setProviderConfigs}
+          activeProvider={activeProvider}
+          setActiveProvider={setActiveProvider}
+          connectionStatus={connectionStatus}
+          onTestConnection={handleTestConnection}
+          onConnect={handleConnectProvider}
+          providerModels={providerModels}
+          modelsFetching={modelsFetching}
+          onExportData={handleExportData}
+          onImportData={handleImportData}
+          autoExport={autoExport}
+          setAutoExport={setAutoExport}
+          createProfile={createProfile}
+          selectProfile={selectProfile}
+          deleteProfile={deleteProfile}
+          getActiveProfile={getActiveProfile}
         />
       )}
     </div>
