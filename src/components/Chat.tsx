@@ -545,13 +545,11 @@ function getThoughtSignature(modelId: string, provider: LLMProviderType): { sign
 // Removed inline - now using @/components/chat/components/FormattedText
 
 // Settings Modal Component with collapsible model dropdown
-function SettingsModal({
+function ModelsModal({
   show,
   onClose,
   globalSettings,
   setGlobalSettings,
-  globalInstructions,
-  setGlobalInstructions,
   providerConfigs,
   setProviderConfigs,
   activeProvider,
@@ -561,7 +559,6 @@ function SettingsModal({
   onConnect,
   providerModels,
   modelsFetching,
-  onImportInstructions,
   onExportData,
   onImportData,
   autoExport,
@@ -570,16 +567,11 @@ function SettingsModal({
   selectProfile,
   deleteProfile,
   getActiveProfile,
-  initialTab = "settings",
-  showModelsSection = true,
-  showInstructionsSection = true,
 }: {
   show: boolean;
   onClose: () => void;
   globalSettings: GlobalSettings;
   setGlobalSettings: React.Dispatch<React.SetStateAction<GlobalSettings>>;
-  globalInstructions: GlobalInstructions;
-  setGlobalInstructions: React.Dispatch<React.SetStateAction<GlobalInstructions>>;
   providerConfigs: Record<LLMProviderType, ProviderConfig>;
   setProviderConfigs: React.Dispatch<React.SetStateAction<Record<LLMProviderType, ProviderConfig>>>;
   activeProvider: LLMProviderType;
@@ -589,8 +581,7 @@ function SettingsModal({
   onConnect: (providerType: LLMProviderType) => void;
   providerModels: Record<LLMProviderType, FetchedModel[]>;
   modelsFetching: Record<LLMProviderType, boolean>;
-  onImportInstructions: (file: File) => void;
-  onExportData: () => void;
+   onExportData: () => void;
   onImportData: (file: File) => void;
   autoExport: AutoExportSettings;
   setAutoExport: React.Dispatch<React.SetStateAction<AutoExportSettings>>;
@@ -598,12 +589,9 @@ function SettingsModal({
   selectProfile: (providerType: LLMProviderType, profileId: string) => void;
   deleteProfile: (providerType: LLMProviderType, profileId: string) => void;
   getActiveProfile: (providerType: LLMProviderType) => ProviderProfile | undefined;
-  initialTab?: "settings" | "models" | "instructions";
-  showModelsSection?: boolean;
-  showInstructionsSection?: boolean;
 }) {
   const [expandedProviders, setExpandedProviders] = useState<Record<string, boolean>>({});
-  const [showModelDropdown, setShowModelDropdown] = useState(initialTab === "models");
+  const [showModelDropdown, setShowModelDropdown] = useState(true);
   const [modelSearchQuery, setModelSearchQuery] = useState("");
   const modelSearchInputRef = useRef<HTMLInputElement>(null);
   const [editingProvider, setEditingProvider] = useState<LLMProviderType | null>(null);
@@ -695,9 +683,8 @@ function SettingsModal({
         </h2>
         
         <div className="space-y-6">
-          {/* Model Selection */}
-          {showModelsSection && (
-          <div>
+           {/* Model Selection */}
+           <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
               Model ({AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || activeProvider})
             </label>
@@ -812,125 +799,9 @@ function SettingsModal({
                                       {'context' in model && model.context && (
                                         <div className="text-xs text-zinc-500 mt-0.5">
                                           {model.context?.toLocaleString() || "?"} ctx | {getModelCostInfo(model)}
-                                        </div>
-                                      )}
-                                    </button>
-                                  );
-                                })}
-                              </>
-                            )}
-                            {paidModels.length > 0 && (
-                              <>
-                                <div className="px-4 py-1.5 text-xs font-semibold text-yellow-400 bg-yellow-900/20 border-b border-zinc-700">
-                                  PAID
-                                </div>
-                                {paidModels.map((model) => {
-                                  const isSelected = model.id === globalSettings.modelId;
-                                  return (
-                                    <button
-                                      key={model.id}
-                                      type="button"
-                                      onClick={() => selectModel(model.id)}
-                                      className={`w-full px-4 py-2 text-left text-sm hover:bg-zinc-700 transition-colors ${
-                                        isSelected ? "bg-blue-900/30 text-blue-300" : "text-zinc-300"
-                                      }`}
-                                    >
-                                      <div className="flex items-center justify-between">
-                                        <span className="font-medium">{model.name || model.id}</span>
-                                        {isSelected && (
-                                          <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                          </svg>
-                                        )}
-                                      </div>
-                                      {'context' in model && model.context && (
-                                        <div className="text-xs text-zinc-500 mt-0.5">
-                                          {model.context?.toLocaleString() || "?"} ctx | {getModelCostInfo(model)}
-                                        </div>
-                                      )}
-                                    </button>
-                                  );
-                                })}
-                              </>
-                            )}
-                            {filteredModels.length === 0 && !hasCustomMatch && modelSearchQuery && (
-                              <div className="px-4 py-3 text-center text-zinc-500 text-sm">
-                                No models found. Press Enter to use "{modelSearchQuery}" as custom model.
-                              </div>
-                            )}
-                          </>
-                        );
-                      })()}
-                    </div>
-                  )}
-                </div>
-
-                {/* Selected Model Info */}
-                {selectedModel && 'context' in selectedModel && selectedModel.context && (
-                  <div className="mt-2 p-3 bg-zinc-800/50 rounded-lg text-xs text-zinc-400 space-y-1">
-                    <div className="flex justify-between">
-                      <span>Provider:</span>
-                      <span className="text-zinc-300">{selectedModel.provider || activeProvider}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Context Window:</span>
-                      <span className="text-zinc-300">{selectedModel.context?.toLocaleString() || "Unknown"} tokens</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Max Output:</span>
-                      <span className="text-zinc-300">{selectedModel.max_tokens?.toLocaleString() || "Unknown"} tokens</span>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-           </div>
-          )}
-
-           {/* Instruction Injection Position */}
-          {showInstructionsSection && (
-          <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-2">
-              Instruction Injection Position
-            </label>
-            <select
-              value={globalSettings.instructionInjectionPosition}
-              onChange={(e) => setGlobalSettings({ 
-                ...globalSettings, 
-                instructionInjectionPosition: e.target.value as any 
-              })}
-              className="w-full bg-zinc-800 text-white px-4 py-2 rounded-lg border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="start">At start (default)</option>
-              <option value="before-last">Before last message</option>
-              <option value="custom-index">Custom message index</option>
-            </select>
-            
-            {globalSettings.instructionInjectionPosition === "custom-index" && (
-              <div className="mt-3">
-                <label className="block text-xs text-zinc-500 mb-1">
-                  Inject instructions before message index (0 = first message)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={globalSettings.instructionCustomInjectionIndex}
-                  onChange={(e) => setGlobalSettings({ 
-                    ...globalSettings, 
-                    instructionCustomInjectionIndex: Math.max(0, parseInt(e.target.value) || 0)
-                  })}
-                  className="w-full bg-zinc-800 text-white px-4 py-2 rounded-lg border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            )}
-            
-            <div className="mt-2 text-xs text-zinc-500">
-              Controls where system instructions are placed in the chat history sent to AI
             </div>
-           </div>
-          )}
 
-          {/* Temperature */}
+           {/* Temperature */}
           <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
               Temperature: {globalSettings.temperature.toFixed(2)}
@@ -1192,400 +1063,7 @@ function SettingsModal({
             </div>
           )}
 
-          {/* Global Instructions */}
-          {showInstructionsSection && (
-          <div className="border-t border-zinc-700 pt-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-white">Instructions</h3>
-              <div className="flex gap-2">
-                <input
-                  type="file"
-                  ref={instructionsFileInputRef}
-                  accept=".json"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      onImportInstructions(file);
-                      e.target.value = "";
-                    }
-                  }}
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => instructionsFileInputRef.current?.click()}
-                  className="text-xs px-3 py-1 bg-zinc-700 text-zinc-300 rounded hover:bg-zinc-600 transition-colors"
-                >
-                  Import JSON
-                </button>
-              </div>
-            </div>
 
-            {/* Custom Instructions - Hidden, use Instruction List instead */}
-            <div className="mb-4" style={{ display: 'none' }}>
-              <label className="block text-sm font-medium text-zinc-400 mb-2">
-                Custom Instructions
-              </label>
-              <textarea
-                value={globalInstructions.customInstructions}
-                onChange={(e) => setGlobalInstructions({ ...globalInstructions, customInstructions: e.target.value })}
-                placeholder="Add specific instructions for how the AI should behave (e.g., 'Speak in a formal tone', 'Keep responses under 100 words')..."
-                rows={3}
-                className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
-              />
-              <p className="text-xs text-zinc-500 mt-1">
-                Applied to all conversations globally
-              </p>
-            </div>
-
-            {/* Advanced Instructions Toggle */}
-            <button
-              type="button"
-              onClick={() => setShowAdvancedInstructions(!showAdvancedInstructions)}
-              className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-300 transition-colors mb-4"
-            >
-              <svg 
-                className={`w-4 h-4 transition-transform ${showAdvancedInstructions ? "rotate-180" : ""}`} 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-              <span>Advanced Instructions</span>
-            </button>
-
-            {/* Advanced Instructions Section with Instruction List */}
-            {showAdvancedInstructions && (
-              <div className="space-y-4 pl-4 border-l-2 border-zinc-700">
-                {/* Formatting Prompt */}
-                <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">
-                    Formatting Prompt
-                  </label>
-                  <textarea
-                    value={globalInstructions.formattingPrompt || DEFAULT_FORMATTING_PROMPT}
-                    onChange={(e) => setGlobalInstructions({
-                      ...globalInstructions,
-                      formattingPrompt: e.target.value
-                    })}
-                    placeholder="Instructions for how the AI should format responses (actions, dialogue, thoughts...)"
-                    rows={5}
-                    className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none text-sm"
-                  />
-                  <p className="text-xs text-zinc-500 mt-1">
-                    Sent before context to guide response formatting (actions, speech, thoughts)
-                  </p>
-                </div>
-
-                {/* Jailbreak Instructions */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-medium text-zinc-400">
-                      Jailbreak Instructions
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setGlobalInstructions({ 
-                        ...globalInstructions, 
-                        enableJailbreak: !globalInstructions.enableJailbreak 
-                      })}
-                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                        globalInstructions.enableJailbreak ? "bg-amber-600" : "bg-zinc-700"
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                          globalInstructions.enableJailbreak ? "translate-x-5" : "translate-x-1"
-                        }`}
-                      />
-                    </button>
-                  </div>
-                  <textarea
-                    value={globalInstructions.jailbreakInstructions || ""}
-                    onChange={(e) => setGlobalInstructions({ 
-                      ...globalInstructions, 
-                      jailbreakInstructions: e.target.value 
-                    })}
-                    placeholder="Jailbreak instructions to bypass content restrictions..."
-                    rows={4}
-                    className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 border border-zinc-700 resize-none text-sm"
-                  />
-                  <p className="text-xs text-amber-500/70 mt-1">
-                    ⚠️ Enable to include jailbreak instructions in prompts
-                  </p>
-                </div>
-
-
-
-                {/* Continue Instruction */}
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">
-                    Continue Instruction
-                  </label>
-                  <textarea
-                    value={globalInstructions.continueInstruction || DEFAULT_CONTINUE_INSTRUCTION}
-                    onChange={(e) => setGlobalInstructions({ 
-                      ...globalInstructions, 
-                      continueInstruction: e.target.value 
-                    })}
-                    placeholder="Continue your previous response..."
-                    rows={2}
-                    className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none text-sm"
-                  />
-                  <p className="text-xs text-zinc-500 mt-1">
-                    Used when clicking continue button to complete incomplete responses
-                  </p>
-                </div>
-
-                {/* Image Generation Instructions */}
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">
-                    Image Generation Instructions
-                  </label>
-                  <textarea
-                    value={globalInstructions.imageGenerationInstructions || DEFAULT_IMAGE_GENERATION_INSTRUCTIONS}
-                    onChange={(e) => setGlobalInstructions({ 
-                      ...globalInstructions, 
-                      imageGenerationInstructions: e.target.value 
-                    })}
-                    placeholder="Instructions for generating character images..."
-                    rows={3}
-                    className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none text-sm"
-                  />
-                  <p className="text-xs text-zinc-500 mt-1">
-                    Used when generating character avatar images. Describe the style, quality, and composition you want.
-                  </p>
-                </div>
-
-                {/* Instruction List Section (SillyTavern-style) */}
-                <div className="mt-6 pt-4 border-t border-zinc-700">
-                  <div className="flex items-center justify-between mb-4">
-                    <label className="block text-sm font-medium text-zinc-400">
-                      Instruction List
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newInstruction: Instruction = {
-                          id: `instruction_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                          name: "New Instruction",
-                          content: "",
-                          role: "system",
-                          position: "after_context",
-                          enabled: true,
-                          order: globalInstructions.instructions?.length || 0,
-                        };
-                        setGlobalInstructions({
-                          ...globalInstructions,
-                          instructions: [...(globalInstructions.instructions || []), newInstruction],
-                        });
-                      }}
-                      className="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition-colors"
-                    >
-                      + Add Instruction
-                    </button>
-                  </div>
-                  
-                  <p className="text-xs text-zinc-500 mb-4">
-                    Manage multiple instructions with custom roles and positions (SillyTavern-style)
-                  </p>
-
-                  {/* Instruction List */}
-                  <div className="space-y-3">
-                    {(globalInstructions.instructions || []).map((instruction, index) => (
-                      <div 
-                        key={instruction.id} 
-                        className={`p-3 rounded-lg border ${
-                          instruction.enabled 
-                            ? "bg-zinc-800/50 border-zinc-700" 
-                            : "bg-zinc-900/50 border-zinc-800 opacity-60"
-                        }`}
-                      >
-                        {/* Instruction Header */}
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            {/* Reorder Buttons */}
-                            <div className="flex flex-col">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (index === 0) return;
-                                  const newList = [...(globalInstructions.instructions || [])];
-                                  [newList[index - 1], newList[index]] = [newList[index], newList[index - 1]];
-                                  // Update order values
-                                  newList.forEach((inst, i) => { inst.order = i; });
-                                  setGlobalInstructions({
-                                    ...globalInstructions,
-                                    instructions: newList,
-                                  });
-                                }}
-                                disabled={index === 0}
-                                className={`p-0.5 ${index === 0 ? 'text-zinc-600' : 'text-zinc-400 hover:text-white'} transition-colors`}
-                              >
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                                </svg>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (index === (globalInstructions.instructions || []).length - 1) return;
-                                  const newList = [...(globalInstructions.instructions || [])];
-                                  [newList[index], newList[index + 1]] = [newList[index + 1], newList[index]];
-                                  // Update order values
-                                  newList.forEach((inst, i) => { inst.order = i; });
-                                  setGlobalInstructions({
-                                    ...globalInstructions,
-                                    instructions: newList,
-                                  });
-                                }}
-                                disabled={index === (globalInstructions.instructions || []).length - 1}
-                                className={`p-0.5 ${index === (globalInstructions.instructions || []).length - 1 ? 'text-zinc-600' : 'text-zinc-400 hover:text-white'} transition-colors`}
-                              >
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                              </button>
-                            </div>
-                            
-                            {/* Name Input */}
-                            <input
-                              type="text"
-                              value={instruction.name}
-                              onChange={(e) => {
-                                const newList = [...(globalInstructions.instructions || [])];
-                                newList[index] = { ...instruction, name: e.target.value };
-                                setGlobalInstructions({
-                                  ...globalInstructions,
-                                  instructions: newList,
-                                });
-                              }}
-                              className="bg-transparent text-white text-sm font-medium border-none focus:outline-none focus:ring-0 w-32"
-                              placeholder="Instruction name"
-                            />
-                          </div>
-                          
-                          <div className="flex items-center gap-2">
-                            {/* Enable/Disable Toggle */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const newList = [...(globalInstructions.instructions || [])];
-                                newList[index] = { ...instruction, enabled: !instruction.enabled };
-                                setGlobalInstructions({
-                                  ...globalInstructions,
-                                  instructions: newList,
-                                });
-                              }}
-                              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                                instruction.enabled ? "bg-green-600" : "bg-zinc-700"
-                              }`}
-                            >
-                              <span
-                                className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                                  instruction.enabled ? "translate-x-5" : "translate-x-1"
-                                }`}
-                              />
-                            </button>
-                            
-                            {/* Delete Button */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (confirm("Delete this instruction?")) {
-                                  const newList = (globalInstructions.instructions || []).filter(
-                                    (_, i) => i !== index
-                                  );
-                                  setGlobalInstructions({
-                                    ...globalInstructions,
-                                    instructions: newList,
-                                  });
-                                }
-                              }}
-                              className="text-zinc-500 hover:text-red-400 transition-colors p-1"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                        
-                        {/* Role and Position Dropdowns */}
-                        <div className="flex gap-2 mb-2">
-                          {/* Role Dropdown */}
-                          <div className="flex-1">
-                            <label className="block text-xs text-zinc-500 mb-1">Role</label>
-                            <select
-                              value={instruction.role}
-                              onChange={(e) => {
-                                const newList = [...(globalInstructions.instructions || [])];
-                                newList[index] = { ...instruction, role: e.target.value as InstructionRole };
-                                setGlobalInstructions({
-                                  ...globalInstructions,
-                                  instructions: newList,
-                                });
-                              }}
-                              className="w-full bg-zinc-900 text-white text-xs rounded px-2 py-1 border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            >
-                              <option value="system">System</option>
-                              <option value="user">User</option>
-                              <option value="assistant">Assistant</option>
-                            </select>
-                          </div>
-                          
-                          {/* Position Dropdown */}
-                          <div className="flex-1">
-                            <label className="block text-xs text-zinc-500 mb-1">Position</label>
-                            <select
-                              value={instruction.position}
-                              onChange={(e) => {
-                                const newList = [...(globalInstructions.instructions || [])];
-                                newList[index] = { ...instruction, position: e.target.value as InstructionPosition };
-                                setGlobalInstructions({
-                                  ...globalInstructions,
-                                  instructions: newList,
-                                });
-                              }}
-                              className="w-full bg-zinc-900 text-white text-xs rounded px-2 py-1 border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            >
-                              <option value="before_context">Before Context</option>
-                              <option value="after_context">After Context</option>
-                            </select>
-                          </div>
-                        </div>
-                        
-                        {/* Content Textarea */}
-                        <textarea
-                          value={instruction.content}
-                          onChange={(e) => {
-                            const newList = [...(globalInstructions.instructions || [])];
-                            newList[index] = { ...instruction, content: e.target.value };
-                            setGlobalInstructions({
-                              ...globalInstructions,
-                              instructions: newList,
-                            });
-                          }}
-                          placeholder="Enter instruction content..."
-                          rows={3}
-                          className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
-                        />
-                      </div>
-                    ))}
-                    
-                    {/* Empty State */}
-                    {(!globalInstructions.instructions || globalInstructions.instructions.length === 0) && (
-                      <div className="text-center py-4 text-zinc-500 text-sm">
-                        No instructions yet. Click &quot;Add Instruction&quot; to create one.
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-           </div>
-          )}
 
           {/* Provider API Keys Configuration */}
           <div className="border-t border-zinc-700 pt-6">
@@ -2451,9 +1929,7 @@ export default function Chat() {
   const [showCharacterModal, setShowCharacterModal] = useState(false);
   const [showCharacterCardModal, setShowCharacterCardModal] = useState(false);
   const [characterSortOrder, setCharacterSortOrder] = useState<'added' | 'lastChat' | 'name'>('added');
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showModelsModal, setShowModelsModal] = useState(false);
-  const [showInstructionsModal, setShowInstructionsModal] = useState(false);
   const [showInstructionModal, setShowInstructionModal] = useState(false);
   const [activeInstructionTab, setActiveInstructionTab] = useState<'chat' | 'generator' | 'brainstorm' | 'vn'>('chat');
   const [chatInstructions, setChatInstructions] = useState<string>('');
@@ -5067,14 +4543,7 @@ Write an engaging story segment. If this is a good point for player interaction,
     setDeletedItem(null);
   };
 
-  const openSettings = () => {
-    setShowSettingsModal(true);
-  };
 
-  const saveSettings = () => {
-    // Settings are saved automatically via useEffect
-    setShowSettingsModal(false);
-  };
 
   // Chat functions
   const handleSubmit = async (e: React.FormEvent) => {
@@ -8260,10 +7729,9 @@ Write an engaging story segment. If this is a good point for player interaction,
                         <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
                         <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
                         <span className="text-sm">Writing...</span>
-                      </div>
-                    )}
-                  </div>
-                  
+           </div>
+
+           
                   {/* Continue button (for non-choice segments) */}
                   {vnProject.story.length > 0 && 
                    !vnProject.story[vnProject.story.length - 1].choices && 
@@ -10177,7 +9645,7 @@ Write an engaging story segment. If this is a good point for player interaction,
 
       {/* Models Modal */}
       {showModelsModal && (
-        <SettingsModal
+        <ModelsModal
           show={showModelsModal}
           onClose={() => setShowModelsModal(false)}
           globalSettings={globalSettings}
@@ -10202,44 +9670,11 @@ Write an engaging story segment. If this is a good point for player interaction,
           selectProfile={selectProfile}
           deleteProfile={deleteProfile}
           getActiveProfile={getActiveProfile}
-          initialTab="models"
-          showModelsSection={true}
-          showInstructionsSection={false}
+
         />
       )}
 
-      {/* Instructions Modal */}
-      {showInstructionsModal && (
-        <SettingsModal
-          show={showInstructionsModal}
-          onClose={() => setShowInstructionsModal(false)}
-          globalSettings={globalSettings}
-          setGlobalSettings={setGlobalSettings}
-          globalInstructions={globalInstructions}
-          setGlobalInstructions={setGlobalInstructions}
-          providerConfigs={providerConfigs}
-          setProviderConfigs={setProviderConfigs}
-          activeProvider={activeProvider}
-          setActiveProvider={setActiveProvider}
-          connectionStatus={connectionStatus}
-          onTestConnection={handleTestConnection}
-          onConnect={handleConnectProvider}
-          providerModels={providerModels}
-          modelsFetching={modelsFetching}
-          onImportInstructions={handleImportInstructions}
-          onExportData={handleExportData}
-          onImportData={handleImportData}
-          autoExport={autoExport}
-          setAutoExport={setAutoExport}
-          createProfile={createProfile}
-          selectProfile={selectProfile}
-          deleteProfile={deleteProfile}
-          getActiveProfile={getActiveProfile}
-          initialTab="instructions"
-          showModelsSection={false}
-          showInstructionsSection={true}
-         />
-       )}
+
 
        {/* Instruction Modal with Tabbed Navigation */}
        {showInstructionModal && (
