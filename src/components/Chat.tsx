@@ -6018,31 +6018,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                     </div>
                   </button>
 
-                  {/* Utility Panel */}
-                  <button
-                    onClick={() => {
-                      if (view === "chat" && currentConversation) {
-                        setShowUtilityPanel(!showUtilityPanel);
-                        setShowHeaderActions(false);
-                      }
-                    }}
-                    disabled={view !== "chat" || !currentConversation}
-                    className={`w-full flex items-center gap-3 px-4 py-3 transition-colors text-left ${
-                      view === "chat" && currentConversation
-                        ? "hover:bg-zinc-800 text-white"
-                        : "opacity-50 cursor-not-allowed"
-                    }`}
-                  >
-                    <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                    </svg>
-                    <div>
-                      <div className="text-sm text-white">Utilities</div>
-                      <div className="text-xs text-zinc-500">
-                        {view === "chat" && currentConversation ? "Tags, summarize, debug" : "Only available in chat"}
-                      </div>
-                    </div>
-                  </button>
+
                 </div>
               )}
               

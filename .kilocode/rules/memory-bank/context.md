@@ -8,12 +8,11 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
-- [x] **COMPLETED: Removed all instruction inputs except from new tabbed modal**
-  - Removed instruction input sections from Generator, Brainstorm, and VN modes
-  - Kept only the new tabbed instructions modal as the single source for all instruction management
-  - Removed duplicate instruction editors and consolidated all instruction editing to the Chat tab in the tabbed modal
-  - Changed Character Card and Utilities buttons to be disabled (not removed) when not in chat mode
-  - Project builds successfully with unified instruction management
+- [x] **COMPLETED: Removed duplicate utilities button**
+  - Identified and removed the duplicate utilities button from header dropdown
+  - Kept only the main utilities modal button that opens the comprehensive utilities interface
+  - Character Card button remains with proper disabled state when not in chat mode
+  - Project builds successfully with single utilities access point
 - [x] **COMPLETED: Fixed duplicate instructions buttons and moved advanced instructions to new tabbed modal**
   - Removed duplicate "Instructions" button from header dropdown (kept only the tabbed modal button)
   - Moved all advanced instructions UI (formatting prompt, jailbreak, continue instruction, image generation, instruction list) from SettingsModal to Chat tab in the new tabbed instructions modal
@@ -510,7 +509,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date       | Changes                                                                                                                                                                                                                                                                                                                                               |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-04-18 | **COMPLETED: Removed all instruction inputs except tabbed modal & kept disabled navigation items** - Removed instruction editors from all modes, kept only tabbed modal, changed Character Card/Utilities to disabled state when not in chat, project builds successfully |
+| 2026-04-18 | **COMPLETED: Resolved multiple utilities buttons issue** - Removed duplicate utilities button, kept only the main modal button, Character Card properly disabled when not in chat, project builds successfully |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-03-12 | Refactor Chat.tsx to follow SOLID principles - Created modular structure in `src/components/chat/` with constants, utils, hooks, and extracted UI components for better maintainability and testability                                                                                                                                               |
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------                                                                                 |
