@@ -564,93 +564,10 @@ function ModelsModal({
     </div>
   );
 }
-  };
 
-  useEffect(() => {
-    if (showModelDropdown) {
-      document.addEventListener("mousedown", handleClickOutside);
-      setTimeout(() => modelSearchInputRef.current?.focus(), 50);
-    } else {
-      setModelSearchQuery("");
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showModelDropdown]);
-
-  const selectModel = (modelId: string) => {
-    const model = activeProviderModels.find(m => m.id === modelId);
-    const maxOutput = model?.max_tokens || 4000;
-    const maxContext = model?.context || 128000;
-    // Auto-set max tokens to model's maximum when selecting a new model
-    const newMaxTokens = maxOutput;
-    const newMaxContext = maxContext;
-    
-    // Update global settings
-    setGlobalSettings({ ...globalSettings, modelId, maxTokens: newMaxTokens, maxContextTokens: newMaxContext });
-    
-    // Also update the provider config and active profile
-    const config = providerConfigs[activeProvider];
-    setProviderConfigs(prev => ({
-      ...prev,
-      [activeProvider]: { 
-        ...prev[activeProvider], 
-        selectedModel: modelId,
-        profiles: prev[activeProvider].profiles.map(p => 
-          p.id === config.activeProfileId ? { ...p, selectedModel: modelId } : p
-        )
-      }
-    }));
-    
-    setShowModelDropdown(false);
-  };
-
-  const getModelCostInfo = (model: Model | FetchedModel) => {
-    if ('cost' in model && model.cost && model.cost.tokens) {
-      const inputCost = (model.cost.input || 0) / 100 * (1000000 / model.cost.tokens);
-      const outputCost = (model.cost.output || 0) / 100 * (1000000 / model.cost.tokens);
-      if (inputCost === 0 && outputCost === 0) {
-        return "Free";
-      }
-      return `$${inputCost.toFixed(2)}/M in | $${outputCost.toFixed(2)}/M out`;
-    }
-    return "Pricing N/A";
-  };
-
-  if (!show) return null;
-
+export default function Chat() {
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-md md:max-w-lg max-h-[90vh] overflow-y-auto relative">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-1 hover:bg-zinc-800 rounded-lg transition-colors"
-        >
-          <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-        <h2 className="text-xl font-semibold text-white mb-4">
-          Global Settings
-        </h2>
-        
-        <div className="space-y-6">
-           {/* Model Selection */}
-           <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-2">
-              Model ({AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || activeProvider})
-            </label>
-            {isLoadingModels ? (
-              <div className="w-full bg-zinc-800 text-zinc-400 rounded-lg px-4 py-2 border border-zinc-700">
-                Loading models...
-              </div>
-            ) : activeProviderModels.length === 0 ? (
-              <div className="w-full bg-zinc-800/50 text-zinc-400 rounded-lg px-4 py-2 border border-zinc-700">
-                Test connection to load models
-              </div>
-            ) : (
-              <>
-                {/* Custom Dropdown */}
-                <div className="relative" ref={dropdownRef}>
-                  <button
+    <button
                     type="button"
                     onClick={() => setShowModelDropdown(!showModelDropdown)}
                     className="w-full bg-zinc-800 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 text-left flex items-center justify-between"
@@ -791,9 +708,9 @@ function ModelsModal({
                                </>
                              )}
                            </>
-                         );
-                       })()}
-                     </div>
+                          );
+                        )
+                      </div>
                    </div>
                  )}
                </>
