@@ -232,7 +232,7 @@ export interface GlobalSettings {
 export type InstructionRole = "system" | "user" | "assistant";
 
 // Instruction position type - where in the message flow it goes
-export type InstructionPosition = "before_context" | "after_context";
+export type InstructionPosition = "before_context" | "after_context" | "inline_with_message";
 
 // Individual instruction entry (SillyTavern-style)
 export interface Instruction {
@@ -240,9 +240,10 @@ export interface Instruction {
   name: string; // User-friendly name for tracking
   content: string; // The instruction text
   role: InstructionRole; // Who this instruction appears to be from
-  position: InstructionPosition; // Before or after context
+  position: InstructionPosition; // Before or after context, or inline with message
   enabled: boolean; // Whether this instruction is active
   order: number; // For sorting within position
+  inlineIndex?: number; // Index for inline_with_message position (0 = after last user message, 1 = before that, etc.)
 }
 
 // Global instructions (SillyTavern-style)

@@ -288,11 +288,12 @@ export const buildFullSystemPrompt = (
   messages: Message[],
   globalInstructions?: GlobalInstructions,
   summaryMemory?: string
-): { 
-  systemPrompt: string; 
+): {
+  systemPrompt: string;
   characterContext: Message;
   beforeContextInstructions: Message[];
   afterContextInstructions: Message[];
+  inlineInstructions: Array<{ message: Message; index: number }>;
 } => {
   const formattingSections: string[] = [];
   const contextSections: string[] = [];
@@ -303,6 +304,7 @@ export const buildFullSystemPrompt = (
   
   const beforeContextInstructions: Message[] = [];
   const afterContextInstructions: Message[] = [];
+  const inlineInstructions: Array<{ message: Message; index: number }> = [];
   
   if (globalInstructions?.instructions && globalInstructions.instructions.length > 0) {
     // Sort instructions by position and order
@@ -320,11 +322,15 @@ export const buildFullSystemPrompt = (
         role: instruction.role,
         content: instruction.content,
       };
-      
+
       if (instruction.position === "before_context") {
         beforeContextInstructions.push(msg);
-      } else {
+      } else if (instruction.position === "after_context") {
         afterContextInstructions.push(msg);
+      } else if (instruction.position === "inline_with_message") {
+        // For inline positioning, use the inlineIndex (default to 0 if not set)
+        const index = instruction.inlineIndex ?? 0;
+        inlineInstructions.push({ message: msg, index });
       }
     }
   }
@@ -411,5 +417,6 @@ export const buildFullSystemPrompt = (
     characterContext: systemMessage,
     beforeContextInstructions,
     afterContextInstructions,
+    inlineInstructions,
   };
 };

@@ -420,6 +420,54 @@ const providerSupportsImageGeneration = (provider: LLMProviderType): boolean => 
   return ["google-ai-studio", "google-vertex"].includes(provider);
 };
 
+// Inject inline instructions into message history
+// Index 0 = after last user message, 1 = before that, etc.
+// If index is too big, put at the very end
+const injectInlineInstructions = (
+  messages: Message[],
+  inlineInstructions: Array<{ message: Message; index: number }>
+): Message[] => {
+  if (inlineInstructions.length === 0) return messages;
+
+  const result = [...messages];
+
+  // Group instructions by index
+  const instructionsByIndex = new Map<number, Message[]>();
+  for (const { message, index } of inlineInstructions) {
+    if (!instructionsByIndex.has(index)) {
+      instructionsByIndex.set(index, []);
+    }
+    instructionsByIndex.get(index)!.push(message);
+  }
+
+  // Find all user message positions (in reverse order for index 0 = last user message)
+  const userMessageIndices: number[] = [];
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === 'user') {
+      userMessageIndices.push(i);
+    }
+  }
+
+  // Inject instructions at each index position
+  for (const [index, instructionMessages] of instructionsByIndex.entries()) {
+    let insertPosition: number;
+
+    if (index >= userMessageIndices.length) {
+      // Index is too big, put at the very end
+      insertPosition = messages.length;
+    } else {
+      // Insert after the user message at the specified index
+      // index 0 = after last user message, index 1 = after second-to-last, etc.
+      insertPosition = userMessageIndices[index] + 1;
+    }
+
+    // Insert all instructions for this index at the calculated position
+    result.splice(insertPosition, 0, ...instructionMessages);
+  }
+
+  return result;
+};
+
 // Truncate messages to fit within max context tokens
 const truncateMessagesToContext = (messages: Message[], maxContextTokens: number, systemPromptTokens: number): Message[] => {
   // Reserve tokens for system prompt and a buffer for the new message
@@ -4777,7 +4825,7 @@ Write an engaging story segment. If this is a good point for player interaction,
       };
       
       // Build system prompt with lorebook support and summary memory
-      const { systemPrompt, characterContext, beforeContextInstructions, afterContextInstructions } = buildFullSystemPrompt(
+      const { systemPrompt, characterContext, beforeContextInstructions, afterContextInstructions, inlineInstructions } = buildFullSystemPrompt(
         selectedCharacter,
         selectedPersona.name,
         selectedPersona.description,
@@ -4802,17 +4850,20 @@ Write an engaging story segment. If this is a good point for player interaction,
         messagesForApi,
         globalSettings.maxContextTokens,
         systemPromptTokens
-      );
+       );
 
-      // Combine messages with correct position: [character context] -> [before instructions] -> [conversation] -> [after instructions]
-      const messagesWithInstructions = [
-        characterContext, 
-        ...beforeContextInstructions, 
-        ...truncatedMessages, 
-        ...afterContextInstructions
-      ];
+       // Inject inline instructions into the conversation
+       const messagesWithInline = injectInlineInstructions(truncatedMessages, inlineInstructions);
 
-      // Capture debug payload for utility panel (sendMessage)
+       // Combine messages with correct position: [character context] -> [before instructions] -> [conversation with inline] -> [after instructions]
+       const messagesWithInstructions = [
+         characterContext,
+         ...beforeContextInstructions,
+         ...messagesWithInline,
+         ...afterContextInstructions
+       ];
+
+       // Capture debug payload for utility panel (sendMessage)
       captureDebugPayload(
         profileConfig.selectedModel || globalSettings.modelId,
         characterContext.content,
@@ -5144,7 +5195,7 @@ Write an engaging story segment. If this is a good point for player interaction,
       };
       
       // Build system prompt with lorebook support and summary memory
-      const { systemPrompt, characterContext, beforeContextInstructions, afterContextInstructions } = buildFullSystemPrompt(
+      const { systemPrompt, characterContext, beforeContextInstructions, afterContextInstructions, inlineInstructions } = buildFullSystemPrompt(
         selectedCharacter,
         selectedPersona.name,
         selectedPersona.description,
@@ -5169,17 +5220,20 @@ Write an engaging story segment. If this is a good point for player interaction,
         messagesForApi,
         globalSettings.maxContextTokens,
         systemPromptTokens
-      );
+       );
 
-      // Combine messages with correct position: [character context] -> [before instructions] -> [conversation] -> [after instructions]
-      const messagesWithInstructions = [
-        characterContext, 
-        ...beforeContextInstructions, 
-        ...truncatedMessages, 
-        ...afterContextInstructions
-      ];
+       // Inject inline instructions into the conversation
+       const messagesWithInline = injectInlineInstructions(truncatedMessages, inlineInstructions);
 
-      // Capture debug payload for utility panel (handleRetry)
+       // Combine messages with correct position: [character context] -> [before instructions] -> [conversation with inline] -> [after instructions]
+       const messagesWithInstructions = [
+         characterContext,
+         ...beforeContextInstructions,
+         ...messagesWithInline,
+         ...afterContextInstructions
+       ];
+
+       // Capture debug payload for utility panel (handleRetry)
       captureDebugPayload(
         profileConfig.selectedModel || globalSettings.modelId,
         characterContext.content,
@@ -5335,7 +5389,7 @@ Write an engaging story segment. If this is a good point for player interaction,
         selectedModel: globalSettings.modelId || activeProfile?.selectedModel
       };
       // Build system prompt with lorebook support and summary memory
-      const { systemPrompt, characterContext, beforeContextInstructions, afterContextInstructions } = buildFullSystemPrompt(
+      const { systemPrompt, characterContext, beforeContextInstructions, afterContextInstructions, inlineInstructions } = buildFullSystemPrompt(
         selectedCharacter,
         selectedPersona.name,
         selectedPersona.description,
@@ -5581,7 +5635,7 @@ Write an engaging story segment. If this is a good point for player interaction,
           selectedModel: globalSettings.modelId || activeProfile?.selectedModel
         };
         
-        const { systemPrompt, characterContext, beforeContextInstructions, afterContextInstructions } = buildFullSystemPrompt(
+        const { systemPrompt, characterContext, beforeContextInstructions, afterContextInstructions, inlineInstructions } = buildFullSystemPrompt(
           selectedCharacter,
           selectedPersona.name,
           selectedPersona.description,
@@ -5605,15 +5659,18 @@ Write an engaging story segment. If this is a good point for player interaction,
           messagesForApi,
           globalSettings.maxContextTokens,
           systemPromptTokens
-        );
+       );
 
-      // Combine messages with correct position: [character context] -> [before instructions] -> [conversation] -> [after instructions]
-      const messagesWithInstructions = [
-        characterContext, 
-        ...beforeContextInstructions, 
-        ...truncatedMessages, 
-        ...afterContextInstructions
-      ];
+       // Inject inline instructions into the conversation
+       const messagesWithInline = injectInlineInstructions(truncatedMessages, inlineInstructions);
+
+       // Combine messages with correct position: [character context] -> [before instructions] -> [conversation with inline] -> [after instructions]
+       const messagesWithInstructions = [
+         characterContext,
+         ...beforeContextInstructions,
+         ...messagesWithInline,
+         ...afterContextInstructions
+       ];
 
       // Capture debug payload for utility panel
       setApiDebugPayload(JSON.stringify({
@@ -10125,8 +10182,34 @@ Write an engaging story segment. If this is a good point for player interaction,
                                 >
                                   <option value="before_context">Before Context</option>
                                   <option value="after_context">After Context</option>
+                                  <option value="inline_with_message">Inline with Message</option>
                                 </select>
                               </div>
+
+                              {/* Inline Index Input - only shown for inline_with_message */}
+                              {instruction.position === "inline_with_message" && (
+                                <div className="flex-1">
+                                  <label className="block text-xs text-zinc-500 mb-1">Index</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={instruction.inlineIndex ?? 0}
+                                    onChange={(e) => {
+                                      const newList = [...(globalInstructions.instructions || [])];
+                                      newList[index] = { ...instruction, inlineIndex: parseInt(e.target.value) || 0 };
+                                      setGlobalInstructions({
+                                        ...globalInstructions,
+                                        instructions: newList,
+                                      });
+                                    }}
+                                    className="w-full bg-zinc-900 text-white text-xs rounded px-2 py-1 border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    placeholder="0"
+                                  />
+                                  <p className="text-xs text-zinc-600 mt-1">
+                                    0 = after last user msg, 1 = before, etc.
+                                  </p>
+                                </div>
+                              )}
                             </div>
 
                             {/* Content Textarea */}

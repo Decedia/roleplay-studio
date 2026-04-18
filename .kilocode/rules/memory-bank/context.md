@@ -8,6 +8,14 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
+- [x] **COMPLETED: Added "Inline with Message" instruction positioning**
+  - Added new `inline_with_message` position type for instructions
+  - Users can inject instructions at specific index positions in conversation history
+  - Index 0 = after last user message, 1 = before that, etc.
+  - If index is too big, instructions are placed at the very end
+  - Updated UI to allow selecting position and setting inline index
+  - Modified message construction logic to inject inline instructions correctly
+  - Project builds successfully with new inline instruction functionality
 - [x] **COMPLETED: Removed duplicate utilities button**
   - Identified and removed the duplicate utilities button from header dropdown
   - Kept only the main utilities modal button that opens the comprehensive utilities interface
@@ -509,7 +517,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date       | Changes                                                                                                                                                                                                                                                                                                                                               |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-04-18 | **COMPLETED: Resolved multiple utilities buttons issue** - Removed duplicate utilities button, kept only the main modal button, Character Card properly disabled when not in chat, project builds successfully |
+| 2026-04-18 | **COMPLETED: Implemented "Inline with Message" instruction positioning** - Added new position type with index-based injection, updated UI and message construction logic, project builds successfully |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-03-12 | Refactor Chat.tsx to follow SOLID principles - Created modular structure in `src/components/chat/` with constants, utils, hooks, and extracted UI components for better maintainability and testability                                                                                                                                               |
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------                                                                                 |
