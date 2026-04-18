@@ -1194,397 +1194,50 @@ function SettingsModal({
 
           {/* Global Instructions */}
           {showInstructionsSection && (
-          <div className="border-t border-zinc-700 pt-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-white">Instructions</h3>
-              <div className="flex gap-2">
-                <input
-                  type="file"
-                  ref={instructionsFileInputRef}
-                  accept=".json"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      onImportInstructions(file);
-                      e.target.value = "";
-                    }
-                  }}
-                  className="hidden"
+            <div className="border-t border-zinc-700 pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-medium text-white">Instructions</h3>
+                <div className="flex gap-2">
+                  <input
+                    type="file"
+                    ref={instructionsFileInputRef}
+                    accept=".json"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        onImportInstructions(file);
+                        e.target.value = "";
+                      }
+                    }}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => instructionsFileInputRef.current?.click()}
+                    className="text-xs px-3 py-1 bg-zinc-700 text-zinc-300 rounded hover:bg-zinc-600 transition-colors"
+                  >
+                    Import JSON
+                  </button>
+                </div>
+              </div>
+
+              {/* Custom Instructions - Hidden, use Instruction List instead */}
+              <div className="mb-4" style={{ display: 'none' }}>
+                <label className="block text-sm font-medium text-zinc-400 mb-2">
+                  Custom Instructions
+                </label>
+                <textarea
+                  value={globalInstructions.customInstructions}
+                  onChange={(e) => setGlobalInstructions({ ...globalInstructions, customInstructions: e.target.value })}
+                  placeholder="Add specific instructions for how the AI should behave (e.g., 'Speak in a formal tone', 'Keep responses under 100 words')..."
+                  rows={3}
+                  className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
                 />
-                <button
-                  type="button"
-                  onClick={() => instructionsFileInputRef.current?.click()}
-                  className="text-xs px-3 py-1 bg-zinc-700 text-zinc-300 rounded hover:bg-zinc-600 transition-colors"
-                >
-                  Import JSON
-                </button>
+                <p className="text-xs text-zinc-500 mt-1">
+                  Applied to all conversations globally
+                </p>
               </div>
             </div>
-
-            {/* Custom Instructions - Hidden, use Instruction List instead */}
-            <div className="mb-4" style={{ display: 'none' }}>
-              <label className="block text-sm font-medium text-zinc-400 mb-2">
-                Custom Instructions
-              </label>
-              <textarea
-                value={globalInstructions.customInstructions}
-                onChange={(e) => setGlobalInstructions({ ...globalInstructions, customInstructions: e.target.value })}
-                placeholder="Add specific instructions for how the AI should behave (e.g., 'Speak in a formal tone', 'Keep responses under 100 words')..."
-                rows={3}
-                className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
-              />
-              <p className="text-xs text-zinc-500 mt-1">
-                Applied to all conversations globally
-              </p>
-            </div>
-
-            {/* Advanced Instructions Toggle */}
-            <button
-              type="button"
-              onClick={() => setShowAdvancedInstructions(!showAdvancedInstructions)}
-              className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-300 transition-colors mb-4"
-            >
-              <svg 
-                className={`w-4 h-4 transition-transform ${showAdvancedInstructions ? "rotate-180" : ""}`} 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-              <span>Advanced Instructions</span>
-            </button>
-
-            {/* Advanced Instructions Section with Instruction List */}
-            {showAdvancedInstructions && (
-              <div className="space-y-4 pl-4 border-l-2 border-zinc-700">
-                {/* Formatting Prompt */}
-                <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">
-                    Formatting Prompt
-                  </label>
-                  <textarea
-                    value={globalInstructions.formattingPrompt || DEFAULT_FORMATTING_PROMPT}
-                    onChange={(e) => setGlobalInstructions({
-                      ...globalInstructions,
-                      formattingPrompt: e.target.value
-                    })}
-                    placeholder="Instructions for how the AI should format responses (actions, dialogue, thoughts...)"
-                    rows={5}
-                    className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none text-sm"
-                  />
-                  <p className="text-xs text-zinc-500 mt-1">
-                    Sent before context to guide response formatting (actions, speech, thoughts)
-                  </p>
-                </div>
-
-                {/* Jailbreak Instructions */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-medium text-zinc-400">
-                      Jailbreak Instructions
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setGlobalInstructions({ 
-                        ...globalInstructions, 
-                        enableJailbreak: !globalInstructions.enableJailbreak 
-                      })}
-                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                        globalInstructions.enableJailbreak ? "bg-amber-600" : "bg-zinc-700"
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                          globalInstructions.enableJailbreak ? "translate-x-5" : "translate-x-1"
-                        }`}
-                      />
-                    </button>
-                  </div>
-                  <textarea
-                    value={globalInstructions.jailbreakInstructions || ""}
-                    onChange={(e) => setGlobalInstructions({ 
-                      ...globalInstructions, 
-                      jailbreakInstructions: e.target.value 
-                    })}
-                    placeholder="Jailbreak instructions to bypass content restrictions..."
-                    rows={4}
-                    className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 border border-zinc-700 resize-none text-sm"
-                  />
-                  <p className="text-xs text-amber-500/70 mt-1">
-                    ⚠️ Enable to include jailbreak instructions in prompts
-                  </p>
-                </div>
-
-
-
-                {/* Continue Instruction */}
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">
-                    Continue Instruction
-                  </label>
-                  <textarea
-                    value={globalInstructions.continueInstruction || DEFAULT_CONTINUE_INSTRUCTION}
-                    onChange={(e) => setGlobalInstructions({ 
-                      ...globalInstructions, 
-                      continueInstruction: e.target.value 
-                    })}
-                    placeholder="Continue your previous response..."
-                    rows={2}
-                    className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none text-sm"
-                  />
-                  <p className="text-xs text-zinc-500 mt-1">
-                    Used when clicking continue button to complete incomplete responses
-                  </p>
-                </div>
-
-                {/* Image Generation Instructions */}
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">
-                    Image Generation Instructions
-                  </label>
-                  <textarea
-                    value={globalInstructions.imageGenerationInstructions || DEFAULT_IMAGE_GENERATION_INSTRUCTIONS}
-                    onChange={(e) => setGlobalInstructions({ 
-                      ...globalInstructions, 
-                      imageGenerationInstructions: e.target.value 
-                    })}
-                    placeholder="Instructions for generating character images..."
-                    rows={3}
-                    className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none text-sm"
-                  />
-                  <p className="text-xs text-zinc-500 mt-1">
-                    Used when generating character avatar images. Describe the style, quality, and composition you want.
-                  </p>
-                </div>
-
-                {/* Instruction List Section (SillyTavern-style) */}
-                <div className="mt-6 pt-4 border-t border-zinc-700">
-                  <div className="flex items-center justify-between mb-4">
-                    <label className="block text-sm font-medium text-zinc-400">
-                      Instruction List
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newInstruction: Instruction = {
-                          id: `instruction_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                          name: "New Instruction",
-                          content: "",
-                          role: "system",
-                          position: "after_context",
-                          enabled: true,
-                          order: globalInstructions.instructions?.length || 0,
-                        };
-                        setGlobalInstructions({
-                          ...globalInstructions,
-                          instructions: [...(globalInstructions.instructions || []), newInstruction],
-                        });
-                      }}
-                      className="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition-colors"
-                    >
-                      + Add Instruction
-                    </button>
-                  </div>
-                  
-                  <p className="text-xs text-zinc-500 mb-4">
-                    Manage multiple instructions with custom roles and positions (SillyTavern-style)
-                  </p>
-
-                  {/* Instruction List */}
-                  <div className="space-y-3">
-                    {(globalInstructions.instructions || []).map((instruction, index) => (
-                      <div 
-                        key={instruction.id} 
-                        className={`p-3 rounded-lg border ${
-                          instruction.enabled 
-                            ? "bg-zinc-800/50 border-zinc-700" 
-                            : "bg-zinc-900/50 border-zinc-800 opacity-60"
-                        }`}
-                      >
-                        {/* Instruction Header */}
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            {/* Reorder Buttons */}
-                            <div className="flex flex-col">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (index === 0) return;
-                                  const newList = [...(globalInstructions.instructions || [])];
-                                  [newList[index - 1], newList[index]] = [newList[index], newList[index - 1]];
-                                  // Update order values
-                                  newList.forEach((inst, i) => { inst.order = i; });
-                                  setGlobalInstructions({
-                                    ...globalInstructions,
-                                    instructions: newList,
-                                  });
-                                }}
-                                disabled={index === 0}
-                                className={`p-0.5 ${index === 0 ? 'text-zinc-600' : 'text-zinc-400 hover:text-white'} transition-colors`}
-                              >
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                                </svg>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (index === (globalInstructions.instructions || []).length - 1) return;
-                                  const newList = [...(globalInstructions.instructions || [])];
-                                  [newList[index], newList[index + 1]] = [newList[index + 1], newList[index]];
-                                  // Update order values
-                                  newList.forEach((inst, i) => { inst.order = i; });
-                                  setGlobalInstructions({
-                                    ...globalInstructions,
-                                    instructions: newList,
-                                  });
-                                }}
-                                disabled={index === (globalInstructions.instructions || []).length - 1}
-                                className={`p-0.5 ${index === (globalInstructions.instructions || []).length - 1 ? 'text-zinc-600' : 'text-zinc-400 hover:text-white'} transition-colors`}
-                              >
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                              </button>
-                            </div>
-                            
-                            {/* Name Input */}
-                            <input
-                              type="text"
-                              value={instruction.name}
-                              onChange={(e) => {
-                                const newList = [...(globalInstructions.instructions || [])];
-                                newList[index] = { ...instruction, name: e.target.value };
-                                setGlobalInstructions({
-                                  ...globalInstructions,
-                                  instructions: newList,
-                                });
-                              }}
-                              className="bg-transparent text-white text-sm font-medium border-none focus:outline-none focus:ring-0 w-32"
-                              placeholder="Instruction name"
-                            />
-                          </div>
-                          
-                          <div className="flex items-center gap-2">
-                            {/* Enable/Disable Toggle */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const newList = [...(globalInstructions.instructions || [])];
-                                newList[index] = { ...instruction, enabled: !instruction.enabled };
-                                setGlobalInstructions({
-                                  ...globalInstructions,
-                                  instructions: newList,
-                                });
-                              }}
-                              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                                instruction.enabled ? "bg-green-600" : "bg-zinc-700"
-                              }`}
-                            >
-                              <span
-                                className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                                  instruction.enabled ? "translate-x-5" : "translate-x-1"
-                                }`}
-                              />
-                            </button>
-                            
-                            {/* Delete Button */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (confirm("Delete this instruction?")) {
-                                  const newList = (globalInstructions.instructions || []).filter(
-                                    (_, i) => i !== index
-                                  );
-                                  setGlobalInstructions({
-                                    ...globalInstructions,
-                                    instructions: newList,
-                                  });
-                                }
-                              }}
-                              className="text-zinc-500 hover:text-red-400 transition-colors p-1"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                        
-                        {/* Role and Position Dropdowns */}
-                        <div className="flex gap-2 mb-2">
-                          {/* Role Dropdown */}
-                          <div className="flex-1">
-                            <label className="block text-xs text-zinc-500 mb-1">Role</label>
-                            <select
-                              value={instruction.role}
-                              onChange={(e) => {
-                                const newList = [...(globalInstructions.instructions || [])];
-                                newList[index] = { ...instruction, role: e.target.value as InstructionRole };
-                                setGlobalInstructions({
-                                  ...globalInstructions,
-                                  instructions: newList,
-                                });
-                              }}
-                              className="w-full bg-zinc-900 text-white text-xs rounded px-2 py-1 border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            >
-                              <option value="system">System</option>
-                              <option value="user">User</option>
-                              <option value="assistant">Assistant</option>
-                            </select>
-                          </div>
-                          
-                          {/* Position Dropdown */}
-                          <div className="flex-1">
-                            <label className="block text-xs text-zinc-500 mb-1">Position</label>
-                            <select
-                              value={instruction.position}
-                              onChange={(e) => {
-                                const newList = [...(globalInstructions.instructions || [])];
-                                newList[index] = { ...instruction, position: e.target.value as InstructionPosition };
-                                setGlobalInstructions({
-                                  ...globalInstructions,
-                                  instructions: newList,
-                                });
-                              }}
-                              className="w-full bg-zinc-900 text-white text-xs rounded px-2 py-1 border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            >
-                              <option value="before_context">Before Context</option>
-                              <option value="after_context">After Context</option>
-                            </select>
-                          </div>
-                        </div>
-                        
-                        {/* Content Textarea */}
-                        <textarea
-                          value={instruction.content}
-                          onChange={(e) => {
-                            const newList = [...(globalInstructions.instructions || [])];
-                            newList[index] = { ...instruction, content: e.target.value };
-                            setGlobalInstructions({
-                              ...globalInstructions,
-                              instructions: newList,
-                            });
-                          }}
-                          placeholder="Enter instruction content..."
-                          rows={3}
-                          className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
-                        />
-                      </div>
-                    ))}
-                    
-                    {/* Empty State */}
-                    {(!globalInstructions.instructions || globalInstructions.instructions.length === 0) && (
-                      <div className="text-center py-4 text-zinc-500 text-sm">
-                        No instructions yet. Click &quot;Add Instruction&quot; to create one.
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-           </div>
           )}
 
           {/* Provider API Keys Configuration */}
@@ -6307,22 +5960,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                     </div>
                   </button>
 
-                  {/* Instructions */}
-                  <button
-                    onClick={() => {
-                      setShowInstructionsModal(true);
-                      setShowHeaderActions(false);
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800 transition-colors text-left"
-                  >
-                    <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    <div>
-                      <div className="text-sm text-white">Instructions</div>
-                      <div className="text-xs text-zinc-500">System prompts, jailbreak, formatting</div>
-                    </div>
-                  </button>
+
 
                    {/* Utilities */}
                    <button
@@ -10319,19 +9957,335 @@ Write an engaging story segment. If this is a good point for player interaction,
 
              {/* Tab Content - Instruction Inputs */}
              <div className="flex-1 overflow-y-auto p-6 space-y-6">
-               {/* Chat Instructions Tab */}
-               {activeInstructionTab === 'chat' && (
-                 <div className="space-y-4">
-                   <h3 className="text-sm font-semibold text-white">Chat / General Instructions</h3>
-                   <textarea
-                     value={chatInstructions}
-                     onChange={(e) => setChatInstructions(e.target.value)}
-                     placeholder="Enter chat instructions that apply to all conversations..."
-                     className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
-                     rows={4}
-                   />
-                 </div>
-               )}
+                {/* Chat Instructions Tab */}
+                {activeInstructionTab === 'chat' && (
+                  <div className="space-y-6">
+                    {/* Formatting Prompt */}
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-300 mb-2">
+                        Formatting Prompt
+                      </label>
+                      <textarea
+                        value={globalInstructions.formattingPrompt || DEFAULT_FORMATTING_PROMPT}
+                        onChange={(e) => setGlobalInstructions({
+                          ...globalInstructions,
+                          formattingPrompt: e.target.value
+                        })}
+                        placeholder="Instructions for how the AI should format responses (actions, dialogue, thoughts...)"
+                        rows={4}
+                        className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
+                      />
+                      <p className="text-xs text-zinc-500 mt-1">
+                        Sent before context to guide response formatting (actions, speech, thoughts)
+                      </p>
+                    </div>
+
+                    {/* Jailbreak Instructions */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-medium text-zinc-300">
+                          Jailbreak Instructions
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setGlobalInstructions({
+                            ...globalInstructions,
+                            enableJailbreak: !globalInstructions.enableJailbreak
+                          })}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                            globalInstructions.enableJailbreak ? "bg-amber-600" : "bg-zinc-700"
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              globalInstructions.enableJailbreak ? "translate-x-6" : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      </div>
+                      {globalInstructions.enableJailbreak && (
+                        <textarea
+                          value={globalInstructions.jailbreakInstructions || ""}
+                          onChange={(e) => setGlobalInstructions({
+                            ...globalInstructions,
+                            jailbreakInstructions: e.target.value
+                          })}
+                          placeholder="Jailbreak instructions to bypass content restrictions..."
+                          rows={3}
+                          className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500 border border-zinc-700 resize-none"
+                        />
+                      )}
+                      <p className="text-xs text-amber-500/70 mt-1">
+                        ⚠️ Enable to include jailbreak instructions in prompts
+                      </p>
+                    </div>
+
+                    {/* Continue Instruction */}
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-300 mb-2">
+                        Continue Instruction
+                      </label>
+                      <textarea
+                        value={globalInstructions.continueInstruction || DEFAULT_CONTINUE_INSTRUCTION}
+                        onChange={(e) => setGlobalInstructions({
+                          ...globalInstructions,
+                          continueInstruction: e.target.value
+                        })}
+                        placeholder="Continue your previous response..."
+                        rows={2}
+                        className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
+                      />
+                      <p className="text-xs text-zinc-500 mt-1">
+                        Used when clicking continue button to complete incomplete responses
+                      </p>
+                    </div>
+
+                    {/* Image Generation Instructions */}
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-300 mb-2">
+                        Image Generation Instructions
+                      </label>
+                      <textarea
+                        value={globalInstructions.imageGenerationInstructions || DEFAULT_IMAGE_GENERATION_INSTRUCTIONS}
+                        onChange={(e) => setGlobalInstructions({
+                          ...globalInstructions,
+                          imageGenerationInstructions: e.target.value
+                        })}
+                        placeholder="Instructions for generating character images..."
+                        rows={3}
+                        className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
+                      />
+                      <p className="text-xs text-zinc-500 mt-1">
+                        Used when generating character avatar images. Describe the style, quality, and composition you want.
+                      </p>
+                    </div>
+
+                    {/* Instruction List Section (SillyTavern-style) */}
+                    <div className="pt-4 border-t border-zinc-700">
+                      <div className="flex items-center justify-between mb-4">
+                        <label className="block text-sm font-medium text-zinc-300">
+                          Instruction List
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newInstruction: Instruction = {
+                              id: `instruction_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                              name: "New Instruction",
+                              content: "",
+                              role: "system",
+                              position: "after_context",
+                              enabled: true,
+                              order: globalInstructions.instructions?.length || 0,
+                            };
+                            setGlobalInstructions({
+                              ...globalInstructions,
+                              instructions: [...(globalInstructions.instructions || []), newInstruction],
+                            });
+                          }}
+                          className="text-sm bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 transition-colors"
+                        >
+                          + Add Instruction
+                        </button>
+                      </div>
+
+                      <p className="text-xs text-zinc-500 mb-4">
+                        Manage multiple instructions with custom roles and positions (SillyTavern-style)
+                      </p>
+
+                      {/* Instruction List */}
+                      <div className="space-y-3">
+                        {(globalInstructions.instructions || []).map((instruction, index) => (
+                          <div
+                            key={instruction.id}
+                            className={`p-3 rounded-lg border ${
+                              instruction.enabled
+                                ? "bg-zinc-800/50 border-zinc-700"
+                                : "bg-zinc-900/50 border-zinc-800 opacity-60"
+                            }`}
+                          >
+                            {/* Instruction Header */}
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                {/* Reorder Buttons */}
+                                <div className="flex flex-col">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (index === 0) return;
+                                      const newList = [...(globalInstructions.instructions || [])];
+                                      [newList[index - 1], newList[index]] = [newList[index], newList[index - 1]];
+                                      // Update order values
+                                      newList.forEach((inst, i) => { inst.order = i; });
+                                      setGlobalInstructions({
+                                        ...globalInstructions,
+                                        instructions: newList,
+                                      });
+                                    }}
+                                    disabled={index === 0}
+                                    className={`p-0.5 ${index === 0 ? 'text-zinc-600' : 'text-zinc-400 hover:text-white'} transition-colors`}
+                                  >
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (index === (globalInstructions.instructions || []).length - 1) return;
+                                      const newList = [...(globalInstructions.instructions || [])];
+                                      [newList[index], newList[index + 1]] = [newList[index + 1], newList[index]];
+                                      // Update order values
+                                      newList.forEach((inst, i) => { inst.order = i; });
+                                      setGlobalInstructions({
+                                        ...globalInstructions,
+                                        instructions: newList,
+                                      });
+                                    }}
+                                    disabled={index === (globalInstructions.instructions || []).length - 1}
+                                    className={`p-0.5 ${index === (globalInstructions.instructions || []).length - 1 ? 'text-zinc-600' : 'text-zinc-400 hover:text-white'} transition-colors`}
+                                  >
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                  </button>
+                                </div>
+
+                                {/* Name Input */}
+                                <input
+                                  type="text"
+                                  value={instruction.name}
+                                  onChange={(e) => {
+                                    const newList = [...(globalInstructions.instructions || [])];
+                                    newList[index] = { ...instruction, name: e.target.value };
+                                    setGlobalInstructions({
+                                      ...globalInstructions,
+                                      instructions: newList,
+                                    });
+                                  }}
+                                  className="bg-transparent text-white text-sm font-medium border-none focus:outline-none focus:ring-0 w-32"
+                                  placeholder="Instruction name"
+                                />
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                {/* Enable/Disable Toggle */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newList = [...(globalInstructions.instructions || [])];
+                                    newList[index] = { ...instruction, enabled: !instruction.enabled };
+                                    setGlobalInstructions({
+                                      ...globalInstructions,
+                                      instructions: newList,
+                                    });
+                                  }}
+                                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                                    instruction.enabled ? "bg-green-600" : "bg-zinc-700"
+                                  }`}
+                                >
+                                  <span
+                                    className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                                      instruction.enabled ? "translate-x-5" : "translate-x-1"
+                                    }`}
+                                  />
+                                </button>
+
+                                {/* Delete Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (confirm("Delete this instruction?")) {
+                                      const newList = (globalInstructions.instructions || []).filter(
+                                        (_, i) => i !== index
+                                      );
+                                      setGlobalInstructions({
+                                        ...globalInstructions,
+                                        instructions: newList,
+                                      });
+                                    }
+                                  }}
+                                  className="text-zinc-500 hover:text-red-400 transition-colors p-1"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Role and Position Dropdowns */}
+                            <div className="flex gap-2 mb-2">
+                              {/* Role Dropdown */}
+                              <div className="flex-1">
+                                <label className="block text-xs text-zinc-500 mb-1">Role</label>
+                                <select
+                                  value={instruction.role}
+                                  onChange={(e) => {
+                                    const newList = [...(globalInstructions.instructions || [])];
+                                    newList[index] = { ...instruction, role: e.target.value as InstructionRole };
+                                    setGlobalInstructions({
+                                      ...globalInstructions,
+                                      instructions: newList,
+                                    });
+                                  }}
+                                  className="w-full bg-zinc-900 text-white text-xs rounded px-2 py-1 border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                >
+                                  <option value="system">System</option>
+                                  <option value="user">User</option>
+                                  <option value="assistant">Assistant</option>
+                                </select>
+                              </div>
+
+                              {/* Position Dropdown */}
+                              <div className="flex-1">
+                                <label className="block text-xs text-zinc-500 mb-1">Position</label>
+                                <select
+                                  value={instruction.position}
+                                  onChange={(e) => {
+                                    const newList = [...(globalInstructions.instructions || [])];
+                                    newList[index] = { ...instruction, position: e.target.value as InstructionPosition };
+                                    setGlobalInstructions({
+                                      ...globalInstructions,
+                                      instructions: newList,
+                                    });
+                                  }}
+                                  className="w-full bg-zinc-900 text-white text-xs rounded px-2 py-1 border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                >
+                                  <option value="before_context">Before Context</option>
+                                  <option value="after_context">After Context</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            {/* Content Textarea */}
+                            <textarea
+                              value={instruction.content}
+                              onChange={(e) => {
+                                const newList = [...(globalInstructions.instructions || [])];
+                                newList[index] = { ...instruction, content: e.target.value };
+                                setGlobalInstructions({
+                                  ...globalInstructions,
+                                  instructions: newList,
+                                });
+                              }}
+                              placeholder="Enter instruction content..."
+                              rows={3}
+                              className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+                            />
+                          </div>
+                        ))}
+
+                        {/* Empty State */}
+                        {(!globalInstructions.instructions || globalInstructions.instructions.length === 0) && (
+                          <div className="text-center py-4 text-zinc-500 text-sm">
+                            No instructions yet. Click &quot;Add Instruction&quot; to create one.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                {/* Generator Instructions Tab */}
                {activeInstructionTab === 'generator' && (
