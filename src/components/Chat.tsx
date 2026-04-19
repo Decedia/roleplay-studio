@@ -653,7 +653,7 @@ function SettingsModal({
   const [expandedProviders, setExpandedProviders] = useState<Record<string, boolean>>({});
   const [showModelDropdown, setShowModelDropdown] = useState(initialTab === "models");
   const [modelSearchQuery, setModelSearchQuery] = useState("");
-  const [activeSettingsTab, setActiveSettingsTab] = useState<'models' | 'settings'>(initialTab === "models" ? "models" : "settings");
+
   const modelSearchInputRef = useRef<HTMLInputElement>(null);
   const [editingProvider, setEditingProvider] = useState<LLMProviderType | null>(null);
   const [showAdvancedInstructions, setShowAdvancedInstructions] = useState(true);
@@ -747,36 +747,11 @@ function SettingsModal({
           </button>
         </div>
 
-        {/* Tabbed Navigation */}
-        <div className="flex-shrink-0 border-b border-zinc-800">
-          <div className="flex gap-0">
-            {[
-              { id: 'models', label: 'Models', icon: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
-              { id: 'settings', label: 'Settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveSettingsTab(tab.id as 'models' | 'settings')}
-                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                  activeSettingsTab === tab.id
-                    ? 'border-b-2 border-blue-500 text-blue-500'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tab.icon} />
-                </svg>
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Modal Content */}
         <div className="flex-1 overflow-y-auto p-6">
           <div className="space-y-6">
-            {/* Models Tab */}
-            {activeSettingsTab === 'models' && showModelsSection && (
+            {/* Models and Settings */}
+            {showModelsSection && (
               <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
               Model ({AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || activeProvider})
@@ -1272,9 +1247,8 @@ function SettingsModal({
             </div>
             )}
 
-            {/* Settings Tab */}
-            {activeSettingsTab === 'settings' && (
-              <>
+            {/* Global Settings */}
+            <div className="pt-6 border-t border-zinc-700">
                 {/* Temperature */}
                 <div>
                   <label className="block text-sm font-medium text-zinc-300 mb-2">
@@ -1379,11 +1353,10 @@ function SettingsModal({
                   <p className="text-xs text-zinc-500 mt-1">
                     Stream AI responses in real-time
                   </p>
-                </div>
-              </>
-            )}
+                 </div>
+              </div>
 
-          {/* Provider API Keys Configuration */}
+            {/* Provider API Keys Configuration */}
           <div className="border-t border-zinc-700 pt-6">
             <h3 className="text-sm font-medium text-white mb-4">Provider Connections</h3>
             <div className="space-y-4">
