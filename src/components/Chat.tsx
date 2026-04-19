@@ -777,7 +777,7 @@ function SettingsModal({
           <div className="space-y-6">
             {/* Models Tab */}
             {activeSettingsTab === 'models' && showModelsSection && (
-          <div>
+              <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
               Model ({AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || activeProvider})
             </label>
@@ -2198,11 +2198,12 @@ function SettingsModal({
                   : "Enable to automatically backup your data at regular intervals"
                 }
               </p>
-            </div>
-          </div>
-        </div>
+             </div>
+           </div>
+         </div>
+       </div>
 
-        <div className="flex gap-3 mt-6">
+       <div className="flex gap-3 mt-6">
           <button
             onClick={onClose}
             className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
