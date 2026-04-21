@@ -2298,6 +2298,7 @@ export default function Chat() {
     "nvidia-nim": { type: "nvidia-nim", isEnabled: false, profiles: [], activeProfileId: null },
     "groq": { type: "groq", isEnabled: false, profiles: [], activeProfileId: null },
     "open-router": { type: "open-router", isEnabled: false, profiles: [], activeProfileId: null },
+    "kobold-horde": { type: "kobold-horde", isEnabled: false, profiles: [], activeProfileId: null },
   });
   
   // Provider-specific models (fetched from API after connection)
@@ -2307,6 +2308,7 @@ export default function Chat() {
     "nvidia-nim": [],
     "groq": [],
     "open-router": [],
+    "kobold-horde": [],
   });
   const [modelsFetching, setModelsFetching] = useState<Record<LLMProviderType, boolean>>({
     "google-ai-studio": false,
@@ -2314,6 +2316,7 @@ export default function Chat() {
     "nvidia-nim": false,
     "groq": false,
     "open-router": false,
+    "kobold-horde": false,
   });
   
   // Active provider state - default to Google AI Studio (not Puter)
@@ -2373,6 +2376,7 @@ export default function Chat() {
     "nvidia-nim": { status: "disconnected" },
     "groq": { status: "disconnected" },
     "open-router": { status: "disconnected" },
+    "kobold-horde": { status: "disconnected" },
   });
 
   // Profile management functions - defined early so they're available throughout the component
@@ -2831,13 +2835,14 @@ export default function Chat() {
         }
       } else {
         // Check for old per-provider storage (for users upgrading from older versions)
-        const providers: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim", "groq", "open-router"];
+        const providers: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim", "groq", "open-router", "kobold-horde"];
         const migratedConfigs: Record<LLMProviderType, ProviderConfig> = {
           "google-ai-studio": { type: "google-ai-studio", isEnabled: false, profiles: [], activeProfileId: null },
           "google-vertex": { type: "google-vertex", isEnabled: false, profiles: [], activeProfileId: null },
           "nvidia-nim": { type: "nvidia-nim", isEnabled: false, profiles: [], activeProfileId: null },
           "groq": { type: "groq", isEnabled: false, profiles: [], activeProfileId: null },
           "open-router": { type: "open-router", isEnabled: false, profiles: [], activeProfileId: null },
+          "kobold-horde": { type: "kobold-horde", isEnabled: false, profiles: [], activeProfileId: null },
         };
         
         providers.forEach(providerType => {

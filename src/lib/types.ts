@@ -142,7 +142,7 @@ export interface BrainstormConversation {
 }
 
 // LLM Provider types
-export type LLMProviderType = "google-ai-studio" | "google-vertex" | "nvidia-nim" | "groq" | "open-router";
+export type LLMProviderType = "google-ai-studio" | "google-vertex" | "nvidia-nim" | "groq" | "open-router" | "kobold-horde";
 
 export interface LLMProvider {
   id: LLMProviderType;

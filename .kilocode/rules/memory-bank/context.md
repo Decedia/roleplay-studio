@@ -8,6 +8,13 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
+- [x] **COMPLETED: Implemented KoboldAI Horde provider support**
+  - Added "kobold-horde" to LLMProviderType and provider configurations
+  - Implemented chatWithKoboldHorde and streamWithKoboldHorde functions
+  - Created /api/kobold-horde route for async text generation workflow
+  - Added test connection and model fetching logic
+  - Updated Chat.tsx state to include kobold-horde provider
+  - KoboldAI Horde provides distributed AI text generation via crowdsourced GPUs
 - [x] **COMPLETED: Implemented full "Inline with Message" instruction positioning system**
   - **UI/UX**: Added position selector and index input field for inline injection
   - **Backend**: Implemented `injectInlineInstructions()` function with proper indexing logic

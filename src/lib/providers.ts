@@ -323,6 +323,54 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
       },
     ],
   },
+  {
+    id: "kobold-horde",
+    name: "KoboldAI Horde",
+    description: "Distributed AI text generation via KoboldAI Horde network",
+    requiresApiKey: true,
+    models: [
+      {
+        id: "koboldcpp/Llama-3.1-8B-Stheno-v3.4",
+        name: "Llama 3.1 8B Stheno v3.4",
+        provider: "kobold-horde",
+        contextWindow: 8192,
+        maxTokens: 4096,
+        supportsThinking: false,
+      },
+      {
+        id: "koboldcpp/L3-8B-Stheno-v3.2",
+        name: "L3 8B Stheno v3.2",
+        provider: "kobold-horde",
+        contextWindow: 8192,
+        maxTokens: 4096,
+        supportsThinking: false,
+      },
+      {
+        id: "koboldcpp/mini-magnum-12b-v1.1",
+        name: "Mini Magnum 12B v1.1",
+        provider: "kobold-horde",
+        contextWindow: 4096,
+        maxTokens: 2048,
+        supportsThinking: false,
+      },
+      {
+        id: "koboldcpp/Gemma-4-31B-it",
+        name: "Gemma 4 31B Instruct",
+        provider: "kobold-horde",
+        contextWindow: 8192,
+        maxTokens: 4096,
+        supportsThinking: false,
+      },
+      {
+        id: "koboldcpp/Cydonia-24B-v4.3",
+        name: "Cydonia 24B v4.3",
+        provider: "kobold-horde",
+        contextWindow: 8192,
+        maxTokens: 4096,
+        supportsThinking: false,
+      },
+    ],
+  },
 ];
 
 // Chat response interface
@@ -1399,6 +1447,192 @@ export const streamWithVertexAI = async (
   }
 };
 
+// KoboldAI Horde chat implementation - uses server-side proxy to avoid CORS
+export const chatWithKoboldHorde: ChatFunction = async (
+  messages,
+  config,
+  options
+) => {
+  if (!config.apiKey) {
+    return { error: "KoboldAI Horde API key is required" };
+  }
+
+  try {
+    // Combine all messages into a single prompt for KoboldAI Horde
+    const systemMessages = messages.filter(m => m.role === "system");
+    const nonSystemMessages = messages.filter(m => m.role !== "system");
+
+    let prompt = "";
+
+    // Add system prompt if provided
+    const systemContent = systemMessages.map(m => m.content).join("\n\n");
+    if (systemContent || options.systemPrompt) {
+      prompt += (systemContent || options.systemPrompt) + "\n\n";
+    }
+
+    // Add conversation history
+    for (const message of nonSystemMessages) {
+      if (message.role === "user") {
+        prompt += `User: ${message.content}\n\n`;
+      } else if (message.role === "assistant") {
+        prompt += `Assistant: ${message.content}\n\n`;
+      }
+    }
+
+    // Add final assistant prompt
+    prompt += "Assistant: ";
+
+    const response = await fetch("/api/kobold-horde", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        apiKey: config.apiKey,
+        model: config.selectedModel,
+        prompt,
+        params: {
+          temperature: options.temperature,
+          top_p: options.topP,
+          top_k: options.topK,
+          max_length: options.maxTokens,
+        },
+        signal: options.abortController?.signal,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        error: data.error || `HTTP ${response.status}`,
+      };
+    }
+
+    return { content: data.content };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+};
+
+// KoboldAI Horde streaming implementation - uses server-side proxy to avoid CORS
+export const streamWithKoboldHorde = async (
+  messages: Message[],
+  config: ProviderConfig,
+  options: {
+    temperature: number;
+    maxTokens: number;
+    topP: number;
+    topK: number;
+    systemPrompt?: string;
+    enableThinking?: boolean;
+    thinkingLevel?: ThinkingLevel;
+    thinkingBudget?: ThinkingBudget;
+    abortController?: AbortController;
+  },
+  onChunk: StreamCallback
+) => {
+  if (!config.apiKey) {
+    onChunk({ error: "KoboldAI Horde API key is required" });
+    return;
+  }
+
+  try {
+    // Combine all messages into a single prompt for KoboldAI Horde
+    const systemMessages = messages.filter(m => m.role === "system");
+    const nonSystemMessages = messages.filter(m => m.role !== "system");
+
+    let prompt = "";
+
+    // Add system prompt if provided
+    const systemContent = systemMessages.map(m => m.content).join("\n\n");
+    if (systemContent || options.systemPrompt) {
+      prompt += (systemContent || options.systemPrompt) + "\n\n";
+    }
+
+    // Add conversation history
+    for (const message of nonSystemMessages) {
+      if (message.role === "user") {
+        prompt += `User: ${message.content}\n\n`;
+      } else if (message.role === "assistant") {
+        prompt += `Assistant: ${message.content}\n\n`;
+      }
+    }
+
+    // Add final assistant prompt
+    prompt += "Assistant: ";
+
+    const response = await fetch("/api/kobold-horde", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        apiKey: config.apiKey,
+        model: config.selectedModel,
+        prompt,
+        params: {
+          temperature: options.temperature,
+          top_p: options.topP,
+          top_k: options.topK,
+          max_length: options.maxTokens,
+        },
+        stream: true,
+        signal: options.abortController?.signal,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      onChunk({ error: errorData.error || `HTTP ${response.status}` });
+      return;
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      onChunk({ error: "Failed to get response stream" });
+      return;
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (line.trim()) {
+            try {
+              const data = JSON.parse(line);
+              if (data.content) {
+                onChunk({ content: data.content });
+              }
+              if (data.done) {
+                onChunk({ done: true });
+                return;
+              }
+            } catch {
+              // Skip invalid JSON
+            }
+          }
+        }
+      }
+    } catch (error) {
+      onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
+    }
+  } catch (error) {
+    onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
+  }
+};
+
 // Main chat function that routes to the correct provider
 export const sendChatMessage = async (
   messages: Message[],
@@ -1426,6 +1660,8 @@ export const sendChatMessage = async (
       return chatWithGroq(messages, config, options);
     case "open-router":
       return chatWithOpenRouter(messages, config, options);
+    case "kobold-horde":
+      return chatWithKoboldHorde(messages, config, options);
     default:
       return { error: `Unknown provider: ${config.type}` };
   }
@@ -1459,6 +1695,8 @@ export const streamChatMessage = async (
       return streamWithGroq(messages, config, options, onChunk);
     case "open-router":
       return streamWithOpenRouter(messages, config, options, onChunk);
+    case "kobold-horde":
+      return streamWithKoboldHorde(messages, config, options, onChunk);
     default:
       onChunk({ error: `Unknown provider: ${config.type}` });
       return;
@@ -1652,7 +1890,40 @@ export const testProviderConnection = async (
         return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
       }
     }
-    
+
+    case "kobold-horde": {
+      if (!config.apiKey) {
+        return { success: false, message: "API key is required." };
+      }
+      try {
+        // Test with a minimal text generation request using server-side proxy
+        const response = await fetch("/api/kobold-horde", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            apiKey: config.apiKey,
+            model: config.selectedModel || "koboldcpp/Llama-3.1-8B-Stheno-v3.4",
+            prompt: "Hello",
+            params: {
+              temperature: 0.1,
+              max_length: 10,
+            },
+          }),
+        });
+
+        if (response.ok) {
+          return { success: true, message: "KoboldAI Horde connection successful!" };
+        }
+
+        const errorData = await response.json().catch(() => ({}));
+        return { success: false, message: errorData.error || `HTTP ${response.status}` };
+      } catch (error) {
+        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
+      }
+    }
+
     default:
       return { success: false, message: `Unknown provider: ${providerType}` };
   }
@@ -1713,248 +1984,30 @@ export const fetchModelsFromProvider = async (
         return { models: data.models || [] };
       }
 
-      case "google-vertex": {
-        const vertexModels: FetchedModel[] = [
-          {
-            id: "gemini-3.1-flash-lite-preview",
-            name: "Gemini 3.1 Flash-Lite Preview",
-            provider: "google-vertex",
-            context: 1048576,
-            max_tokens: 65536,
-            supportsThinking: false,
-          },
-          {
-            id: "gemini-3.1-pro-preview",
-            name: "Gemini 3.1 Pro Preview",
-            provider: "google-vertex",
-            context: 1048576,
-            max_tokens: 65536,
-            supportsThinking: true,
-          },
-          {
-            id: "gemini-3-flash-preview",
-            name: "Gemini 3 Flash Preview",
-            provider: "google-vertex",
-            context: 1048576,
-            max_tokens: 65536,
-            supportsThinking: true,
-          },
-          {
-            id: "gemini-2.5-pro",
-            name: "Gemini 2.5 Pro",
-            provider: "google-vertex",
-            context: 1048576,
-            max_tokens: 65536,
-            supportsThinking: true,
-          },
-          {
-            id: "gemini-2.5-flash",
-            name: "Gemini 2.5 Flash",
-            provider: "google-vertex",
-            context: 1048576,
-            max_tokens: 65536,
-            supportsThinking: true,
-          },
-          {
-            id: "gemini-2.5-flash-lite",
-            name: "Gemini 2.5 Flash-Lite",
-            provider: "google-vertex",
-            context: 1048576,
-            max_tokens: 65536,
-            supportsThinking: false,
-          },
-          {
-            id: "gemini-2.0-flash",
-            name: "Gemini 2.0 Flash",
-            provider: "google-vertex",
-            context: 1048576,
-            max_tokens: 8192,
-            supportsThinking: true,
-          },
-          {
-            id: "gemini-1.5-pro",
-            name: "Gemini 1.5 Pro",
-            provider: "google-vertex",
-            context: 2097152,
-            max_tokens: 8192,
-            supportsThinking: false,
-          },
-          {
-            id: "gemini-1.5-flash",
-            name: "Gemini 1.5 Flash",
-            provider: "google-vertex",
-            context: 1048576,
-            max_tokens: 8192,
-            supportsThinking: false,
-          },
-        ];
+      case "kobold-horde": {
+        try {
+          // KoboldAI Horde doesn't require API key for model listing
+          const response = await fetch("https://aihorde.net/api/v2/status/models?type=text");
+          const data = await response.json();
 
-        return { models: vertexModels };
-      }
-
-      case "groq": {
-        // Return static Groq models - fetch from API if needed
-        // For now, return the models defined in AVAILABLE_PROVIDERS
-        const staticModels: FetchedModel[] = [
-          {
-            id: "llama-3.3-70b-versatile",
-            name: "Llama 3.3 70B Versatile",
-            provider: "groq",
-            context: 8192,
-            max_tokens: 8192,
-            supportsThinking: false,
-          },
-          {
-            id: "llama-3.1-70b-versatile",
-            name: "Llama 3.1 70B Versatile",
-            provider: "groq",
-            context: 8192,
-            max_tokens: 8192,
-            supportsThinking: false,
-          },
-          {
-            id: "llama-3.1-8b-instant",
-            name: "Llama 3.1 8B Instant",
-            provider: "groq",
-            context: 8192,
-            max_tokens: 8192,
-            supportsThinking: false,
-          },
-          {
-            id: "mixtral-8x7b-32768",
-            name: "Mixtral 8x7B",
-            provider: "groq",
-            context: 32768,
-            max_tokens: 32768,
-            supportsThinking: false,
-          },
-          {
-            id: "gemma2-9b-it",
-            name: "Gemma 2 9B",
-            provider: "groq",
-            context: 8192,
-            max_tokens: 8192,
-            supportsThinking: false,
-          },
-        ];
-
-        // Try to fetch dynamic models from Groq API if API key is available
-        if (config.apiKey) {
-          try {
-            const response = await fetch(`/api/models?provider=groq&apiKey=${encodeURIComponent(config.apiKey)}`);
-            if (response.ok) {
-              const data = await response.json();
-              if (data.models && data.models.length > 0) {
-                return { models: data.models };
-              }
-            }
-          } catch {
-            // Fall back to static models
+          if (!response.ok) {
+            return { models: [], error: `HTTP ${response.status}` };
           }
+
+          // Transform Horde models to our format
+          const models: FetchedModel[] = data.map((model: any) => ({
+            id: model.name,
+            name: model.name,
+            contextWindow: 4096, // Default, could be improved with model-specific data
+            maxTokens: 512, // Default
+            supportsThinking: false,
+          }));
+
+          return { models };
+        } catch (error) {
+          // Fall back to static models if API fails
+          return { models: getModelsForProvider("kobold-horde") };
         }
-
-        return { models: staticModels };
-      }
-
-      case "open-router": {
-        const staticModels: FetchedModel[] = [
-          {
-            id: "anthropic/claude-3.5-sonnet",
-            name: "Claude 3.5 Sonnet",
-            provider: "open-router",
-            context: 200000,
-            max_tokens: 8192,
-            supportsThinking: false,
-          },
-          {
-            id: "anthropic/claude-3-opus",
-            name: "Claude 3 Opus",
-            provider: "open-router",
-            context: 200000,
-            max_tokens: 4096,
-            supportsThinking: false,
-          },
-          {
-            id: "openai/gpt-4o",
-            name: "GPT-4o",
-            provider: "open-router",
-            context: 128000,
-            max_tokens: 16384,
-            supportsThinking: false,
-          },
-          {
-            id: "openai/gpt-4o-mini",
-            name: "GPT-4o Mini",
-            provider: "open-router",
-            context: 128000,
-            max_tokens: 16384,
-            supportsThinking: false,
-          },
-          {
-            id: "meta-llama/llama-3.3-70b-instruct",
-            name: "Llama 3.3 70B",
-            provider: "open-router",
-            context: 128000,
-            max_tokens: 8192,
-            supportsThinking: false,
-          },
-          {
-            id: "deepseek/deepseek-chat",
-            name: "DeepSeek Chat",
-            provider: "open-router",
-            context: 64000,
-            max_tokens: 8192,
-            supportsThinking: false,
-          },
-          {
-            id: "deepseek/deepseek-reasoner",
-            name: "DeepSeek Reasoner",
-            provider: "open-router",
-            context: 64000,
-            max_tokens: 8192,
-            supportsThinking: true,
-          },
-          {
-            id: "google/gemini-2.0-flash",
-            name: "Gemini 2.0 Flash",
-            provider: "open-router",
-            context: 1048576,
-            max_tokens: 8192,
-            supportsThinking: true,
-          },
-          {
-            id: "mistralai/mistral-large",
-            name: "Mistral Large",
-            provider: "open-router",
-            context: 128000,
-            max_tokens: 8192,
-            supportsThinking: false,
-          },
-          {
-            id: "qwen/qwen2.5-72b-instruct",
-            name: "Qwen 2.5 72B",
-            provider: "open-router",
-            context: 32768,
-            max_tokens: 8192,
-            supportsThinking: false,
-          },
-        ];
-
-        if (config.apiKey) {
-          try {
-            const response = await fetch(`/api/models?provider=open-router&apiKey=${encodeURIComponent(config.apiKey)}`);
-            if (response.ok) {
-              const data = await response.json();
-              if (data.models && data.models.length > 0) {
-                return { models: data.models };
-              }
-            }
-          } catch {
-            // Fall back to static models
-          }
-        }
-
-        return { models: staticModels };
       }
 
       default:
