@@ -8,6 +8,13 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
+- [x] **COMPLETED: Implemented full "Inline with Message" instruction positioning system**
+  - **UI/UX**: Added position selector and index input field for inline injection
+  - **Backend**: Implemented `injectInlineInstructions()` function with proper indexing logic
+  - **Integration**: Modified `buildFullSystemPrompt()` to collect and `injectInlineInstructions()` to place instructions
+  - **Positioning Logic**: Index 0 = after last user message, 1 = before that, etc. (overflows to end)
+  - **Message Construction**: Inline instructions injected into conversation before API calls
+  - Project builds successfully with complete inline instruction functionality
 - [x] **COMPLETED: Simplified models modal and fixed component sizing**
   - Removed unnecessary tabbed navigation from models modal - now shows models and settings in single view
   - Made Switch and Checkbox components fixed small sizes instead of responsive
@@ -516,7 +523,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date       | Changes                                                                                                                                                                                                                                                                                                                                               |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-04-19 | **COMPLETED: Simplified models modal and fixed component sizes** - Removed tabbed navigation, made switches/checkboxes fixed small sizes, improved modal usability |
+| 2026-04-21 | **COMPLETED: Implemented backend for inline instruction positioning** - Added injectInlineInstructions function, integrated with message construction, system now fully functional |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-03-12 | Refactor Chat.tsx to follow SOLID principles - Created modular structure in `src/components/chat/` with constants, utils, hooks, and extracted UI components for better maintainability and testability                                                                                                                                               |
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------                                                                                 |
