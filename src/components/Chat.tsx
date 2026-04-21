@@ -985,26 +985,7 @@ function SettingsModal({
            </div>
           )}
 
-          {/* Temperature */}
-          <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-2">
-              Temperature: {globalSettings.temperature.toFixed(2)}
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="2"
-              step="0.1"
-              value={globalSettings.temperature}
-              onChange={(e) => setGlobalSettings({ ...globalSettings, temperature: parseFloat(e.target.value) })}
-              className="w-full"
-            />
-            <p className="text-xs text-zinc-500 mt-1">
-              Lower = more focused, Higher = more creative
-            </p>
-          </div>
-
-          {/* Custom Size Toggle */}
+           {/* Custom Size Toggle */}
           <div className="flex items-center gap-3 mb-4">
             <Checkbox
               id="useCustomSize"
@@ -1115,58 +1096,7 @@ function SettingsModal({
             </p>
           </div>
 
-          {/* Top P */}
-          <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-2">
-              Top P: {globalSettings.topP.toFixed(2)}
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              value={globalSettings.topP}
-              onChange={(e) => setGlobalSettings({ ...globalSettings, topP: parseFloat(e.target.value) })}
-              className="w-full"
-            />
-            <p className="text-xs text-zinc-500 mt-1">
-              Controls diversity of word selection
-            </p>
-          </div>
 
-          {/* Top K */}
-          <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-2">
-              Top K: {globalSettings.topK}
-            </label>
-            <input
-              type="range"
-              min="1"
-              max="100"
-              step="1"
-              value={globalSettings.topK}
-              onChange={(e) => setGlobalSettings({ ...globalSettings, topK: parseInt(e.target.value) })}
-              className="w-full"
-            />
-            <p className="text-xs text-zinc-500 mt-1">
-              Limits word choices to top K most likely tokens
-            </p>
-          </div>
-
-          {/* Enable Thinking */}
-          <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-2">
-              Enable Thinking
-            </label>
-            <Switch
-              checked={globalSettings.enableThinking}
-              onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, enableThinking: checked })}
-              className="data-[state=checked]:bg-blue-600"
-            />
-            <p className="text-xs text-zinc-500 mt-1">
-              Allow AI to show its reasoning process (Gemini 2.0 only)
-            </p>
-          </div>
 
           {/* Enable Streaming */}
           <div>
@@ -2093,6 +2023,130 @@ function SettingsModal({
                             className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {modelsFetching["open-router"] ? "Loading Models..." : "Connect & Load Models"}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* KoboldAI Horde */}
+              <div className="p-3 bg-zinc-800/50 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${
+                      connectionStatus["kobold-horde"]?.status === "connected" ? "bg-green-500" :
+                      connectionStatus["kobold-horde"]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
+                      connectionStatus["kobold-horde"]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
+                    }`} />
+                    <span className="text-sm font-medium text-white">KoboldAI Horde</span>
+                    {activeProvider === "kobold-horde" && (
+                      <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingProvider(editingProvider === 'kobold-horde' ? null : 'kobold-horde')}
+                    className="text-xs text-blue-400 hover:text-blue-300"
+                  >
+                    {editingProvider === 'kobold-horde' ? 'Hide' : 'Configure'}
+                  </button>
+                </div>
+                {connectionStatus["kobold-horde"]?.message && (
+                  <p className={`text-xs mb-2 ${
+                    connectionStatus["kobold-horde"]?.status === "connected" ? "text-green-400" :
+                    connectionStatus["kobold-horde"]?.status === "error" ? "text-red-400" : "text-zinc-400"
+                  }`}>
+                    {connectionStatus["kobold-horde"].message}
+                  </p>
+                )}
+                {editingProvider === 'kobold-horde' && (
+                  <div className="mt-3 space-y-3">
+                    {/* Profile Selection */}
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-1">Profile</label>
+                      <div className="flex gap-2">
+                        <select
+                          value={providerConfigs["kobold-horde"]?.activeProfileId || ""}
+                          onChange={(e) => {
+                            if (e.target.value === "__new__") {
+                              const name = prompt("Enter profile name (or leave empty for date/time):");
+                              if (name !== null) {
+                                createProfile("kobold-horde", {
+                                  name: name.trim() || new Date().toLocaleString(),
+                                  apiKey: ""
+                                });
+                              }
+                            } else {
+                              selectProfile("kobold-horde", e.target.value);
+                            }
+                          }}
+                          className="flex-1 bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                          <option value="">Select a profile...</option>
+                          {providerConfigs["kobold-horde"]?.profiles.map(profile => (
+                            <option key={profile.id} value={profile.id}>{profile.name}</option>
+                          ))}
+                          <option value="__new__">+ Add New Profile</option>
+                        </select>
+                        {providerConfigs["kobold-horde"]?.activeProfileId && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm("Delete this profile?")) {
+                                deleteProfile("kobold-horde", providerConfigs["kobold-horde"].activeProfileId!);
+                              }
+                            }}
+                            className="px-3 py-2 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* API Key - only show if profile is selected */}
+                    {providerConfigs["kobold-horde"]?.activeProfileId && (
+                      <>
+                        <div>
+                          <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                          <input
+                            type="password"
+                            value={getActiveProfile("kobold-horde")?.apiKey || ""}
+                            onChange={(e) => {
+                              const profileId = providerConfigs["kobold-horde"].activeProfileId;
+                              if (!profileId) return;
+                              setProviderConfigs(prev => ({
+                                ...prev,
+                                "kobold-horde": {
+                                  ...prev["kobold-horde"],
+                                  profiles: prev["kobold-horde"].profiles.map(p =>
+                                    p.id === profileId ? { ...p, apiKey: e.target.value } : p
+                                  )
+                                }
+                              }));
+                            }}
+                            placeholder="Enter your KoboldAI Horde API key"
+                            className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onTestConnection("kobold-horde")}
+                            disabled={connectionStatus["kobold-horde"]?.status === "testing" || !getActiveProfile("kobold-horde")?.apiKey}
+                            className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {connectionStatus["kobold-horde"]?.status === "testing" ? "Testing..." : "Test Connection"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onConnect("kobold-horde")}
+                            disabled={connectionStatus["kobold-horde"]?.status !== "connected"}
+                            className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Connect
                           </button>
                         </div>
                       </>
