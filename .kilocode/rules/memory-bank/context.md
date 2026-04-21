@@ -14,7 +14,13 @@ A chat application for roleplay conversations with multiple LLM provider support
   - Created /api/kobold-horde route for async text generation workflow
   - Added test connection and model fetching logic
   - Updated Chat.tsx state to include kobold-horde provider
+  - Added KoboldAI Horde provider UI section with profile management and connection controls
   - KoboldAI Horde provides distributed AI text generation via crowdsourced GPUs
+- [x] **COMPLETED: Fixed duplicate settings controls in global settings modal**
+  - Removed duplicate temperature, top P, top K, enable thinking, and enable streaming controls from model selection section
+  - Consolidated all global settings controls in the proper "Global Settings" section
+  - Eliminated user confusion from having settings in multiple locations
+  - Streamlined settings modal interface
 - [x] **COMPLETED: Implemented full "Inline with Message" instruction positioning system**
   - **UI/UX**: Added position selector and index input field for inline injection
   - **Backend**: Implemented `injectInlineInstructions()` function with proper indexing logic
