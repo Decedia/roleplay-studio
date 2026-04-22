@@ -39,17 +39,8 @@ A chat application for roleplay conversations with multiple LLM provider support
   - Streamlined modal interface for better usability
   - Project builds successfully with updated modal design
 - [x] **COMPLETED: Removed duplicate utilities button**
-  - Identified and removed the duplicate utilities button from header dropdown
-  - Kept only the main utilities modal button that opens the comprehensive utilities interface
-  - Character Card button remains with proper disabled state when not in chat mode
-  - Project builds successfully with single utilities access point
 - [x] **COMPLETED: Fixed duplicate instructions buttons and moved advanced instructions to new tabbed modal**
-  - Removed duplicate "Instructions" button from header dropdown (kept only the tabbed modal button)
-  - Moved all advanced instructions UI (formatting prompt, jailbreak, continue instruction, image generation, instruction list) from SettingsModal to Chat tab in the new tabbed instructions modal
-  - Removed advanced instructions section from old SettingsModal completely
-  - Fixed JSX syntax errors and ensured project builds successfully
-  - All instruction management now consolidated in the new tabbed instructions modal
-- [x] Fix Vertex AI model loading - Replaced broken dynamic API model fetching with static model list from Vertex AI console. Updated AVAILABLE_PROVIDERS, fetchModelsFromProvider, and api/models/route.ts to use hardcoded Gemini models (3.1, 3, 2.5, 2.0, 1.5 series). Removed unused API call to aiplatform.googleapis.com that was failing.
+- [x] Fix Vertex AI model loading - Added proper Vertex AI API models list endpoint integration with fallback to static Gemini model list for when projectId and accessToken are not provided. Updated api/models/route.ts to properly call Vertex AI `projects.locations.models.list` API endpoint with correct authentication headers.
 - [x] Responsive Design System Refactor - Implemented mobile-first responsive design:
   - Added CSS design system with spacing variables, border radius, and transitions in globals.css
   - Added responsive breakpoint utilities and overflow prevention
