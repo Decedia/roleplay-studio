@@ -2048,6 +2048,17 @@ function SettingsModal({
                       placeholder="Enter your KoboldAI Horde API key"
                       className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
+                    <p className="text-xs text-zinc-500 mt-2">
+                      Get your API key at{" "}
+                      <a
+                        href="https://aihorde.net/register"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 hover:text-blue-300 underline"
+                      >
+                        aihorde.net/register
+                      </a>
+                    </p>
                   </div>
                   <div className="flex gap-2">
                     <button
