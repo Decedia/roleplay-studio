@@ -1858,24 +1858,16 @@ function SettingsModal({
                             className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                           />
                         </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => onTestConnection("groq")}
-                            disabled={connectionStatus["groq"]?.status === "testing" || !getActiveProfile("groq")?.apiKey}
-                            className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {connectionStatus["groq"]?.status === "testing" ? "Testing..." : "Test Connection"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onConnect("groq")}
-                            disabled={connectionStatus["groq"]?.status !== "connected"}
-                            className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            Connect
-                          </button>
-                        </div>
+                         <div className="flex gap-2">
+                           <button
+                             type="button"
+                             onClick={() => onConnect("groq")}
+                             disabled={connectionStatus["groq"]?.status === "testing" || !getActiveProfile("groq")?.apiKey}
+                             className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                           >
+                             {connectionStatus["groq"]?.status === "testing" ? "Testing..." : "Connect"}
+                           </button>
+                         </div>
                       </>
                     )}
                   </div>
@@ -3226,17 +3218,72 @@ export default function Chat() {
     }
   };
 
-  const handleConnectProvider = async (providerType: LLMProviderType) => {
+   const handleConnectProvider = async (providerType: LLMProviderType) => {
     // Set as active provider
     setActiveProvider(providerType);
     
     // Get the active profile for this provider
     const config = providerConfigs[providerType];
     const activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
-    const selectedModelId = activeProfile?.selectedModel;
+    
+    // Build profile config for API calls
+    const profileConfig = {
+      ...config,
+      apiKey: activeProfile?.apiKey || "",
+      projectId: activeProfile?.projectId || "",
+      serviceAccountJson: activeProfile?.serviceAccountJson,
+      vertexMode: activeProfile?.vertexMode,
+      vertexLocation: activeProfile?.vertexLocation,
+      selectedModel: activeProfile?.selectedModel
+    };
+    
+    // Test connection status first
+    setConnectionStatus(prev => ({
+      ...prev,
+      [providerType]: {
+        status: "testing",
+        message: "Testing connection..."
+      }
+    }));
+
+    try {
+      // Test connection
+      const testResult = await testProviderConnection(providerType, profileConfig);
+      
+      if (testResult.success) {
+        // Mark as connected
+        setConnectionStatus(prev => ({
+          ...prev,
+          [providerType]: {
+            status: "connected",
+            message: "Connected"
+          }
+        }));
+      } else {
+        // Mark connection failed
+        setConnectionStatus(prev => ({
+          ...prev,
+          [providerType]: {
+            status: "error",
+            message: testResult.message
+          }
+        }));
+        return;
+      }
+    } catch (error) {
+      setConnectionStatus(prev => ({
+        ...prev,
+        [providerType]: {
+          status: "error",
+          message: error instanceof Error ? error.message : "Connection failed"
+        }
+      }));
+      return;
+    }
     
     // Find the model in providerModels to get context and max_tokens
     const models = providerModels[providerType] || [];
+    const selectedModelId = activeProfile?.selectedModel;
     const selectedModel = models.find(m => m.id === selectedModelId);
     
     // Update global settings with the provider's selected model and its capabilities
@@ -3251,28 +3298,6 @@ export default function Chat() {
         maxContextTokens: maxContext
       }));
     }
-    
-    // Mark as connected if not already
-    if (connectionStatus[providerType].status !== "connected") {
-      setConnectionStatus(prev => ({
-        ...prev,
-        [providerType]: {
-          status: "connected",
-          message: "Connected"
-        }
-      }));
-    }
-    
-    // Build profile config for API calls
-    const profileConfig = {
-      ...config,
-      apiKey: activeProfile?.apiKey || "",
-      projectId: activeProfile?.projectId || "",
-      serviceAccountJson: activeProfile?.serviceAccountJson,
-      vertexMode: activeProfile?.vertexMode,
-      vertexLocation: activeProfile?.vertexLocation,
-      selectedModel: activeProfile?.selectedModel
-    };
     
     // Fetch models for providers that support dynamic model fetching
     if ((providerType === "google-ai-studio" || providerType === "google-vertex" || providerType === "open-router" || providerType === "groq") && models.length === 0 && activeProfile?.apiKey) {
