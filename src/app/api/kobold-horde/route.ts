@@ -29,14 +29,16 @@ export async function POST(request: NextRequest) {
         "Content-Type": "application/json",
         "apikey": apiKey,
       },
-      body: JSON.stringify({
-        prompt,
-        params: {
-          ...params,
-          max_context_length: params.max_context_length || 2048,
-        },
-        models: model ? [model] : undefined,
-      }),
+       body: JSON.stringify({
+         prompt,
+         params: {
+           ...params,
+           max_context_length: params.max_context_length || 8192,
+         },
+         models: model ? [model] : undefined,
+         // Disable safe filters for compatibility
+         disable_badwords: true,
+       }),
     });
 
     if (!submitResponse.ok) {

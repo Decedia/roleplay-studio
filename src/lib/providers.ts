@@ -1487,18 +1487,19 @@ export const chatWithKoboldHorde: ChatFunction = async (
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        apiKey: config.apiKey,
-        model: config.selectedModel,
-        prompt,
-        params: {
-          temperature: options.temperature,
-          top_p: options.topP,
-          top_k: options.topK,
-          max_length: options.maxTokens,
-        },
-        signal: options.abortController?.signal,
-      }),
+       body: JSON.stringify({
+         apiKey: config.apiKey,
+         model: config.selectedModel,
+         prompt,
+         params: {
+           temperature: options.temperature,
+           top_p: options.topP,
+           top_k: options.topK,
+           max_length: options.maxTokens,
+           max_context_length: 8192,
+         },
+         signal: options.abortController?.signal,
+       }),
     });
 
     const data = await response.json();
@@ -1569,19 +1570,20 @@ export const streamWithKoboldHorde = async (
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        apiKey: config.apiKey,
-        model: config.selectedModel,
-        prompt,
-        params: {
-          temperature: options.temperature,
-          top_p: options.topP,
-          top_k: options.topK,
-          max_length: options.maxTokens,
-        },
-        stream: true,
-        signal: options.abortController?.signal,
-      }),
+       body: JSON.stringify({
+         apiKey: config.apiKey,
+         model: config.selectedModel,
+         prompt,
+         params: {
+           temperature: options.temperature,
+           top_p: options.topP,
+           top_k: options.topK,
+           max_length: options.maxTokens,
+           max_context_length: 8192,
+         },
+         stream: true,
+         signal: options.abortController?.signal,
+       }),
     });
 
     if (!response.ok) {
