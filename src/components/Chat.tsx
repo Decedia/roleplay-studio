@@ -2012,13 +2012,6 @@ function SettingsModal({
                       <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
                     )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setEditingProvider(editingProvider === 'kobold-horde' ? null : 'kobold-horde')}
-                    className="text-xs text-blue-400 hover:text-blue-300"
-                  >
-                    {editingProvider === 'kobold-horde' ? 'Hide' : 'Configure'}
-                  </button>
                 </div>
                 {connectionStatus["kobold-horde"]?.message && (
                   <p className={`text-xs mb-2 ${
@@ -2028,99 +2021,53 @@ function SettingsModal({
                     {connectionStatus["kobold-horde"].message}
                   </p>
                 )}
-                {editingProvider === 'kobold-horde' && (
-                  <div className="mt-3 space-y-3">
-                    {/* Profile Selection */}
-                    <div>
-                      <label className="block text-xs text-zinc-400 mb-1">Profile</label>
-                      <div className="flex gap-2">
-                        <select
-                          value={providerConfigs["kobold-horde"]?.activeProfileId || ""}
-                          onChange={(e) => {
-                            if (e.target.value === "__new__") {
-                              const name = prompt("Enter profile name (or leave empty for date/time):");
-                              if (name !== null) {
-                                createProfile("kobold-horde", {
-                                  name: name.trim() || new Date().toLocaleString(),
-                                  apiKey: "",
-                                  selectedModel: "koboldcpp/Llama-3.1-8B-Stheno-v3.4"
-                                });
-                              }
-                            } else {
-                              selectProfile("kobold-horde", e.target.value);
-                            }
-                          }}
-                          className="flex-1 bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        >
-                          <option value="">Select a profile...</option>
-                          {providerConfigs["kobold-horde"]?.profiles.map(profile => (
-                            <option key={profile.id} value={profile.id}>{profile.name}</option>
-                          ))}
-                          <option value="__new__">+ Add New Profile</option>
-                        </select>
-                        {providerConfigs["kobold-horde"]?.activeProfileId && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (confirm("Delete this profile?")) {
-                                deleteProfile("kobold-horde", providerConfigs["kobold-horde"].activeProfileId!);
-                              }
-                            }}
-                            className="px-3 py-2 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                    </div>
 
-                    {/* API Key - only show if profile is selected */}
-                    {providerConfigs["kobold-horde"]?.activeProfileId && (
-                      <>
-                        <div>
-                          <label className="block text-xs text-zinc-400 mb-1">API Key</label>
-                          <input
-                            type="password"
-                            value={getActiveProfile("kobold-horde")?.apiKey || ""}
-                            onChange={(e) => {
-                              const profileId = providerConfigs["kobold-horde"].activeProfileId;
-                              if (!profileId) return;
-                              setProviderConfigs(prev => ({
-                                ...prev,
-                                "kobold-horde": {
-                                  ...prev["kobold-horde"],
-                                  profiles: prev["kobold-horde"].profiles.map(p =>
-                                    p.id === profileId ? { ...p, apiKey: e.target.value } : p
-                                  )
-                                }
-                              }));
-                            }}
-                            placeholder="Enter your KoboldAI Horde API key"
-                            className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => onTestConnection("kobold-horde")}
-                            disabled={connectionStatus["kobold-horde"]?.status === "testing" || !getActiveProfile("kobold-horde")?.apiKey}
-                            className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {connectionStatus["kobold-horde"]?.status === "testing" ? "Testing..." : "Test Connection"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onConnect("kobold-horde")}
-                            disabled={connectionStatus["kobold-horde"]?.status !== "connected"}
-                            className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            Connect
-                          </button>
-                        </div>
-                      </>
-                    )}
+                <div className="mt-3 space-y-3">
+                  <div>
+                    <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                    <input
+                      type="password"
+                      value={providerConfigs["kobold-horde"]?.profiles?.[0]?.apiKey || ""}
+                      onChange={(e) => {
+                        // Single profile for Kobold Horde (no profile system)
+                        setProviderConfigs(prev => ({
+                          ...prev,
+                          "kobold-horde": {
+                            ...prev["kobold-horde"],
+                            profiles: [{
+                              id: "kobold-horde-single",
+                              name: "Default",
+                              apiKey: e.target.value,
+                              selectedModel: "koboldcpp/Llama-3.1-8B-Stheno-v3.4",
+                              createdAt: Date.now()
+                            }],
+                            activeProfileId: "kobold-horde-single"
+                          }
+                        }));
+                      }}
+                      placeholder="Enter your KoboldAI Horde API key"
+                      className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
                   </div>
-                )}
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onTestConnection("kobold-horde")}
+                      disabled={connectionStatus["kobold-horde"]?.status === "testing" || !providerConfigs["kobold-horde"]?.profiles?.[0]?.apiKey}
+                      className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {connectionStatus["kobold-horde"]?.status === "testing" ? "Testing..." : "Test Connection"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onConnect("kobold-horde")}
+                      disabled={connectionStatus["kobold-horde"]?.status !== "connected"}
+                      className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Connect
+                    </button>
+                  </div>
+                </div>
               </div>
 
 
@@ -6109,27 +6056,9 @@ Write an engaging story segment. If this is a good point for player interaction,
                       <div className="text-sm text-white">Models</div>
                       <div className="text-xs text-zinc-500">Select AI model and providers</div>
                     </div>
-                   </button>
+                    </button>
 
-                   {/* Settings */}
-                   <button
-                     onClick={() => {
-                       setShowSettingsModal(true);
-                       setShowHeaderActions(false);
-                     }}
-                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800 transition-colors text-left"
-                   >
-                     <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                     </svg>
-                     <div>
-                       <div className="text-sm text-white">Settings</div>
-                       <div className="text-xs text-zinc-500">Temperature, tokens, streaming</div>
-                     </div>
-                   </button>
-
-                    {/* Utilities */}
+                     {/* Utilities */}
                    <button
                      onClick={() => {
                        setShowUtilitiesModal(true);
