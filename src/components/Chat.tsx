@@ -750,6 +750,120 @@ function SettingsModal({
         {/* Modal Content */}
         <div className="flex-1 overflow-y-auto p-6">
           <div className="space-y-6">
+            {/* Global Settings Only */}
+            {!showModelsSection && !showInstructionsSection && (
+              <div>
+                <h3 className="text-sm font-medium text-white mb-4">Global Settings</h3>
+                <div className="space-y-4">
+                  {/* Temperature */}
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-300 mb-2">
+                      Temperature: {globalSettings.temperature.toFixed(2)}
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="2"
+                      step="0.1"
+                      value={globalSettings.temperature}
+                      onChange={(e) => setGlobalSettings({ ...globalSettings, temperature: parseFloat(e.target.value) })}
+                      className="w-full"
+                    />
+                    <p className="text-xs text-zinc-500 mt-1">
+                      Lower = more focused, Higher = more creative
+                    </p>
+                  </div>
+
+                  {/* Max Tokens */}
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-300 mb-2">
+                      Max Tokens: {globalSettings.maxTokens}
+                    </label>
+                    <input
+                      type="range"
+                      min="100"
+                      max="4000"
+                      step="50"
+                      value={globalSettings.maxTokens}
+                      onChange={(e) => setGlobalSettings({ ...globalSettings, maxTokens: parseInt(e.target.value) })}
+                      className="w-full"
+                    />
+                    <p className="text-xs text-zinc-500 mt-1">
+                      Maximum response length
+                    </p>
+                  </div>
+
+                  {/* Top P */}
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-300 mb-2">
+                      Top P: {globalSettings.topP.toFixed(2)}
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value={globalSettings.topP}
+                      onChange={(e) => setGlobalSettings({ ...globalSettings, topP: parseFloat(e.target.value) })}
+                      className="w-full"
+                    />
+                    <p className="text-xs text-zinc-500 mt-1">
+                      Nucleus sampling - controls response diversity
+                    </p>
+                  </div>
+
+                  {/* Top K */}
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-300 mb-2">
+                      Top K: {globalSettings.topK}
+                    </label>
+                    <input
+                      type="range"
+                      min="1"
+                      max="100"
+                      step="1"
+                      value={globalSettings.topK}
+                      onChange={(e) => setGlobalSettings({ ...globalSettings, topK: parseInt(e.target.value) })}
+                      className="w-full"
+                    />
+                    <p className="text-xs text-zinc-500 mt-1">
+                      Limits token selection to top K choices
+                    </p>
+                  </div>
+
+                  {/* Enable Thinking */}
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-300 mb-2">
+                      Enable Thinking
+                    </label>
+                    <Switch
+                      checked={globalSettings.enableThinking}
+                      onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, enableThinking: checked })}
+                      className="data-[state=checked]:bg-blue-600"
+                    />
+                    <p className="text-xs text-zinc-500 mt-1">
+                      Show AI reasoning process (Gemini models only)
+                    </p>
+                  </div>
+
+                  {/* Enable Streaming */}
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-300 mb-2">
+                      Enable Streaming
+                    </label>
+                    <Switch
+                      checked={globalSettings.enableStreaming}
+                      onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, enableStreaming: checked })}
+                      className="data-[state=checked]:bg-blue-600"
+                    />
+                    <p className="text-xs text-zinc-500 mt-1">
+                      Stream AI responses in real-time
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Models and Settings */}
             {showModelsSection && (
               <div>
@@ -1177,114 +1291,7 @@ function SettingsModal({
             </div>
             )}
 
-            {/* Global Settings */}
-            <div className="pt-6 border-t border-zinc-700">
-                {/* Temperature */}
-                <div>
-                  <label className="block text-sm font-medium text-zinc-300 mb-2">
-                    Temperature: {globalSettings.temperature.toFixed(2)}
-                  </label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="2"
-                    step="0.1"
-                    value={globalSettings.temperature}
-                    onChange={(e) => setGlobalSettings({ ...globalSettings, temperature: parseFloat(e.target.value) })}
-                    className="w-full"
-                  />
-                  <p className="text-xs text-zinc-500 mt-1">
-                    Lower = more focused, Higher = more creative
-                  </p>
-                </div>
 
-                {/* Max Tokens */}
-                <div>
-                  <label className="block text-sm font-medium text-zinc-300 mb-2">
-                    Max Tokens: {globalSettings.maxTokens}
-                  </label>
-                  <input
-                    type="range"
-                    min="100"
-                    max="4000"
-                    step="50"
-                    value={globalSettings.maxTokens}
-                    onChange={(e) => setGlobalSettings({ ...globalSettings, maxTokens: parseInt(e.target.value) })}
-                    className="w-full"
-                  />
-                  <p className="text-xs text-zinc-500 mt-1">
-                    Maximum response length
-                  </p>
-                </div>
-
-                {/* Top P */}
-                <div>
-                  <label className="block text-sm font-medium text-zinc-300 mb-2">
-                    Top P: {globalSettings.topP.toFixed(2)}
-                  </label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.05"
-                    value={globalSettings.topP}
-                    onChange={(e) => setGlobalSettings({ ...globalSettings, topP: parseFloat(e.target.value) })}
-                    className="w-full"
-                  />
-                  <p className="text-xs text-zinc-500 mt-1">
-                    Nucleus sampling - controls response diversity
-                  </p>
-                </div>
-
-                {/* Top K */}
-                <div>
-                  <label className="block text-sm font-medium text-zinc-300 mb-2">
-                    Top K: {globalSettings.topK}
-                  </label>
-                  <input
-                    type="range"
-                    min="1"
-                    max="100"
-                    step="1"
-                    value={globalSettings.topK}
-                    onChange={(e) => setGlobalSettings({ ...globalSettings, topK: parseInt(e.target.value) })}
-                    className="w-full"
-                  />
-                  <p className="text-xs text-zinc-500 mt-1">
-                    Limits token selection to top K choices
-                  </p>
-                </div>
-
-                {/* Enable Thinking */}
-                <div>
-                  <label className="block text-sm font-medium text-zinc-300 mb-2">
-                    Enable Thinking
-                  </label>
-                  <Switch
-                    checked={globalSettings.enableThinking}
-                    onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, enableThinking: checked })}
-                    className="data-[state=checked]:bg-blue-600"
-                  />
-                  <p className="text-xs text-zinc-500 mt-1">
-                    Show AI reasoning process (Gemini models only)
-                  </p>
-                </div>
-
-                {/* Enable Streaming */}
-                <div>
-                  <label className="block text-sm font-medium text-zinc-300 mb-2">
-                    Enable Streaming
-                  </label>
-                  <Switch
-                    checked={globalSettings.enableStreaming}
-                    onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, enableStreaming: checked })}
-                    className="data-[state=checked]:bg-blue-600"
-                  />
-                  <p className="text-xs text-zinc-500 mt-1">
-                    Stream AI responses in real-time
-                  </p>
-                 </div>
-              </div>
 
             {/* Provider API Keys Configuration */}
           <div className="border-t border-zinc-700 pt-6">
@@ -6141,11 +6148,27 @@ Write an engaging story segment. If this is a good point for player interaction,
                       <div className="text-sm text-white">Models</div>
                       <div className="text-xs text-zinc-500">Select AI model and providers</div>
                     </div>
-                  </button>
+                   </button>
 
+                   {/* Settings */}
+                   <button
+                     onClick={() => {
+                       setShowSettingsModal(true);
+                       setShowHeaderActions(false);
+                     }}
+                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800 transition-colors text-left"
+                   >
+                     <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                     </svg>
+                     <div>
+                       <div className="text-sm text-white">Settings</div>
+                       <div className="text-xs text-zinc-500">Temperature, tokens, streaming</div>
+                     </div>
+                   </button>
 
-
-                   {/* Utilities */}
+                    {/* Utilities */}
                    <button
                      onClick={() => {
                        setShowUtilitiesModal(true);
@@ -9968,9 +9991,42 @@ Write an engaging story segment. If this is a good point for player interaction,
           showModelsSection={false}
           showInstructionsSection={true}
          />
-       )}
+        )}
 
-       {/* Instruction Modal with Tabbed Navigation */}
+        {/* Settings Modal - Global Settings Only */}
+        {showSettingsModal && (
+          <SettingsModal
+            show={showSettingsModal}
+            onClose={() => setShowSettingsModal(false)}
+            globalSettings={globalSettings}
+            setGlobalSettings={setGlobalSettings}
+            globalInstructions={globalInstructions}
+            setGlobalInstructions={setGlobalInstructions}
+            providerConfigs={providerConfigs}
+            setProviderConfigs={setProviderConfigs}
+            activeProvider={activeProvider}
+            setActiveProvider={setActiveProvider}
+            connectionStatus={connectionStatus}
+            onTestConnection={handleTestConnection}
+            onConnect={handleConnectProvider}
+            providerModels={providerModels}
+            modelsFetching={modelsFetching}
+            onImportInstructions={handleImportInstructions}
+            onExportData={handleExportData}
+            onImportData={handleImportData}
+            autoExport={autoExport}
+            setAutoExport={setAutoExport}
+            createProfile={createProfile}
+            selectProfile={selectProfile}
+            deleteProfile={deleteProfile}
+            getActiveProfile={getActiveProfile}
+            initialTab="settings"
+            showModelsSection={false}
+            showInstructionsSection={false}
+          />
+        )}
+
+        {/* Instruction Modal with Tabbed Navigation */}
        {showInstructionModal && (
          <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
