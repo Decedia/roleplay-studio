@@ -121,23 +121,116 @@ export async function GET(request: NextRequest) {
       }
 
       case "google-vertex": {
+        const projectId = searchParams.get("projectId");
         const location = searchParams.get("location") || "global";
-        const vertexModels = [
-          { id: "gemini-3.1-flash-lite-preview", name: "Gemini 3.1 Flash-Lite Preview", context: 1048576, max_tokens: 65536, supportsThinking: false },
-          { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro Preview", context: 1048576, max_tokens: 65536, supportsThinking: true },
-          { id: "gemini-3-flash-preview", name: "Gemini 3 Flash Preview", context: 1048576, max_tokens: 65536, supportsThinking: true },
-          { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", context: 1048576, max_tokens: 65536, supportsThinking: true },
-          { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", context: 1048576, max_tokens: 65536, supportsThinking: true },
-          { id: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash-Lite", context: 1048576, max_tokens: 65536, supportsThinking: false },
-          { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", context: 1048576, max_tokens: 8192, supportsThinking: true },
-          { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", context: 2097152, max_tokens: 8192, supportsThinking: false },
-          { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash", context: 1048576, max_tokens: 8192, supportsThinking: false },
-        ];
+        const accessToken = searchParams.get("accessToken");
 
-        const models = vertexModels.map((model) => ({
-          ...model,
-          provider: "google-vertex",
-        }));
+        if (!projectId || !accessToken) {
+          // Fallback to static models if no credentials provided
+          const vertexModels = [
+            { id: "gemini-3.1-flash-lite-preview", name: "Gemini 3.1 Flash-Lite Preview", context: 1048576, max_tokens: 65536, supportsThinking: false },
+            { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro Preview", context: 1048576, max_tokens: 65536, supportsThinking: true },
+            { id: "gemini-3-flash-preview", name: "Gemini 3 Flash Preview", context: 1048576, max_tokens: 65536, supportsThinking: true },
+            { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", context: 1048576, max_tokens: 65536, supportsThinking: true },
+            { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", context: 1048576, max_tokens: 65536, supportsThinking: true },
+            { id: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash-Lite", context: 1048576, max_tokens: 65536, supportsThinking: false },
+            { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", context: 1048576, max_tokens: 8192, supportsThinking: true },
+            { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", context: 2097152, max_tokens: 8192, supportsThinking: false },
+            { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash", context: 1048576, max_tokens: 8192, supportsThinking: false },
+          ];
+
+          const models = vertexModels.map((model) => ({
+            ...model,
+            provider: "google-vertex",
+          }));
+
+          return NextResponse.json({ models, location });
+        }
+
+        const serviceEndpoint = location === "global"
+          ? "https://aiplatform.googleapis.com"
+          : `https://${location}-aiplatform.googleapis.com`;
+
+        const parent = `projects/${projectId}/locations/${location}`;
+        const response = await fetch(`${serviceEndpoint}/v1/${parent}/models`, {
+          method: "GET",
+          headers: {
+            "Accept": "application/json",
+            "Authorization": `Bearer ${accessToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          // Fallback to static models if API call fails
+          const vertexModels = [
+            { id: "gemini-3.1-flash-lite-preview", name: "Gemini 3.1 Flash-Lite Preview", context: 1048576, max_tokens: 65536, supportsThinking: false },
+            { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro Preview", context: 1048576, max_tokens: 65536, supportsThinking: true },
+            { id: "gemini-3-flash-preview", name: "Gemini 3 Flash Preview", context: 1048576, max_tokens: 65536, supportsThinking: true },
+            { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", context: 1048576, max_tokens: 65536, supportsThinking: true },
+            { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", context: 1048576, max_tokens: 65536, supportsThinking: true },
+            { id: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash-Lite", context: 1048576, max_tokens: 65536, supportsThinking: false },
+            { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", context: 1048576, max_tokens: 8192, supportsThinking: true },
+            { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", context: 2097152, max_tokens: 8192, supportsThinking: false },
+            { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash", context: 1048576, max_tokens: 8192, supportsThinking: false },
+          ];
+
+          const models = vertexModels.map((model) => ({
+            ...model,
+            provider: "google-vertex",
+          }));
+
+          return NextResponse.json({ models, location });
+        }
+
+        const data = await response.json();
+
+        // Known model capabilities (context window and max output tokens)
+        const modelCapabilities: Record<string, { context: number; max_tokens: number; supportsThinking?: boolean }> = {
+          "gemini-2.0-flash": { context: 1048576, max_tokens: 8192, supportsThinking: true },
+          "gemini-2.0-flash-lite": { context: 1048576, max_tokens: 8192, supportsThinking: false },
+          "gemini-2.0-pro-exp-02-05": { context: 1048576, max_tokens: 8192, supportsThinking: true },
+          "gemini-2.0-pro-exp": { context: 1048576, max_tokens: 8192, supportsThinking: true },
+          "gemini-1.5-pro": { context: 2097152, max_tokens: 8192, supportsThinking: false },
+          "gemini-1.5-flash": { context: 1048576, max_tokens: 8192, supportsThinking: false },
+          "gemini-1.5-pro-002": { context: 2097152, max_tokens: 8192, supportsThinking: false },
+          "gemini-1.5-flash-002": { context: 1048576, max_tokens: 8192, supportsThinking: false },
+          "gemini-1.5-flash-8b": { context: 1048576, max_tokens: 8192, supportsThinking: false },
+          "gemini-1.5-flash-8b-exp-0924": { context: 1048576, max_tokens: 8192, supportsThinking: false },
+          "gemini-exp-1206": { context: 1048576, max_tokens: 8192, supportsThinking: true },
+          "gemini-exp-1121": { context: 1048576, max_tokens: 8192, supportsThinking: true },
+          "gemini-exp-1114": { context: 1048576, max_tokens: 8192, supportsThinking: true },
+          "gemini-2.0-flash-exp": { context: 1048576, max_tokens: 8192, supportsThinking: true },
+          "gemini-2.0-flash-thinking-exp-1219": { context: 1048576, max_tokens: 8192, supportsThinking: true },
+          "gemini-2.0-flash-thinking-exp": { context: 1048576, max_tokens: 8192, supportsThinking: true },
+          "gemini-3-pro": { context: 1048576, max_tokens: 65536, supportsThinking: true },
+          "gemini-3-flash": { context: 1048576, max_tokens: 65536, supportsThinking: true },
+          "gemini-3-flash-lite": { context: 1048576, max_tokens: 65536, supportsThinking: false },
+          "gemini-3.1-flash-lite-preview": { context: 1048576, max_tokens: 65536, supportsThinking: false },
+          "gemini-3.1-pro-preview": { context: 1048576, max_tokens: 65536, supportsThinking: true },
+          "gemini-3-flash-preview": { context: 1048576, max_tokens: 65536, supportsThinking: true },
+          "gemini-2.5-pro": { context: 1048576, max_tokens: 65536, supportsThinking: true },
+          "gemini-2.5-flash": { context: 1048576, max_tokens: 65536, supportsThinking: true },
+          "gemini-2.5-flash-lite": { context: 1048576, max_tokens: 65536, supportsThinking: false },
+        };
+
+        // Transform Vertex AI models to our format
+        const models = (data.models || [])
+          .filter((model: { supportedGenerationMethods?: string[] }) =>
+            model.supportedGenerationMethods?.includes("generateContent")
+          )
+          .map((model: { name: string; displayName?: string }) => {
+            const modelId = model.name.replace(`projects/${projectId}/locations/${location}/models/`, "");
+            const capabilities = modelCapabilities[modelId] || { context: 128000, max_tokens: 8192, supportsThinking: false };
+            
+            return {
+              id: modelId,
+              provider: "google-vertex",
+              name: model.displayName || modelId,
+              context: capabilities.context,
+              max_tokens: capabilities.max_tokens,
+              supportsThinking: capabilities.supportsThinking,
+            };
+          });
 
         return NextResponse.json({ models, location });
       }
