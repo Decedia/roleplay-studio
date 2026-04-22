@@ -17,12 +17,13 @@ A chat application for roleplay conversations with multiple LLM provider support
   - Added KoboldAI Horde provider UI section with profile management and connection controls
   - KoboldAI Horde provides distributed AI text generation via crowdsourced GPUs
 - [x] **COMPLETED: Separated global settings from models modal and added dedicated settings access**
-  - Removed duplicate global settings controls (temperature, max tokens, top P, top K, enable thinking, enable streaming) from models modal
+  - Removed duplicate global settings controls (temperature, max tokens, top P, top K, enable thinking, enable streaming, ding when unfocused, thinking level/budget) from models modal
   - Created dedicated Settings modal that shows only global settings controls
   - Added Settings button to header dropdown menu for clean access to global settings
   - Models modal now focuses exclusively on model selection and provider configuration
   - Improved UX by clearly separating: Models (model selection + providers) vs Settings (global parameters) vs Instructions (prompt templates)
   - Eliminated user confusion from having settings scattered across different modals
+  - Fixed KoboldAI Horde profile creation by adding default selectedModel to prevent connection errors
 - [x] **COMPLETED: Implemented full "Inline with Message" instruction positioning system**
   - **UI/UX**: Added position selector and index input field for inline injection
   - **Backend**: Implemented `injectInlineInstructions()` function with proper indexing logic
