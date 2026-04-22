@@ -179,6 +179,7 @@ export interface ProviderProfile {
   serviceAccountJson?: string; // For Vertex AI
   vertexMode?: VertexMode; // For Vertex AI
   vertexLocation?: VertexLocation; // For Vertex AI
+  accessToken?: string; // For Vertex AI
   selectedModel?: string;
   createdAt: number;
 }

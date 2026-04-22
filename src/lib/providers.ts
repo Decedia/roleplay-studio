@@ -2010,6 +2010,17 @@ export const fetchModelsFromProvider = async (
         }
       }
 
+      case "google-vertex": {
+        try {
+          // Google Vertex AI currently uses static model list
+          // API integration requires OAuth2 credentials which are not implemented yet
+          return { models: getModelsForProvider("google-vertex") };
+        } catch (error) {
+          // Fall back to static models on any error
+          return { models: getModelsForProvider("google-vertex") };
+        }
+      }
+
       default:
         return { models: [], error: `Unknown provider: ${providerType}` };
     }
