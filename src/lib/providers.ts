@@ -1986,6 +1986,21 @@ export const fetchModelsFromProvider = async (
         return { models: data.models || [] };
       }
 
+      case "groq": {
+        if (!config.apiKey) {
+          return { models: [], error: "API key is required" };
+        }
+
+        const groqResponse = await fetch(`/api/models?provider=groq&apiKey=${encodeURIComponent(config.apiKey)}`);
+        const groqData = await groqResponse.json();
+
+        if (!groqResponse.ok) {
+          return { models: [], error: groqData.error || `HTTP ${groqResponse.status}` };
+        }
+
+        return { models: groqData.models || [] };
+      }
+
       case "kobold-horde": {
         try {
           // KoboldAI Horde doesn't require API key for model listing
@@ -2010,6 +2025,21 @@ export const fetchModelsFromProvider = async (
           // Fall back to static models if API fails
           return { models: getModelsForProvider("kobold-horde") };
         }
+      }
+
+      case "open-router": {
+        if (!config.apiKey) {
+          return { models: [], error: "API key is required" };
+        }
+
+        const openRouterResponse = await fetch(`/api/models?provider=open-router&apiKey=${encodeURIComponent(config.apiKey)}`);
+        const openRouterData = await openRouterResponse.json();
+
+        if (!openRouterResponse.ok) {
+          return { models: [], error: openRouterData.error || `HTTP ${openRouterResponse.status}` };
+        }
+
+        return { models: openRouterData.models || [] };
       }
 
       case "google-vertex": {

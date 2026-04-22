@@ -3275,7 +3275,7 @@ export default function Chat() {
     };
     
     // Fetch models for providers that support dynamic model fetching
-    if ((providerType === "google-ai-studio" || providerType === "google-vertex" || providerType === "open-router") && models.length === 0 && activeProfile?.apiKey) {
+    if ((providerType === "google-ai-studio" || providerType === "google-vertex" || providerType === "open-router" || providerType === "groq") && models.length === 0 && activeProfile?.apiKey) {
       setModelsFetching(prev => ({ ...prev, [providerType]: true }));
       const modelsResult = await fetchModelsFromProvider(providerType, profileConfig);
       setModelsFetching(prev => ({ ...prev, [providerType]: false }));
