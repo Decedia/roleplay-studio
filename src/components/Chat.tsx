@@ -1208,46 +1208,10 @@ function SettingsModal({
             <p className="text-xs text-zinc-500 mt-1">
               Maximum conversation history sent to AI • Model max: <span className="text-purple-400">{((selectedModel?.context || 128000)).toLocaleString()}</span> tokens
             </p>
-          </div>
+           </div>
 
-
-
-          {/* Enable Streaming */}
-          <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-2">
-              Enable Streaming
-            </label>
-            <Switch
-              checked={globalSettings.enableStreaming}
-              onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, enableStreaming: checked })}
-              className="data-[state=checked]:bg-blue-600"
-            />
-            <p className="text-xs text-zinc-500 mt-1">
-              Stream AI responses in real-time (disable for slower but more stable responses)
-            </p>
-          </div>
-
-          {/* Ding When Unfocused */}
-          <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-2">
-              Ding When Unfocused
-            </label>
-            <Switch
-              checked={globalSettings.dingWhenUnfocused}
-              onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, dingWhenUnfocused: checked })}
-              className="data-[state=checked]:bg-blue-600"
-            />
-            <p className="text-xs text-zinc-500 mt-1">
-              Play a notification sound when AI finishes and window is not focused
-            </p>
-          </div>
-
-          <p className="text-xs text-zinc-500 mt-3">
-            Configure your AI model, temperature, and other generation settings.
-          </p>
-
-          {/* Thinking Level/Budget - Only for Google providers */}
-          {(activeProvider === "google-ai-studio" || activeProvider === "google-vertex") && globalSettings.enableThinking && (
+           {/* Thinking Level/Budget - Only for Google providers */}
+           {(activeProvider === "google-ai-studio" || activeProvider === "google-vertex") && globalSettings.enableThinking && (
             <div>
               {/* Check if model is Gemini 2.5 */}
               {globalSettings.modelId?.startsWith("gemini-2.5") ? (
@@ -2082,7 +2046,8 @@ function SettingsModal({
                               if (name !== null) {
                                 createProfile("kobold-horde", {
                                   name: name.trim() || new Date().toLocaleString(),
-                                  apiKey: ""
+                                  apiKey: "",
+                                  selectedModel: "koboldcpp/Llama-3.1-8B-Stheno-v3.4"
                                 });
                               }
                             } else {
