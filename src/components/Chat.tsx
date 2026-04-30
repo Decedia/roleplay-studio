@@ -1358,13 +1358,12 @@ useEffect(() => {
                          </div>
                          <div className="flex gap-2">
                            <button
-                             type="button"
-                             onClick={() => handleConnectProvider("google-ai-studio")}
-                             disabled={!getActiveProfile("google-ai-studio")?.apiKey}
-                             className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                           >
-                             Connect
-                           </button>
+                              type="button"
+                              onClick={() => handleConnectProvider("google-ai-studio")}
+                              className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                            >
+                              Connect
+                            </button>
                          </div>
                        </>
                      )}
@@ -1592,18 +1591,12 @@ useEffect(() => {
                         </div>
                          <div className="flex gap-2">
                            <button
-                             type="button"
-                             onClick={() => handleConnectProvider("google-vertex")}
-                             disabled={
-                               !getActiveProfile("google-vertex")?.projectId ||
-                               (getActiveProfile("google-vertex")?.vertexMode === "full" 
-                                 ? !getActiveProfile("google-vertex")?.serviceAccountJson 
-                                 : !getActiveProfile("google-vertex")?.apiKey)
-                             }
-                             className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                           >
-                             Connect
-                           </button>
+                              type="button"
+                              onClick={() => handleConnectProvider("google-vertex")}
+                              className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                            >
+                              Connect
+                            </button>
                          </div>
                       </>
                     )}
@@ -1711,16 +1704,15 @@ useEffect(() => {
                             className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                           />
                         </div>
-                         <div className="flex gap-2">
-                           <button
-                             type="button"
-                             onClick={() => handleConnectProvider("nvidia-nim")}
-                             disabled={!getActiveProfile("nvidia-nim")?.apiKey}
-                             className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                           >
-                             Connect
-                           </button>
-                         </div>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleConnectProvider("nvidia-nim")}
+                              className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                            >
+                              Connect
+                            </button>
+                          </div>
                       </>
                     )}
                   </div>
@@ -1830,12 +1822,11 @@ useEffect(() => {
                           <div className="flex gap-2">
                             <button
                               type="button"
-                              onClick={() => handleConnectProvider("groq")}
-                              disabled={!getActiveProfile("groq")?.apiKey}
-                              className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              Connect
-                            </button>
+                               onClick={() => handleConnectProvider("groq")}
+                               className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                             >
+                               Connect
+                             </button>
                           </div>
                       </>
                     )}
@@ -1943,16 +1934,15 @@ useEffect(() => {
                             className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                           />
                         </div>
-                         <div className="flex gap-2">
-                           <button
-                             type="button"
-                             onClick={() => handleConnectProvider("groq")}
-                             disabled={!getActiveProfile("groq")?.apiKey}
-                             className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                           >
-                             Connect
-                           </button>
-                         </div>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleConnectProvider("open-router")}
+                              className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                            >
+                              Connect
+                            </button>
+                          </div>
                       </>
                     )}
                   </div>
@@ -2022,14 +2012,13 @@ useEffect(() => {
                     </p>
                   </div>
                     <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleConnectProvider("kobold-horde")}
-                        disabled={!providerConfigs["kobold-horde"]?.profiles?.[0]?.apiKey}
-                        className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Connect
-                      </button>
+                       <button
+                         type="button"
+                         onClick={() => handleConnectProvider("kobold-horde")}
+                         className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                       >
+                         Connect
+                       </button>
                     </div>
                 </div>
               </div>
