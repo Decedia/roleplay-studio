@@ -13,8 +13,8 @@ import {
   streamChatMessage,
   AVAILABLE_PROVIDERS,
   getModelsForProvider,
-  testProviderConnection,
   getDefaultModelForProvider,
+  testProviderConnection,
   TestConnectionResult,
   VertexMode,
   VertexLocation,
@@ -605,8 +605,7 @@ function SettingsModal({
   activeProvider,
   setActiveProvider,
   connectionStatus,
-  onTestConnection,
-  onConnect,
+  handleConnectProvider,
   providerModels,
   modelsFetching,
   onImportInstructions,
@@ -633,8 +632,7 @@ function SettingsModal({
   activeProvider: LLMProviderType;
   setActiveProvider: React.Dispatch<React.SetStateAction<LLMProviderType>>;
   connectionStatus: Record<LLMProviderType, ConnectionStatus>;
-  onTestConnection: (providerType: LLMProviderType) => void;
-  onConnect: (providerType: LLMProviderType) => void;
+  handleConnectProvider: (providerType: LLMProviderType) => void;
   providerModels: Record<LLMProviderType, FetchedModel[]>;
   modelsFetching: Record<LLMProviderType, boolean>;
   onImportInstructions: (file: File) => void;
@@ -677,15 +675,16 @@ function SettingsModal({
     }
   };
 
-  useEffect(() => {
-    if (showModelDropdown) {
-      document.addEventListener("mousedown", handleClickOutside);
-      setTimeout(() => modelSearchInputRef.current?.focus(), 50);
-    } else {
-      setModelSearchQuery("");
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showModelDropdown]);
+useEffect(() => {
+  if (showModelDropdown) {
+    document.addEventListener("mousedown", handleClickOutside);
+    setTimeout(() => modelSearchInputRef.current?.focus(), 50);
+  }
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside);
+    setModelSearchQuery("");
+  };
+}, [showModelDropdown]);
 
   const selectModel = (modelId: string) => {
     const model = activeProviderModels.find(m => m.id === modelId);
@@ -760,10 +759,10 @@ function SettingsModal({
               <div className="w-full bg-zinc-800 text-zinc-400 rounded-lg px-4 py-2 border border-zinc-700">
                 Loading models...
               </div>
-            ) : activeProviderModels.length === 0 ? (
-              <div className="w-full bg-zinc-800/50 text-zinc-400 rounded-lg px-4 py-2 border border-zinc-700">
-                Test connection to load models
-              </div>
+             ) : activeProviderModels.length === 0 ? (
+               <div className="w-full bg-zinc-800/50 text-zinc-400 rounded-lg px-4 py-2 border border-zinc-700">
+                 No models available. Connect to load models.
+               </div>
             ) : (
               <>
                 {/* Custom Dropdown */}
@@ -833,7 +832,7 @@ function SettingsModal({
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                                   </svg>
-                                  <span className="font-medium">Use custom model: "{modelSearchQuery.trim()}"</span>
+                                   <span className="font-medium">Use custom model: &quot;{modelSearchQuery.trim()}&quot;</span>
                                 </div>
                                 <div className="text-xs text-zinc-500 mt-0.5">
                                   Press Enter or click to use this model
@@ -909,9 +908,9 @@ function SettingsModal({
                               </>
                             )}
                             {filteredModels.length === 0 && !hasCustomMatch && modelSearchQuery && (
-                              <div className="px-4 py-3 text-center text-zinc-500 text-sm">
-                                No models found. Press Enter to use "{modelSearchQuery}" as custom model.
-                              </div>
+                               <div className="px-4 py-3 text-center text-zinc-500 text-sm">
+                                 No models found. Press Enter to use &quot;{modelSearchQuery}&quot; as custom model.
+                               </div>
                             )}
                           </>
                         );
@@ -1287,98 +1286,90 @@ function SettingsModal({
                     {connectionStatus["google-ai-studio"].message}
                   </p>
                 )}
-                {editingProvider === 'google-ai-studio' && (
-                  <div className="mt-3 space-y-3">
-                    {/* Profile Selection */}
-                    <div>
-                      <label className="block text-xs text-zinc-400 mb-1">Profile</label>
-                      <div className="flex gap-2">
-                        <select
-                          value={providerConfigs["google-ai-studio"]?.activeProfileId || ""}
-                          onChange={(e) => {
-                            if (e.target.value === "__new__") {
-                              const name = prompt("Enter profile name (or leave empty for date/time):");
-                              if (name !== null) {
-                                createProfile("google-ai-studio", {
-                                  name: name.trim() || new Date().toLocaleString(),
-                                  apiKey: ""
-                                });
-                              }
-                            } else {
-                              selectProfile("google-ai-studio", e.target.value);
-                            }
-                          }}
-                          className="flex-1 bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        >
-                          <option value="">Select a profile...</option>
-                          {providerConfigs["google-ai-studio"]?.profiles.map(profile => (
-                            <option key={profile.id} value={profile.id}>{profile.name}</option>
-                          ))}
-                          <option value="__new__">+ Add New Profile</option>
-                        </select>
-                        {providerConfigs["google-ai-studio"]?.activeProfileId && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (confirm("Delete this profile?")) {
-                                deleteProfile("google-ai-studio", providerConfigs["google-ai-studio"].activeProfileId!);
-                              }
-                            }}
-                            className="px-3 py-2 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* API Key - only show if profile is selected */}
-                    {providerConfigs["google-ai-studio"]?.activeProfileId && (
-                      <>
-                        <div>
-                          <label className="block text-xs text-zinc-400 mb-1">API Key</label>
-                          <input
-                            type="password"
-                            value={getActiveProfile("google-ai-studio")?.apiKey || ""}
-                            onChange={(e) => {
-                              const profileId = providerConfigs["google-ai-studio"].activeProfileId;
-                              if (!profileId) return;
-                              setProviderConfigs(prev => ({
-                                ...prev,
-                                "google-ai-studio": {
-                                  ...prev["google-ai-studio"],
-                                  profiles: prev["google-ai-studio"].profiles.map(p =>
-                                    p.id === profileId ? { ...p, apiKey: e.target.value } : p
-                                  )
-                                }
-                              }));
-                            }}
-                            placeholder="Enter your Google AI Studio API key"
-                            className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => onTestConnection("google-ai-studio")}
-                            disabled={connectionStatus["google-ai-studio"]?.status === "testing" || !getActiveProfile("google-ai-studio")?.apiKey}
-                            className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {connectionStatus["google-ai-studio"]?.status === "testing" ? "Testing..." : "Test Connection"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onConnect("google-ai-studio")}
-                            disabled={connectionStatus["google-ai-studio"]?.status !== "connected"}
-                            className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            Connect
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
+                 {editingProvider === 'google-ai-studio' && (
+                   <div className="mt-3 space-y-3">
+                     {/* Profile Selection */}
+                     <div>
+                       <label className="block text-xs text-zinc-400 mb-1">Profile</label>
+                       <div className="flex gap-2">
+                         <select
+                           value={providerConfigs["google-ai-studio"]?.activeProfileId || ""}
+                           onChange={(e) => {
+                             if (e.target.value === "__new__") {
+                               const name = prompt("Enter profile name (or leave empty for date/time):");
+                               if (name !== null) {
+                                 createProfile("google-ai-studio", {
+                                   name: name.trim() || new Date().toLocaleString(),
+                                   apiKey: ""
+                                 });
+                               }
+                             } else {
+                               selectProfile("google-ai-studio", e.target.value);
+                             }
+                           }}
+                           className="flex-1 bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                         >
+                           <option value="">Select a profile...</option>
+                           {providerConfigs["google-ai-studio"]?.profiles.map(profile => (
+                             <option key={profile.id} value={profile.id}>{profile.name}</option>
+                           ))}
+                           <option value="__new__">+ Add New Profile</option>
+                         </select>
+                         {providerConfigs["google-ai-studio"]?.activeProfileId && (
+                           <button
+                             type="button"
+                             onClick={() => {
+                               if (confirm("Delete this profile?")) {
+                                 deleteProfile("google-ai-studio", providerConfigs["google-ai-studio"].activeProfileId!);
+                               }
+                             }}
+                             className="px-3 py-2 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                           >
+                             Delete
+                           </button>
+                         )}
+                       </div>
+                     </div>
+                     
+                     {/* API Key - only show if profile is selected */}
+                     {providerConfigs["google-ai-studio"]?.activeProfileId && (
+                       <>
+                         <div>
+                           <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                           <input
+                             type="password"
+                             value={getActiveProfile("google-ai-studio")?.apiKey || ""}
+                             onChange={(e) => {
+                               const profileId = providerConfigs["google-ai-studio"].activeProfileId;
+                               if (!profileId) return;
+                               setProviderConfigs(prev => ({
+                                 ...prev,
+                                 "google-ai-studio": {
+                                   ...prev["google-ai-studio"],
+                                   profiles: prev["google-ai-studio"].profiles.map(p =>
+                                     p.id === profileId ? { ...p, apiKey: e.target.value } : p
+                                   )
+                                 }
+                               }));
+                             }}
+                             placeholder="Enter your Google AI Studio API key"
+                             className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                           />
+                         </div>
+                         <div className="flex gap-2">
+                           <button
+                             type="button"
+                             onClick={() => handleConnectProvider("google-ai-studio")}
+                             disabled={!getActiveProfile("google-ai-studio")?.apiKey}
+                             className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                           >
+                             Connect & Load Models
+                           </button>
+                         </div>
+                       </>
+                     )}
+                   </div>
+                 )}
               </div>
 
               {/* Google Vertex AI */}
@@ -1599,35 +1590,21 @@ function SettingsModal({
                             className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                           />
                         </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => onTestConnection("google-vertex")}
-                            disabled={
-                              connectionStatus["google-vertex"]?.status === "testing" ||
-                              !getActiveProfile("google-vertex")?.projectId ||
-                              (getActiveProfile("google-vertex")?.vertexMode === "full" 
-                                ? !getActiveProfile("google-vertex")?.serviceAccountJson 
-                                : !getActiveProfile("google-vertex")?.apiKey)
-                            }
-                            className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {connectionStatus["google-vertex"]?.status === "testing" ? "Testing..." : "Test Connection"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onConnect("google-vertex")}
-                            disabled={
-                              !getActiveProfile("google-vertex")?.projectId ||
-                              (getActiveProfile("google-vertex")?.vertexMode === "full" 
-                                ? !getActiveProfile("google-vertex")?.serviceAccountJson 
-                                : !getActiveProfile("google-vertex")?.apiKey)
-                            }
-                            className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            Connect
-                          </button>
-                        </div>
+                         <div className="flex gap-2">
+                           <button
+                             type="button"
+                             onClick={() => handleConnectProvider("google-vertex")}
+                             disabled={
+                               !getActiveProfile("google-vertex")?.projectId ||
+                               (getActiveProfile("google-vertex")?.vertexMode === "full" 
+                                 ? !getActiveProfile("google-vertex")?.serviceAccountJson 
+                                 : !getActiveProfile("google-vertex")?.apiKey)
+                             }
+                             className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                           >
+                             Connect & Load Models
+                           </button>
+                         </div>
                       </>
                     )}
                   </div>
@@ -1734,24 +1711,16 @@ function SettingsModal({
                             className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                           />
                         </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => onTestConnection("nvidia-nim")}
-                            disabled={connectionStatus["nvidia-nim"]?.status === "testing" || !getActiveProfile("nvidia-nim")?.apiKey}
-                            className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {connectionStatus["nvidia-nim"]?.status === "testing" ? "Testing..." : "Test Connection"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onConnect("nvidia-nim")}
-                            disabled={connectionStatus["nvidia-nim"]?.status !== "connected"}
-                            className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            Connect
-                          </button>
-                        </div>
+                         <div className="flex gap-2">
+                           <button
+                             type="button"
+                             onClick={() => handleConnectProvider("nvidia-nim")}
+                             disabled={!getActiveProfile("nvidia-nim")?.apiKey}
+                             className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                           >
+                             Connect & Load Models
+                           </button>
+                         </div>
                       </>
                     )}
                   </div>
@@ -1858,16 +1827,16 @@ function SettingsModal({
                             className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                           />
                         </div>
-                         <div className="flex gap-2">
-                           <button
-                             type="button"
-                             onClick={() => onConnect("groq")}
-                             disabled={connectionStatus["groq"]?.status === "testing" || !getActiveProfile("groq")?.apiKey}
-                             className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                           >
-                             {connectionStatus["groq"]?.status === "testing" ? "Testing..." : "Connect"}
-                           </button>
-                         </div>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleConnectProvider("groq")}
+                              disabled={!getActiveProfile("groq")?.apiKey}
+                              className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              Connect & Load Models
+                            </button>
+                          </div>
                       </>
                     )}
                   </div>
@@ -1974,16 +1943,16 @@ function SettingsModal({
                             className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                           />
                         </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => onConnect("open-router")}
-                            disabled={!getActiveProfile("open-router")?.apiKey || modelsFetching["open-router"]}
-                            className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {modelsFetching["open-router"] ? "Loading Models..." : "Connect & Load Models"}
-                          </button>
-                        </div>
+                         <div className="flex gap-2">
+                           <button
+                             type="button"
+                             onClick={() => handleConnectProvider("open-router")}
+                             disabled={!getActiveProfile("open-router")?.apiKey}
+                             className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                           >
+                             Connect & Load Models
+                           </button>
+                         </div>
                       </>
                     )}
                   </div>
@@ -2052,24 +2021,16 @@ function SettingsModal({
                       </a>
                     </p>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onTestConnection("kobold-horde")}
-                      disabled={connectionStatus["kobold-horde"]?.status === "testing" || !providerConfigs["kobold-horde"]?.profiles?.[0]?.apiKey}
-                      className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {connectionStatus["kobold-horde"]?.status === "testing" ? "Testing..." : "Test Connection"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onConnect("kobold-horde")}
-                      disabled={connectionStatus["kobold-horde"]?.status !== "connected"}
-                      className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Connect
-                    </button>
-                  </div>
+                   <div className="flex gap-2">
+                     <button
+                       type="button"
+                       onClick={() => handleConnectProvider("kobold-horde")}
+                       disabled={!providerConfigs["kobold-horde"]?.profiles?.[0]?.apiKey}
+                       className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                     >
+                       Connect & Load Models
+                     </button>
+                   </div>
                 </div>
               </div>
 
@@ -3143,80 +3104,7 @@ export default function Chat() {
   };
 
   // Provider connection functions
-  const handleTestConnection = async (providerType: LLMProviderType) => {
-    // Set testing status
-    setConnectionStatus(prev => ({
-      ...prev,
-      [providerType]: { status: "testing", message: "Testing connection..." }
-    }));
 
-    const config = providerConfigs[providerType];
-    const activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
-    
-    // Build config from active profile
-    const profileConfig = {
-      ...config,
-      apiKey: activeProfile?.apiKey || "",
-      projectId: activeProfile?.projectId || "",
-      serviceAccountJson: activeProfile?.serviceAccountJson,
-      vertexMode: activeProfile?.vertexMode,
-      vertexLocation: activeProfile?.vertexLocation,
-      selectedModel: activeProfile?.selectedModel
-    };
-    
-    const result = await testProviderConnection(providerType, profileConfig);
-
-    setConnectionStatus(prev => ({
-      ...prev,
-      [providerType]: {
-        status: result.success ? "connected" : "error",
-        message: result.message,
-        lastTested: Date.now()
-      }
-    }));
-
-    // If connection successful, fetch models from the provider
-    if (result.success) {
-      setModelsFetching(prev => ({ ...prev, [providerType]: true }));
-      const modelsResult = await fetchModelsFromProvider(providerType, profileConfig);
-      setModelsFetching(prev => ({ ...prev, [providerType]: false }));
-      
-      if (modelsResult.models.length > 0) {
-        setProviderModels(prev => ({
-          ...prev,
-          [providerType]: modelsResult.models
-        }));
-        
-        // Auto-select first model if no model is currently selected for this profile
-        if (!activeProfile?.selectedModel && modelsResult.models[0]) {
-          const firstModel = modelsResult.models[0];
-          
-          // Update the profile with the selected model
-          if (activeProfile) {
-            setProviderConfigs(prev => ({
-              ...prev,
-              [providerType]: {
-                ...prev[providerType],
-                profiles: prev[providerType].profiles.map(p =>
-                  p.id === activeProfile.id ? { ...p, selectedModel: firstModel.id } : p
-                )
-              }
-            }));
-          }
-          
-          // Also update global settings with the model's capabilities
-          const maxOutput = firstModel.max_tokens || 4000;
-          const maxContext = firstModel.context || 128000;
-          setGlobalSettings(prev => ({
-            ...prev,
-            modelId: firstModel.id,
-            maxTokens: maxOutput,
-            maxContextTokens: maxContext
-          }));
-        }
-      }
-    }
-  };
 
    const handleConnectProvider = async (providerType: LLMProviderType) => {
     // Set as active provider
@@ -9853,70 +9741,68 @@ Write an engaging story segment. If this is a good point for player interaction,
         </div>
       )}
 
-      {/* Models Modal */}
-      {showModelsModal && (
-        <SettingsModal
-          show={showModelsModal}
-          onClose={() => setShowModelsModal(false)}
-          globalSettings={globalSettings}
-          setGlobalSettings={setGlobalSettings}
-          globalInstructions={globalInstructions}
-          setGlobalInstructions={setGlobalInstructions}
-          providerConfigs={providerConfigs}
-          setProviderConfigs={setProviderConfigs}
-          activeProvider={activeProvider}
-          setActiveProvider={setActiveProvider}
-          connectionStatus={connectionStatus}
-          onTestConnection={handleTestConnection}
-          onConnect={handleConnectProvider}
-          providerModels={providerModels}
-          modelsFetching={modelsFetching}
-          onImportInstructions={handleImportInstructions}
-          onExportData={handleExportData}
-          onImportData={handleImportData}
-          autoExport={autoExport}
-          setAutoExport={setAutoExport}
-          createProfile={createProfile}
-          selectProfile={selectProfile}
-          deleteProfile={deleteProfile}
-          getActiveProfile={getActiveProfile}
-          initialTab="models"
-          showModelsSection={true}
-          showInstructionsSection={false}
-        />
-      )}
+       {/* Models Modal */}
+       {showModelsModal && (
+         <SettingsModal
+           show={showModelsModal}
+           onClose={() => setShowModelsModal(false)}
+           globalSettings={globalSettings}
+           setGlobalSettings={setGlobalSettings}
+           globalInstructions={globalInstructions}
+           setGlobalInstructions={setGlobalInstructions}
+           providerConfigs={providerConfigs}
+           setProviderConfigs={setProviderConfigs}
+           activeProvider={activeProvider}
+           setActiveProvider={setActiveProvider}
+           connectionStatus={connectionStatus}
+           handleConnectProvider={handleConnectProvider}
+           providerModels={providerModels}
+           modelsFetching={modelsFetching}
+           onImportInstructions={handleImportInstructions}
+           onExportData={handleExportData}
+           onImportData={handleImportData}
+           autoExport={autoExport}
+           setAutoExport={setAutoExport}
+           createProfile={createProfile}
+           selectProfile={selectProfile}
+           deleteProfile={deleteProfile}
+           getActiveProfile={getActiveProfile}
+           initialTab="models"
+           showModelsSection={true}
+           showInstructionsSection={false}
+         />
+       )}
 
       {/* Instructions Modal */}
       {showInstructionsModal && (
-        <SettingsModal
-          show={showInstructionsModal}
-          onClose={() => setShowInstructionsModal(false)}
-          globalSettings={globalSettings}
-          setGlobalSettings={setGlobalSettings}
-          globalInstructions={globalInstructions}
-          setGlobalInstructions={setGlobalInstructions}
-          providerConfigs={providerConfigs}
-          setProviderConfigs={setProviderConfigs}
-          activeProvider={activeProvider}
-          setActiveProvider={setActiveProvider}
-          connectionStatus={connectionStatus}
-          onTestConnection={handleTestConnection}
-          onConnect={handleConnectProvider}
-          providerModels={providerModels}
-          modelsFetching={modelsFetching}
-          onImportInstructions={handleImportInstructions}
-          onExportData={handleExportData}
-          onImportData={handleImportData}
-          autoExport={autoExport}
-          setAutoExport={setAutoExport}
-          createProfile={createProfile}
-          selectProfile={selectProfile}
-          deleteProfile={deleteProfile}
-          getActiveProfile={getActiveProfile}
-          initialTab="instructions"
-          showModelsSection={false}
-          showInstructionsSection={true}
-         />
+         <SettingsModal
+           show={showInstructionsModal}
+           onClose={() => setShowInstructionsModal(false)}
+           globalSettings={globalSettings}
+           setGlobalSettings={setGlobalSettings}
+           globalInstructions={globalInstructions}
+           setGlobalInstructions={setGlobalInstructions}
+           providerConfigs={providerConfigs}
+           setProviderConfigs={setProviderConfigs}
+           activeProvider={activeProvider}
+           setActiveProvider={setActiveProvider}
+           connectionStatus={connectionStatus}
+           handleConnectProvider={handleConnectProvider}
+           providerModels={providerModels}
+           modelsFetching={modelsFetching}
+           onImportInstructions={handleImportInstructions}
+           onExportData={handleExportData}
+           onImportData={handleImportData}
+           autoExport={autoExport}
+           setAutoExport={setAutoExport}
+           createProfile={createProfile}
+           selectProfile={selectProfile}
+           deleteProfile={deleteProfile}
+           getActiveProfile={getActiveProfile}
+           initialTab="instructions"
+           showModelsSection={false}
+           showInstructionsSection={true}
+          />
         )}
 
 
