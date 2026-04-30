@@ -23,6 +23,12 @@ A chat application for roleplay conversations with multiple LLM provider support
   - Updated UI to show "Connect & Load Models" buttons that directly fetch models
   - Simplified provider configuration UI by removing redundant testing states and connection status indicators
   - Improved user experience by making connection immediate and model fetching automatic
+- [x] **COMPLETED: Removed test connection system entirely**
+  - Eliminated all connection testing logic from the connection process
+  - Connect button now immediately fetches models from provider APIs without any preliminary testing
+  - Removed all "testing" status indicators and related UI elements
+  - Simplified the connection flow to be: user clicks connect → models are fetched → UI updates with results
+  - Improved responsiveness by removing unnecessary connection testing step
 - [x] **COMPLETED: Separated global settings from models modal and added dedicated settings access**
   - Removed duplicate global settings controls (temperature, max tokens, top P, top K, enable thinking, enable streaming, ding when unfocused, thinking level/budget) from models modal
   - Created dedicated Settings modal that shows only global settings controls
