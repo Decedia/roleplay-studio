@@ -3106,134 +3106,119 @@ export default function Chat() {
   // Provider connection functions
 
 
-   const handleConnectProvider = async (providerType: LLMProviderType) => {
-    // Set as active provider
-    setActiveProvider(providerType);
-    
-    // Get the active profile for this provider
-    const config = providerConfigs[providerType];
-    const activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
-    
-    // Build profile config for API calls
-    const profileConfig = {
-      ...config,
-      apiKey: activeProfile?.apiKey || "",
-      projectId: activeProfile?.projectId || "",
-      serviceAccountJson: activeProfile?.serviceAccountJson,
-      vertexMode: activeProfile?.vertexMode,
-      vertexLocation: activeProfile?.vertexLocation,
-      selectedModel: activeProfile?.selectedModel
-    };
-    
-    // Test connection status first
-    setConnectionStatus(prev => ({
-      ...prev,
-      [providerType]: {
-        status: "testing",
-        message: "Testing connection..."
-      }
-    }));
-
-    try {
-      // Test connection
-      const testResult = await testProviderConnection(providerType, profileConfig);
-      
-      if (testResult.success) {
-        // Mark as connected
-        setConnectionStatus(prev => ({
-          ...prev,
-          [providerType]: {
-            status: "connected",
-            message: "Connected"
-          }
-        }));
-      } else {
-        // Mark connection failed
-        setConnectionStatus(prev => ({
-          ...prev,
-          [providerType]: {
-            status: "error",
-            message: testResult.message
-          }
-        }));
-        return;
-      }
-    } catch (error) {
-      setConnectionStatus(prev => ({
-        ...prev,
-        [providerType]: {
-          status: "error",
-          message: error instanceof Error ? error.message : "Connection failed"
-        }
-      }));
-      return;
-    }
-    
-    // Find the model in providerModels to get context and max_tokens
-    const models = providerModels[providerType] || [];
-    const selectedModelId = activeProfile?.selectedModel;
-    const selectedModel = models.find(m => m.id === selectedModelId);
-    
-    // Update global settings with the provider's selected model and its capabilities
-    if (selectedModelId) {
-      const maxOutput = selectedModel?.max_tokens || 4000;
-      const maxContext = selectedModel?.context || 128000;
-      
-      setGlobalSettings(prev => ({
-        ...prev,
-        modelId: selectedModelId,
-        maxTokens: maxOutput,
-        maxContextTokens: maxContext
-      }));
-    }
-    
-    // Fetch models for providers that support dynamic model fetching
-    if ((providerType === "google-ai-studio" || providerType === "google-vertex" || providerType === "open-router" || providerType === "groq") && models.length === 0 && activeProfile?.apiKey) {
-      setModelsFetching(prev => ({ ...prev, [providerType]: true }));
-      const modelsResult = await fetchModelsFromProvider(providerType, profileConfig);
-      setModelsFetching(prev => ({ ...prev, [providerType]: false }));
-      
-      if (modelsResult.models.length > 0) {
-        // Sort models: free first, then paid
-        const sortedModels = [...modelsResult.models].sort((a, b) => {
-          const aFree = a.id.toLowerCase().includes('free') || a.id.toLowerCase().includes('free:');
-          const bFree = b.id.toLowerCase().includes('free') || b.id.toLowerCase().includes('free:');
-          if (aFree && !bFree) return -1;
-          if (!aFree && bFree) return 1;
-          return 0;
-        });
-        
-        setProviderModels(prev => ({
-          ...prev,
-          [providerType]: sortedModels
-        }));
-        
-        // Auto-select first model if no model is currently selected for this profile
-        if (!activeProfile?.selectedModel && sortedModels[0]) {
-          const firstModel = sortedModels[0];
-          setProviderConfigs(prev => ({
-            ...prev,
-            [providerType]: {
-              ...prev[providerType],
-              profiles: prev[providerType].profiles.map(p =>
-                p.id === activeProfile.id ? { ...p, selectedModel: firstModel.id } : p
-              )
-            }
-          }));
-          
-          // Also update global settings with the model's capabilities
-          const maxOutput = firstModel.max_tokens || 4000;
-          const maxContext = firstModel.context || 128000;
-          setGlobalSettings(prev => ({
-            ...prev,
-            modelId: firstModel.id,
-            maxTokens: maxOutput,
-            maxContextTokens: maxContext
-          }));
-        }
-      }
-    }
-  };
+    const handleConnectProvider = async (providerType: LLMProviderType) => {
+     // Set as active provider
+     setActiveProvider(providerType);
+     
+     // Get the active profile for this provider
+     const config = providerConfigs[providerType];
+     const activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
+     
+     // Build profile config for API calls
+     const profileConfig = {
+       ...config,
+       apiKey: activeProfile?.apiKey || "",
+       projectId: activeProfile?.projectId || "",
+       serviceAccountJson: activeProfile?.serviceAccountJson,
+       vertexMode: activeProfile?.vertexMode,
+       vertexLocation: activeProfile?.vertexLocation,
+       selectedModel: activeProfile?.selectedModel
+     };
+     
+     // Set connecting status
+     setConnectionStatus(prev => ({
+       ...prev,
+       [providerType]: {
+         status: "testing",
+         message: "Connecting..."
+       }
+     }));
+     
+     try {
+       // Find the model in providerModels to get context and max_tokens
+       const models = providerModels[providerType] || [];
+       const selectedModelId = activeProfile?.selectedModel;
+       const selectedModel = models.find(m => m.id === selectedModelId);
+       
+       // Update global settings with the provider's selected model and its capabilities
+       if (selectedModelId) {
+         const maxOutput = selectedModel?.max_tokens || 4000;
+         const maxContext = selectedModel?.context || 128000;
+         
+         setGlobalSettings(prev => ({
+           ...prev,
+           modelId: selectedModelId,
+           maxTokens: maxOutput,
+           maxContextTokens: maxContext
+         }));
+       }
+       
+       // Fetch models for providers that support dynamic model fetching
+       if ((providerType === "google-ai-studio" || providerType === "google-vertex" || providerType === "open-router" || providerType === "groq") && models.length === 0 && activeProfile?.apiKey) {
+         setModelsFetching(prev => ({ ...prev, [providerType]: true }));
+         const modelsResult = await fetchModelsFromProvider(providerType, profileConfig);
+         setModelsFetching(prev => ({ ...prev, [providerType]: false }));
+         
+         if (modelsResult.models.length > 0) {
+           // Sort models: free first, then paid
+           const sortedModels = [...modelsResult.models].sort((a, b) => {
+             const aFree = a.id.toLowerCase().includes('free') || a.id.toLowerCase().includes('free:');
+             const bFree = b.id.toLowerCase().includes('free') || b.id.toLowerCase().includes('free:');
+             if (aFree && !bFree) return -1;
+             if (!aFree && bFree) return 1;
+             return 0;
+           });
+           
+           setProviderModels(prev => ({
+             ...prev,
+             [providerType]: sortedModels
+           }));
+           
+           // Auto-select first model if no model is currently selected for this profile
+           if (!activeProfile?.selectedModel && sortedModels[0]) {
+             const firstModel = sortedModels[0];
+             setProviderConfigs(prev => ({
+               ...prev,
+               [providerType]: {
+                 ...prev[providerType],
+                 profiles: prev[providerType].profiles.map(p =>
+                   p.id === activeProfile.id ? { ...p, selectedModel: firstModel.id } : p
+                 )
+               }
+             }));
+             
+             // Also update global settings with the model's capabilities
+             const maxOutput = firstModel.max_tokens || 4000;
+             const maxContext = firstModel.context || 128000;
+             setGlobalSettings(prev => ({
+               ...prev,
+               modelId: firstModel.id,
+               maxTokens: maxOutput,
+               maxContextTokens: maxContext
+             }));
+           }
+         }
+       }
+       
+       // Mark as connected
+       setConnectionStatus(prev => ({
+         ...prev,
+         [providerType]: {
+           status: "connected",
+           message: "Connected"
+         }
+       }));
+     } catch (error) {
+       setConnectionStatus(prev => ({
+         ...prev,
+         [providerType]: {
+           status: "error",
+           message: error instanceof Error ? error.message : "Connection failed"
+         }
+       }));
+       return;
+     }
+   };
 
   const handleDisconnectProvider = (providerType: LLMProviderType) => {
     // Reset connection status for this provider
