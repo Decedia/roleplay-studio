@@ -1363,7 +1363,7 @@ useEffect(() => {
                              disabled={!getActiveProfile("google-ai-studio")?.apiKey}
                              className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                            >
-                             Connect & Load Models
+                             Connect
                            </button>
                          </div>
                        </>
@@ -1602,7 +1602,7 @@ useEffect(() => {
                              }
                              className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                            >
-                             Connect & Load Models
+                             Connect
                            </button>
                          </div>
                       </>
@@ -1718,7 +1718,7 @@ useEffect(() => {
                              disabled={!getActiveProfile("nvidia-nim")?.apiKey}
                              className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                            >
-                             Connect & Load Models
+                             Connect
                            </button>
                          </div>
                       </>
@@ -1834,7 +1834,7 @@ useEffect(() => {
                               disabled={!getActiveProfile("groq")?.apiKey}
                               className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              Connect & Load Models
+                              Connect
                             </button>
                           </div>
                       </>
@@ -1946,11 +1946,11 @@ useEffect(() => {
                          <div className="flex gap-2">
                            <button
                              type="button"
-                             onClick={() => handleConnectProvider("open-router")}
-                             disabled={!getActiveProfile("open-router")?.apiKey}
+                             onClick={() => handleConnectProvider("groq")}
+                             disabled={!getActiveProfile("groq")?.apiKey}
                              className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                            >
-                             Connect & Load Models
+                             Connect
                            </button>
                          </div>
                       </>
@@ -2021,16 +2021,16 @@ useEffect(() => {
                       </a>
                     </p>
                   </div>
-                   <div className="flex gap-2">
-                     <button
-                       type="button"
-                       onClick={() => handleConnectProvider("kobold-horde")}
-                       disabled={!providerConfigs["kobold-horde"]?.profiles?.[0]?.apiKey}
-                       className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                     >
-                       Connect & Load Models
-                     </button>
-                   </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleConnectProvider("kobold-horde")}
+                        disabled={!providerConfigs["kobold-horde"]?.profiles?.[0]?.apiKey}
+                        className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Connect
+                      </button>
+                    </div>
                 </div>
               </div>
 
@@ -3153,8 +3153,8 @@ export default function Chat() {
          }));
        }
        
-       // Fetch models for providers that support dynamic model fetching
-       if ((providerType === "google-ai-studio" || providerType === "google-vertex" || providerType === "open-router" || providerType === "groq") && models.length === 0 && activeProfile?.apiKey) {
+        // Fetch models for providers that support dynamic model fetching
+        if ((providerType === "google-ai-studio" || providerType === "google-vertex" || providerType === "open-router" || providerType === "groq" || providerType === "nvidia-nim") && models.length === 0 && activeProfile?.apiKey) {
          setModelsFetching(prev => ({ ...prev, [providerType]: true }));
          const modelsResult = await fetchModelsFromProvider(providerType, profileConfig);
          setModelsFetching(prev => ({ ...prev, [providerType]: false }));

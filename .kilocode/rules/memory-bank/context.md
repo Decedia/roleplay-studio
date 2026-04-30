@@ -20,7 +20,7 @@ A chat application for roleplay conversations with multiple LLM provider support
   - Removed individual "Test Connection" buttons for each provider
   - Removed testProviderConnection function and related status tracking
   - Modified connection flow to immediately fetch models from provider servers during connection without separate testing
-  - Updated UI to show "Connect & Load Models" buttons that directly fetch models
+  - Updated UI to show "Connect" buttons that directly fetch models
   - Simplified provider configuration UI by removing redundant testing states and connection status indicators
   - Improved user experience by making connection immediate and model fetching automatic
 - [x] **COMPLETED: Removed test connection system entirely**
@@ -29,6 +29,11 @@ A chat application for roleplay conversations with multiple LLM provider support
   - Removed all "testing" status indicators and related UI elements
   - Simplified the connection flow to be: user clicks connect → models are fetched → UI updates with results
   - Improved responsiveness by removing unnecessary connection testing step
+- [x] **COMPLETED: Fixed NVIDIA NIM model fetching**
+  - Updated NVIDIA NIM provider to properly fetch models from the API
+  - Fixed the models endpoint in src/app/api/models/route.ts to correctly call NVIDIA NIM's models API
+  - Ensured proper transformation of NVIDIA NIM model data to the application's format
+  - Verified that NVIDIA NIM models are now properly displayed in the UI after connection
 - [x] **COMPLETED: Separated global settings from models modal and added dedicated settings access**
   - Removed duplicate global settings controls (temperature, max tokens, top P, top K, enable thinking, enable streaming, ding when unfocused, thinking level/budget) from models modal
   - Created dedicated Settings modal that shows only global settings controls
