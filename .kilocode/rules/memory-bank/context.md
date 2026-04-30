@@ -1,10 +1,10 @@
 # Active Context: Roleplay Studio
 
 ## Current State
-
+ 
 **Application Status**: ✅ Ready for use
-
-A chat application for roleplay conversations with multiple LLM provider support. Features a modern black theme with dual persona/character system, SillyTavern character import, and advanced instruction handling.
+ 
+A chat application for roleplay conversations with multiple LLM provider support. Features a modern black theme with dual persona/character system, SillyTavern character import, and advanced instruction handling. Recent changes removed individual test connection buttons and simplified the connection process to fetch models directly during provider connection.
 
 ## Recently Completed
 
@@ -16,6 +16,13 @@ A chat application for roleplay conversations with multiple LLM provider support
   - Updated Chat.tsx state to include kobold-horde provider
   - Added KoboldAI Horde provider UI section with profile management and connection controls
   - KoboldAI Horde provides distributed AI text generation via crowdsourced GPUs
+- [x] **COMPLETED: Removed test connection buttons and system**
+  - Removed individual "Test Connection" buttons for each provider
+  - Removed testProviderConnection function and related status tracking
+  - Modified connection flow to fetch models directly from provider servers during connection
+  - Updated UI to show "Connect & Load Models" buttons that test connection and fetch models in one step
+  - Simplified provider configuration UI by removing redundant testing states
+  - Improved user experience by combining connection testing and model fetching
 - [x] **COMPLETED: Separated global settings from models modal and added dedicated settings access**
   - Removed duplicate global settings controls (temperature, max tokens, top P, top K, enable thinking, enable streaming, ding when unfocused, thinking level/budget) from models modal
   - Created dedicated Settings modal that shows only global settings controls
