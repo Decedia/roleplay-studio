@@ -1449,191 +1449,188 @@ export const streamWithVertexAI = async (
 
 // KoboldAI Horde chat implementation - uses server-side proxy to avoid CORS
 export const chatWithKoboldHorde: ChatFunction = async (
-  messages,
-  config,
-  options
-) => {
-  if (!config.apiKey) {
-    return { error: "KoboldAI Horde API key is required" };
-  }
+   messages,
+   config,
+   options
+ ) => {
+   if (!config.apiKey) {
+     return { error: "KoboldAI Horde API key is required" };
+   }
 
-  try {
-    // Combine all messages into a single prompt for KoboldAI Horde
-    const systemMessages = messages.filter(m => m.role === "system");
-    const nonSystemMessages = messages.filter(m => m.role !== "system");
+   try {
+     // Combine all messages into a single prompt for KoboldAI Horde
+     const systemMessages = messages.filter(m => m.role === "system");
+     const nonSystemMessages = messages.filter(m => m.role !== "system");
 
-    let prompt = "";
+     let prompt = "";
 
-    // Add system prompt if provided
-    const systemContent = systemMessages.map(m => m.content).join("\n\n");
-    if (systemContent || options.systemPrompt) {
-      prompt += (systemContent || options.systemPrompt) + "\n\n";
-    }
+     // Add system prompt if provided
+     const systemContent = systemMessages.map(m => m.content).join("\n\n");
+     if (systemContent || options.systemPrompt) {
+       prompt += (systemContent || options.systemPrompt) + "\n\n";
+     }
 
-    // Add conversation history
-    for (const message of nonSystemMessages) {
-      if (message.role === "user") {
-        prompt += `User: ${message.content}\n\n`;
-      } else if (message.role === "assistant") {
-        prompt += `Assistant: ${message.content}\n\n`;
-      }
-    }
+     // Add conversation history
+     for (const message of nonSystemMessages) {
+       if (message.role === "user") {
+         prompt += `User: ${message.content}\n\n`;
+       } else if (message.role === "assistant") {
+         prompt += `Assistant: ${message.content}\n\n`;
+       }
+     }
 
-    // Add final assistant prompt
-    prompt += "Assistant: ";
+     // Add final assistant prompt
+     prompt += "Assistant: ";
 
-    const response = await fetch("/api/kobold-horde", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-       body: JSON.stringify({
-         apiKey: config.apiKey,
-         model: config.selectedModel,
-         prompt,
-         params: {
-           temperature: options.temperature,
-           top_p: options.topP,
-           top_k: options.topK,
-           max_length: options.maxTokens,
-           max_context_length: 8192,
-         },
-         signal: options.abortController?.signal,
-       }),
-    });
+     const response = await fetch("https://aihorde.net/api/v2/generate/text", {
+       method: "POST",
+       headers: {
+         "Content-Type": "application/json",
+         "apikey": config.apiKey,
+       },
+        body: JSON.stringify({
+          prompt,
+          params: {
+            temperature: options.temperature,
+            top_p: options.topP,
+            top_k: options.topK,
+            max_length: options.maxTokens,
+          },
+          models: [config.selectedModel || "koboldcpp/Llama-3.1-8B-Stheno-v3.4"],
+          n: 1,
+          post_processing: [],
+        }),
+     });
 
-    const data = await response.json();
+     const data = await response.json();
 
-    if (!response.ok) {
-      return {
-        error: data.error || `HTTP ${response.status}`,
-      };
-    }
+     if (!response.ok) {
+       return {
+         error: data.error || `HTTP ${response.status}`,
+       };
+     }
 
-    return { content: data.content };
-  } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : "Unknown error occurred",
-    };
-  }
-};
+     return { content: data.generations[0].text };
+   } catch (error) {
+     return {
+       error: error instanceof Error ? error.message : "Unknown error occurred",
+     };
+   }
+ };
 
-// KoboldAI Horde streaming implementation - uses server-side proxy to avoid CORS
+// KoboldAI Horde streaming implementation - uses direct API to avoid CORS
 export const streamWithKoboldHorde = async (
-  messages: Message[],
-  config: ProviderConfig,
-  options: {
-    temperature: number;
-    maxTokens: number;
-    topP: number;
-    topK: number;
-    systemPrompt?: string;
-    enableThinking?: boolean;
-    thinkingLevel?: ThinkingLevel;
-    thinkingBudget?: ThinkingBudget;
-    abortController?: AbortController;
-  },
-  onChunk: StreamCallback
-) => {
-  if (!config.apiKey) {
-    onChunk({ error: "KoboldAI Horde API key is required" });
-    return;
-  }
+   messages: Message[],
+   config: ProviderConfig,
+   options: {
+     temperature: number;
+     maxTokens: number;
+     topP: number;
+     topK: number;
+     systemPrompt?: string;
+     enableThinking?: boolean;
+     thinkingLevel?: ThinkingLevel;
+     thinkingBudget?: ThinkingBudget;
+     abortController?: AbortController;
+   },
+   onChunk: StreamCallback
+ ) => {
+   if (!config.apiKey) {
+     onChunk({ error: "KoboldAI Horde API key is required" });
+     return;
+   }
 
-  try {
-    // Combine all messages into a single prompt for KoboldAI Horde
-    const systemMessages = messages.filter(m => m.role === "system");
-    const nonSystemMessages = messages.filter(m => m.role !== "system");
+   try {
+     // Combine all messages into a single prompt for KoboldAI Horde
+     const systemMessages = messages.filter(m => m.role === "system");
+     const nonSystemMessages = messages.filter(m => m.role !== "system");
 
-    let prompt = "";
+     let prompt = "";
 
-    // Add system prompt if provided
-    const systemContent = systemMessages.map(m => m.content).join("\n\n");
-    if (systemContent || options.systemPrompt) {
-      prompt += (systemContent || options.systemPrompt) + "\n\n";
-    }
+     // Add system prompt if provided
+     const systemContent = systemMessages.map(m => m.content).join("\n\n");
+     if (systemContent || options.systemPrompt) {
+       prompt += (systemContent || options.systemPrompt) + "\n\n";
+     }
 
-    // Add conversation history
-    for (const message of nonSystemMessages) {
-      if (message.role === "user") {
-        prompt += `User: ${message.content}\n\n`;
-      } else if (message.role === "assistant") {
-        prompt += `Assistant: ${message.content}\n\n`;
-      }
-    }
+     // Add conversation history
+     for (const message of nonSystemMessages) {
+       if (message.role === "user") {
+         prompt += `User: ${message.content}\n\n`;
+       } else if (message.role === "assistant") {
+         prompt += `Assistant: ${message.content}\n\n`;
+       }
+     }
 
-    // Add final assistant prompt
-    prompt += "Assistant: ";
+     // Add final assistant prompt
+     prompt += "Assistant: ";
 
-    const response = await fetch("/api/kobold-horde", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-       body: JSON.stringify({
-         apiKey: config.apiKey,
-         model: config.selectedModel,
-         prompt,
-         params: {
-           temperature: options.temperature,
-           top_p: options.topP,
-           top_k: options.topK,
-           max_length: options.maxTokens,
-           max_context_length: 8192,
-         },
-         stream: true,
-         signal: options.abortController?.signal,
-       }),
-    });
+     const response = await fetch("https://aihorde.net/api/v2/generate/text/stream", {
+       method: "POST",
+       headers: {
+         "Content-Type": "application/json",
+         "apikey": config.apiKey,
+       },
+        body: JSON.stringify({
+          prompt,
+          params: {
+            temperature: options.temperature,
+            top_p: options.topP,
+            top_k: options.topK,
+            max_length: options.maxTokens,
+          },
+          models: [config.selectedModel || "koboldcpp/Llama-3.1-8B-Stheno-v3.4"],
+          n: 1,
+          post_processing: [],
+        }),
+     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      onChunk({ error: errorData.error || `HTTP ${response.status}` });
-      return;
-    }
+     if (!response.ok) {
+       const errorData = await response.json();
+       onChunk({ error: errorData.error || `HTTP ${response.status}` });
+       return;
+     }
 
-    const reader = response.body?.getReader();
-    if (!reader) {
-      onChunk({ error: "Failed to get response stream" });
-      return;
-    }
+     const reader = response.body?.getReader();
+     if (!reader) {
+       onChunk({ error: "Failed to get response stream" });
+       return;
+     }
 
-    const decoder = new TextDecoder();
-    let buffer = "";
+     const decoder = new TextDecoder();
+     let buffer = "";
 
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+     try {
+       while (true) {
+         const { done, value } = await reader.read();
+         if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
+         buffer += decoder.decode(value, { stream: true });
+         const lines = buffer.split("\n");
+         buffer = lines.pop() || "";
 
-        for (const line of lines) {
-          if (line.trim()) {
-            try {
-              const data = JSON.parse(line);
-              if (data.content) {
-                onChunk({ content: data.content });
-              }
-              if (data.done) {
-                onChunk({ done: true });
-                return;
-              }
-            } catch {
-              // Skip invalid JSON
-            }
-          }
-        }
-      }
-    } catch (error) {
-      onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
-    }
-  } catch (error) {
-    onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
-  }
-};
+         for (const line of lines) {
+           if (line.trim()) {
+             try {
+               const data = JSON.parse(line);
+               if (data.text) {
+                 onChunk({ content: data.text });
+               }
+             } catch (e) {
+               // Ignore parsing errors
+             }
+           }
+         }
+       }
+     } catch (error) {
+       onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
+     } finally {
+       reader.releaseLock();
+     }
+   } catch (error) {
+     onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
+   }
+ };
 
 // Main chat function that routes to the correct provider
 export const sendChatMessage = async (
@@ -1893,38 +1890,38 @@ export const testProviderConnection = async (
       }
     }
 
-    case "kobold-horde": {
-      if (!config.apiKey) {
-        return { success: false, message: "API key is required." };
-      }
-      try {
-        // Test with a minimal text generation request using server-side proxy
-        const response = await fetch("/api/kobold-horde", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            apiKey: config.apiKey,
-            model: config.selectedModel || "koboldcpp/Llama-3.1-8B-Stheno-v3.4",
-            prompt: "Hello",
-            params: {
-              temperature: 0.1,
-              max_length: 10,
-            },
-          }),
-        });
+case "kobold-horde": {
+       if (!config.apiKey) {
+         return { success: false, message: "API key is required." };
+       }
+       try {
+         // Test with a minimal text generation request using direct API to avoid CORS
+         const response = await fetch("https://aihorde.net/api/v2/generate/text", {
+           method: "POST",
+           headers: {
+             "Content-Type": "application/json",
+             "apikey": config.apiKey,
+           },
+           body: JSON.stringify({
+             prompt: "Hello",
+             params: {
+               temperature: 0.1,
+               max_length: 10,
+             },
+             models: [config.selectedModel || "koboldcpp/Llama-3.1-8B-Stheno-v3.4"],
+           }),
+         });
 
-        if (response.ok) {
-          return { success: true, message: "KoboldAI Horde connection successful!" };
-        }
+         if (response.ok) {
+           return { success: true, message: "KoboldAI Horde connection successful!" };
+         }
 
-        const errorData = await response.json().catch(() => ({}));
-        return { success: false, message: errorData.error || `HTTP ${response.status}` };
-      } catch (error) {
-        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
-      }
-    }
+         const errorData = await response.json();
+         return { success: false, message: errorData.error || `HTTP ${response.status}` };
+       } catch (error) {
+         return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
+       }
+     }
 
     default:
       return { success: false, message: `Unknown provider: ${providerType}` };
@@ -2001,31 +1998,34 @@ export const fetchModelsFromProvider = async (
         return { models: groqData.models || [] };
       }
 
-      case "kobold-horde": {
-        try {
-          // KoboldAI Horde doesn't require API key for model listing
-          const response = await fetch("https://aihorde.net/api/v2/status/models?type=text");
-          const data = await response.json();
+case "kobold-horde": {
+         try {
+           // KoboldAI Horde doesn't require API key for model listing
+           const response = await fetch("https://aihorde.net/api/v2/status/models?type=text");
+           const data = await response.json();
 
-          if (!response.ok) {
-            return { models: [], error: `HTTP ${response.status}` };
-          }
+           if (!response.ok) {
+             return { models: [], error: `HTTP ${response.status}` };
+           }
 
-          // Transform Horde models to our format
-          const models: FetchedModel[] = data.map((model: any) => ({
-            id: model.name,
-            name: model.name,
-            contextWindow: 4096, // Default, could be improved with model-specific data
-            maxTokens: 512, // Default
-            supportsThinking: false,
-          }));
+           // Transform Horde models to our format
+           // Filter for text models only and map to our FetchedModel format
+           const models: FetchedModel[] = data
+             .filter((model: any) => model.type === "text")
+             .map((model: any) => ({
+               id: model.name,
+               name: model.name,
+               contextWindow: 4096, // Default context window
+               maxTokens: 512, // Default max tokens
+               supportsThinking: false, // KoboldAI Horde doesn't support thinking mode
+             }));
 
-          return { models };
-        } catch (error) {
-          // Fall back to static models if API fails
-          return { models: getModelsForProvider("kobold-horde") };
-        }
-      }
+           return { models };
+         } catch (error) {
+           // Fall back to static models if API fails
+           return { models: getModelsForProvider("kobold-horde") };
+         }
+       }
 
       case "open-router": {
         if (!config.apiKey) {
