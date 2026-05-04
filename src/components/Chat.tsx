@@ -4112,7 +4112,7 @@ export default function Chat() {
     return matches;
   };
   
-  // Apply instructions to global instructions
+  // Apply instructions to global instructions or selected preset
   const applyInstructions = (instructions: string) => {
     // Prompt user for instruction name
     const name = prompt("Enter instruction name:");
@@ -4140,11 +4140,30 @@ export default function Chat() {
       order: (globalInstructions.instructions?.length || 0),
     };
     
-    // Add to instruction list
-    setGlobalInstructions(prev => ({
-      ...prev,
-      instructions: [...(prev.instructions || []), newInstruction],
-    }));
+    // If a preset is selected, update the preset's instructions
+    if (selectedPresetId) {
+      setInstructionPresets(prev => prev.map(preset => {
+        if (preset.id === selectedPresetId) {
+          return {
+            ...preset,
+            instructions: [...preset.instructions, newInstruction],
+            updatedAt: Date.now(),
+          };
+        }
+        return preset;
+      }));
+      // Also update the global instruction list for immediate visibility
+      setGlobalInstructions(prev => ({
+        ...prev,
+        instructions: [...(prev.instructions || []), newInstruction],
+      }));
+    } else {
+      // No preset selected, add to global instruction list
+      setGlobalInstructions(prev => ({
+        ...prev,
+        instructions: [...(prev.instructions || []), newInstruction],
+      }));
+    }
     
     // Mark as applied for visual feedback
     setAppliedInstructions(prev => new Set(prev).add(instructions));
@@ -7272,20 +7291,20 @@ Write an engaging story segment. If this is a good point for player interaction,
                                               : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
                                           }`}
                                         >
-                                          {isApplied ? (
-                                            <span className="flex items-center gap-1">
-                                              <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                              </svg>
-                                              <span className="hidden sm:inline">Applied!</span>
-                                              <span className="sm:hidden">✓</span>
-                                            </span>
-                                          ) : (
-                                            <span>
-                                              <span className="hidden sm:inline">Apply to Global Instructions</span>
-                                              <span className="sm:hidden">Apply</span>
-                                            </span>
-                                          )}
+{isApplied ? (
+                                             <span className="flex items-center gap-1">
+                                               <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                               </svg>
+                                               <span className="hidden sm:inline">Applied!</span>
+                                               <span className="sm:hidden">✓</span>
+                                             </span>
+                                           ) : (
+                                             <span>
+                                               <span className="hidden sm:inline">{selectedPresetId ? 'Apply to Selected Preset' : 'Apply to Global Instructions'}</span>
+                                               <span className="sm:hidden">Apply</span>
+                                             </span>
+                                           )}
                                         </button>
                                       </div>
                                     </div>
