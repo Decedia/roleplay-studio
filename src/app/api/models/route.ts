@@ -322,6 +322,37 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ models });
       }
 
+      case "kobold-horde": {
+        // KoboldAI Horde API returns available models (workers) - no API key required
+        const response = await fetch("https://aihorde.net/api/v2/status/models?type=text");
+
+        if (!response.ok) {
+          // Fall back to static models if API fails
+          const staticModels = [
+            { id: "koboldcpp/Llama-3.1-8B-Stheno-v3.4", provider: "kobold-horde", name: "Llama 3.1 8B Stheno v3.4" },
+            { id: "koboldcpp/L3-8B-Stheno-v3.2", provider: "kobold-horde", name: "L3 8B Stheno v3.2" },
+            { id: "koboldcpp/mini-magnum-12b-v1.1", provider: "kobold-horde", name: "Mini Magnum 12B v1.1" },
+          ];
+          return NextResponse.json({ models: staticModels });
+        }
+
+        const data = await response.json();
+
+        // Transform Horde models to our format
+        // Each model has: name (full path), type, count, performance
+        const models = data
+          .filter((model: { type?: string; count?: number }) => 
+            model.type === "text" && (model.count ?? 0) > 0
+          )
+          .map((model: { name: string }) => ({
+            id: model.name,
+            provider: "kobold-horde",
+            name: model.name,
+          }));
+
+        return NextResponse.json({ models });
+      }
+
       default:
         return NextResponse.json(
           { error: `Unknown provider: ${provider}` },

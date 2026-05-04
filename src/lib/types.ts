@@ -286,6 +286,7 @@ export type ViewType = "home" | "chat" | "generator" | "brainstorm" | "vn";
 
 export interface FetchedModel {
   id: string;
+  provider: string;
   name: string;
   contextWindow?: number;
   maxTokens?: number;

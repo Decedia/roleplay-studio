@@ -2031,33 +2031,31 @@ export const fetchModelsFromProvider = async (
       }
 
 case "kobold-horde": {
-         try {
-           // KoboldAI Horde doesn't require API key for model listing
-           const response = await fetch("https://aihorde.net/api/v2/status/models?type=text");
-           const data = await response.json();
+          try {
+            // KoboldAI Horde API returns models with workers count - filters by type already in URL
+            const response = await fetch("https://aihorde.net/api/v2/status/models?type=text");
+            const data = await response.json();
 
-           if (!response.ok) {
-             return { models: [], error: `HTTP ${response.status}` };
-           }
+            if (!response.ok) {
+              return { models: [], error: `HTTP ${response.status}` };
+            }
 
-           // Transform Horde models to our format
-           // Filter for text models only and map to our FetchedModel format
-           const models: FetchedModel[] = data
-             .filter((model: any) => model.type === "text")
-             .map((model: any) => ({
-               id: model.name,
-               name: model.name,
-               contextWindow: 4096, // Default context window
-               maxTokens: 512, // Default max tokens
-               supportsThinking: false, // KoboldAI Horde doesn't support thinking mode
-             }));
+            // Transform Horde models to our format
+            // Each model has: name (full path like "koboldcpp/L3-8B-Stheno-v3.2"), type, count, performance
+            const models: FetchedModel[] = data
+              .filter((model: any) => model.count > 0) // Only include models with available workers
+              .map((model: any) => ({
+                id: model.name,
+                provider: "kobold-horde",
+                name: model.name,
+              }));
 
-           return { models };
-         } catch (error) {
-           // Fall back to static models if API fails
-           return { models: getModelsForProvider("kobold-horde") };
-         }
-       }
+            return { models };
+          } catch (error) {
+            // Fall back to static models if API fails
+            return { models: getModelsForProvider("kobold-horde") };
+          }
+        }
 
       case "open-router": {
         if (!config.apiKey) {
