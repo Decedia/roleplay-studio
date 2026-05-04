@@ -3163,8 +3163,8 @@ export default function Chat() {
          }));
        }
        
-        // Fetch models for providers that support dynamic model fetching
-        if ((providerType === "google-ai-studio" || providerType === "google-vertex" || providerType === "open-router" || providerType === "groq" || providerType === "nvidia-nim" || providerType === "kobold-horde") && models.length === 0 && activeProfile?.apiKey) {
+// Fetch models for providers that support dynamic model fetching
+         if ((providerType === "google-ai-studio" || providerType === "google-vertex" || providerType === "open-router" || providerType === "groq" || providerType === "nvidia-nim" || providerType === "kobold-horde") && models.length === 0 && (activeProfile?.apiKey || providerType === "kobold-horde")) {
          setModelsFetching(prev => ({ ...prev, [providerType]: true }));
          const modelsResult = await fetchModelsFromProvider(providerType, profileConfig);
          setModelsFetching(prev => ({ ...prev, [providerType]: false }));
@@ -3184,18 +3184,18 @@ export default function Chat() {
              [providerType]: sortedModels
            }));
            
-           // Auto-select first model if no model is currently selected for this profile
-           if (!activeProfile?.selectedModel && sortedModels[0]) {
-             const firstModel = sortedModels[0];
-             setProviderConfigs(prev => ({
-               ...prev,
-               [providerType]: {
-                 ...prev[providerType],
-                 profiles: prev[providerType].profiles.map(p =>
-                   p.id === activeProfile.id ? { ...p, selectedModel: firstModel.id } : p
-                 )
-               }
-             }));
+// Auto-select first model if no model is currently selected for this profile
+            if (activeProfile && !activeProfile?.selectedModel && sortedModels[0]) {
+              const firstModel = sortedModels[0];
+              setProviderConfigs(prev => ({
+                ...prev,
+                [providerType]: {
+                  ...prev[providerType],
+                  profiles: prev[providerType].profiles.map(p =>
+                    p.id === activeProfile.id ? { ...p, selectedModel: firstModel.id } : p
+                  )
+                }
+              }));
              
              // Also update global settings with the model's capabilities
              const maxOutput = firstModel.max_tokens || 4000;
