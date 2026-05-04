@@ -9,13 +9,19 @@ A chat application for roleplay conversations with multiple LLM provider support
 ## Recently Completed
 
 - [x] **COMPLETED: Implemented KoboldAI Horde provider support**
-  - Added "kobold-horde" to LLMProviderType and provider configurations
-  - Implemented chatWithKoboldHorde and streamWithKoboldHorde functions
-  - Created /api/kobold-horde route for async text generation workflow
-  - Added test connection and model fetching logic
-  - Updated Chat.tsx state to include kobold-horde provider
-  - Added KoboldAI Horde provider UI section with profile management and connection controls
-  - KoboldAI Horde provides distributed AI text generation via crowdsourced GPUs
+   - Added "kobold-horde" to LLMProviderType and provider configurations
+   - Implemented chatWithKoboldHorde and streamWithKoboldHorde functions
+   - Created /api/kobold-horde route for async text generation workflow
+   - Added test connection and model fetching logic
+   - Updated Chat.tsx state to include kobold-horde provider
+   - Added KoboldAI Horde provider UI section with profile management and connection controls
+   - KoboldAI Horde provides distributed AI text generation via crowdsourced GPUs
+- [x] **COMPLETED: Fixed AI Horde models fetching to use workers API**
+   - Fixed model fetching to query `/api/v2/status/models?type=text` which returns available workers
+   - Fixed filtering to only show models with available workers (`count > 0`)
+   - Fixed model mapping to use correct API response fields (`name`, `type`, `count`)
+   - Allowed model fetching without API key requirement (Horde public endpoint)
+   - Fixed `FetchedModel` type to include `provider` field
 - [x] **COMPLETED: Removed test connection buttons and system**
   - Removed individual "Test Connection" buttons for each provider
   - Removed testProviderConnection function and related status tracking
