@@ -9949,140 +9949,140 @@ Write an engaging story segment. If this is a good point for player interaction,
                     </div>
 
 {/* Instruction List Section (SillyTavern-style) */}
-                     <div className="pt-4 border-t border-zinc-700">
-                       <div className="flex items-center justify-between mb-4">
-                         <div className="flex items-center gap-4">
+                    <div className="pt-4 border-t border-zinc-700">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
+                         <div className="flex items-center gap-2">
                            <label className="block text-sm font-medium text-zinc-300">
                              Instruction List
                            </label>
-                           
+                            
                            {/* Preset Dropdown */}
-                           <div className="flex items-center gap-2">
-<select
-                                value={selectedPresetId}
-                                onChange={(e) => {
-                                  const presetId = e.target.value;
-                                  setSelectedPresetId(presetId);
-                                  
-                                  if (presetId === "") {
-                                    // Reset to default empty state
-                                    setGlobalInstructions({
-                                      ...globalInstructions,
-                                      instructions: [],
-                                    });
-                                  } else {
-                                    // Load the selected preset
-                                    const preset = instructionPresets.find(p => p.id === presetId);
-                                    if (preset) {
-                                      setGlobalInstructions({
-                                        ...globalInstructions,
-                                        instructions: [...preset.instructions],
-                                      });
-                                    }
-                                  }
-                                }}
-                                className="bg-zinc-800 text-white text-xs rounded px-2 py-1 border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                              >
-                                <option value="">Select a preset...</option>
-                                {instructionPresets.map(preset => (
-                                  <option key={preset.id} value={preset.id}>
-                                    {preset.name}
-                                  </option>
-                                ))}
-                              </select>
-                              
-                              {/* Save Current as Preset Button */}
+                           <select
+                             value={selectedPresetId}
+                             onChange={(e) => {
+                               const presetId = e.target.value;
+                               setSelectedPresetId(presetId);
+                               
+                               if (presetId === "") {
+                                 // Reset to default empty state
+                                 setGlobalInstructions({
+                                   ...globalInstructions,
+                                   instructions: [],
+                                 });
+                               } else {
+                                 // Load the selected preset
+                                 const preset = instructionPresets.find(p => p.id === presetId);
+                                 if (preset) {
+                                   setGlobalInstructions({
+                                     ...globalInstructions,
+                                     instructions: [...preset.instructions],
+                                   });
+                                 }
+                               }
+                             }}
+                             className="bg-zinc-800 text-white text-xs rounded px-2 py-1 border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                           >
+                             <option value="">Select a preset...</option>
+                             {instructionPresets.map(preset => (
+                               <option key={preset.id} value={preset.id}>
+                                 {preset.name}
+                               </option>
+                             ))}
+                           </select>
+                         </div>
+                         
+                         {/* Preset Action Buttons - responsive layout */}
+                         <div className="flex flex-wrap items-center gap-1">
+                           {/* Save Current as Preset Button */}
+                           <button
+                             type="button"
+                             onClick={() => {
+                               const name = prompt("Enter preset name (or leave empty for default):");
+                               if (name !== null) {
+                                 const presetName = name.trim() || `Saved ${new Date().toLocaleString()}`;
+                                 const newPreset: InstructionPreset = {
+                                   id: `preset_${Date.now()}`,
+                                   name: presetName,
+                                   instructions: [...(globalInstructions.instructions || [])],
+                                   createdAt: Date.now(),
+                                   updatedAt: Date.now(),
+                                 };
+                                 setInstructionPresets(prev => [...prev, newPreset]);
+                               }
+                             }}
+                             className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition-colors"
+                           >
+                             Save
+                           </button>
+                           
+                           {/* Rename Preset Button - only show when a preset is selected */}
+                           {selectedPresetId && (
+                             <button
+                               type="button"
+                               onClick={() => {
+                                 const preset = instructionPresets.find(p => p.id === selectedPresetId);
+                                 if (preset) {
+                                   const name = prompt("Enter new preset name:", preset.name);
+                                   if (name !== null && name.trim()) {
+                                     setInstructionPresets(prev => prev.map(p => 
+                                       p.id === selectedPresetId 
+                                         ? { ...p, name: name.trim(), updatedAt: Date.now() }
+                                         : p
+                                     ));
+                                   }
+                                 }
+                               }}
+                               className="text-xs bg-amber-600 text-white px-2 py-1 rounded hover:bg-amber-700 transition-colors"
+                             >
+                               Rename
+                             </button>
+                           )}
+                           
+{/* Delete Preset Button - only show when a preset is selected */}
+                            {selectedPresetId && (
                               <button
                                 type="button"
                                 onClick={() => {
-                                  const name = prompt("Enter preset name (or leave empty for default):");
-                                  if (name !== null) {
-                                    const presetName = name.trim() || `Saved ${new Date().toLocaleString()}`;
-                                    const newPreset: InstructionPreset = {
-                                      id: `preset_${Date.now()}`,
-                                      name: presetName,
-                                      instructions: [...(globalInstructions.instructions || [])],
-                                      createdAt: Date.now(),
-                                      updatedAt: Date.now(),
-                                    };
-                                    setInstructionPresets(prev => [...prev, newPreset]);
+                                  if (confirm("Delete this preset?")) {
+                                    setInstructionPresets(prev => prev.filter(p => p.id !== selectedPresetId));
+                                    setSelectedPresetId("");
                                   }
                                 }}
-                                className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition-colors"
+                                className="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition-colors"
                               >
-                                Save as Preset
+                                Delete
                               </button>
-                              
-                              {/* Rename Preset Button - only show when a preset is selected */}
-                              {selectedPresetId && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const preset = instructionPresets.find(p => p.id === selectedPresetId);
-                                    if (preset) {
-                                      const name = prompt("Enter new preset name:", preset.name);
-                                      if (name !== null && name.trim()) {
-                                        setInstructionPresets(prev => prev.map(p => 
-                                          p.id === selectedPresetId 
-                                            ? { ...p, name: name.trim(), updatedAt: Date.now() }
-                                            : p
-                                        ));
-                                      }
-                                    }
-                                  }}
-                                  className="text-xs bg-amber-600 text-white px-2 py-1 rounded hover:bg-amber-700 transition-colors"
-                                >
-                                  Rename
-                                </button>
-                              )}
-                              
-                              {/* Delete Preset Button - only show when a preset is selected */}
-                              {selectedPresetId && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (confirm("Delete this preset?")) {
-                                      setInstructionPresets(prev => prev.filter(p => p.id !== selectedPresetId));
-                                      setSelectedPresetId("");
-                                    }
-                                  }}
-                                  className="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition-colors"
-                                >
-                                  Delete
-                                </button>
-                              )}
-                            </div>
-                         </div>
-                         
-                         <button
-                           type="button"
-                           onClick={() => {
-                             const newInstruction: Instruction = {
-                               id: `instruction_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                               name: "New Instruction",
-                               content: "",
-                               role: "system",
-                               position: "after_context",
-                               enabled: true,
-                               order: globalInstructions.instructions?.length || 0,
-                             };
-                             setGlobalInstructions({
-                               ...globalInstructions,
-                               instructions: [...(globalInstructions.instructions || []), newInstruction],
-                             });
-                           }}
-                           className="text-sm bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 transition-colors"
-                         >
-                           + Add Instruction
-                         </button>
-                       </div>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newInstruction: Instruction = {
+                              id: `instruction_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                              name: "New Instruction",
+                              content: "",
+                              role: "system",
+                              position: "after_context",
+                              enabled: true,
+                              order: globalInstructions.instructions?.length || 0,
+                            };
+                            setGlobalInstructions({
+                              ...globalInstructions,
+                              instructions: [...(globalInstructions.instructions || []), newInstruction],
+                            });
+                          }}
+                          className="text-sm bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 transition-colors"
+                        >
+                          + Add Instruction
+                        </button>
 
-                       <p className="text-xs text-zinc-500 mb-4">
-                         Manage multiple instructions with custom roles and positions (SillyTavern-style)
-                       </p>
+                        <p className="text-xs text-zinc-500 mb-4">
+                          Manage multiple instructions with custom roles and positions (SillyTavern-style)
+                        </p>
 
-                       {/* Instruction List */}
-                       <div className="space-y-3">
+                        {/* Instruction List */}
+                        <div className="space-y-3">
                          {(globalInstructions.instructions || []).map((instruction, index) => (
                            <div
                              key={instruction.id}
@@ -10290,80 +10290,81 @@ Write an engaging story segment. If this is a good point for player interaction,
                           </div>
                         ))}
 
-                        {/* Empty State */}
-                        {(!globalInstructions.instructions || globalInstructions.instructions.length === 0) && (
-                          <div className="text-center py-4 text-zinc-500 text-sm">
-                            No instructions yet. Click &quot;Add Instruction&quot; to create one.
-                          </div>
-                        )}
-                      </div>
-                    </div>
+{/* Empty State */}
+                         {(!globalInstructions.instructions || globalInstructions.instructions.length === 0) && (
+                           <div className="text-center py-4 text-zinc-500 text-sm">
+                             No instructions yet. Click &quot;Add Instruction&quot; to create one.
+                           </div>
+                         )}
+                       </div>
+                     </div>
+                   </div>
+                 )}
+                 
+                {/* Generator Instructions Tab */}
+                {activeInstructionTab === 'generator' && (
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-white">Character Generator Instructions</h3>
+                    <textarea
+                      value={generatorInstructions}
+                      onChange={(e) => setGeneratorInstructions(e.target.value)}
+                      placeholder="Enter character creator instructions..."
+                      className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
+                      rows={6}
+                    />
                   </div>
                 )}
 
-               {/* Generator Instructions Tab */}
-               {activeInstructionTab === 'generator' && (
-                 <div className="space-y-4">
-                   <h3 className="text-sm font-semibold text-white">Character Generator Instructions</h3>
-                   <textarea
-                     value={generatorInstructions}
-                     onChange={(e) => setGeneratorInstructions(e.target.value)}
-                     placeholder="Enter character creator instructions..."
-                     className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
-                     rows={6}
-                   />
-                 </div>
-               )}
+                {/* Brainstorm Instructions Tab */}
+                {activeInstructionTab === 'brainstorm' && (
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-white">Brainstorm Instructions</h3>
+                    <textarea
+                      value={brainstormInstructions}
+                      onChange={(e) => setBrainstormInstructions(e.target.value)}
+                      placeholder="Enter brainstorm assistant instructions..."
+                      className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
+                      rows={6}
+                    />
+                  </div>
+                )}
 
-               {/* Brainstorm Instructions Tab */}
-               {activeInstructionTab === 'brainstorm' && (
-                 <div className="space-y-4">
-                   <h3 className="text-sm font-semibold text-white">Brainstorm Instructions</h3>
-                   <textarea
-                     value={brainstormInstructions}
-                     onChange={(e) => setBrainstormInstructions(e.target.value)}
-                     placeholder="Enter brainstorm assistant instructions..."
-                     className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
-                     rows={6}
-                   />
-                 </div>
-               )}
+                {/* VN Generator Instructions Tab */}
+                {activeInstructionTab === 'vn' && (
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-white">VN Generator Instructions</h3>
+                    <textarea
+                      value={vnInstructions}
+                      onChange={(e) => setVnInstructions(e.target.value)}
+                      placeholder="Enter visual novel generator instructions..."
+                      className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
+rows={6}
+                     />
+                  </div>
+                )}
+                 
+              </div>
 
-               {/* VN Generator Instructions Tab */}
-               {activeInstructionTab === 'vn' && (
-                 <div className="space-y-4">
-                   <h3 className="text-sm font-semibold text-white">VN Generator Instructions</h3>
-                   <textarea
-                     value={vnInstructions}
-                     onChange={(e) => setVnInstructions(e.target.value)}
-                     placeholder="Enter visual novel generator instructions..."
-                     className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
-                     rows={6}
-                   />
-                 </div>
-               )}
-             </div>
-
-             {/* Modal Footer */}
-             <div className="flex-shrink-0 p-4 border-t border-zinc-800 flex gap-3">
-               <button
-                 onClick={() => {
-                   // Apply all instruction changes
-                   setShowInstructionModal(false);
-                 }}
-                 className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-               >
-                 Save All
-               </button>
-               <button
-                 onClick={() => setShowInstructionModal(false)}
-                 className="flex-1 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors font-medium"
-               >
-                 Cancel
-               </button>
-             </div>
-           </div>
-         </div>
+              {/* Modal Footer */}
+              <div className="flex-shrink-0 p-4 border-t border-zinc-800 flex gap-3">
+                <button
+                  onClick={() => {
+                    // Apply all instruction changes
+                    setShowInstructionModal(false);
+                  }}
+                  className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                >
+                  Save All
+                </button>
+                <button
+                  onClick={() => setShowInstructionModal(false)}
+                  className="flex-1 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
        {/* Utilities Modal */}
