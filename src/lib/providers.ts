@@ -1449,74 +1449,102 @@ export const streamWithVertexAI = async (
 
 // KoboldAI Horde chat implementation - uses server-side proxy to avoid CORS
 export const chatWithKoboldHorde: ChatFunction = async (
-   messages,
-   config,
-   options
- ) => {
-   if (!config.apiKey) {
-     return { error: "KoboldAI Horde API key is required" };
-   }
+    messages,
+    config,
+    options
+  ) => {
+    if (!config.apiKey) {
+      return { error: "KoboldAI Horde API key is required" };
+    }
 
-   try {
-     // Combine all messages into a single prompt for KoboldAI Horde
-     const systemMessages = messages.filter(m => m.role === "system");
-     const nonSystemMessages = messages.filter(m => m.role !== "system");
+    try {
+      // Combine all messages into a single prompt for KoboldAI Horde
+      const systemMessages = messages.filter(m => m.role === "system");
+      const nonSystemMessages = messages.filter(m => m.role !== "system");
 
-     let prompt = "";
+      let prompt = "";
 
-     // Add system prompt if provided
-     const systemContent = systemMessages.map(m => m.content).join("\n\n");
-     if (systemContent || options.systemPrompt) {
-       prompt += (systemContent || options.systemPrompt) + "\n\n";
-     }
+      // Add system prompt if provided
+      const systemContent = systemMessages.map(m => m.content).join("\n\n");
+      if (systemContent || options.systemPrompt) {
+        prompt += (systemContent || options.systemPrompt) + "\n\n";
+      }
 
-     // Add conversation history
-     for (const message of nonSystemMessages) {
-       if (message.role === "user") {
-         prompt += `User: ${message.content}\n\n`;
-       } else if (message.role === "assistant") {
-         prompt += `Assistant: ${message.content}\n\n`;
-       }
-     }
+      // Add conversation history
+      for (const message of nonSystemMessages) {
+        if (message.role === "user") {
+          prompt += `User: ${message.content}\n\n`;
+        } else if (message.role === "assistant") {
+          prompt += `Assistant: ${message.content}\n\n`;
+        }
+      }
 
-     // Add final assistant prompt
-     prompt += "Assistant: ";
+      // Add final assistant prompt
+      prompt += "Assistant: ";
 
-     const response = await fetch("https://aihorde.net/api/v2/generate/text", {
-       method: "POST",
-       headers: {
-         "Content-Type": "application/json",
-         "apikey": config.apiKey,
-       },
-        body: JSON.stringify({
-          prompt,
-          params: {
-            temperature: options.temperature,
-            top_p: options.topP,
-            top_k: options.topK,
-            max_length: options.maxTokens,
-          },
-          models: [config.selectedModel || "koboldcpp/Llama-3.1-8B-Stheno-v3.4"],
-          n: 1,
-          post_processing: [],
-        }),
-     });
+      const response = await fetch("https://aihorde.net/api/v2/generate/text/async", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": config.apiKey,
+        },
+         body: JSON.stringify({
+           prompt,
+           params: {
+             temperature: options.temperature,
+             top_p: options.topP,
+             top_k: options.topK,
+             max_length: options.maxTokens,
+           },
+           models: [config.selectedModel || "koboldcpp/Llama-3.1-8B-Stheno-v3.4"],
+           n: 1,
+           post_processing: [],
+         }),
+      });
 
-     const data = await response.json();
+      const data = await response.json();
 
-     if (!response.ok) {
-       return {
-         error: data.error || `HTTP ${response.status}`,
-       };
-     }
+      if (!response.ok) {
+        return {
+          error: data.error || `HTTP ${response.status}`,
+        };
+      }
 
-     return { content: data.generations[0].text };
-   } catch (error) {
-     return {
-       error: error instanceof Error ? error.message : "Unknown error occurred",
-     };
-   }
- };
+      // For async endpoint, we need to poll for completion
+      if (data.task_id) {
+        // Poll for result (simplified - in a real app you'd want to handle this better)
+        let result = null;
+        for (let i = 0; i < 10; i++) { // Try up to 10 times
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+          const statusResponse = await fetch(`https://aihorde.net/api/v2/generate/text/check/${data.task_id}`, {
+            headers: {
+              "apikey": config.apiKey,
+            },
+          });
+          
+          if (statusResponse.ok) {
+            const statusData = await statusResponse.json();
+            if (statusData.finished && statusData.generations && statusData.generations.length > 0) {
+              result = statusData.generations[0].text;
+              break;
+            }
+          }
+        }
+        
+        if (result) {
+          return { content: result };
+        } else {
+          return { error: "Timeout waiting for generation" };
+        }
+      }
+      
+      return { error: "No task ID returned" };
+    } catch (error) {
+      return {
+        error: error instanceof Error ? error.message : "Unknown error occurred",
+      };
+    }
+  };
 
 // KoboldAI Horde streaming implementation - uses direct API to avoid CORS
 export const streamWithKoboldHorde = async (
@@ -1534,7 +1562,7 @@ export const streamWithKoboldHorde = async (
      abortController?: AbortController;
    },
    onChunk: StreamCallback
- ) => {
+) => {
    if (!config.apiKey) {
      onChunk({ error: "KoboldAI Horde API key is required" });
      return;
@@ -1894,33 +1922,37 @@ case "kobold-horde": {
        if (!config.apiKey) {
          return { success: false, message: "API key is required." };
        }
-       try {
-         // Test with a minimal text generation request using direct API to avoid CORS
-         const response = await fetch("https://aihorde.net/api/v2/generate/text", {
-           method: "POST",
-           headers: {
-             "Content-Type": "application/json",
-             "apikey": config.apiKey,
-           },
-           body: JSON.stringify({
-             prompt: "Hello",
-             params: {
-               temperature: 0.1,
-               max_length: 10,
-             },
-             models: [config.selectedModel || "koboldcpp/Llama-3.1-8B-Stheno-v3.4"],
-           }),
-         });
+        try {
+          // Test with a minimal text generation request using the async API to avoid CORS
+          const response = await fetch("https://aihorde.net/api/v2/generate/text/async", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "apikey": config.apiKey,
+            },
+            body: JSON.stringify({
+              prompt: "Hello",
+              params: {
+                temperature: 0.1,
+                max_length: 16, // Minimum allowed by the API
+              },
+              models: [config.selectedModel || "koboldcpp/Llama-3.1-8B-Stheno-v3.4"],
+            }),
+          });
 
-         if (response.ok) {
-           return { success: true, message: "KoboldAI Horde connection successful!" };
-         }
+          if (response.ok) {
+            const result = await response.json();
+            if (result.task_id) {
+              return { success: true, message: "KoboldAI Horde connection successful!" };
+            }
+            return { success: false, message: "Unexpected response format (no task_id)" };
+          }
 
-         const errorData = await response.json();
-         return { success: false, message: errorData.error || `HTTP ${response.status}` };
-       } catch (error) {
-         return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
-       }
+          const errorData = await response.json();
+          return { success: false, message: errorData.error || `HTTP ${response.status}` };
+        } catch (error) {
+          return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
+        }
      }
 
     default:
