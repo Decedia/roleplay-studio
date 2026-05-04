@@ -30,7 +30,7 @@ import {
   type SummarizationResult,
 } from "@/lib/summarization";
 import { readCharacterFile, buildFullSystemPrompt } from "@/lib/character-import";
-import { Character as CharacterType, CharacterBook, CharacterBookEntry, ProviderProfile, GeneratorConversation, BrainstormConversation, Instruction, InstructionRole, InstructionPosition } from "@/lib/types";
+import { Character as CharacterType, CharacterBook, CharacterBookEntry, ProviderProfile, GeneratorConversation, BrainstormConversation, Instruction, InstructionRole, InstructionPosition, InstructionPreset } from "@/lib/types";
 import { parseRoleplayText, getSegmentClasses, TextSegment } from "@/lib/text-formatter";
 
 // Import from modular chat structure
@@ -222,6 +222,7 @@ const GENERATOR_MESSAGES_KEY = "chat_generator_messages";
 const GENERATOR_SESSIONS_KEY = "chat_generator_sessions";
 const BRAINSTORM_SESSIONS_KEY = "chat_brainstorm_sessions";
 const LAST_SESSION_KEY = "chat_last_session";
+const INSTRUCTION_PRESETS_KEY = "chat_instruction_presets";
 
 // Type for last session data (stores view and conversation state)
 type ViewType = "home" | "personas" | "characters" | "conversations" | "chat" | "generator" | "brainstorm" | "vn-generator";
@@ -2285,6 +2286,10 @@ export default function Chat() {
   // Global instructions state
   const [globalInstructions, setGlobalInstructions] = useState<GlobalInstructions>(DEFAULT_GLOBAL_INSTRUCTIONS);
   
+  // Instruction presets state
+  const [instructionPresets, setInstructionPresets] = useState<InstructionPreset[]>([]);
+  const [selectedPresetId, setSelectedPresetId] = useState<string>("");
+  
   // File input ref for character import and instructions import
   const fileInputRef = useRef<HTMLInputElement>(null);
   const instructionsFileInputRef = useRef<HTMLInputElement>(null);
@@ -2604,6 +2609,17 @@ export default function Chat() {
         console.error("Failed to parse last session:", e);
       }
     }
+    
+    // Load instruction presets
+    const storedPresets = localStorage.getItem(INSTRUCTION_PRESETS_KEY);
+    if (storedPresets) {
+      try {
+        const parsed = JSON.parse(storedPresets) as InstructionPreset[];
+        setInstructionPresets(parsed);
+      } catch (e) {
+        console.error("Failed to parse instruction presets:", e);
+      }
+    }
   }, []);
 
   // Save last session when view or related state changes
@@ -2650,6 +2666,11 @@ export default function Chat() {
   useEffect(() => {
     localStorage.setItem(GLOBAL_INSTRUCTIONS_KEY, JSON.stringify(globalInstructions));
   }, [globalInstructions]);
+
+  // Save instruction presets to localStorage
+  useEffect(() => {
+    localStorage.setItem(INSTRUCTION_PRESETS_KEY, JSON.stringify(instructionPresets));
+  }, [instructionPresets]);
 
   // Save global settings to localStorage
   useEffect(() => {
@@ -9927,55 +9948,155 @@ Write an engaging story segment. If this is a good point for player interaction,
                       </p>
                     </div>
 
-                    {/* Instruction List Section (SillyTavern-style) */}
-                    <div className="pt-4 border-t border-zinc-700">
-                      <div className="flex items-center justify-between mb-4">
-                        <label className="block text-sm font-medium text-zinc-300">
-                          Instruction List
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newInstruction: Instruction = {
-                              id: `instruction_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                              name: "New Instruction",
-                              content: "",
-                              role: "system",
-                              position: "after_context",
-                              enabled: true,
-                              order: globalInstructions.instructions?.length || 0,
-                            };
-                            setGlobalInstructions({
-                              ...globalInstructions,
-                              instructions: [...(globalInstructions.instructions || []), newInstruction],
-                            });
-                          }}
-                          className="text-sm bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 transition-colors"
-                        >
-                          + Add Instruction
-                        </button>
-                      </div>
+{/* Instruction List Section (SillyTavern-style) */}
+                     <div className="pt-4 border-t border-zinc-700">
+                       <div className="flex items-center justify-between mb-4">
+                         <div className="flex items-center gap-4">
+                           <label className="block text-sm font-medium text-zinc-300">
+                             Instruction List
+                           </label>
+                           
+                           {/* Preset Dropdown */}
+                           <div className="flex items-center gap-2">
+<select
+                                value={selectedPresetId}
+                                onChange={(e) => {
+                                  const presetId = e.target.value;
+                                  setSelectedPresetId(presetId);
+                                  
+                                  if (presetId === "") {
+                                    // Reset to default empty state
+                                    setGlobalInstructions({
+                                      ...globalInstructions,
+                                      instructions: [],
+                                    });
+                                  } else {
+                                    // Load the selected preset
+                                    const preset = instructionPresets.find(p => p.id === presetId);
+                                    if (preset) {
+                                      setGlobalInstructions({
+                                        ...globalInstructions,
+                                        instructions: [...preset.instructions],
+                                      });
+                                    }
+                                  }
+                                }}
+                                className="bg-zinc-800 text-white text-xs rounded px-2 py-1 border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              >
+                                <option value="">Select a preset...</option>
+                                {instructionPresets.map(preset => (
+                                  <option key={preset.id} value={preset.id}>
+                                    {preset.name}
+                                  </option>
+                                ))}
+                              </select>
+                              
+                              {/* Save Current as Preset Button */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const name = prompt("Enter preset name (or leave empty for default):");
+                                  if (name !== null) {
+                                    const presetName = name.trim() || `Saved ${new Date().toLocaleString()}`;
+                                    const newPreset: InstructionPreset = {
+                                      id: `preset_${Date.now()}`,
+                                      name: presetName,
+                                      instructions: [...(globalInstructions.instructions || [])],
+                                      createdAt: Date.now(),
+                                      updatedAt: Date.now(),
+                                    };
+                                    setInstructionPresets(prev => [...prev, newPreset]);
+                                  }
+                                }}
+                                className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition-colors"
+                              >
+                                Save as Preset
+                              </button>
+                              
+                              {/* Rename Preset Button - only show when a preset is selected */}
+                              {selectedPresetId && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const preset = instructionPresets.find(p => p.id === selectedPresetId);
+                                    if (preset) {
+                                      const name = prompt("Enter new preset name:", preset.name);
+                                      if (name !== null && name.trim()) {
+                                        setInstructionPresets(prev => prev.map(p => 
+                                          p.id === selectedPresetId 
+                                            ? { ...p, name: name.trim(), updatedAt: Date.now() }
+                                            : p
+                                        ));
+                                      }
+                                    }
+                                  }}
+                                  className="text-xs bg-amber-600 text-white px-2 py-1 rounded hover:bg-amber-700 transition-colors"
+                                >
+                                  Rename
+                                </button>
+                              )}
+                              
+                              {/* Delete Preset Button - only show when a preset is selected */}
+                              {selectedPresetId && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (confirm("Delete this preset?")) {
+                                      setInstructionPresets(prev => prev.filter(p => p.id !== selectedPresetId));
+                                      setSelectedPresetId("");
+                                    }
+                                  }}
+                                  className="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition-colors"
+                                >
+                                  Delete
+                                </button>
+                              )}
+                            </div>
+                         </div>
+                         
+                         <button
+                           type="button"
+                           onClick={() => {
+                             const newInstruction: Instruction = {
+                               id: `instruction_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                               name: "New Instruction",
+                               content: "",
+                               role: "system",
+                               position: "after_context",
+                               enabled: true,
+                               order: globalInstructions.instructions?.length || 0,
+                             };
+                             setGlobalInstructions({
+                               ...globalInstructions,
+                               instructions: [...(globalInstructions.instructions || []), newInstruction],
+                             });
+                           }}
+                           className="text-sm bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 transition-colors"
+                         >
+                           + Add Instruction
+                         </button>
+                       </div>
 
-                      <p className="text-xs text-zinc-500 mb-4">
-                        Manage multiple instructions with custom roles and positions (SillyTavern-style)
-                      </p>
+                       <p className="text-xs text-zinc-500 mb-4">
+                         Manage multiple instructions with custom roles and positions (SillyTavern-style)
+                       </p>
 
-                      {/* Instruction List */}
-                      <div className="space-y-3">
-                        {(globalInstructions.instructions || []).map((instruction, index) => (
-                          <div
-                            key={instruction.id}
-                            className={`p-3 rounded-lg border ${
-                              instruction.enabled
-                                ? "bg-zinc-800/50 border-zinc-700"
-                                : "bg-zinc-900/50 border-zinc-800 opacity-60"
-                            }`}
-                          >
-                            {/* Instruction Header */}
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                {/* Reorder Buttons */}
-                                <div className="flex flex-col">
+                       {/* Instruction List */}
+                       <div className="space-y-3">
+                         {(globalInstructions.instructions || []).map((instruction, index) => (
+                           <div
+                             key={instruction.id}
+                             className={`p-3 rounded-lg border ${
+                               instruction.enabled
+                                 ? "bg-zinc-800/50 border-zinc-700"
+                                 : "bg-zinc-900/50 border-zinc-800 opacity-60"
+                             }`}
+                           >
+                             {/* Instruction Header */}
+                             <div className="flex items-center justify-between mb-2">
+                               <div className="flex items-center gap-2">
+                                 {/* Reorder Buttons */}
+                                 <div className="flex flex-col">
                                   <button
                                     type="button"
                                     onClick={() => {

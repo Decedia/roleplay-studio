@@ -247,6 +247,15 @@ export interface Instruction {
   inlineIndex?: number; // Index for inline_with_message position (0 = after last user message, 1 = before that, etc.)
 }
 
+// Instruction preset for saving/loading instruction lists
+export interface InstructionPreset {
+  id: string;
+  name: string;
+  instructions: Instruction[];
+  createdAt: number;
+  updatedAt: number;
+}
+
 // Global instructions (SillyTavern-style)
 export interface GlobalInstructions {
   // Instruction list (SillyTavern-style)
