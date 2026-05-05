@@ -4119,7 +4119,7 @@ if (modelsResult.models.length > 0) {
     return matches;
   };
   
-  // Apply instructions to global instructions or selected preset
+  // Apply instructions to the currently active instruction tab or selected preset
   const applyInstructions = (instructions: string) => {
     // Prompt user for instruction name
     const name = prompt("Enter instruction name:");
@@ -4144,32 +4144,67 @@ if (modelsResult.models.length > 0) {
       role,
       position,
       enabled: true,
-      order: (globalInstructions.instructions?.length || 0),
+      order: 0, // Will be set correctly below based on target
     };
     
-    // If a preset is selected, update the preset's instructions
+    // If a preset is selected, update the preset's instructions (global behavior)
     if (selectedPresetId) {
       setInstructionPresets(prev => prev.map(preset => {
         if (preset.id === selectedPresetId) {
+          const updatedInstructions = [...preset.instructions, newInstruction];
+          // Update order indices
+          updatedInstructions.forEach((instr, index) => {
+            instr.order = index;
+          });
           return {
             ...preset,
-            instructions: [...preset.instructions, newInstruction],
+            instructions: updatedInstructions,
             updatedAt: Date.now(),
           };
         }
         return preset;
       }));
+      
       // Also update the global instruction list for immediate visibility
-      setGlobalInstructions(prev => ({
-        ...prev,
-        instructions: [...(prev.instructions || []), newInstruction],
-      }));
+      setGlobalInstructions(prev => {
+        const updatedInstructions = [...(prev.instructions || []), newInstruction];
+        // Update order indices
+        updatedInstructions.forEach((instr, index) => {
+          instr.order = index;
+        });
+        return {
+          ...prev,
+          instructions: updatedInstructions,
+        };
+      });
     } else {
-      // No preset selected, add to global instruction list
-      setGlobalInstructions(prev => ({
-        ...prev,
-        instructions: [...(prev.instructions || []), newInstruction],
-      }));
+      // No preset selected, add to the currently active instruction tab
+      switch (activeInstructionTab) {
+        case 'chat':
+          setChatInstructions(prev => {
+            const updated = (prev ? prev + '\n\n' : '') + instructions;
+            return updated;
+          });
+          break;
+        case 'generator':
+          setGeneratorInstructions(prev => {
+            const updated = (prev ? prev + '\n\n' : '') + instructions;
+            return updated;
+          });
+          break;
+        case 'brainstorm':
+          setBrainstormInstructions(prev => {
+            const updated = (prev ? prev + '\n\n' : '') + instructions;
+            return updated;
+          });
+          break;
+        case 'vn':
+          setVnInstructions(prev => {
+            const updated = (prev ? prev + '\n\n' : '') + instructions;
+            return updated;
+          });
+          break;
+      }
     }
     
     // Mark as applied for visual feedback
