@@ -3169,15 +3169,22 @@ export default function Chat() {
          const modelsResult = await fetchModelsFromProvider(providerType, profileConfig);
          setModelsFetching(prev => ({ ...prev, [providerType]: false }));
          
-         if (modelsResult.models.length > 0) {
-           // Sort models: free first, then paid
-           const sortedModels = [...modelsResult.models].sort((a, b) => {
-             const aFree = a.id.toLowerCase().includes('free') || a.id.toLowerCase().includes('free:');
-             const bFree = b.id.toLowerCase().includes('free') || b.id.toLowerCase().includes('free:');
-             if (aFree && !bFree) return -1;
-             if (!aFree && bFree) return 1;
-             return 0;
-           });
+if (modelsResult.models.length > 0) {
+            // Sort models based on provider type
+            const sortedModels = [...modelsResult.models].sort((a, b) => {
+              // For kobold-horde, sort by worker count (highest first) for faster responses
+              if (providerType === "kobold-horde") {
+                const aWorkers = a.workerCount ?? 0;
+                const bWorkers = b.workerCount ?? 0;
+                if (aWorkers !== bWorkers) return bWorkers - aWorkers;
+              }
+              // For other providers, sort free first, then paid
+              const aFree = a.id.toLowerCase().includes('free') || a.id.toLowerCase().includes('free:');
+              const bFree = b.id.toLowerCase().includes('free') || b.id.toLowerCase().includes('free:');
+              if (aFree && !bFree) return -1;
+              if (!aFree && bFree) return 1;
+              return 0;
+            });
            
            setProviderModels(prev => ({
              ...prev,

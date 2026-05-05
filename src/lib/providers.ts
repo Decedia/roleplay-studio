@@ -10,10 +10,11 @@ import {
   VertexLocation,
   ThinkingLevel,
   ThinkingBudget,
+  FetchedModel,
 } from "./types";
 
 // Re-export types for convenience
-export type { LLMProviderType, ProviderConfig, Message, LLMModel, LLMProvider, VertexMode, VertexLocation, ThinkingLevel, ThinkingBudget };
+export type { LLMProviderType, ProviderConfig, Message, LLMModel, LLMProvider, VertexMode, VertexLocation, ThinkingLevel, ThinkingBudget, FetchedModel };
 
 // Available providers configuration
 export const AVAILABLE_PROVIDERS: LLMProvider[] = [
@@ -1969,16 +1970,6 @@ export const getDefaultModelForProvider = (providerType: LLMProviderType): strin
   return "";
 };
 
-// Fetch models from provider API (server-side to avoid CORS)
-export interface FetchedModel {
-  id: string;
-  provider: string;
-  name: string;
-  context?: number;
-  max_tokens?: number;
-  supportsThinking?: boolean;
-}
-
 export const fetchModelsFromProvider = async (
   providerType: LLMProviderType,
   config: ProviderConfig
@@ -2031,31 +2022,33 @@ export const fetchModelsFromProvider = async (
       }
 
 case "kobold-horde": {
-          try {
-            // KoboldAI Horde API returns models with workers count - filters by type already in URL
-            const response = await fetch("https://aihorde.net/api/v2/status/models?type=text");
-            const data = await response.json();
+           try {
+             // KoboldAI Horde API returns models with workers count - filters by type already in URL
+             const response = await fetch("https://aihorde.net/api/v2/status/models?type=text");
+             const data = await response.json();
 
-            if (!response.ok) {
-              return { models: [], error: `HTTP ${response.status}` };
-            }
+             if (!response.ok) {
+               return { models: [], error: `HTTP ${response.status}` };
+             }
 
-            // Transform Horde models to our format
-            // Each model has: name (full path like "koboldcpp/L3-8B-Stheno-v3.2"), type, count, performance
-            const models: FetchedModel[] = data
-              .filter((model: any) => model.count > 0) // Only include models with available workers
-              .map((model: any) => ({
-                id: model.name,
-                provider: "kobold-horde",
-                name: model.name,
-              }));
+             // Transform Horde models to our format
+             // Each model has: name (full path like "koboldcpp/L3-8B-Stheno-v3.2"), type, count, performance
+             const models: FetchedModel[] = data
+               .filter((model: any) => model.count > 0) // Only include models with available workers
+               .map((model: any) => ({
+                 id: model.name,
+                 provider: "kobold-horde",
+                 name: model.name,
+                 workerCount: model.count,
+                 performance: model.performance,
+               }));
 
-            return { models };
-          } catch (error) {
-            // Fall back to static models if API fails
-            return { models: getModelsForProvider("kobold-horde") };
-          }
-        }
+             return { models };
+           } catch (error) {
+             // Fall back to static models if API fails
+             return { models: getModelsForProvider("kobold-horde") };
+           }
+         }
 
       case "open-router": {
         if (!config.apiKey) {

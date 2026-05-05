@@ -329,9 +329,9 @@ export async function GET(request: NextRequest) {
         if (!response.ok) {
           // Fall back to static models if API fails
           const staticModels = [
-            { id: "koboldcpp/Llama-3.1-8B-Stheno-v3.4", provider: "kobold-horde", name: "Llama 3.1 8B Stheno v3.4" },
-            { id: "koboldcpp/L3-8B-Stheno-v3.2", provider: "kobold-horde", name: "L3 8B Stheno v3.2" },
-            { id: "koboldcpp/mini-magnum-12b-v1.1", provider: "kobold-horde", name: "Mini Magnum 12B v1.1" },
+            { id: "koboldcpp/Llama-3.1-8B-Stheno-v3.4", provider: "kobold-horde", name: "Llama 3.1 8B Stheno v3.4", workerCount: 1, performance: 15 },
+            { id: "koboldcpp/L3-8B-Stheno-v3.2", provider: "kobold-horde", name: "L3 8B Stheno v3.2", workerCount: 2, performance: 20 },
+            { id: "koboldcpp/mini-magnum-12b-v1.1", provider: "kobold-horde", name: "Mini Magnum 12B v1.1", workerCount: 1, performance: 10 },
           ];
           return NextResponse.json({ models: staticModels });
         }
@@ -344,10 +344,12 @@ export async function GET(request: NextRequest) {
           .filter((model: { type?: string; count?: number }) => 
             model.type === "text" && (model.count ?? 0) > 0
           )
-          .map((model: { name: string }) => ({
+          .map((model: { name: string; count: number; performance: number }) => ({
             id: model.name,
             provider: "kobold-horde",
             name: model.name,
+            workerCount: model.count,
+            performance: model.performance,
           }));
 
         return NextResponse.json({ models });

@@ -285,13 +285,15 @@ export interface ModelCost {
 export type ViewType = "home" | "chat" | "generator" | "brainstorm" | "vn";
 
 export interface FetchedModel {
-  id: string;
-  provider: string;
-  name: string;
-  contextWindow?: number;
-  maxTokens?: number;
-  supportsThinking?: boolean;
-}
+   id: string;
+   provider: string;
+   name: string;
+   context?: number;
+   max_tokens?: number;
+   supportsThinking?: boolean;
+   workerCount?: number;
+   performance?: number;
+ }
 
 export interface ConnectionStatus {
   status: "disconnected" | "connecting" | "connected" | "error";
