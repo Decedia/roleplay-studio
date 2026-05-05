@@ -1483,69 +1483,97 @@ export const chatWithKoboldHorde: ChatFunction = async (
       // Add final assistant prompt
       prompt += "Assistant: ";
 
-      const response = await fetch("https://aihorde.net/api/v2/generate/text/async", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": config.apiKey,
-        },
+       const response = await fetch("https://aihorde.net/api/v2/generate/text/async", {
+         method: "POST",
+         headers: {
+           "Content-Type": "application/json",
+           "apikey": config.apiKey,
+           "Client-Agent": "roleplay-studio:1.0.0",
+         },
          body: JSON.stringify({
            prompt,
            params: {
              temperature: options.temperature,
              top_p: options.topP,
              top_k: options.topK,
+             typical: 1,
+             frmtadsnsp: false,
+             frmtrmblln: false,
+             frmtrmspch: false,
+             frmttriminc: false,
+             rep_pen: 1.1,
+             rep_pen_range: 4096,
+             rep_pen_slope: 10,
+             singleline: false,
+             smoothing_factor: 0,
+             dynatemp_range: 0,
+             dynatemp_exponent: 1,
+             n: 1,
+             max_context_length: 2048,
              max_length: options.maxTokens,
+             min_p: 0,
+             use_default_badwordsids: true,
+             sampler_order: [0],
+             stop_sequence: [],
            },
+           trusted_workers: false,
+           validated_backends: true,
+           slow_workers: true,
+           workers: [],
+           worker_blacklist: false,
            models: [config.selectedModel || "koboldcpp/Llama-3.1-8B-Stheno-v3.4"],
-           n: 1,
-           post_processing: [],
+           dry_run: false,
+           allow_downgrade: false,
+           disable_batching: false,
+           extra_source_images: [],
+           softprompt: "",
+           extra_slow_workers: false,
          }),
-      });
+       });
 
-      const data = await response.json();
+       const data = await response.json();
 
-      if (!response.ok) {
-        return {
-          error: data.error || `HTTP ${response.status}`,
-        };
-      }
+       if (!response.ok) {
+         return {
+           error: data.error || `HTTP ${response.status}`,
+         };
+       }
 
-      // For async endpoint, we need to poll for completion
-      if (data.task_id) {
-        // Poll for result (simplified - in a real app you'd want to handle this better)
-        let result = null;
-        for (let i = 0; i < 10; i++) { // Try up to 10 times
-          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
-          const statusResponse = await fetch(`https://aihorde.net/api/v2/generate/text/check/${data.task_id}`, {
-            headers: {
-              "apikey": config.apiKey,
-            },
-          });
-          
-          if (statusResponse.ok) {
-            const statusData = await statusResponse.json();
-            if (statusData.finished && statusData.generations && statusData.generations.length > 0) {
-              result = statusData.generations[0].text;
-              break;
-            }
-          }
-        }
-        
-        if (result) {
-          return { content: result };
-        } else {
-          return { error: "Timeout waiting for generation" };
-        }
-      }
-      
-      return { error: "No task ID returned" };
-    } catch (error) {
-      return {
-        error: error instanceof Error ? error.message : "Unknown error occurred",
-      };
-    }
-  };
+       // For async endpoint, we need to poll for completion
+       if (data.task_id) {
+         // Poll for result (simplified - in a real app you'd want to handle this better)
+         let result = null;
+         for (let i = 0; i < 10; i++) { // Try up to 10 times
+           await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+           const statusResponse = await fetch(`https://aihorde.net/api/v2/generate/text/check/${data.task_id}`, {
+             headers: {
+               "apikey": config.apiKey,
+             },
+           });
+           
+           if (statusResponse.ok) {
+             const statusData = await statusResponse.json();
+             if (statusData.finished && statusData.generations && statusData.generations.length > 0) {
+               result = statusData.generations[0].text;
+               break;
+             }
+           }
+         }
+         
+         if (result) {
+           return { content: result };
+         } else {
+           return { error: "Timeout waiting for generation" };
+         }
+       }
+       
+       return { error: "No task ID returned" };
+     } catch (error) {
+       return {
+         error: error instanceof Error ? error.message : "Unknown error occurred",
+       };
+     }
+   };
 
 // KoboldAI Horde streaming implementation - uses direct API to avoid CORS
 export const streamWithKoboldHorde = async (
@@ -1594,25 +1622,53 @@ export const streamWithKoboldHorde = async (
      // Add final assistant prompt
      prompt += "Assistant: ";
 
-     const response = await fetch("https://aihorde.net/api/v2/generate/text/stream", {
-       method: "POST",
-       headers: {
-         "Content-Type": "application/json",
-         "apikey": config.apiKey,
-       },
-        body: JSON.stringify({
-          prompt,
-          params: {
-            temperature: options.temperature,
-            top_p: options.topP,
-            top_k: options.topK,
-            max_length: options.maxTokens,
-          },
-          models: [config.selectedModel || "koboldcpp/Llama-3.1-8B-Stheno-v3.4"],
-          n: 1,
-          post_processing: [],
-        }),
-     });
+      const response = await fetch("https://aihorde.net/api/v2/generate/text/stream", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": config.apiKey,
+          "Client-Agent": "roleplay-studio:1.0.0",
+        },
+         body: JSON.stringify({
+           prompt,
+           params: {
+             temperature: options.temperature,
+             top_p: options.topP,
+             top_k: options.topK,
+             typical: 1,
+             frmtadsnsp: false,
+             frmtrmblln: false,
+             frmtrmspch: false,
+             frmttriminc: false,
+             rep_pen: 1.1,
+             rep_pen_range: 4096,
+             rep_pen_slope: 10,
+             singleline: false,
+             smoothing_factor: 0,
+             dynatemp_range: 0,
+             dynatemp_exponent: 1,
+             n: 1,
+             max_context_length: 2048,
+             max_length: options.maxTokens,
+             min_p: 0,
+             use_default_badwordsids: true,
+             sampler_order: [0],
+             stop_sequence: [],
+           },
+           trusted_workers: false,
+           validated_backends: true,
+           slow_workers: true,
+           workers: [],
+           worker_blacklist: false,
+           models: [config.selectedModel || "koboldcpp/Llama-3.1-8B-Stheno-v3.4"],
+           dry_run: false,
+           allow_downgrade: false,
+           disable_batching: false,
+           extra_source_images: [],
+           softprompt: "",
+           extra_slow_workers: false,
+         }),
+      });
 
      if (!response.ok) {
        const errorData = await response.json();
