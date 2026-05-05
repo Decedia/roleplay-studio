@@ -2018,37 +2018,37 @@ export const fetchModelsFromProvider = async (
           return { models: [], error: groqData.error || `HTTP ${groqResponse.status}` };
         }
 
-        return { models: groqData.models || [] };
+return { models: groqData.models || [] };
       }
 
-case "kobold-horde": {
-           try {
-             // KoboldAI Horde API returns models with workers count - filters by type already in URL
-             const response = await fetch("https://aihorde.net/api/v2/status/models?type=text");
-             const data = await response.json();
+      case "kobold-horde": {
+        try {
+          // KoboldAI Horde API returns models with workers count - filters by type already in URL
+          const response = await fetch("https://aihorde.net/api/v2/status/models?type=text");
+          const data = await response.json();
 
-             if (!response.ok) {
-               return { models: [], error: `HTTP ${response.status}` };
-             }
+          if (!response.ok) {
+            return { models: [], error: `HTTP ${response.status}` };
+          }
 
-             // Transform Horde models to our format
-             // Each model has: name (full path like "koboldcpp/L3-8B-Stheno-v3.2"), type, count, performance
-             const models: FetchedModel[] = data
-               .filter((model: any) => model.count > 0) // Only include models with available workers
-               .map((model: any) => ({
-                 id: model.name,
-                 provider: "kobold-horde",
-                 name: model.name,
-                 workerCount: model.count,
-                 performance: model.performance,
-               }));
+          // Transform Horde models to our format
+          // Each model has: name (full path like "koboldcpp/L3-8B-Stheno-v3.2"), type, count, performance
+          const models: FetchedModel[] = data
+            .filter((model: any) => model.count > 0) // Only include models with available workers
+            .map((model: any) => ({
+              id: model.name,
+              provider: "kobold-horde",
+              name: model.name,
+              workerCount: model.count,
+              performance: model.performance,
+            }));
 
-             return { models };
-           } catch (error) {
-             // Fall back to static models if API fails
-             return { models: getModelsForProvider("kobold-horde") };
-           }
-         }
+          return { models };
+        } catch (error) {
+          // Fall back to static models if API fails
+          return { models: getModelsForProvider("kobold-horde") };
+        }
+      }
 
       case "open-router": {
         if (!config.apiKey) {
