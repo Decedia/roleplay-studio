@@ -3117,23 +3117,49 @@ export default function Chat() {
 
 
     const handleConnectProvider = async (providerType: LLMProviderType) => {
-     // Set as active provider
-     setActiveProvider(providerType);
-     
-     // Get the active profile for this provider
-     const config = providerConfigs[providerType];
-     const activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
-     
-     // Build profile config for API calls
-     const profileConfig = {
-       ...config,
-       apiKey: activeProfile?.apiKey || "",
-       projectId: activeProfile?.projectId || "",
-       serviceAccountJson: activeProfile?.serviceAccountJson,
-       vertexMode: activeProfile?.vertexMode,
-       vertexLocation: activeProfile?.vertexLocation,
-       selectedModel: activeProfile?.selectedModel
-     };
+      // Set as active provider
+      setActiveProvider(providerType);
+      
+      // Get the active profile for this provider
+      const config = providerConfigs[providerType];
+      
+      // For kobold-horde, ensure we have a profile initialized
+      let activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
+      if (providerType === "kobold-horde" && (!activeProfile || config.profiles.length === 0)) {
+        // Create default profile for kobold-horde if it doesn't exist
+        const defaultProfile: ProviderProfile = {
+          id: "kobold-horde-single",
+          name: "Default",
+          apiKey: "",
+          selectedModel: "koboldcpp/Llama-3.1-8B-Stheno-v3.4",
+          createdAt: Date.now()
+        };
+        
+        setProviderConfigs(prev => ({
+          ...prev,
+          [providerType]: {
+            ...prev[providerType],
+            profiles: [defaultProfile],
+            activeProfileId: defaultProfile.id
+          }
+        }));
+        
+        activeProfile = defaultProfile;
+      } else if (!activeProfile) {
+        // Fallback for other providers - use first profile if available
+        activeProfile = config.profiles[0] || null;
+      }
+      
+      // Build profile config for API calls
+      const profileConfig = {
+        ...config,
+        apiKey: activeProfile?.apiKey || "",
+        projectId: activeProfile?.projectId || "",
+        serviceAccountJson: activeProfile?.serviceAccountJson,
+        vertexMode: activeProfile?.vertexMode,
+        vertexLocation: activeProfile?.vertexLocation,
+        selectedModel: activeProfile?.selectedModel
+      };
      
      // Set connecting status
      setConnectionStatus(prev => ({
