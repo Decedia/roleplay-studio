@@ -1951,14 +1951,51 @@ case "kobold-horde": {
 
           const errorData = await response.json();
           return { success: false, message: errorData.error || `HTTP ${response.status}` };
-        } catch (error) {
-          return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
-        }
+       } catch (error) {
+         return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
+       }
      }
+     
+     case "kobold-horde": {
+        if (!config.apiKey) {
+          return { success: false, message: "API key is required." };
+        }
+         try {
+           // Test with a minimal text generation request using the async API to avoid CORS
+           const response = await fetch("https://aihorde.net/api/v2/generate/text/async", {
+             method: "POST",
+             headers: {
+               "Content-Type": "application/json",
+               "apikey": config.apiKey,
+             },
+             body: JSON.stringify({
+               prompt: "Hello",
+               params: {
+                 temperature: 0.1,
+                 max_length: 16, // Minimum allowed by the API
+               },
+               models: [config.selectedModel || "koboldcpp/Llama-3.1-8B-Stheno-v3.4"],
+             }),
+           });
 
-    default:
-      return { success: false, message: `Unknown provider: ${providerType}` };
-  }
+           if (response.ok) {
+             const result = await response.json();
+             if (result.task_id) {
+               return { success: true, message: "KoboldAI Horde connection successful!" };
+             }
+             return { success: false, message: "Unexpected response format (no task_id)" };
+           }
+
+           const errorData = await response.json();
+           return { success: false, message: errorData.error || `HTTP ${response.status}` };
+         } catch (error) {
+           return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
+         }
+      }
+
+     default:
+       return { success: false, message: `Unknown provider: ${providerType}` };
+   }
 };
 
 // Get default model for a provider
