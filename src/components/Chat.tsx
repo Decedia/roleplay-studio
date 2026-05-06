@@ -1950,79 +1950,87 @@ useEffect(() => {
                 )}
               </div>
 
-              {/* KoboldAI Horde */}
-              <div className="p-3 bg-zinc-800/50 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${
-                      connectionStatus["kobold-horde"]?.status === "connected" ? "bg-green-500" :
-                      connectionStatus["kobold-horde"]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
-                      connectionStatus["kobold-horde"]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
-                    }`} />
-                    <span className="text-sm font-medium text-white">KoboldAI Horde</span>
-                    {activeProvider === "kobold-horde" && (
-                      <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
-                    )}
-                  </div>
-                </div>
-                {connectionStatus["kobold-horde"]?.message && (
-                  <p className={`text-xs mb-2 ${
-                    connectionStatus["kobold-horde"]?.status === "connected" ? "text-green-400" :
-                    connectionStatus["kobold-horde"]?.status === "error" ? "text-red-400" : "text-zinc-400"
-                  }`}>
-                    {connectionStatus["kobold-horde"].message}
-                  </p>
-                )}
-
-                <div className="mt-3 space-y-3">
-                  <div>
-                    <label className="block text-xs text-zinc-400 mb-1">API Key</label>
-                    <input
-                      type="password"
-                      value={providerConfigs["kobold-horde"]?.profiles?.[0]?.apiKey || ""}
-                      onChange={(e) => {
-                        // Single profile for Kobold Horde (no profile system)
-                        setProviderConfigs(prev => ({
-                          ...prev,
-                          "kobold-horde": {
-                            ...prev["kobold-horde"],
-                            profiles: [{
-                              id: "kobold-horde-single",
-                              name: "Default",
-                              apiKey: e.target.value,
-                              selectedModel: "koboldcpp/Llama-3.1-8B-Stheno-v3.4",
-                              createdAt: Date.now()
-                            }],
-                            activeProfileId: "kobold-horde-single"
-                          }
-                        }));
-                      }}
-                      placeholder="Enter your KoboldAI Horde API key"
-                      className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                    <p className="text-xs text-zinc-500 mt-2">
-                      Get your API key at{" "}
-                      <a
-                        href="https://aihorde.net/register"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-400 hover:text-blue-300 underline"
-                      >
-                        aihorde.net/register
-                      </a>
-                    </p>
-                  </div>
-                    <div className="flex gap-2">
-                       <button
-                         type="button"
-                         onClick={() => handleConnectProvider("kobold-horde")}
-                         className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                       >
-                         Connect
-                       </button>
-                    </div>
-                </div>
-              </div>
+               {/* KoboldAI Horde */}
+               <div className="p-3 bg-zinc-800/50 rounded-lg">
+                 <div className="flex items-center justify-between mb-2">
+                   <div className="flex items-center gap-2">
+                     <div className={`w-2 h-2 rounded-full ${
+                       connectionStatus["kobold-horde"]?.status === "connected" ? "bg-green-500" :
+                       connectionStatus["kobold-horde"]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
+                       connectionStatus["kobold-horde"]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
+                     }`} />
+                     <span className="text-sm font-medium text-white">KoboldAI Horde</span>
+                     {activeProvider === "kobold-horde" && (
+                       <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
+                     )}
+                   </div>
+                   <button
+                     type="button"
+                     onClick={() => setEditingProvider(editingProvider === 'kobold-horde' ? null : 'kobold-horde')}
+                     className="text-xs text-blue-400 hover:text-blue-300"
+                   >
+                     {editingProvider === 'kobold-horde' ? 'Hide' : 'Configure'}
+                   </button>
+                 </div>
+                 {connectionStatus["kobold-horde"]?.message && (
+                   <p className={`text-xs mb-2 ${
+                     connectionStatus["kobold-horde"]?.status === "connected" ? "text-green-400" :
+                     connectionStatus["kobold-horde"]?.status === "error" ? "text-red-400" : "text-zinc-400"
+                   }`}>
+                     {connectionStatus["kobold-horde"].message}
+                   </p>
+                 )}
+                 {editingProvider === 'kobold-horde' && (
+                   <div className="mt-3 space-y-3">
+                     <div>
+                       <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                       <input
+                         type="password"
+                         value={providerConfigs["kobold-horde"]?.profiles?.[0]?.apiKey || ""}
+                         onChange={(e) => {
+                           // Single profile for Kobold Horde (no profile system)
+                           setProviderConfigs(prev => ({
+                             ...prev,
+                             "kobold-horde": {
+                               ...prev["kobold-horde"],
+                               profiles: [{
+                                 id: "kobold-horde-single",
+                                 name: "Default",
+                                 apiKey: e.target.value,
+                                 selectedModel: "koboldcpp/Llama-3.1-8B-Stheno-v3.4",
+                                 createdAt: Date.now()
+                               }],
+                               activeProfileId: "kobold-horde-single"
+                             }
+                           }));
+                         }}
+                         placeholder="Enter your KoboldAI Horde API key"
+                         className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                       />
+                       <p className="text-xs text-zinc-500 mt-2">
+                         Get your API key at{" "}
+                         <a
+                           href="https://aihorde.net/register"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           className="text-blue-400 hover:text-blue-300 underline"
+                         >
+                           aihorde.net/register
+                         </a>
+                       </p>
+                     </div>
+                     <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleConnectProvider("kobold-horde")}
+                          className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                        >
+                          Connect
+                        </button>
+                     </div>
+                   </div>
+                 )}
+               </div>
 
 
             </div>
