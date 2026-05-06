@@ -20,6 +20,7 @@ import {
   VertexLocation,
   fetchModelsFromProvider,
   FetchedModel,
+  DEFAULT_KOBOLD_HORDE_MODEL,
 } from "@/lib/providers";
 import {
   summarizeConversation,
@@ -1997,7 +1998,7 @@ useEffect(() => {
                                  id: "kobold-horde-single",
                                  name: "Default",
                                  apiKey: e.target.value,
-                                 selectedModel: "koboldcpp/Llama-3.1-8B-Stheno-v3.4",
+                                 selectedModel: DEFAULT_KOBOLD_HORDE_MODEL,
                                  createdAt: Date.now()
                                }],
                                activeProfileId: "kobold-horde-single"
@@ -3139,7 +3140,7 @@ export default function Chat() {
           id: "kobold-horde-single",
           name: "Default",
           apiKey: "",
-          selectedModel: "koboldcpp/Llama-3.1-8B-Stheno-v3.4",
+           selectedModel: DEFAULT_KOBOLD_HORDE_MODEL,
           createdAt: Date.now()
         };
         

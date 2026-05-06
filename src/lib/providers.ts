@@ -16,6 +16,9 @@ import {
 // Re-export types for convenience
 export type { LLMProviderType, ProviderConfig, Message, LLMModel, LLMProvider, VertexMode, VertexLocation, ThinkingLevel, ThinkingBudget, FetchedModel };
 
+// Default models for providers
+export const DEFAULT_KOBOLD_HORDE_MODEL = "koboldcpp/Llama-3.1-8B-Stheno-v3.4";
+
 // Available providers configuration
 export const AVAILABLE_PROVIDERS: LLMProvider[] = [
   {
@@ -331,7 +334,7 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
     requiresApiKey: true,
     models: [
       {
-        id: "koboldcpp/Llama-3.1-8B-Stheno-v3.4",
+        id: DEFAULT_KOBOLD_HORDE_MODEL,
         name: "Llama 3.1 8B Stheno v3.4",
         provider: "kobold-horde",
         contextWindow: 8192,
@@ -1458,6 +1461,11 @@ export const chatWithKoboldHorde: ChatFunction = async (
       return { error: "KoboldAI Horde API key is required" };
     }
 
+    // Get the selected model's context window, fallback to 8192
+    const availableModels = getModelsForProvider("kobold-horde");
+    const selectedModel = availableModels.find(m => m.id === (config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL));
+    const maxContextLength = selectedModel?.contextWindow || 8192;
+
     try {
       // Combine all messages into a single prompt for KoboldAI Horde
       const systemMessages = messages.filter(m => m.role === "system");
@@ -1509,7 +1517,7 @@ export const chatWithKoboldHorde: ChatFunction = async (
              dynatemp_range: 0,
              dynatemp_exponent: 1,
              n: 1,
-             max_context_length: 2048,
+             max_context_length: maxContextLength,
              max_length: options.maxTokens,
              min_p: 0,
              use_default_badwordsids: true,
@@ -1521,7 +1529,7 @@ export const chatWithKoboldHorde: ChatFunction = async (
            slow_workers: true,
            workers: [],
            worker_blacklist: false,
-           models: [config.selectedModel || "koboldcpp/Llama-3.1-8B-Stheno-v3.4"],
+           models: [config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL],
            dry_run: false,
            allow_downgrade: false,
            disable_batching: false,
@@ -1541,32 +1549,47 @@ export const chatWithKoboldHorde: ChatFunction = async (
 
        // For async endpoint, we need to poll for completion
        if (data.task_id) {
-         // Poll for result (simplified - in a real app you'd want to handle this better)
+         // Poll for result with exponential backoff and timeout
+         const maxAttempts = 12; // Up to ~64 seconds total
+         const baseDelay = 1000; // 1 second
          let result = null;
-         for (let i = 0; i < 10; i++) { // Try up to 10 times
-           await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
-           const statusResponse = await fetch(`https://aihorde.net/api/v2/generate/text/check/${data.task_id}`, {
-             headers: {
-               "apikey": config.apiKey,
-             },
-           });
+         
+         for (let i = 0; i < maxAttempts; i++) {
+           // Exponential backoff: 1s, 2s, 4s, 8s, etc.
+           const delay = Math.min(baseDelay * Math.pow(2, i), 30000); // Cap at 30s
+           await new Promise(resolve => setTimeout(resolve, delay));
            
-           if (statusResponse.ok) {
-             const statusData = await statusResponse.json();
-             if (statusData.finished && statusData.generations && statusData.generations.length > 0) {
-               result = statusData.generations[0].text;
-               break;
+           try {
+             const statusResponse = await fetch(`https://aihorde.net/api/v2/generate/text/check/${data.task_id}`, {
+               headers: {
+                 "apikey": config.apiKey,
+               },
+             });
+             
+             if (statusResponse.ok) {
+               const statusData = await statusResponse.json();
+               if (statusData.finished && statusData.generations && statusData.generations.length > 0) {
+                 result = statusData.generations[0].text;
+                 break;
+               }
+               // If still processing, continue polling
+               if (statusData.done === false) {
+                 continue;
+               }
              }
+           } catch (pollError) {
+             // Ignore individual poll errors and continue
+             continue;
            }
          }
          
          if (result) {
            return { content: result };
          } else {
-           return { error: "Timeout waiting for generation" };
+           return { error: "Timeout waiting for generation - task may still be processing" };
          }
        }
-       
+        
        return { error: "No task ID returned" };
      } catch (error) {
        return {
@@ -1596,6 +1619,11 @@ export const streamWithKoboldHorde = async (
      onChunk({ error: "KoboldAI Horde API key is required" });
      return;
    }
+
+   // Get the selected model's context window, fallback to 8192
+   const availableModels = getModelsForProvider("kobold-horde");
+   const selectedModel = availableModels.find(m => m.id === (config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL));
+   const maxContextLength = selectedModel?.contextWindow || 8192;
 
    try {
      // Combine all messages into a single prompt for KoboldAI Horde
@@ -1648,7 +1676,7 @@ export const streamWithKoboldHorde = async (
              dynatemp_range: 0,
              dynatemp_exponent: 1,
              n: 1,
-             max_context_length: 2048,
+             max_context_length: maxContextLength,
              max_length: options.maxTokens,
              min_p: 0,
              use_default_badwordsids: true,
@@ -1660,7 +1688,7 @@ export const streamWithKoboldHorde = async (
            slow_workers: true,
            workers: [],
            worker_blacklist: false,
-           models: [config.selectedModel || "koboldcpp/Llama-3.1-8B-Stheno-v3.4"],
+           models: [config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL],
            dry_run: false,
            allow_downgrade: false,
            disable_batching: false,
@@ -1976,63 +2004,26 @@ export const testProviderConnection = async (
     }
 
 case "kobold-horde": {
-       if (!config.apiKey) {
-         return { success: false, message: "API key is required." };
-       }
-        try {
-          // Test with a minimal text generation request using the async API to avoid CORS
-          const response = await fetch("https://aihorde.net/api/v2/generate/text/async", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "apikey": config.apiKey,
-            },
-            body: JSON.stringify({
-              prompt: "Hello",
-              params: {
-                temperature: 0.1,
-                max_length: 16, // Minimum allowed by the API
-              },
-              models: [config.selectedModel || "koboldcpp/Llama-3.1-8B-Stheno-v3.4"],
-            }),
-          });
-
-          if (response.ok) {
-            const result = await response.json();
-            if (result.task_id) {
-              return { success: true, message: "KoboldAI Horde connection successful!" };
-            }
-            return { success: false, message: "Unexpected response format (no task_id)" };
-          }
-
-          const errorData = await response.json();
-          return { success: false, message: errorData.error || `HTTP ${response.status}` };
-       } catch (error) {
-         return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
-       }
-     }
-     
-     case "kobold-horde": {
         if (!config.apiKey) {
           return { success: false, message: "API key is required." };
         }
          try {
            // Test with a minimal text generation request using the async API to avoid CORS
-           const response = await fetch("https://aihorde.net/api/v2/generate/text/async", {
-             method: "POST",
-             headers: {
-               "Content-Type": "application/json",
-               "apikey": config.apiKey,
-             },
-             body: JSON.stringify({
-               prompt: "Hello",
-               params: {
-                 temperature: 0.1,
-                 max_length: 16, // Minimum allowed by the API
-               },
-               models: [config.selectedModel || "koboldcpp/Llama-3.1-8B-Stheno-v3.4"],
-             }),
-           });
+        const response = await fetch("https://aihorde.net/api/v2/generate/text/async", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": config.apiKey,
+          },
+          body: JSON.stringify({
+            prompt: "Hello",
+            params: {
+              temperature: 0.1,
+              max_length: 16, // Minimum allowed by the API
+            },
+            models: [config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL],
+          }),
+        });
 
            if (response.ok) {
              const result = await response.json();

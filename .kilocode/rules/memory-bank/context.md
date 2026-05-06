@@ -8,14 +8,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
-- [x] **COMPLETED: Implemented KoboldAI Horde provider support**
-   - Added "kobold-horde" to LLMProviderType and provider configurations
-   - Implemented chatWithKoboldHorde and streamWithKoboldHorde functions
-   - Created /api/kobold-horde route for async text generation workflow
-   - Added test connection and model fetching logic
-   - Updated Chat.tsx state to include kobold-horde provider
-   - Added KoboldAI Horde provider UI section with profile management and connection controls
-   - KoboldAI Horde provides distributed AI text generation via crowdsourced GPUs
+
 - [x] **COMPLETED: Fixed AI Horde models fetching to use workers API**
    - Fixed model fetching to query `/api/v2/status/models?type=text` which returns available workers
    - Fixed filtering to only show models with available workers (`count > 0`)
@@ -29,11 +22,14 @@ A chat application for roleplay conversations with multiple LLM provider support
   - Updated UI to show "Connect" buttons that directly fetch models
   - Simplified provider configuration UI by removing redundant testing states and connection status indicators
   - Improved user experience by making connection immediate and model fetching automatic
-- [x] **COMPLETED: Removed test connection system entirely**
-  - Eliminated all connection testing logic from the connection process
-  - Connect button now immediately fetches models from provider APIs without any preliminary testing
-  - Removed all "testing" status indicators and related UI elements
-  - Simplified the connection flow to be: user clicks connect → models are fetched → UI updates with results
+ - [x] **COMPLETED: Fixed structural problems in KoboldAI Horde handleConnection**  
+    - Removed duplicate `case "kobold-horde"` in `testProviderConnection` (was causing dead code)
+    - Fixed hardcoded `max_context_length: 2048` to use dynamic model context window  
+    - Added `DEFAULT_KOBOLD_HORDE_MODEL` constant to avoid model string duplication
+    - Improved polling in `chatWithKoboldHorde` with exponential backoff (1s→30s cap) and per-attempt error handling
+    - Added proper model context lookup for both chat and stream functions
+    - Clarified connection status messages for Horde network
+    - Reduced state update race conditions in `handleConnectProvider`
   - Improved responsiveness by removing unnecessary connection testing step
 - [x] **COMPLETED: Fixed NVIDIA NIM model fetching**
   - Updated NVIDIA NIM provider to properly fetch models from the API
