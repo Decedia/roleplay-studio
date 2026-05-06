@@ -3117,19 +3117,30 @@ export default function Chat() {
       setImportSuccess("Data imported successfully! All your personas, characters, and conversations have been restored.");
       setTimeout(() => setImportSuccess(null), 5000);
     } catch (error) {
-      setImportError(`Failed to import data: ${error instanceof Error ? error.message : "Invalid JSON file"}`);
-      setTimeout(() => setImportError(null), 5000);
-    }
-  };
+       setImportError(`Failed to import data: ${error instanceof Error ? error.message : "Invalid JSON file"}`);
+       setTimeout(() => setImportError(null), 5000);
+     }
+   };
 
-  // Provider connection functions
+   const [toasts, setToasts] = useState<Array<{id: string, message: string, type: 'success' | 'error' | 'info'}>>([]);
+
+   const addToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+     const id = Math.random().toString(36).substr(2, 9);
+     setToasts(prev => [...prev, { id, message, type }]);
+     setTimeout(() => {
+       setToasts(prev => prev.filter(t => t.id !== id));
+     }, 5000);
+   };
+
+   // Provider connection functions
 
 
-    const handleConnectProvider = async (providerType: LLMProviderType) => {
-      // Set as active provider
-      setActiveProvider(providerType);
-      
-      // Get the active profile for this provider
+const handleConnectProvider = async (providerType: LLMProviderType) => {
+  // Set as active provider
+  setActiveProvider(providerType);
+  addToast(`Connecting to ${providerType}...`);
+  
+  // Get the active profile for this provider
       const config = providerConfigs[providerType];
       
       // For kobold-horde, ensure we have a profile initialized
@@ -3252,24 +3263,26 @@ if (modelsResult.models.length > 0) {
          }
        }
        
-       // Mark as connected
-       setConnectionStatus(prev => ({
-         ...prev,
-         [providerType]: {
-           status: "connected",
-           message: "Connected"
-         }
-       }));
-     } catch (error) {
-       setConnectionStatus(prev => ({
-         ...prev,
-         [providerType]: {
-           status: "error",
-           message: error instanceof Error ? error.message : "Connection failed"
-         }
-       }));
-       return;
-     }
+        // Mark as connected
+        setConnectionStatus(prev => ({
+          ...prev,
+          [providerType]: {
+            status: "connected",
+            message: "Connected"
+          }
+        }));
+        addToast(`Connected to ${providerType}`, 'success');
+      } catch (error) {
+        setConnectionStatus(prev => ({
+          ...prev,
+          [providerType]: {
+            status: "error",
+            message: error instanceof Error ? error.message : "Connection failed"
+          }
+        }));
+        addToast(`Failed to connect to ${providerType}: ${error instanceof Error ? error.message : "Connection failed"}`, 'error');
+        return;
+      }
    };
 
   const handleDisconnectProvider = (providerType: LLMProviderType) => {
