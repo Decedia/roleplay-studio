@@ -657,13 +657,16 @@ function SettingsModal({
 
   const modelSearchInputRef = useRef<HTMLInputElement>(null);
   const [editingProvider, setEditingProvider] = useState<LLMProviderType | null>(null);
-  const [showAdvancedInstructions, setShowAdvancedInstructions] = useState(true);
-  const [activeInstructionsTab, setActiveInstructionsTab] = useState<"chat" | "generator" | "brainstorm" | "vn">("chat");
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const instructionsFileInputRef = useRef<HTMLInputElement>(null);
-  const dataImportInputRef = useRef<HTMLInputElement>(null);
+   const [showAdvancedInstructions, setShowAdvancedInstructions] = useState(true);
+   const [activeInstructionsTab, setActiveInstructionsTab] = useState<"chat" | "generator" | "brainstorm" | "vn">("chat");
+   const dropdownRef = useRef<HTMLDivElement>(null);
+   const instructionsFileInputRef = useRef<HTMLInputElement>(null);
+   const dataImportInputRef = useRef<HTMLInputElement>(null);
+   const [showProviderDropdown, setShowProviderDropdown] = useState(false);
+   const [providerSearchQuery, setProviderSearchQuery] = useState("");
+   const providerSearchInputRef = useRef<HTMLInputElement>(null);
 
-  // Get models for the active provider
+   // Get models for the active provider
   const activeProviderModels = providerModels[activeProvider] || [];
   
   const isLoadingModels = modelsFetching[activeProvider];
@@ -676,18 +679,36 @@ function SettingsModal({
     if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
       setShowModelDropdown(false);
     }
-  };
-
-useEffect(() => {
-  if (showModelDropdown) {
-    document.addEventListener("mousedown", handleClickOutside);
-    setTimeout(() => modelSearchInputRef.current?.focus(), 50);
-  }
-  return () => {
-    document.removeEventListener("mousedown", handleClickOutside);
-    setModelSearchQuery("");
-  };
-}, [showModelDropdown]);
+   };
+ 
+   useEffect(() => {
+     if (showModelDropdown) {
+       document.addEventListener("mousedown", handleClickOutside);
+       setTimeout(() => modelSearchInputRef.current?.focus(), 50);
+     }
+     return () => {
+       document.removeEventListener("mousedown", handleClickOutside);
+       setModelSearchQuery("");
+     };
+   }, [showModelDropdown]);
+   
+   // Close dropdown when clicking outside for provider dropdown
+   const handleProviderClickOutside = (e: MouseEvent) => {
+     if (providerSearchInputRef.current && !providerSearchInputRef.current.contains(e.target as Node)) {
+       setShowProviderDropdown(false);
+     }
+   };
+   
+   useEffect(() => {
+     if (showProviderDropdown) {
+       document.addEventListener("mousedown", handleProviderClickOutside);
+       setTimeout(() => providerSearchInputRef.current?.focus(), 50);
+     }
+     return () => {
+       document.removeEventListener("mousedown", handleProviderClickOutside);
+       setProviderSearchQuery("");
+     };
+   }, [showProviderDropdown]);
 
   const selectModel = (modelId: string) => {
     const model = activeProviderModels.find(m => m.id === modelId);
