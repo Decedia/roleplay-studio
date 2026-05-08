@@ -8,6 +8,13 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
+- [x] **Added toast system for provider connection debugging**
+  - Created reusable `useToast` hook in `src/hooks/useToast.ts`
+  - Integrated toast system into Chat component to show connection status for providers
+  - Kobold Horde connect button now shows toast with provider name when connection is attempted
+  - Increased toast z-index to ensure it appears above other content
+  - Toasts automatically disappear after 5 seconds
+
 
 - [x] **COMPLETED: Fixed AI Horde models fetching to use workers API**
    - Fixed model fetching to query `/api/v2/status/models?type=text` which returns available workers

@@ -22,6 +22,7 @@ import {
   FetchedModel,
   DEFAULT_KOBOLD_HORDE_MODEL,
 } from "@/lib/providers";
+import { useToast } from "@/hooks/useToast";
 import {
   summarizeConversation,
   shouldTriggerSummarization,
@@ -3122,15 +3123,7 @@ export default function Chat() {
      }
    };
 
-   const [toasts, setToasts] = useState<Array<{id: string, message: string, type: 'success' | 'error' | 'info'}>>([]);
-
-   const addToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
-     const id = Math.random().toString(36).substr(2, 9);
-     setToasts(prev => [...prev, { id, message, type }]);
-     setTimeout(() => {
-       setToasts(prev => prev.filter(t => t.id !== id));
-     }, 5000);
-   };
+    const { toasts, addToast } = useToast();
 
    // Provider connection functions
 

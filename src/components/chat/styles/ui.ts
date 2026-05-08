@@ -408,10 +408,10 @@ export const notifications = {
   errorContent: "overflow-y-auto whitespace-pre-wrap",
   errorActions: "flex justify-end gap-2 mt-3 pt-3 border-t border-red-700/50",
   
-  /** Toast notification */
-  toast: "fixed bottom-32 left-0 right-0 z-[1000] px-4 py-3",
-  toastInner: "bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white shadow-xl backdrop-blur-sm flex items-center justify-between",
-  toastContent: "flex items-center gap-3",
+/** Toast notification */
+toast: "fixed bottom-32 left-0 right-0 z-[5000] px-4 py-3",
+toastInner: "bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white shadow-xl backdrop-blur-sm flex items-center justify-between",
+toastContent: "flex items-center gap-3",
   
   /** Info notification */
   info: "bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 text-sm text-zinc-400",
