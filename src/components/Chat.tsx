@@ -10877,8 +10877,18 @@ rows={6}
             </div>
           </div>
         </div>
-      )}
-
-    </div>
-  );
+       )}
+   
+     <div className={ui.notifications.toast}>
+       {toasts.map(toast => (
+         <div key={toast.id} className={ui.notifications.toastInner}>
+           <div className={ui.notifications.toastContent}>
+             {toast.message}
+           </div>
+         </div>
+       ))}
+     </div>
+   
+     </div>
+   );
 }
