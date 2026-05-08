@@ -666,13 +666,13 @@ function SettingsModal({
    const [providerSearchQuery, setProviderSearchQuery] = useState("");
    const providerSearchInputRef = useRef<HTMLInputElement>(null);
 
-   // Get models for the active provider
-  const activeProviderModels = providerModels[activeProvider] || [];
-  
-  const isLoadingModels = modelsFetching[activeProvider];
-
-  // Find selected model info
-  const selectedModel = activeProviderModels.find(m => m.id === globalSettings.modelId);
+    // Get models for the modal provider (the provider selected in the modal)
+   const modalProviderModels = providerModels[modalProvider] || [];
+   
+   const isLoadingModalProviderModels = modelsFetching[modalProvider];
+   
+   // Find selected model info for the modal provider
+   const selectedModel = modalProviderModels.find(m => m.id === globalSettings.modelId);
 
   // Close dropdown when clicking outside
   const handleClickOutside = (e: MouseEvent) => {
