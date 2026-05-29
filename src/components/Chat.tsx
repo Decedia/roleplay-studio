@@ -667,9 +667,13 @@ function SettingsModal({
    const providerSearchInputRef = useRef<HTMLInputElement>(null);
 
     // Get models for the modal provider (the provider selected in the modal)
-   const modalProviderModels = providerModels[modalProvider] || [];
-   
-   const isLoadingModalProviderModels = modelsFetching[modalProvider];
+    const modalProviderModels = providerModels[activeProvider] || [];
+    
+    const isLoadingModalProviderModels = modelsFetching[activeProvider];
+    
+    // Get models for the active provider
+    const activeProviderModels = providerModels[activeProvider] || [];
+    const isLoadingModels = modelsFetching[activeProvider] || false;
    
    // Find selected model info for the modal provider
    const selectedModel = modalProviderModels.find(m => m.id === globalSettings.modelId);
