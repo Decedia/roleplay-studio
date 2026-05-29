@@ -255,6 +255,7 @@ A chat application for roleplay conversations with multiple LLM provider support
 - [x] **Added "Ding when unfocused" global setting** - plays notification sound when AI finishes generating
 - [x] **Fixed notification sound logic** - removed window focus check (browsers throttle background tabs anyway)
 - [x] **Enable send button in brainstorm when last message is from user** - allows resending last message
+- [x] **Fixed OpenRouter provider to properly handle system messages** - Ensured system messages from input and options.systemPrompt are preserved and sent with correct role "system" to prevent 'provider return error' from some models.
 
 ## Current Structure
 

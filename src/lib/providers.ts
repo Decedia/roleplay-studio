@@ -1126,18 +1126,16 @@ export const chatWithOpenRouter: ChatFunction = async (
   }
 
   try {
-    const systemMessages = messages.filter(m => m.role === "system");
+    const systemMessagesFromInput = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
-    
-    const formattedMessages = nonSystemMessages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
 
-    const systemContent = systemMessages.map(m => m.content).join("\n\n");
-    const messagesWithSystem = systemContent || options.systemPrompt
-      ? [{ role: "system", content: systemContent || options.systemPrompt || "" }, ...formattedMessages]
-      : formattedMessages;
+    let systemMessages = [];
+    if (options.systemPrompt) {
+      systemMessages.push({ role: "system", content: options.systemPrompt });
+    }
+    systemMessages = systemMessages.concat(systemMessagesFromInput);
+
+    const messagesWithSystem = systemMessages.concat(nonSystemMessages);
 
     const response = await fetch("/api/open-router", {
       method: "POST",
@@ -1199,18 +1197,16 @@ export const streamWithOpenRouter = async (
   }
 
   try {
-    const systemMessages = messages.filter(m => m.role === "system");
+    const systemMessagesFromInput = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
-    
-    const formattedMessages = nonSystemMessages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
 
-    const systemContent = systemMessages.map(m => m.content).join("\n\n");
-    const messagesWithSystem = systemContent || options.systemPrompt
-      ? [{ role: "system", content: systemContent || options.systemPrompt || "" }, ...formattedMessages]
-      : formattedMessages;
+    let systemMessages = [];
+    if (options.systemPrompt) {
+      systemMessages.push({ role: "system", content: options.systemPrompt });
+    }
+    systemMessages = systemMessages.concat(systemMessagesFromInput);
+
+    const messagesWithSystem = systemMessages.concat(nonSystemMessages);
 
     const response = await fetch("/api/open-router", {
       method: "POST",
