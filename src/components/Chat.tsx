@@ -1977,93 +1977,288 @@ function SettingsModal({
                 )}
               </div>
 
-               {/* KoboldAI Horde */}
-               <div className="p-3 bg-zinc-800/50 rounded-lg">
-                 <div className="flex items-center justify-between mb-2">
-                   <div className="flex items-center gap-2">
-                     <div className={`w-2 h-2 rounded-full ${
-                       connectionStatus["kobold-horde"]?.status === "connected" ? "bg-green-500" :
-                       connectionStatus["kobold-horde"]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
-                       connectionStatus["kobold-horde"]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
-                     }`} />
-                     <span className="text-sm font-medium text-white">KoboldAI Horde</span>
-                     {activeProvider === "kobold-horde" && (
-                       <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
-                     )}
-                   </div>
-                   <button
-                     type="button"
-                     onClick={() => setEditingProvider(editingProvider === 'kobold-horde' ? null : 'kobold-horde')}
-                     className="text-xs text-blue-400 hover:text-blue-300"
-                   >
-                     {editingProvider === 'kobold-horde' ? 'Hide' : 'Configure'}
-                   </button>
-                 </div>
-                 {connectionStatus["kobold-horde"]?.message && (
-                   <p className={`text-xs mb-2 ${
-                     connectionStatus["kobold-horde"]?.status === "connected" ? "text-green-400" :
-                     connectionStatus["kobold-horde"]?.status === "error" ? "text-red-400" : "text-zinc-400"
-                   }`}>
-                     {connectionStatus["kobold-horde"].message}
-                   </p>
-                 )}
-                 {editingProvider === 'kobold-horde' && (
-                   <div className="mt-3 space-y-3">
-                     <div>
-                       <label className="block text-xs text-zinc-400 mb-1">API Key</label>
-                       <input
-                         type="password"
-                         value={providerConfigs["kobold-horde"]?.profiles?.[0]?.apiKey || ""}
-                         onChange={(e) => {
-                           // Single profile for Kobold Horde (no profile system)
-                           setProviderConfigs(prev => ({
-                             ...prev,
-                             "kobold-horde": {
-                               ...prev["kobold-horde"],
-                               profiles: [{
-                                 id: "kobold-horde-single",
-                                 name: "Default",
-                                 apiKey: e.target.value,
-                                 selectedModel: DEFAULT_KOBOLD_HORDE_MODEL,
-                                 createdAt: Date.now()
-                               }],
-                               activeProfileId: "kobold-horde-single"
-                             }
-                           }));
-                         }}
-                         placeholder="Enter your KoboldAI Horde API key"
-                         className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                       />
-                       <p className="text-xs text-zinc-500 mt-2">
-                         Get your API key at{" "}
-                         <a
-                           href="https://aihorde.net/register"
-                           target="_blank"
-                           rel="noopener noreferrer"
-                           className="text-blue-400 hover:text-blue-300 underline"
+                {/* KoboldAI Horde */}
+                <div className="p-3 bg-zinc-800/50 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${
+                        connectionStatus["kobold-horde"]?.status === "connected" ? "bg-green-500" :
+                        connectionStatus["kobold-horde"]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
+                        connectionStatus["kobold-horde"]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
+                      }`} />
+                      <span className="text-sm font-medium text-white">KoboldAI Horde</span>
+                      {activeProvider === "kobold-horde" && (
+                        <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditingProvider(editingProvider === 'kobold-horde' ? null : 'kobold-horde')}
+                      className="text-xs text-blue-400 hover:text-blue-300"
+                    >
+                      {editingProvider === 'kobold-horde' ? 'Hide' : 'Configure'}
+                    </button>
+                  </div>
+                  {connectionStatus["kobold-horde"]?.message && (
+                    <p className={`text-xs mb-2 ${
+                      connectionStatus["kobold-horde"]?.status === "connected" ? "text-green-400" :
+                      connectionStatus["kobold-horde"]?.status === "error" ? "text-red-400" : "text-zinc-400"
+                    }`}>
+                      {connectionStatus["kobold-horde"].message}
+                    </p>
+                  )}
+                  {editingProvider === 'kobold-horde' && (
+                    <div className="mt-3 space-y-3">
+                      <div>
+                        <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                        <input
+                          type="password"
+                          value={providerConfigs["kobold-horde"]?.profiles?.[0]?.apiKey || ""}
+                          onChange={(e) => {
+                            // Single profile for Kobold Horde (no profile system)
+                            setProviderConfigs(prev => ({
+                              ...prev,
+                              "kobold-horde": {
+                                ...prev["kobold-horde"],
+                                profiles: [{
+                                  id: "kobold-horde-single",
+                                  name: "Default",
+                                  apiKey: e.target.value,
+                                  selectedModel: DEFAULT_KOBOLD_HORDE_MODEL,
+                                  createdAt: Date.now()
+                                }],
+                                activeProfileId: "kobold-horde-single"
+                              }
+                            }));
+                          }}
+                          placeholder="Enter your KoboldAI Horde API key"
+                          className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <p className="text-xs text-zinc-500 mt-2">
+                          Get your API key at{" "}
+                          <a
+                            href="https://aihorde.net/register"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 hover:text-blue-300 underline"
+                          >
+                            aihorde.net/register
+                          </a>
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                         <button
+                           type="button"
+                           onClick={() => handleConnectProvider("kobold-horde")}
+                           className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
                          >
-                           aihorde.net/register
-                         </a>
-                       </p>
-                     </div>
-                     <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleConnectProvider("kobold-horde")}
-                          className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                        >
-                          Connect
-                        </button>
-                     </div>
-                   </div>
-                 )}
-               </div>
+                           Connect
+                         </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
+                {/* Ollama */}
+                <div className="p-3 bg-zinc-800/50 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${
+                        connectionStatus["ollama"]?.status === "connected" ? "bg-green-500" :
+                        connectionStatus["ollama"]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
+                        connectionStatus["ollama"]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
+                      }`} />
+                      <span className="text-sm font-medium text-white">Self-Hosted (Ollama)</span>
+                      {activeProvider === "ollama" && (
+                        <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditingProvider(editingProvider === 'ollama' ? null : 'ollama')}
+                      className="text-xs text-blue-400 hover:text-blue-300"
+                    >
+                      {editingProvider === 'ollama' ? 'Hide' : 'Configure'}
+                    </button>
+                  </div>
+                  {connectionStatus["ollama"]?.message && (
+                    <p className={`text-xs mb-2 ${
+                      connectionStatus["ollama"]?.status === "connected" ? "text-green-400" :
+                      connectionStatus["ollama"]?.status === "error" ? "text-red-400" : "text-zinc-400"
+                    }`}>
+                      {connectionStatus["ollama"].message}
+                    </p>
+                  )}
+                  {editingProvider === 'ollama' && (
+                    <div className="mt-3 space-y-3">
+                      {/* Profile Selection */}
+                      <div>
+                        <label className="block text-xs text-zinc-400 mb-1">Profile</label>
+                        <div className="flex gap-2">
+                          <select
+                            value={providerConfigs["ollama"]?.activeProfileId || ""}
+                            onChange={(e) => {
+                              if (e.target.value === "__new__") {
+                                const name = prompt("Enter profile name (or leave empty for date/time):");
+                                if (name !== null) {
+                                  createProfile("ollama", {
+                                    name: name.trim() || new Date().toLocaleString(),
+                                    apiKey: "",
+                                    baseUrl: "http://localhost:11434/v1", // Default Ollama URL
+                                  });
+                                }
+                              } else {
+                                selectProfile("ollama", e.target.value);
+                              }
+                            }}
+                            className="flex-1 bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          >
+                            <option value="">Select a profile...</option>
+                            {providerConfigs["ollama"]?.profiles.map(profile => (
+                              <option key={profile.id} value={profile.id}>{profile.name}</option>
+                            ))}
+                            <option value="__new__">+ Add New Profile</option>
+                          </select>
+                          {providerConfigs["ollama"]?.activeProfileId && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (confirm("Delete this profile?")) {
+                                  deleteProfile("ollama", providerConfigs["ollama"].activeProfileId!);
+                                }
+                              }}
+                              className="px-3 py-2 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Base URL - only show if profile is selected */}
+                      {providerConfigs["ollama"]?.activeProfileId && (
+                        <>
+                          <div>
+                            <label className="block text-xs text-zinc-400 mb-1">Base URL</label>
+                            <input
+                              type="text"
+                              value={getActiveProfile("ollama")?.baseUrl || "http://localhost:11434/v1"}
+                              onChange={(e) => {
+                                const profileId = providerConfigs["ollama"].activeProfileId;
+                                if (!profileId) return;
+                                setProviderConfigs(prev => ({
+                                  ...prev,
+                                  "ollama": {
+                                    ...prev["ollama"],
+                                    profiles: prev["ollama"].profiles.map(p =>
+                                      p.id === profileId ? { ...p, baseUrl: e.target.value } : p
+                                    )
+                                  }
+                                }));
+                              }}
+                              placeholder="http://localhost:11434/v1"
+                              className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                            <p className="text-xs text-zinc-500 mt-1">
+                              Default is http://localhost:11434/v1 for local Ollama server
+                            </p>
+                          </div>
+                          
+                          {/* Model Name - only show if profile is selected */}
+                          <div>
+                            <label className="block text-xs text-zinc-400 mb-1">Model Name</label>
+                            <input
+                              type="text"
+                              value={getActiveProfile("ollama")?.selectedModel || ""}
+                              onChange={(e) => {
+                                const profileId = providerConfigs["ollama"].activeProfileId;
+                                if (!profileId) return;
+                                setProviderConfigs(prev => ({
+                                  ...prev,
+                                  "ollama": {
+                                    ...prev["ollama"],
+                                    profiles: prev["ollama"].profiles.map(p =>
+                                      p.id === profileId ? { ...p, selectedModel: e.target.value } : p
+                                    )
+                                  }
+                                }));
+                              }}
+                              placeholder="llama3.2"
+                              className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                            <p className="text-xs text-zinc-500 mt-1">
+                              Enter the model name as it appears in Ollama (e.g., llama3.2, mistral, phi3)
+                            </p>
+                          </div>
+                          
+                          {/* API Key - optional for remote setups */}
+                          <div>
+                            <label className="block text-xs text-zinc-400 mb-1">API Key (Optional)</label>
+                            <input
+                              type="password"
+                              value={getActiveProfile("ollama")?.apiKey || ""}
+                              onChange={(e) => {
+                                const profileId = providerConfigs["ollama"].activeProfileId;
+                                if (!profileId) return;
+                                setProviderConfigs(prev => ({
+                                  ...prev,
+                                  "ollama": {
+                                    ...prev["ollama"],
+                                    profiles: prev["ollama"].profiles.map(p =>
+                                      p.id === profileId ? { ...p, apiKey: e.target.value } : p
+                                    )
+                                  }
+                                }));
+                              }}
+                              placeholder="Leave empty for local Ollama"
+                              className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                            <p className="text-xs text-zinc-500 mt-1">
+                              Optional API key for remote Ollama setups that require authentication
+                            </p>
+                          </div>
+                          
+                          {/* CORS Notice */}
+                          <div className="mt-4 p-3 bg-red-900/50 border border-red-800 rounded-lg">
+                            <div className="flex items-start gap-3">
+                              <div className="flex-shrink-0">
+                                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zm-1 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                                </svg>
+                              </div>
+                              <div className="flex-1">
+                                <h3 className="text-sm font-medium text-red-400">
+                                  Important: To avoid CORS issues when using Ollama from a remote website, you need to start Ollama with:
+                                </h3>
+                                <p className="mt-1 text-xs text-red-300 font-mono">
+                                  OLLAMA_ORIGINS=* ollama serve
+                                </p>
+                                <p className="mt-1 text-xs text-red-300">
+                                  Or on Windows, set the environment variable OLLAMA_ORIGINS to * before starting Ollama
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleConnectProvider("ollama")}
+                              className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                            >
+                              Connect
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
 
-            </div>
-          </div>
+             </div>
+           </div>
 
-          {/* Data Export/Import */}
+           {/* Data Export/Import */}
           <div className="border-t border-zinc-700 pt-6">
             <h3 className="text-sm font-medium text-white mb-4">Data Backup</h3>
             <p className="text-xs text-zinc-400 mb-4">

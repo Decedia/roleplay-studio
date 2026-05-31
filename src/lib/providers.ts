@@ -327,55 +327,62 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
       },
     ],
   },
-  {
-    id: "kobold-horde",
-    name: "KoboldAI Horde",
-    description: "Distributed AI text generation via KoboldAI Horde network",
-    requiresApiKey: true,
-    models: [
-      {
-        id: DEFAULT_KOBOLD_HORDE_MODEL,
-        name: "Llama 3.1 8B Stheno v3.4",
-        provider: "kobold-horde",
-        contextWindow: 8192,
-        maxTokens: 4096,
-        supportsThinking: false,
-      },
-      {
-        id: "koboldcpp/L3-8B-Stheno-v3.2",
-        name: "L3 8B Stheno v3.2",
-        provider: "kobold-horde",
-        contextWindow: 8192,
-        maxTokens: 4096,
-        supportsThinking: false,
-      },
-      {
-        id: "koboldcpp/mini-magnum-12b-v1.1",
-        name: "Mini Magnum 12B v1.1",
-        provider: "kobold-horde",
-        contextWindow: 4096,
-        maxTokens: 2048,
-        supportsThinking: false,
-      },
-      {
-        id: "koboldcpp/Gemma-4-31B-it",
-        name: "Gemma 4 31B Instruct",
-        provider: "kobold-horde",
-        contextWindow: 8192,
-        maxTokens: 4096,
-        supportsThinking: false,
-      },
-      {
-        id: "koboldcpp/Cydonia-24B-v4.3",
-        name: "Cydonia 24B v4.3",
-        provider: "kobold-horde",
-        contextWindow: 8192,
-        maxTokens: 4096,
-        supportsThinking: false,
-      },
-    ],
-  },
-];
+   {
+     id: "kobold-horde",
+     name: "KoboldAI Horde",
+     description: "Distributed AI text generation via KoboldAI Horde network",
+     requiresApiKey: true,
+     models: [
+       {
+         id: DEFAULT_KOBOLD_HORDE_MODEL,
+         name: "Llama 3.1 8B Stheno v3.4",
+         provider: "kobold-horde",
+         contextWindow: 8192,
+         maxTokens: 4096,
+         supportsThinking: false,
+       },
+       {
+         id: "koboldcpp/L3-8B-Stheno-v3.2",
+         name: "L3 8B Stheno v3.2",
+         provider: "kobold-horde",
+         contextWindow: 8192,
+         maxTokens: 4096,
+         supportsThinking: false,
+       },
+       {
+         id: "koboldcpp/mini-magnum-12b-v1.1",
+         name: "Mini Magnum 12B v1.1",
+         provider: "kobold-horde",
+         contextWindow: 4096,
+         maxTokens: 2048,
+         supportsThinking: false,
+       },
+       {
+         id: "koboldcpp/Gemma-4-31B-it",
+         name: "Gemma 4 31B Instruct",
+         provider: "kobold-horde",
+         contextWindow: 8192,
+         maxTokens: 4096,
+         supportsThinking: false,
+       },
+       {
+         id: "koboldcpp/Cydonia-24B-v4.3",
+         name: "Cydonia 24B v4.3",
+         provider: "kobold-horde",
+         contextWindow: 8192,
+         maxTokens: 4096,
+         supportsThinking: false,
+       },
+     ],
+   },
+   {
+     id: "ollama",
+     name: "Self-Hosted (Ollama)",
+     description: "Self-hosted LLMs via Ollama with OpenAI-compatible API",
+     requiresApiKey: false, // API key is optional for remote setups
+     models: [], // Models are fetched dynamically from the Ollama server
+   },
+ ];
 
 // Chat response interface
 export interface ChatResponse {
@@ -1770,6 +1777,8 @@ export const sendChatMessage = async (
       return chatWithOpenRouter(messages, config, options);
     case "kobold-horde":
       return chatWithKoboldHorde(messages, config, options);
+    case "ollama":
+      return chatWithOllama(messages, config, options);
     default:
       return { error: `Unknown provider: ${config.type}` };
   }
@@ -1805,6 +1814,8 @@ export const streamChatMessage = async (
       return streamWithOpenRouter(messages, config, options, onChunk);
     case "kobold-horde":
       return streamWithKoboldHorde(messages, config, options, onChunk);
+    case "ollama":
+      return streamWithOllama(messages, config, options, onChunk);
     default:
       onChunk({ error: `Unknown provider: ${config.type}` });
       return;
@@ -1998,47 +2009,246 @@ export const testProviderConnection = async (
         return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
       }
     }
+    
+    case "kobold-horde": {
+      if (!config.apiKey) {
+        return { success: false, message: "API key is required." };
+      }
+       try {
+         // Test with a minimal text generation request using the async API to avoid CORS
+       const response = await fetch("https://aihorde.net/api/v2/generate/text/async", {
+         method: "POST",
+         headers: {
+           "Content-Type": "application/json",
+           "apikey": config.apiKey,
+         },
+         body: JSON.stringify({
+           prompt: "Hello",
+           params: {
+             temperature: 0.1,
+             max_length: 16, // Minimum allowed by the API
+           },
+           models: [config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL],
+         }),
+       });
 
-case "kobold-horde": {
-        if (!config.apiKey) {
-          return { success: false, message: "API key is required." };
+        if (response.ok) {
+          const result = await response.json();
+          if (result.task_id) {
+            return { success: true, message: "KoboldAI Horde connection successful!" };
+          }
+          return { success: false, message: "Unexpected response format (no task_id)" };
         }
-         try {
-           // Test with a minimal text generation request using the async API to avoid CORS
-        const response = await fetch("https://aihorde.net/api/v2/generate/text/async", {
+
+        const errorData = await response.json();
+        return { success: false, message: errorData.error || `HTTP ${response.status}` };
+      } catch (error) {
+        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
+      }
+    }
+
+    case "ollama": {
+      // Ollama doesn't require an API key, but we can use one if provided
+      const apiKey = config.apiKey || "";
+      const baseUrl = config.baseUrl?.endsWith('/') ? config.baseUrl.slice(0, -1) : config.baseUrl || "http://localhost:11434/v1";
+      try {
+        // Test by fetching models from the Ollama server using server-side proxy
+        const response = await fetch("/api/ollama", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "apikey": config.apiKey,
           },
           body: JSON.stringify({
-            prompt: "Hello",
-            params: {
-              temperature: 0.1,
-              max_length: 16, // Minimum allowed by the API
-            },
-            models: [config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL],
+            endpoint: `${baseUrl}/api/tags`, // Ollama's models endpoint
+            apiKey: apiKey,
           }),
         });
-
-           if (response.ok) {
-             const result = await response.json();
-             if (result.task_id) {
-               return { success: true, message: "KoboldAI Horde connection successful!" };
-             }
-             return { success: false, message: "Unexpected response format (no task_id)" };
-           }
-
-           const errorData = await response.json();
-           return { success: false, message: errorData.error || `HTTP ${response.status}` };
-         } catch (error) {
-           return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
-         }
+        
+        if (response.ok) {
+          return { success: true, message: "Ollama connection successful!" };
+        }
+        
+        const errorData = await response.json();
+        return { success: false, message: errorData.error || `HTTP ${response.status}` };
+      } catch (error) {
+        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
       }
+    }
 
-     default:
-       return { success: false, message: `Unknown provider: ${providerType}` };
-   }
+    default:
+      return { success: false, message: `Unknown provider: ${providerType}` };
+  }
+};
+
+// Ollama chat implementation - uses server-side proxy to avoid CORS
+export const chatWithOllama: ChatFunction = async (
+  messages,
+  config,
+  options
+) => {
+  // Ollama doesn't require an API key, but we can send one if provided for remote setups
+  const apiKey = config.apiKey || "";
+  const baseUrl = config.baseUrl?.endsWith('/') ? config.baseUrl.slice(0, -1) : config.baseUrl || "http://localhost:11434/v1";
+
+  try {
+    const systemMessages = messages.filter(m => m.role === "system");
+    const nonSystemMessages = messages.filter(m => m.role !== "system");
+    
+    const formattedMessages = nonSystemMessages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    const systemContent = systemMessages.map(m => m.content).join("\n\n");
+    const messagesWithSystem = systemContent || options.systemPrompt
+      ? [{ role: "system", content: systemContent || options.systemPrompt || "" }, ...formattedMessages]
+      : formattedMessages;
+
+    // Use server-side proxy to avoid CORS issues
+    const response = await fetch("/api/ollama", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        endpoint: `${baseUrl}/chat/completions`,
+        apiKey: apiKey,
+        payload: {
+          model: config.selectedModel,
+          messages: messagesWithSystem,
+          temperature: options.temperature,
+          max_tokens: options.maxTokens,
+          top_p: options.topP,
+          stream: false,
+        },
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        error: data.error || `HTTP ${response.status}`,
+      };
+    }
+
+    const content = data.choices?.[0]?.message?.content || "";
+
+    return { content };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+};
+
+// Ollama streaming implementation
+export const streamWithOllama = async (
+  messages: Message[],
+  config: ProviderConfig,
+  options: {
+    temperature: number;
+    maxTokens: number;
+    topP: number;
+    topK: number;
+    systemPrompt?: string;
+    enableThinking?: boolean;
+    abortController?: AbortController;
+  },
+  onChunk: StreamCallback
+): Promise<void> => {
+  const apiKey = config.apiKey || "";
+  const baseUrl = config.baseUrl?.endsWith('/') ? config.baseUrl.slice(0, -1) : config.baseUrl || "http://localhost:11434/v1";
+
+  try {
+    const systemMessages = messages.filter(m => m.role === "system");
+    const nonSystemMessages = messages.filter(m => m.role !== "system");
+    
+    const formattedMessages = nonSystemMessages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    const systemContent = systemMessages.map(m => m.content).join("\n\n");
+    const messagesWithSystem = systemContent || options.systemPrompt
+      ? [{ role: "system", content: systemContent || options.systemPrompt || "" }, ...formattedMessages]
+      : formattedMessages;
+
+    // Use server-side proxy to avoid CORS issues
+    const response = await fetch("/api/ollama", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        endpoint: `${baseUrl}/chat/completions`,
+        apiKey: apiKey,
+        payload: {
+          model: config.selectedModel,
+          messages: messagesWithSystem,
+          temperature: options.temperature,
+          max_tokens: options.maxTokens,
+          top_p: options.topP,
+          stream: true,
+        },
+        stream: true,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      onChunk({ error: errorData.error || `HTTP ${response.status}` });
+      return;
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      onChunk({ error: "Failed to get response stream" });
+      return;
+    }
+
+    const decoder = new TextDecoder();
+    let fullContent = "";
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr || jsonStr === "[DONE]") continue;
+
+          try {
+            const data = JSON.parse(jsonStr);
+            
+            if (data.error) {
+              onChunk({ error: data.error });
+              return;
+            }
+            
+            const delta = data.choices?.[0]?.delta;
+            
+            if (delta?.content) {
+              fullContent += delta.content;
+              onChunk({ content: fullContent });
+            }
+          } catch {
+            // Skip invalid JSON
+          }
+        }
+      }
+    }
+
+    onChunk({ content: fullContent, done: true });
+  } catch (error) {
+    onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
+  }
 };
 
 // Get default model for a provider
@@ -2098,7 +2308,7 @@ export const fetchModelsFromProvider = async (
           return { models: [], error: groqData.error || `HTTP ${groqResponse.status}` };
         }
 
-return { models: groqData.models || [] };
+        return { models: groqData.models || [] };
       }
 
       case "kobold-horde": {
@@ -2153,6 +2363,43 @@ return { models: groqData.models || [] };
         } catch (error) {
           // Fall back to static models on any error
           return { models: getModelsForProvider("google-vertex") };
+        }
+      }
+
+      case "ollama": {
+        try {
+          // Fetch models from Ollama server using server-side proxy
+          // Ollama's models endpoint is /api/tags
+          const response = await fetch(`/api/ollama`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              endpoint: `${config.baseUrl || "http://localhost:11434/v1"}/api/tags`,
+              apiKey: config.apiKey || "",
+            }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            return { models: [], error: errorData.error || `HTTP ${response.status}` };
+          }
+
+          const data = await response.json();
+          
+          // Transform Ollama models to our format
+          // Ollama returns: { models: [{ name: "llama3.2", modified_at: "...", size: ... }, ...] }
+          const models: FetchedModel[] = data.models?.map((model: any) => ({
+            id: model.name,
+            provider: "ollama",
+            name: model.name,
+          })) || [];
+
+          return { models };
+        } catch (error) {
+          // Return empty models array on error
+          return { models: [] };
         }
       }
 
