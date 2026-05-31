@@ -2050,8 +2050,23 @@ export const testProviderConnection = async (
     case "ollama": {
       // Ollama doesn't require an API key, but we can use one if provided
       const apiKey = config.apiKey || "";
-      const activeProfile = config.profiles.find(p => p.id === config.activeProfileId) || config.profiles[0];
-      const baseUrl = (activeProfile?.baseUrl?.endsWith('/') ? activeProfile.baseUrl.slice(0, -1) : activeProfile?.baseUrl) || "http://localhost:11434/v1";
+      // Get active profile or create a default one if none exists
+      let activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
+      if (!activeProfile && config.profiles.length > 0) {
+        activeProfile = config.profiles[0];
+      }
+      // If still no active profile (empty profiles array), create a default one
+      if (!activeProfile) {
+        activeProfile = {
+          id: `ollama-default-${Date.now()}`,
+          name: "Default",
+          apiKey: "",
+          baseUrl: "http://localhost:11434/v1",
+          selectedModel: "",
+          createdAt: Date.now()
+        };
+      }
+      const baseUrl = (activeProfile.baseUrl?.endsWith('/') ? activeProfile.baseUrl.slice(0, -1) : activeProfile.baseUrl) || "http://localhost:11434/v1";
       try {
         // Test by fetching models from the Ollama server using server-side proxy
         const response = await fetch("/api/ollama", {
@@ -2089,8 +2104,23 @@ export const chatWithOllama: ChatFunction = async (
 ) => {
   // Ollama doesn't require an API key, but we can send one if provided for remote setups
   const apiKey = config.apiKey || "";
-  const activeProfile = config.profiles.find(p => p.id === config.activeProfileId) || config.profiles[0];
-  const baseUrl = (activeProfile?.baseUrl?.endsWith('/') ? activeProfile.baseUrl.slice(0, -1) : activeProfile?.baseUrl) || "http://localhost:11434/v1";
+  // Get active profile or create a default one if none exists
+  let activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
+  if (!activeProfile && config.profiles.length > 0) {
+    activeProfile = config.profiles[0];
+  }
+  // If still no active profile (empty profiles array), create a default one
+  if (!activeProfile) {
+    activeProfile = {
+      id: `ollama-default-${Date.now()}`,
+      name: "Default",
+      apiKey: "",
+      baseUrl: "http://localhost:11434/v1",
+      selectedModel: "",
+      createdAt: Date.now()
+    };
+  }
+  const baseUrl = (activeProfile.baseUrl?.endsWith('/') ? activeProfile.baseUrl.slice(0, -1) : activeProfile.baseUrl) || "http://localhost:11434/v1";
 
   try {
     const systemMessages = messages.filter(m => m.role === "system");
@@ -2160,8 +2190,23 @@ export const streamWithOllama = async (
   onChunk: StreamCallback
 ): Promise<void> => {
   const apiKey = config.apiKey || "";
-  const activeProfile = config.profiles.find(p => p.id === config.activeProfileId) || config.profiles[0];
-  const baseUrl = (activeProfile?.baseUrl?.endsWith('/') ? activeProfile.baseUrl.slice(0, -1) : activeProfile?.baseUrl) || "http://localhost:11434/v1";
+  // Get active profile or create a default one if none exists
+  let activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
+  if (!activeProfile && config.profiles.length > 0) {
+    activeProfile = config.profiles[0];
+  }
+  // If still no active profile (empty profiles array), create a default one
+  if (!activeProfile) {
+    activeProfile = {
+      id: `ollama-default-${Date.now()}`,
+      name: "Default",
+      apiKey: "",
+      baseUrl: "http://localhost:11434/v1",
+      selectedModel: "",
+      createdAt: Date.now()
+    };
+  }
+  const baseUrl = (activeProfile.baseUrl?.endsWith('/') ? activeProfile.baseUrl.slice(0, -1) : activeProfile.baseUrl) || "http://localhost:11434/v1";
 
   try {
     const systemMessages = messages.filter(m => m.role === "system");
