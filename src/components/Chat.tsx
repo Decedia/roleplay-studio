@@ -2101,11 +2101,17 @@ function SettingsModal({
                               if (e.target.value === "__new__") {
                                 const name = prompt("Enter profile name (or leave empty for date/time):");
                                 if (name !== null) {
-                                  createProfile("ollama", {
-                                    name: name.trim() || new Date().toLocaleString(),
-                                    apiKey: "",
-                                    baseUrl: "http://localhost:11434/v1", // Default Ollama URL
-                                  });
+                                   createProfile("ollama", {
+                                     name: name.trim() || new Date().toLocaleString(),
+                                     apiKey: "",
+                                     projectId: undefined,
+                                     serviceAccountJson: undefined,
+                                     vertexMode: undefined,
+                                     vertexLocation: undefined,
+                                     accessToken: undefined,
+                                     selectedModel: "",
+                                     baseUrl: "http://localhost:11434/v1", // Default Ollama URL
+                                   });
                                 }
                               } else {
                                 selectProfile("ollama", e.target.value);
@@ -3043,12 +3049,12 @@ export default function Chat() {
                 createdAt: Date.now()
               };
               
-              migratedConfigs[providerType] = {
-                ...migratedConfigs[providerType],
-                isEnabled: oldConfig.isEnabled || false,
-                profiles: [defaultProfile],
-                activeProfileId: defaultProfile.id
-              };
+               migratedConfigs[providerType] = {
+                 ...(migratedConfigs[providerType] || {}),
+                 isEnabled: oldConfig.isEnabled || false,
+                 profiles: [defaultProfile],
+                 activeProfileId: defaultProfile.id
+               };
               
               console.log(`Migrated ${providerType} config from old storage`);
             } catch (e) {
