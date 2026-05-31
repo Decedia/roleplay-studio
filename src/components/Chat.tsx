@@ -2120,9 +2120,9 @@ function SettingsModal({
                             className="flex-1 bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                           >
                             <option value="">Select a profile...</option>
-                            {providerConfigs["ollama"]?.profiles.map(profile => (
-                              <option key={profile.id} value={profile.id}>{profile.name}</option>
-                            ))}
+                             {providerConfigs["ollama"]?.profiles?.map(profile => (
+                               <option key={profile.id} value={profile.id}>{profile.name}</option>
+                             )) || []}
                             <option value="__new__">+ Add New Profile</option>
                           </select>
                           {providerConfigs["ollama"]?.activeProfileId && (
@@ -2152,15 +2152,15 @@ function SettingsModal({
                               onChange={(e) => {
                                 const profileId = providerConfigs["ollama"].activeProfileId;
                                 if (!profileId) return;
-                                setProviderConfigs(prev => ({
-                                  ...prev,
-                                  "ollama": {
-                                    ...prev["ollama"],
-                                    profiles: prev["ollama"].profiles.map(p =>
-                                      p.id === profileId ? { ...p, baseUrl: e.target.value } : p
-                                    )
-                                  }
-                                }));
+                                 setProviderConfigs(prev => ({
+                                   ...prev,
+                                   "ollama": {
+                                     ...prev["ollama"],
+                                     profiles: (prev["ollama"]?.profiles || []).map(p =>
+                                       p.id === profileId ? { ...p, baseUrl: e.target.value } : p
+                                     )
+                                   }
+                                 }));
                               }}
                               placeholder="http://localhost:11434/v1"
                               className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -2179,15 +2179,15 @@ function SettingsModal({
                               onChange={(e) => {
                                 const profileId = providerConfigs["ollama"].activeProfileId;
                                 if (!profileId) return;
-                                setProviderConfigs(prev => ({
-                                  ...prev,
-                                  "ollama": {
-                                    ...prev["ollama"],
-                                    profiles: prev["ollama"].profiles.map(p =>
-                                      p.id === profileId ? { ...p, selectedModel: e.target.value } : p
-                                    )
-                                  }
-                                }));
+                                 setProviderConfigs(prev => ({
+                                   ...prev,
+                                   "ollama": {
+                                     ...prev["ollama"],
+                                     profiles: (prev["ollama"]?.profiles || []).map(p =>
+                                       p.id === profileId ? { ...p, selectedModel: e.target.value } : p
+                                     )
+                                   }
+                                 }));
                               }}
                               placeholder="llama3.2"
                               className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -2206,15 +2206,15 @@ function SettingsModal({
                               onChange={(e) => {
                                 const profileId = providerConfigs["ollama"].activeProfileId;
                                 if (!profileId) return;
-                                setProviderConfigs(prev => ({
-                                  ...prev,
-                                  "ollama": {
-                                    ...prev["ollama"],
-                                    profiles: prev["ollama"].profiles.map(p =>
-                                      p.id === profileId ? { ...p, apiKey: e.target.value } : p
-                                    )
-                                  }
-                                }));
+                                 setProviderConfigs(prev => ({
+                                   ...prev,
+                                   "ollama": {
+                                     ...prev["ollama"],
+                                     profiles: (prev["ollama"]?.profiles || []).map(p =>
+                                       p.id === profileId ? { ...p, apiKey: e.target.value } : p
+                                     )
+                                   }
+                                 }));
                               }}
                               placeholder="Leave empty for local Ollama"
                               className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -2602,10 +2602,10 @@ export default function Chat() {
     }));
   }, [providerConfigs]);
 
-  const getActiveProfile = useCallback((providerType: LLMProviderType): ProviderProfile | undefined => {
-    const config = providerConfigs[providerType];
-    return config.profiles.find(p => p.id === config.activeProfileId);
-  }, [providerConfigs]);
+   const getActiveProfile = useCallback((providerType: LLMProviderType): ProviderProfile | undefined => {
+     const config = providerConfigs[providerType];
+     return config.profiles?.find(p => p.id === config.activeProfileId) || undefined;
+   }, [providerConfigs]);
 
   // Auto-export state
   const [autoExport, setAutoExport] = useState<AutoExportSettings>(DEFAULT_AUTO_EXPORT);
