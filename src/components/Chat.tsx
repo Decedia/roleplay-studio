@@ -2452,6 +2452,7 @@ export default function Chat() {
     "groq": { type: "groq", isEnabled: false, profiles: [], activeProfileId: null },
     "open-router": { type: "open-router", isEnabled: false, profiles: [], activeProfileId: null },
     "kobold-horde": { type: "kobold-horde", isEnabled: false, profiles: [], activeProfileId: null },
+    "ollama": { type: "ollama", isEnabled: false, profiles: [], activeProfileId: null },
   });
   
   // Provider-specific models (fetched from API after connection)
@@ -2462,6 +2463,7 @@ export default function Chat() {
     "groq": [],
     "open-router": [],
     "kobold-horde": [],
+    "ollama": [],
   });
   const [modelsFetching, setModelsFetching] = useState<Record<LLMProviderType, boolean>>({
     "google-ai-studio": false,
@@ -2470,6 +2472,7 @@ export default function Chat() {
     "groq": false,
     "open-router": false,
     "kobold-horde": false,
+    "ollama": false,
   });
   
   // Active provider state - default to Google AI Studio (not Puter)
@@ -2534,6 +2537,7 @@ export default function Chat() {
     "groq": { status: "disconnected" },
     "open-router": { status: "disconnected" },
     "kobold-horde": { status: "disconnected" },
+    "ollama": { status: "disconnected" },
   });
 
   // Profile management functions - defined early so they're available throughout the component
@@ -3008,7 +3012,7 @@ export default function Chat() {
         }
       } else {
         // Check for old per-provider storage (for users upgrading from older versions)
-        const providers: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim", "groq", "open-router", "kobold-horde"];
+        const providers: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim", "groq", "open-router", "kobold-horde", "ollama"];
         const migratedConfigs: Record<LLMProviderType, ProviderConfig> = {
           "google-ai-studio": { type: "google-ai-studio", isEnabled: false, profiles: [], activeProfileId: null },
           "google-vertex": { type: "google-vertex", isEnabled: false, profiles: [], activeProfileId: null },
@@ -3016,6 +3020,7 @@ export default function Chat() {
           "groq": { type: "groq", isEnabled: false, profiles: [], activeProfileId: null },
           "open-router": { type: "open-router", isEnabled: false, profiles: [], activeProfileId: null },
           "kobold-horde": { type: "kobold-horde", isEnabled: false, profiles: [], activeProfileId: null },
+          "ollama": { type: "ollama", isEnabled: false, profiles: [], activeProfileId: null },
         };
         
         providers.forEach(providerType => {

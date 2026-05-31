@@ -2050,7 +2050,8 @@ export const testProviderConnection = async (
     case "ollama": {
       // Ollama doesn't require an API key, but we can use one if provided
       const apiKey = config.apiKey || "";
-      const baseUrl = config.baseUrl?.endsWith('/') ? config.baseUrl.slice(0, -1) : config.baseUrl || "http://localhost:11434/v1";
+      const activeProfile = config.profiles.find(p => p.id === config.activeProfileId) || config.profiles[0];
+      const baseUrl = (activeProfile?.baseUrl?.endsWith('/') ? activeProfile.baseUrl.slice(0, -1) : activeProfile?.baseUrl) || "http://localhost:11434/v1";
       try {
         // Test by fetching models from the Ollama server using server-side proxy
         const response = await fetch("/api/ollama", {
@@ -2088,7 +2089,8 @@ export const chatWithOllama: ChatFunction = async (
 ) => {
   // Ollama doesn't require an API key, but we can send one if provided for remote setups
   const apiKey = config.apiKey || "";
-  const baseUrl = config.baseUrl?.endsWith('/') ? config.baseUrl.slice(0, -1) : config.baseUrl || "http://localhost:11434/v1";
+  const activeProfile = config.profiles.find(p => p.id === config.activeProfileId) || config.profiles[0];
+  const baseUrl = (activeProfile?.baseUrl?.endsWith('/') ? activeProfile.baseUrl.slice(0, -1) : activeProfile?.baseUrl) || "http://localhost:11434/v1";
 
   try {
     const systemMessages = messages.filter(m => m.role === "system");
@@ -2158,7 +2160,8 @@ export const streamWithOllama = async (
   onChunk: StreamCallback
 ): Promise<void> => {
   const apiKey = config.apiKey || "";
-  const baseUrl = config.baseUrl?.endsWith('/') ? config.baseUrl.slice(0, -1) : config.baseUrl || "http://localhost:11434/v1";
+  const activeProfile = config.profiles.find(p => p.id === config.activeProfileId) || config.profiles[0];
+  const baseUrl = (activeProfile?.baseUrl?.endsWith('/') ? activeProfile.baseUrl.slice(0, -1) : activeProfile?.baseUrl) || "http://localhost:11434/v1";
 
   try {
     const systemMessages = messages.filter(m => m.role === "system");
@@ -2370,14 +2373,17 @@ export const fetchModelsFromProvider = async (
         try {
           // Fetch models from Ollama server using server-side proxy
           // Ollama's models endpoint is /api/tags
+          const apiKey = config.apiKey || "";
+          const activeProfile = config.profiles.find(p => p.id === config.activeProfileId) || config.profiles[0];
+          const baseUrl = (activeProfile?.baseUrl?.endsWith('/') ? activeProfile.baseUrl.slice(0, -1) : activeProfile?.baseUrl) || "http://localhost:11434/v1";
           const response = await fetch(`/api/ollama`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              endpoint: `${config.baseUrl || "http://localhost:11434/v1"}/api/tags`,
-              apiKey: config.apiKey || "",
+              endpoint: `${baseUrl}/api/tags`,
+              apiKey: apiKey,
             }),
           });
 
