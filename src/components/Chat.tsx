@@ -2101,17 +2101,18 @@ function SettingsModal({
                               if (e.target.value === "__new__") {
                                 const name = prompt("Enter profile name (or leave empty for date/time):");
                                 if (name !== null) {
-                                   createProfile("ollama", {
-                                     name: name.trim() || new Date().toLocaleString(),
-                                     apiKey: "",
-                                     projectId: undefined,
-                                     serviceAccountJson: undefined,
-                                     vertexMode: undefined,
-                                     vertexLocation: undefined,
-                                     accessToken: undefined,
-                                     selectedModel: "",
-                                     baseUrl: "http://localhost:11434/v1", // Default Ollama URL
-                                   });
+                                    createProfile("ollama", {
+                                      name: name.trim() || new Date().toLocaleString(),
+                                      apiKey: "",
+                                      projectId: undefined,
+                                      serviceAccountJson: undefined,
+                                      vertexMode: undefined,
+                                      vertexLocation: undefined,
+                                      accessToken: undefined,
+                                      selectedModel: "",
+                                      baseUrl: "http://localhost:11434/v1", // Default Ollama URL
+                                      lastUsedPreset: undefined
+                                    });
                                 }
                               } else {
                                 selectProfile("ollama", e.target.value);
@@ -3036,18 +3037,19 @@ export default function Chat() {
             try {
               const oldConfig = JSON.parse(oldConfigStr);
               
-              // Create a default profile from old config
-              const defaultProfile: ProviderProfile = {
-                id: `default-${Date.now()}`,
-                name: "Default Profile",
-                apiKey: oldConfig.apiKey,
-                projectId: oldConfig.projectId,
-                serviceAccountJson: oldConfig.serviceAccountJson,
-                vertexMode: oldConfig.vertexMode,
-                vertexLocation: oldConfig.vertexLocation,
-                selectedModel: oldConfig.selectedModel,
-                createdAt: Date.now()
-              };
+               // Create a default profile from old config
+               const defaultProfile: ProviderProfile = {
+                 id: `default-${Date.now()}`,
+                 name: "Default Profile",
+                 apiKey: oldConfig.apiKey,
+                 projectId: oldConfig.projectId,
+                 serviceAccountJson: oldConfig.serviceAccountJson,
+                 vertexMode: oldConfig.vertexMode,
+                 vertexLocation: oldConfig.vertexLocation,
+                 selectedModel: oldConfig.selectedModel,
+                 lastUsedPreset: undefined,
+                 createdAt: Date.now()
+               };
               
                migratedConfigs[providerType] = {
                  ...(migratedConfigs[providerType] || {}),

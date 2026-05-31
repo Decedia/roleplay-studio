@@ -172,17 +172,18 @@ export type VertexLocation = "global" | "us-central1" | "us-east1" | "us-west1" 
 // Provider profile for storing multiple API keys
 // Each profile represents a different API key/project combination
 export interface ProviderProfile {
-   id: string;
-   name: string; // Profile name (project name or date/time)
-   apiKey?: string;
-   projectId?: string; // For Vertex AI
-   serviceAccountJson?: string; // For Vertex AI
-   vertexMode?: VertexMode; // For Vertex AI
-   vertexLocation?: VertexLocation; // For Vertex AI
-   accessToken?: string; // For Vertex AI
-   selectedModel?: string;
-   baseUrl?: string; // For Ollama and other custom endpoints
-   createdAt: number;
+    id: string;
+    name: string; // Profile name (project name or date/time)
+    apiKey?: string;
+    projectId?: string; // For Vertex AI
+    serviceAccountJson?: string; // For Vertex AI
+    vertexMode?: VertexMode; // For Vertex AI
+    vertexLocation?: VertexLocation; // For Vertex AI
+    accessToken?: string; // For Vertex AI
+    selectedModel?: string;
+    baseUrl?: string; // For Ollama and other custom endpoints
+    lastUsedPreset?: string; // For remembering the last used preset
+    createdAt: number;
 }
 
 // Provider configurations (stored in localStorage)
