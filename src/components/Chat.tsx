@@ -2227,48 +2227,10 @@ function SettingsModal({
                                      "ollama": {
                                        ...prev["ollama"],
                                        profiles: (prev["ollama"]?.profiles || []).map(p =>
-                                         p.id === profileId ? { ...p, baseUrl: e.target.value } : p
-                                       )
-                                     }
-                                   }));
-                                 }}
-                                 placeholder="http://localhost:11434/api/chat"
-                                 className="flex-1 bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                               />
-                               <button
-                                 type="button"
-                                 onClick={() => {
-                                   // Test connection for the ollama provider
-                                   handleConnectProvider("ollama");
-                                 }}
-                                 className="px-3 py-2 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                               >
-                                 Test
-                               </button>
-                             </div>
-                             <p className="text-xs text-zinc-500 mt-1">
-                               {getSelectedPresetForProfile(getActiveProfile("ollama"))?.note}
-                             </p>
-                           </div>
-                           
-                           {/* Model Name - only show if profile is selected */}
-                           <div>
-                             <label className="block text-xs text-zinc-400 mb-1">Model Name</label>
-                             <input
-                               type="text"
-                               value={getActiveProfile("ollama")?.selectedModel || ""}
-                               onChange={(e) => {
-                                 const profileId = providerConfigs["ollama"].activeProfileId;
-                                 if (!profileId) return;
-                                 setProviderConfigs(prev => ({
-                                   ...prev,
-                                   "ollama": {
-                                     ...prev["ollama"],
-                                     profiles: (prev["ollama"]?.profiles || []).map(p =>
-                                       p.id === profileId ? { ...p, selectedModel: e.target.value } : p
-                                     )
-                                   }
-                                 ));
+                                                p.id === profileId ? { ...p, baseUrl: e.target.value } : p
+                                            )
+                                        }
+                                    }));
                                }}
                                placeholder="llama3.2"
                                className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -2292,10 +2254,10 @@ function SettingsModal({
                                    "ollama": {
                                      ...prev["ollama"],
                                      profiles: (prev["ollama"]?.profiles || []).map(p =>
-                                       p.id === profileId ? { ...p, apiKey: e.target.value } : p
-                                     )
-                                   }
-                                 ));
+                                                p.id === profileId ? { ...p, apiKey: e.target.value } : p
+                                            )
+                                        }
+                                    }));
                                }}
                                placeholder="Leave empty for local Ollama"
                                className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -10443,7 +10405,7 @@ Write an engaging story segment. If this is a good point for player interaction,
                                        p.id === selectedPresetId 
                                          ? { ...p, name: name.trim(), updatedAt: Date.now() }
                                          : p
-                                     ));
+                                     }));
                                    }
                                  }
                                }}
