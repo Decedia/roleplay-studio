@@ -664,7 +664,59 @@ function SettingsModal({
    const dataImportInputRef = useRef<HTMLInputElement>(null);
    const [showProviderDropdown, setShowProviderDropdown] = useState(false);
    const [providerSearchQuery, setProviderSearchQuery] = useState("");
-   const providerSearchInputRef = useRef<HTMLInputElement>(null);
+    const providerSearchInputRef = useRef<HTMLInputElement>(null);
+
+    // Ollama presets for self-hosted providers
+    const ollamaPresets = [
+      { label: "Ollama (Local)", value: "http://localhost:11434/api/chat", note: "default" },
+      { label: "Hugging Face Space", value: "https://{username}-{space-name}.hf.space/api/chat", note: "custom" },
+      { label: "LM Studio", value: "http://localhost:1234/v1/chat/completions", note: "OpenAI format" },
+      { label: "Jan.ai", value: "http://localhost:1337/v1/chat/completions", note: "OpenAI format" },
+      { label: "Kobold.cpp", value: "http://localhost:5001/api/v1/generate", note: "custom" },
+      { label: "Text Generation WebUI", value: "http://localhost:5000/api/v1/chat", note: "custom" },
+      { label: "Custom", value: "", note: "manual" },
+    ];
+
+    // Helper function to get the selected preset for a profile
+    const getSelectedPresetForProfile = (profile: ProviderProfile | undefined): { label: string; value: string; note: string } | null => {
+      if (!profile) return null;
+      // Check if lastUsedPreset matches a preset
+      const lastUsedPresetMatch = ollamaPresets.find(p => p.value === profile.lastUsedPreset);
+      if (lastUsedPresetMatch) return lastUsedPresetMatch;
+      // Check if baseUrl matches a preset
+      const baseUrlMatch = ollamaPresets.find(p => p.value === profile.baseUrl);
+      if (baseUrlMatch) return baseUrlMatch;
+      // Otherwise, return Custom
+      return ollamaPresets.find(p => p.label === "Custom") || null;
+    };
+
+    // Handler for preset dropdown change
+    const handlePresetChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const selectedValue = e.target.value;
+      const preset = ollamaPresets.find(p => p.value === selectedValue);
+      if (preset && preset.label !== "Custom") {
+        // Update the profile's baseUrl and lastUsedPreset
+        const profileId = providerConfigs["ollama"]?.activeProfileId;
+        if (profileId) {
+          setProviderConfigs(prev => ({
+            ...prev,
+            "ollama": {
+              ...prev["ollama"],
+              profiles: (prev["ollama"]?.profiles || []).map(p =>
+                p.id === profileId
+                  ? {
+                      ...p,
+                      baseUrl: preset.value,
+                      lastUsedPreset: preset.value,
+                    }
+                  : p
+              )
+            }
+          }));
+        }
+      }
+      // If Custom is selected, we do not change the profile's baseUrl or lastUsedPreset
+    };
 
     // Get models for the modal provider (the provider selected in the modal)
     const modalProviderModels = providerModels[activeProvider] || [];
@@ -2059,127 +2111,155 @@ function SettingsModal({
                   )}
                 </div>
 
-                {/* Ollama */}
-                <div className="p-3 bg-zinc-800/50 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${
-                        connectionStatus["ollama"]?.status === "connected" ? "bg-green-500" :
-                        connectionStatus["ollama"]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
-                        connectionStatus["ollama"]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
-                      }`} />
-                      <span className="text-sm font-medium text-white">Self-Hosted (Ollama)</span>
-                      {activeProvider === "ollama" && (
-                        <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setEditingProvider(editingProvider === 'ollama' ? null : 'ollama')}
-                      className="text-xs text-blue-400 hover:text-blue-300"
-                    >
-                      {editingProvider === 'ollama' ? 'Hide' : 'Configure'}
-                    </button>
-                  </div>
-                  {connectionStatus["ollama"]?.message && (
-                    <p className={`text-xs mb-2 ${
-                      connectionStatus["ollama"]?.status === "connected" ? "text-green-400" :
-                      connectionStatus["ollama"]?.status === "error" ? "text-red-400" : "text-zinc-400"
-                    }`}>
-                      {connectionStatus["ollama"].message}
-                    </p>
-                  )}
-                  {editingProvider === 'ollama' && (
-                    <div className="mt-3 space-y-3">
-                      {/* Profile Selection */}
-                      <div>
-                        <label className="block text-xs text-zinc-400 mb-1">Profile</label>
-                        <div className="flex gap-2">
-                          <select
-                            value={providerConfigs["ollama"]?.activeProfileId || ""}
-                            onChange={(e) => {
-                              if (e.target.value === "__new__") {
-                                const name = prompt("Enter profile name (or leave empty for date/time):");
-                                if (name !== null) {
-                                    createProfile("ollama", {
-                                      name: name.trim() || new Date().toLocaleString(),
-                                      apiKey: "",
-                                      projectId: undefined,
-                                      serviceAccountJson: undefined,
-                                      vertexMode: undefined,
-                                      vertexLocation: undefined,
-                                      accessToken: undefined,
-                                      selectedModel: "",
-                                      baseUrl: "http://localhost:11434/v1", // Default Ollama URL
-                                      lastUsedPreset: undefined
-                                    });
-                                }
-                              } else {
-                                selectProfile("ollama", e.target.value);
-                              }
-                            }}
-                            className="flex-1 bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          >
-                            <option value="">Select a profile...</option>
-                             {providerConfigs["ollama"]?.profiles?.map(profile => (
-                               <option key={profile.id} value={profile.id}>{profile.name}</option>
-                             )) || []}
-                            <option value="__new__">+ Add New Profile</option>
-                          </select>
-                          {providerConfigs["ollama"]?.activeProfileId && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (confirm("Delete this profile?")) {
-                                  deleteProfile("ollama", providerConfigs["ollama"].activeProfileId!);
-                                }
-                              }}
-                              className="px-3 py-2 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                            >
-                              Delete
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {/* Base URL - only show if profile is selected */}
-                      {providerConfigs["ollama"]?.activeProfileId && (
-                        <>
-                          <div>
-                            <label className="block text-xs text-zinc-400 mb-1">Base URL</label>
-                            <input
-                              type="text"
-                              value={getActiveProfile("ollama")?.baseUrl || "http://localhost:11434/v1"}
-                              onChange={(e) => {
-                                const profileId = providerConfigs["ollama"].activeProfileId;
-                                if (!profileId) return;
-                                 setProviderConfigs(prev => ({
-                                   ...prev,
-                                   "ollama": {
-                                     ...prev["ollama"],
-                                     profiles: (prev["ollama"]?.profiles || []).map(p =>
-                                       p.id === profileId ? { ...p, baseUrl: e.target.value } : p
-                                     )
-                                   }
-                                 }));
-                              }}
-                              placeholder="http://localhost:11434/v1"
-                              className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            />
-                            <p className="text-xs text-zinc-500 mt-1">
-                              Default is http://localhost:11434/v1 for local Ollama server
-                            </p>
-                          </div>
-                          
-                          {/* Model Name - only show if profile is selected */}
-                          <div>
-                            <label className="block text-xs text-zinc-400 mb-1">Model Name</label>
-                            <input
-                              type="text"
-                              value={getActiveProfile("ollama")?.selectedModel || ""}
-                              onChange={(e) => {
-                                const profileId = providerConfigs["ollama"].activeProfileId;
-                                if (!profileId) return;
+                 {/* Ollama */}
+                 <div className="p-3 bg-zinc-800/50 rounded-lg">
+                   <div className="flex items-center justify-between mb-2">
+                     <div className="flex items-center gap-2">
+                       <div className={`w-2 h-2 rounded-full ${
+                         connectionStatus["ollama"]?.status === "connected" ? "bg-green-500" :
+                         connectionStatus["ollama"]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
+                         connectionStatus["ollama"]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
+                       }`} />
+                       <span className="text-sm font-medium text-white">Self-Hosted (Ollama)</span>
+                       {activeProvider === "ollama" && (
+                         <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
+                       )}
+                     </div>
+                     <button
+                       type="button"
+                       onClick={() => setEditingProvider(editingProvider === 'ollama' ? null : 'ollama')}
+                       className="text-xs text-blue-400 hover:text-blue-300"
+                     >
+                       {editingProvider === 'ollama' ? 'Hide' : 'Configure'}
+                     </button>
+                   </div>
+                   {connectionStatus["ollama"]?.message && (
+                     <p className={`text-xs mb-2 ${
+                       connectionStatus["ollama"]?.status === "connected" ? "text-green-400" :
+                       connectionStatus["ollama"]?.status === "error" ? "text-red-400" : "text-zinc-400"
+                     }`}>
+                       {connectionStatus["ollama"].message}
+                     </p>
+                   )}
+                   {editingProvider === 'ollama' && (
+                     <div className="mt-3 space-y-3">
+                       {/* Profile Selection */}
+                       <div>
+                         <label className="block text-xs text-zinc-400 mb-1">Profile</label>
+                         <div className="flex gap-2">
+                           <select
+                             value={providerConfigs["ollama"]?.activeProfileId || ""}
+                             onChange={(e) => {
+                               if (e.target.value === "__new__") {
+                                 const name = prompt("Enter profile name (or leave empty for date/time):");
+                                 if (name !== null) {
+                                   createProfile("ollama", {
+                                     name: name.trim() || new Date().toLocaleString(),
+                                     apiKey: "",
+                                     projectId: undefined,
+                                     serviceAccountJson: undefined,
+                                     vertexMode: undefined,
+                                     vertexLocation: undefined,
+                                     accessToken: undefined,
+                                     selectedModel: "",
+                                     baseUrl: "http://localhost:11434/api/chat", // Default Ollama URL from preset
+                                     lastUsedPreset: undefined
+                                   });
+                                 }
+                               } else {
+                                 selectProfile("ollama", e.target.value);
+                               }
+                             }}
+                             className="flex-1 bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                           >
+                             <option value="">Select a profile...</option>
+                              {providerConfigs["ollama"]?.profiles?.map(profile => (
+                                <option key={profile.id} value={profile.id}>{profile.name}</option>
+                              )) || []}
+                             <option value="__new__">+ Add New Profile</option>
+                           </select>
+                           {providerConfigs["ollama"]?.activeProfileId && (
+                             <button
+                               type="button"
+                               onClick={() => {
+                                 if (confirm("Delete this profile?")) {
+                                   deleteProfile("ollama", providerConfigs["ollama"].activeProfileId!);
+                                 }
+                               }}
+                               className="px-3 py-2 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                             >
+                               Delete
+                             </button>
+                           )}
+                         </div>
+                       </div>
+                       
+                       {/* Provider Preset - only show if profile is selected */}
+                       {providerConfigs["ollama"]?.activeProfileId && (
+                         <>
+                           <div>
+                             <label className="block text-xs text-zinc-400 mb-1">Provider Preset</label>
+                             <select
+                               value={getSelectedPresetForProfile(getActiveProfile("ollama"))?.value || ""}
+                               onChange={handlePresetChange}
+                               className="w-full bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                             >
+                               {ollamaPresets.map(preset => (
+                                 <option key={preset.value} value={preset.value}>
+                                   {preset.label}
+                                 </option>
+                               ))}
+                             </select>
+                           </div>
+                           
+                           {/* Base URL - only show if profile is selected */}
+                           <div>
+                             <label className="block text-xs text-zinc-400 mb-1">Base URL</label>
+                             <div className="flex items-center gap-2">
+                               <input
+                                 type="text"
+                                 value={getActiveProfile("ollama")?.baseUrl || ""}
+                                 onChange={(e) => {
+                                   const profileId = providerConfigs["ollama"].activeProfileId;
+                                 if (!profileId) return;
+                                   setProviderConfigs(prev => ({
+                                     ...prev,
+                                     "ollama": {
+                                       ...prev["ollama"],
+                                       profiles: (prev["ollama"]?.profiles || []).map(p =>
+                                         p.id === profileId ? { ...p, baseUrl: e.target.value } : p
+                                       )
+                                     }
+                                   }));
+                                 }}
+                                 placeholder="http://localhost:11434/api/chat"
+                                 className="flex-1 bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                               />
+                               <button
+                                 type="button"
+                                 onClick={() => {
+                                   // Test connection for the ollama provider
+                                   handleConnectProvider("ollama");
+                                 }}
+                                 className="px-3 py-2 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                               >
+                                 Test
+                               </button>
+                             </div>
+                             <p className="text-xs text-zinc-500 mt-1">
+                               {getSelectedPresetForProfile(getActiveProfile("ollama"))?.note}
+                             </p>
+                           </div>
+                           
+                           {/* Model Name - only show if profile is selected */}
+                           <div>
+                             <label className="block text-xs text-zinc-400 mb-1">Model Name</label>
+                             <input
+                               type="text"
+                               value={getActiveProfile("ollama")?.selectedModel || ""}
+                               onChange={(e) => {
+                                 const profileId = providerConfigs["ollama"].activeProfileId;
+                                 if (!profileId) return;
                                  setProviderConfigs(prev => ({
                                    ...prev,
                                    "ollama": {
@@ -2188,25 +2268,25 @@ function SettingsModal({
                                        p.id === profileId ? { ...p, selectedModel: e.target.value } : p
                                      )
                                    }
-                                 }));
-                              }}
-                              placeholder="llama3.2"
-                              className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            />
-                            <p className="text-xs text-zinc-500 mt-1">
-                              Enter the model name as it appears in Ollama (e.g., llama3.2, mistral, phi3)
-                            </p>
-                          </div>
-                          
-                          {/* API Key - optional for remote setups */}
-                          <div>
-                            <label className="block text-xs text-zinc-400 mb-1">API Key (Optional)</label>
-                            <input
-                              type="password"
-                              value={getActiveProfile("ollama")?.apiKey || ""}
-                              onChange={(e) => {
-                                const profileId = providerConfigs["ollama"].activeProfileId;
-                                if (!profileId) return;
+                                 ));
+                               }}
+                               placeholder="llama3.2"
+                               className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                             />
+                             <p className="text-xs text-zinc-500 mt-1">
+                               Enter the model name as it appears in Ollama (e.g., llama3.2, mistral, phi3)
+                             </p>
+                           </div>
+                           
+                           {/* API Key - optional for remote setups */}
+                           <div>
+                             <label className="block text-xs text-zinc-400 mb-1">API Key (Optional)</label>
+                             <input
+                               type="password"
+                               value={getActiveProfile("ollama")?.apiKey || ""}
+                               onChange={(e) => {
+                                 const profileId = providerConfigs["ollama"].activeProfileId;
+                                 if (!profileId) return;
                                  setProviderConfigs(prev => ({
                                    ...prev,
                                    "ollama": {
@@ -2215,52 +2295,52 @@ function SettingsModal({
                                        p.id === profileId ? { ...p, apiKey: e.target.value } : p
                                      )
                                    }
-                                 }));
-                              }}
-                              placeholder="Leave empty for local Ollama"
-                              className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            />
-                            <p className="text-xs text-zinc-500 mt-1">
-                              Optional API key for remote Ollama setups that require authentication
-                            </p>
-                          </div>
-                          
-                          {/* CORS Notice */}
-                          <div className="mt-4 p-3 bg-red-900/50 border border-red-800 rounded-lg">
-                            <div className="flex items-start gap-3">
-                              <div className="flex-shrink-0">
-                                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zm-1 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
-                                </svg>
-                              </div>
-                              <div className="flex-1">
-                                <h3 className="text-sm font-medium text-red-400">
-                                  Important: To avoid CORS issues when using Ollama from a remote website, you need to start Ollama with:
-                                </h3>
-                                <p className="mt-1 text-xs text-red-300 font-mono">
-                                  OLLAMA_ORIGINS=* ollama serve
-                                </p>
-                                <p className="mt-1 text-xs text-red-300">
-                                  Or on Windows, set the environment variable OLLAMA_ORIGINS to * before starting Ollama
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => handleConnectProvider("ollama")}
-                              className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                            >
-                              Connect
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
+                                 ));
+                               }}
+                               placeholder="Leave empty for local Ollama"
+                               className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                             />
+                             <p className="text-xs text-zinc-500 mt-1">
+                               Optional API key for remote Ollama setups that require authentication
+                             </p>
+                           </div>
+                           
+                           {/* CORS Notice */}
+                           <div className="mt-4 p-3 bg-red-900/50 border border-red-800 rounded-lg">
+                             <div className="flex items-start gap-3">
+                               <div className="flex-shrink-0">
+                                 <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                   <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zm-1 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                                 </svg>
+                               </div>
+                               <div className="flex-1">
+                                 <h3 className="text-sm font-medium text-red-400">
+                                   Important: To avoid CORS issues when using Ollama from a remote website, you need to start Ollama with:
+                                 </h3>
+                                 <p className="mt-1 text-xs text-red-300 font-mono">
+                                   OLLAMA_ORIGINS=* ollama serve
+                                 </p>
+                                 <p className="mt-1 text-xs text-red-300">
+                                   Or on Windows, set the environment variable OLLAMA_ORIGINS to * before starting Ollama
+                                 </p>
+                               </div>
+                             </div>
+                           </div>
+                           
+                           <div className="flex gap-2">
+                             <button
+                               type="button"
+                               onClick={() => handleConnectProvider("ollama")}
+                               className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                             >
+                               Connect
+                             </button>
+                           </div>
+                         </>
+                       )}
+                     </div>
+                   )}
+                 </div>
 
              </div>
            </div>
