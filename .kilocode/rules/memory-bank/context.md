@@ -1,12 +1,19 @@
 # Active Context: Roleplay Studio
 
 ## Current State
- 
-**Application Status**: ✅ Ready for use
- 
-A chat application for roleplay conversations with multiple LLM provider support. Features a modern black theme with dual persona/character system, SillyTavern character import, and advanced instruction handling. Recent changes removed individual test connection buttons and simplified the connection process to fetch models directly during provider connection.
+
+**Application Status**: ✅ Ready for use - Modularization in progress
+
+Currently modularizing `src/components/Chat.tsx` (11,200 lines) into smaller files under `src/components/chat/`. Completed Steps 1-3 of the module plan. Build compiles successfully.
 
 ## Recently Completed
+- [x] **Extracted SettingsModal from Chat.tsx into its own file**
+  - Created `src/components/chat/components/SettingsModal.tsx` with all necessary imports and local type definitions
+  - Updated `src/components/chat/components/index.ts` to export SettingsModal
+  - Updated Chat.tsx to import SettingsModal from the new module
+  - Chat.tsx now delegates settings UI to the extracted component
+  - Build compiles successfully
+
 
 - [x] **Added toast system for provider connection debugging**
   - Created reusable `useToast` hook in `src/hooks/useToast.ts`
@@ -625,3 +632,4 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 | 2026-02-15 | Enhanced dark theme with custom scrollbar and global dark mode styles                                                                                                                                                                                                                                                                                 |
 | 2026-02-15 | Created GLM 5 chat application with multi-provider support                                                                                                                                                                                                                                                                                            |
 | Initial    | Template created with base setup                                                                                                                                                                                                                                                                                                                      |
+| 2026-07-05 | **Refactor: Extract SettingsModal from Chat.tsx** - Moved SettingsModal component (lines 599-2231) into `src/components/chat/components/SettingsModal.tsx` as part of Step 3 modularization. Added necessary imports and local type definitions. Updated barrel exports and Chat.tsx import. Build compiles successfully. |
