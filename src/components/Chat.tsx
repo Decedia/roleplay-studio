@@ -37,9 +37,14 @@ import { parseRoleplayText, getSegmentClasses, TextSegment } from "@/lib/text-fo
 
 // Import from modular chat structure
 import { ThinkingSection, ThinkingPanel, CollapsibleTagSection, FormattedText, SettingsModal } from "@/components/chat/components";
+import { useChatState } from "@/components/chat/hooks/useChatState";
 
 // Import UI styles
 import * as ui from "@/components/chat/styles";
+
+// Custom UI components
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 
 // Types - using imported Message interface
 export interface Persona {
