@@ -181,6 +181,21 @@ export function SettingsModal({
    const [providerSearchQuery, setProviderSearchQuery] = useState("");
     const providerSearchInputRef = useRef<HTMLInputElement>(null);
 
+    const handleConnectProviderRef = useRef(handleConnectProvider);
+    useEffect(() => {
+      handleConnectProviderRef.current = handleConnectProvider;
+    });
+
+    useEffect(() => {
+      if (!show) return;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setEditingProvider(activeProvider);
+      const status = connectionStatus[activeProvider]?.status;
+      if (status !== "connected") {
+        handleConnectProviderRef.current(activeProvider);
+      }
+    }, [show, activeProvider, connectionStatus]);
+
     // Ollama presets for self-hosted providers
     const ollamaPresets = [
       { label: "Ollama (Local)", value: "http://localhost:11434/api/chat", note: "default" },
