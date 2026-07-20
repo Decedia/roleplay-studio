@@ -167,8 +167,9 @@ export function SettingsModal({
   showInstructionsSection?: boolean;
 }) {
   const [expandedProviders, setExpandedProviders] = useState<Record<string, boolean>>({});
-  const [showModelDropdown, setShowModelDropdown] = useState(initialTab === "models");
+  const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [modelSearchQuery, setModelSearchQuery] = useState("");
+  const [customModels, setCustomModels] = useState<Array<{id: string; name?: string; provider?: string; context?: number; max_tokens?: number; cost?: Model['cost']}>>([]);
 
   const modelSearchInputRef = useRef<HTMLInputElement>(null);
   const [editingProvider, setEditingProvider] = useState<LLMProviderType | null>(activeProvider);
@@ -195,6 +196,13 @@ export function SettingsModal({
         handleConnectProviderRef.current(activeProvider);
       }
     }, [show, activeProvider, connectionStatus]);
+
+    useEffect(() => {
+      if (!show) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setCustomModels([]);
+      }
+    }, [show]);
 
     // Ollama presets for self-hosted providers
     const ollamaPresets = [
@@ -297,17 +305,15 @@ export function SettingsModal({
    }, [showProviderDropdown]);
 
   const selectModel = (modelId: string) => {
-    const model = activeProviderModels.find(m => m.id === modelId);
-    const maxOutput = model?.max_tokens || 4000;
-    const maxContext = model?.context || 128000;
-    // Auto-set max tokens to model's maximum when selecting a new model
+    const existing = activeProviderModels.find(m => m.id === modelId);
+    const model = existing || { id: modelId, name: modelId, provider: activeProvider } as Model | FetchedModel;
+    const maxOutput = model.max_tokens || 4000;
+    const maxContext = model.context || 128000;
     const newMaxTokens = maxOutput;
     const newMaxContext = maxContext;
     
-    // Update global settings
     setGlobalSettings({ ...globalSettings, modelId, maxTokens: newMaxTokens, maxContextTokens: newMaxContext });
     
-    // Also update the provider config and active profile
     const config = providerConfigs[activeProvider];
     setProviderConfigs(prev => ({
       ...prev,
@@ -320,7 +326,16 @@ export function SettingsModal({
       }
     }));
     
+    if (!existing) {
+      setCustomModels(prev => {
+        const exists = prev.find(m => m.id === modelId);
+        if (exists) return prev;
+        return [...prev, { id: modelId, name: modelId, provider: activeProvider, context: maxContext, max_tokens: maxOutput }];
+      });
+    }
+    
     setShowModelDropdown(false);
+    setModelSearchQuery("");
   };
 
   const getModelCostInfo = (model: Model | FetchedModel) => {
@@ -360,7 +375,7 @@ export function SettingsModal({
         <div className="flex-1 overflow-y-auto p-6">
           <div className="space-y-6">
             {/* Provider Connections */}
-            <div className="border-t border-zinc-700 pt-6">
+            <div className="pt-6">
               <h3 className="text-sm font-medium text-white mb-4">Provider Connections</h3>
 
               {/* Provider Selector Dropdown */}
@@ -941,6 +956,11 @@ export function SettingsModal({
                         
                         const hasCustomMatch = query && !filteredModels.some(m => m.id.toLowerCase() === query);
                         
+                        const customFiltered = customModels.filter(m => 
+                          m.id.toLowerCase().includes(query) || 
+                          (m.name && m.name.toLowerCase().includes(query))
+                        );
+                        
                         return (
                           <>
                             {hasCustomMatch && (
@@ -959,6 +979,38 @@ export function SettingsModal({
                                   Press Enter or click to use this model
                                 </div>
                               </button>
+                            )}
+                            {customFiltered.length > 0 && (
+                              <>
+                                <div className="px-4 py-1.5 text-xs font-semibold text-amber-400 bg-amber-900/20 border-b border-zinc-700">
+                                  CUSTOM
+                                </div>
+                                {customFiltered.map((model) => {
+                                  const isSelected = model.id === globalSettings.modelId;
+                                  return (
+                                    <button
+                                      key={model.id}
+                                      type="button"
+                                      onClick={() => selectModel(model.id)}
+                                      className={`w-full px-4 py-2 text-left text-sm hover:bg-zinc-700 transition-colors ${
+                                        isSelected ? "bg-blue-900/30 text-blue-300" : "text-zinc-300"
+                                      }`}
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-medium">{model.name || model.id}</span>
+                                        {isSelected && (
+                                          <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                          </svg>
+                                        )}
+                                      </div>
+                                      <div className="text-xs text-zinc-500 mt-0.5">
+                                        Custom model
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </>
                             )}
                             {freeModels.length > 0 && (
                               <>
@@ -1028,11 +1080,11 @@ export function SettingsModal({
                                 })}
                               </>
                             )}
-                            {filteredModels.length === 0 && !hasCustomMatch && modelSearchQuery && (
+                            {filteredModels.length === 0 && customFiltered.length === 0 && !hasCustomMatch && modelSearchQuery && (
                                <div className="px-4 py-3 text-center text-zinc-500 text-sm">
                                  No models found. Press Enter to use &quot;{modelSearchQuery}&quot; as custom model.
                                </div>
-                            )}
+                             )}
                           </>
                         );
                       })()}
