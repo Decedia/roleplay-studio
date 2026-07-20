@@ -847,742 +847,401 @@ export function SettingsModal({
 
 
 
-            {/* Provider API Keys Configuration */}
-          <div className="border-t border-zinc-700 pt-6">
-            <h3 className="text-sm font-medium text-white mb-4">Provider Connections</h3>
-            <div className="space-y-4">
-              {/* Google AI Studio */}
-              <div className="p-3 bg-zinc-800/50 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${
-                      connectionStatus["google-ai-studio"]?.status === "connected" ? "bg-green-500" :
-                      connectionStatus["google-ai-studio"]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
-                      connectionStatus["google-ai-studio"]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
-                    }`} />
-                    <span className="text-sm font-medium text-white">Google AI Studio</span>
-                    {activeProvider === "google-ai-studio" && (
-                      <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setEditingProvider(editingProvider === 'google-ai-studio' ? null : 'google-ai-studio')}
-                    className="text-xs text-blue-400 hover:text-blue-300"
-                  >
-                    {editingProvider === 'google-ai-studio' ? 'Hide' : 'Configure'}
-                  </button>
-                </div>
-                {connectionStatus["google-ai-studio"]?.message && (
-                  <p className={`text-xs mb-2 ${
-                    connectionStatus["google-ai-studio"]?.status === "connected" ? "text-green-400" :
-                    connectionStatus["google-ai-studio"]?.status === "error" ? "text-red-400" : "text-zinc-400"
-                  }`}>
-                    {connectionStatus["google-ai-studio"].message}
-                  </p>
-                )}
-                 {editingProvider === 'google-ai-studio' && (
-                   <div className="mt-3 space-y-3">
-                     {/* Profile Selection */}
-                     <div>
-                       <label className="block text-xs text-zinc-400 mb-1">Profile</label>
-                       <div className="flex gap-2">
-                         <select
-                           value={providerConfigs["google-ai-studio"]?.activeProfileId || ""}
-                           onChange={(e) => {
-                             if (e.target.value === "__new__") {
-                               const name = prompt("Enter profile name (or leave empty for date/time):");
-                               if (name !== null) {
-                                 createProfile("google-ai-studio", {
-                                   name: name.trim() || new Date().toLocaleString(),
-                                   apiKey: ""
-                                 });
-                               }
-                             } else {
-                               selectProfile("google-ai-studio", e.target.value);
-                             }
-                           }}
-                           className="flex-1 bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                         >
-                           <option value="">Select a profile...</option>
-                           {providerConfigs["google-ai-studio"]?.profiles.map(profile => (
-                             <option key={profile.id} value={profile.id}>{profile.name}</option>
-                           ))}
-                           <option value="__new__">+ Add New Profile</option>
-                         </select>
-                         {providerConfigs["google-ai-studio"]?.activeProfileId && (
-                           <button
-                             type="button"
-                             onClick={() => {
-                               if (confirm("Delete this profile?")) {
-                                 deleteProfile("google-ai-studio", providerConfigs["google-ai-studio"].activeProfileId!);
-                               }
-                             }}
-                             className="px-3 py-2 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                           >
-                             Delete
-                           </button>
-                         )}
-                       </div>
-                     </div>
-                     
-                     {/* API Key - only show if profile is selected */}
-                     {providerConfigs["google-ai-studio"]?.activeProfileId && (
-                       <>
-                         <div>
-                           <label className="block text-xs text-zinc-400 mb-1">API Key</label>
-                           <input
-                             type="password"
-                             value={getActiveProfile("google-ai-studio")?.apiKey || ""}
-                             onChange={(e) => {
-                               const profileId = providerConfigs["google-ai-studio"].activeProfileId;
-                               if (!profileId) return;
-                               setProviderConfigs(prev => ({
-                                 ...prev,
-                                 "google-ai-studio": {
-                                   ...prev["google-ai-studio"],
-                                   profiles: prev["google-ai-studio"].profiles.map(p =>
-                                     p.id === profileId ? { ...p, apiKey: e.target.value } : p
-                                   )
-                                 }
-                               }));
-                             }}
-                             placeholder="Enter your Google AI Studio API key"
-                             className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                           />
-                         </div>
-                         <div className="flex gap-2">
-                           <button
-                              type="button"
-                              onClick={() => handleConnectProvider("google-ai-studio")}
-                              className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                            >
-                              Connect
-                            </button>
-                         </div>
-                       </>
-                     )}
-                   </div>
-                 )}
+            {/* Provider Connections */}
+            <div className="border-t border-zinc-700 pt-6">
+              <h3 className="text-sm font-medium text-white mb-4">Provider Connections</h3>
+
+              {/* Provider Selector Dropdown */}
+              <div className="mb-4">
+                <label className="block text-xs text-zinc-400 mb-1">Select Provider</label>
+                <select
+                  value={editingProvider || ""}
+                  onChange={(e) => setEditingProvider(e.target.value as LLMProviderType | null)}
+                  className="w-full bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="">Select a provider...</option>
+                  {AVAILABLE_PROVIDERS.map(provider => (
+                    <option key={provider.id} value={provider.id}>{provider.name}</option>
+                  ))}
+                </select>
               </div>
 
-              {/* Google Vertex AI */}
-              <div className="p-3 bg-zinc-800/50 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${
-                      connectionStatus["google-vertex"]?.status === "connected" ? "bg-green-500" :
-                      connectionStatus["google-vertex"]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
-                      connectionStatus["google-vertex"]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
-                    }`} />
-                    <span className="text-sm font-medium text-white">Google Vertex AI</span>
-                    {activeProvider === "google-vertex" && (
-                      <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setEditingProvider(editingProvider === 'google-vertex' ? null : 'google-vertex')}
-                    className="text-xs text-blue-400 hover:text-blue-300"
-                  >
-                    {editingProvider === 'google-vertex' ? 'Hide' : 'Configure'}
-                  </button>
-                </div>
-                {connectionStatus["google-vertex"]?.message && (
-                  <p className={`text-xs mb-2 ${
-                    connectionStatus["google-vertex"]?.status === "connected" ? "text-green-400" :
-                    connectionStatus["google-vertex"]?.status === "error" ? "text-red-400" : "text-zinc-400"
-                  }`}>
-                    {connectionStatus["google-vertex"].message}
-                  </p>
-                )}
-                {editingProvider === 'google-vertex' && (
-                  <div className="mt-3 space-y-3">
-                    {/* Profile Selection */}
-                    <div>
-                      <label className="block text-xs text-zinc-400 mb-1">Profile</label>
-                      <div className="flex gap-2">
-                        <select
-                          value={providerConfigs["google-vertex"]?.activeProfileId || ""}
-                          onChange={(e) => {
-                            if (e.target.value === "__new__") {
-                              const name = prompt("Enter profile name (use project name or leave empty for date/time):");
-                              if (name !== null) {
-                                createProfile("google-vertex", {
-                                  name: name.trim() || new Date().toLocaleString(),
-                                  apiKey: "",
-                                  projectId: "",
-                                  vertexMode: "express",
-                                  vertexLocation: "global"
-                                });
-                              }
-                            } else {
-                              selectProfile("google-vertex", e.target.value);
-                            }
-                          }}
-                          className="flex-1 bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        >
-                          <option value="">Select a profile...</option>
-                          {providerConfigs["google-vertex"]?.profiles.map(profile => (
-                            <option key={profile.id} value={profile.id}>{profile.name}</option>
-                          ))}
-                          <option value="__new__">+ Add New Profile</option>
-                        </select>
-                        {providerConfigs["google-vertex"]?.activeProfileId && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (confirm("Delete this profile?")) {
-                                deleteProfile("google-vertex", providerConfigs["google-vertex"].activeProfileId!);
-                              }
-                            }}
-                            className="px-3 py-2 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Only show config if profile is selected */}
-                    {providerConfigs["google-vertex"]?.activeProfileId && (
-                      <>
-                        {/* Mode Selector */}
-                        <div>
-                          <label className="block text-xs text-zinc-400 mb-1">Mode</label>
-                          <select
-                            value={getActiveProfile("google-vertex")?.vertexMode || "express"}
-                            onChange={(e) => {
-                              const profileId = providerConfigs["google-vertex"].activeProfileId;
-                              if (!profileId) return;
-                              setProviderConfigs(prev => ({
-                                ...prev,
-                                "google-vertex": {
-                                  ...prev["google-vertex"],
-                                  profiles: prev["google-vertex"].profiles.map(p =>
-                                    p.id === profileId ? { ...p, vertexMode: e.target.value as VertexMode } : p
-                                  )
-                                }
-                              }));
-                            }}
-                            className="w-full bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          >
-                            <option value="express">Express (API Key + Project ID)</option>
-                            <option value="full">Full (Service Account)</option>
-                          </select>
-                          <p className="text-xs text-zinc-500 mt-1">
-                            Express mode uses API key authentication. Full mode requires a Google Cloud Service Account JSON.
-                          </p>
-                        </div>
-                        {/* Show Service Account JSON input only in Full mode */}
-                        {getActiveProfile("google-vertex")?.vertexMode === "full" && (
-                          <div>
-                            <label className="block text-xs text-zinc-400 mb-1">Service Account JSON <span className="text-red-400">*</span></label>
-                            <textarea
-                              value={getActiveProfile("google-vertex")?.serviceAccountJson || ""}
-                              onChange={(e) => {
-                                const profileId = providerConfigs["google-vertex"].activeProfileId;
-                                if (!profileId) return;
-                                setProviderConfigs(prev => ({
-                                  ...prev,
-                                  "google-vertex": {
-                                    ...prev["google-vertex"],
-                                    profiles: prev["google-vertex"].profiles.map(p =>
-                                      p.id === profileId ? { ...p, serviceAccountJson: e.target.value } : p
-                                    )
-                                  }
-                                }));
-                              }}
-                              placeholder='{"type": "service_account", "project_id": "..."}'
-                              rows={4}
-                              className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono text-xs"
-                            />
-                            <p className="text-xs text-zinc-500 mt-1">
-                              Paste your service account JSON key from the Google Cloud Console
-                            </p>
-                          </div>
-                        )}
-                        {/* Project ID */}
-                        <div>
-                          <label className="block text-xs text-zinc-400 mb-1">Google Cloud Project ID <span className="text-red-400">*</span></label>
-                          <input
-                            type="text"
-                            value={getActiveProfile("google-vertex")?.projectId || ""}
-                            onChange={(e) => {
-                              const profileId = providerConfigs["google-vertex"].activeProfileId;
-                              if (!profileId) return;
-                              setProviderConfigs(prev => ({
-                                ...prev,
-                                "google-vertex": {
-                                  ...prev["google-vertex"],
-                                  profiles: prev["google-vertex"].profiles.map(p =>
-                                    p.id === profileId ? { ...p, projectId: e.target.value } : p
-                                  )
-                                }
-                              }));
-                            }}
-                            placeholder="your-project-id"
-                            className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          />
-                          <p className="text-xs text-zinc-500 mt-1">
-                            Find your Project ID in the <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Google Cloud Console</a>
-                          </p>
-                        </div>
-                        {/* Server Location */}
-                        <div>
-                          <label className="block text-xs text-zinc-400 mb-1">Server Location</label>
-                          <select
-                            value={getActiveProfile("google-vertex")?.vertexLocation || "global"}
-                            onChange={(e) => {
-                              const profileId = providerConfigs["google-vertex"].activeProfileId;
-                              if (!profileId) return;
-                              setProviderConfigs(prev => ({
-                                ...prev,
-                                "google-vertex": {
-                                  ...prev["google-vertex"],
-                                  profiles: prev["google-vertex"].profiles.map(p =>
-                                    p.id === profileId ? { ...p, vertexLocation: e.target.value as VertexLocation } : p
-                                  )
-                                }
-                              }));
-                            }}
-                            className="w-full bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          >
-                            <option value="global">Global (Auto-routing)</option>
-                            <option value="us-central1">US Central (Iowa)</option>
-                            <option value="us-east1">US East (South Carolina)</option>
-                            <option value="us-west1">US West (Oregon)</option>
-                            <option value="europe-west1">Europe West (Belgium)</option>
-                            <option value="europe-west4">Europe West (Netherlands)</option>
-                            <option value="asia-east1">Asia East (Taiwan)</option>
-                            <option value="asia-northeast1">Asia Northeast (Tokyo)</option>
-                            <option value="asia-southeast1">Asia Southeast (Singapore)</option>
-                          </select>
-                          <p className="text-xs text-zinc-500 mt-1">
-                            Choose the closest region for lower latency
-                          </p>
-                        </div>
-                        <div>
-                          <label className="block text-xs text-zinc-400 mb-1">API Key</label>
-                          <input
-                            type="password"
-                            value={getActiveProfile("google-vertex")?.apiKey || ""}
-                            onChange={(e) => {
-                              const profileId = providerConfigs["google-vertex"].activeProfileId;
-                              if (!profileId) return;
-                              setProviderConfigs(prev => ({
-                                ...prev,
-                                "google-vertex": {
-                                  ...prev["google-vertex"],
-                                  profiles: prev["google-vertex"].profiles.map(p =>
-                                    p.id === profileId ? { ...p, apiKey: e.target.value } : p
-                                  )
-                                }
-                              }));
-                            }}
-                            placeholder="Enter your Google API key"
-                            className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          />
-                        </div>
-                         <div className="flex gap-2">
-                           <button
-                              type="button"
-                              onClick={() => handleConnectProvider("google-vertex")}
-                              className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                            >
-                              Connect
-                            </button>
-                         </div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* NVIDIA NIM */}
-              <div className="p-3 bg-zinc-800/50 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${
-                      connectionStatus["nvidia-nim"]?.status === "connected" ? "bg-green-500" :
-                      connectionStatus["nvidia-nim"]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
-                      connectionStatus["nvidia-nim"]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
-                    }`} />
-                    <span className="text-sm font-medium text-white">NVIDIA NIM</span>
-                    {activeProvider === "nvidia-nim" && (
-                      <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setEditingProvider(editingProvider === 'nvidia-nim' ? null : 'nvidia-nim')}
-                    className="text-xs text-blue-400 hover:text-blue-300"
-                  >
-                    {editingProvider === 'nvidia-nim' ? 'Hide' : 'Configure'}
-                  </button>
-                </div>
-                {connectionStatus["nvidia-nim"]?.message && (
-                  <p className={`text-xs mb-2 ${
-                    connectionStatus["nvidia-nim"]?.status === "connected" ? "text-green-400" :
-                    connectionStatus["nvidia-nim"]?.status === "error" ? "text-red-400" : "text-zinc-400"
-                  }`}>
-                    {connectionStatus["nvidia-nim"].message}
-                  </p>
-                )}
-                {editingProvider === 'nvidia-nim' && (
-                  <div className="mt-3 space-y-3">
-                    {/* Profile Selection */}
-                    <div>
-                      <label className="block text-xs text-zinc-400 mb-1">Profile</label>
-                      <div className="flex gap-2">
-                        <select
-                          value={providerConfigs["nvidia-nim"]?.activeProfileId || ""}
-                          onChange={(e) => {
-                            if (e.target.value === "__new__") {
-                              const name = prompt("Enter profile name (or leave empty for date/time):");
-                              if (name !== null) {
-                                createProfile("nvidia-nim", {
-                                  name: name.trim() || new Date().toLocaleString(),
-                                  apiKey: ""
-                                });
-                              }
-                            } else {
-                              selectProfile("nvidia-nim", e.target.value);
-                            }
-                          }}
-                          className="flex-1 bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        >
-                          <option value="">Select a profile...</option>
-                          {providerConfigs["nvidia-nim"]?.profiles.map(profile => (
-                            <option key={profile.id} value={profile.id}>{profile.name}</option>
-                          ))}
-                          <option value="__new__">+ Add New Profile</option>
-                        </select>
-                        {providerConfigs["nvidia-nim"]?.activeProfileId && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (confirm("Delete this profile?")) {
-                                deleteProfile("nvidia-nim", providerConfigs["nvidia-nim"].activeProfileId!);
-                              }
-                            }}
-                            className="px-3 py-2 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* API Key - only show if profile is selected */}
-                    {providerConfigs["nvidia-nim"]?.activeProfileId && (
-                      <>
-                        <div>
-                          <label className="block text-xs text-zinc-400 mb-1">API Key</label>
-                          <input
-                            type="password"
-                            value={getActiveProfile("nvidia-nim")?.apiKey || ""}
-                            onChange={(e) => {
-                              const profileId = providerConfigs["nvidia-nim"].activeProfileId;
-                              if (!profileId) return;
-                              setProviderConfigs(prev => ({
-                                ...prev,
-                                "nvidia-nim": {
-                                  ...prev["nvidia-nim"],
-                                  profiles: prev["nvidia-nim"].profiles.map(p =>
-                                    p.id === profileId ? { ...p, apiKey: e.target.value } : p
-                                  )
-                                }
-                              }));
-                            }}
-                            placeholder="Enter your NVIDIA NIM API key"
-                            className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          />
-                        </div>
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => handleConnectProvider("nvidia-nim")}
-                              className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                            >
-                              Connect
-                            </button>
-                          </div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Groq */}
-              <div className="p-3 bg-zinc-800/50 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${
-                      connectionStatus["groq"]?.status === "connected" ? "bg-green-500" :
-                      connectionStatus["groq"]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
-                      connectionStatus["groq"]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
-                    }`} />
-                    <span className="text-sm font-medium text-white">Groq</span>
-                    {activeProvider === "groq" && (
-                      <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setEditingProvider(editingProvider === 'groq' ? null : 'groq')}
-                    className="text-xs text-blue-400 hover:text-blue-300"
-                  >
-                    {editingProvider === 'groq' ? 'Hide' : 'Configure'}
-                  </button>
-                </div>
-                {connectionStatus["groq"]?.message && (
-                  <p className={`text-xs mb-2 ${
-                    connectionStatus["groq"]?.status === "connected" ? "text-green-400" :
-                    connectionStatus["groq"]?.status === "error" ? "text-red-400" : "text-zinc-400"
-                  }`}>
-                    {connectionStatus["groq"].message}
-                  </p>
-                )}
-                {editingProvider === 'groq' && (
-                  <div className="mt-3 space-y-3">
-                    {/* Profile Selection */}
-                    <div>
-                      <label className="block text-xs text-zinc-400 mb-1">Profile</label>
-                      <div className="flex gap-2">
-                        <select
-                          value={providerConfigs["groq"]?.activeProfileId || ""}
-                          onChange={(e) => {
-                            if (e.target.value === "__new__") {
-                              const name = prompt("Enter profile name (or leave empty for date/time):");
-                              if (name !== null) {
-                                createProfile("groq", {
-                                  name: name.trim() || new Date().toLocaleString(),
-                                  apiKey: ""
-                                });
-                              }
-                            } else {
-                              selectProfile("groq", e.target.value);
-                            }
-                          }}
-                          className="flex-1 bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        >
-                          <option value="">Select a profile...</option>
-                          {providerConfigs["groq"]?.profiles.map(profile => (
-                            <option key={profile.id} value={profile.id}>{profile.name}</option>
-                          ))}
-                          <option value="__new__">+ Add New Profile</option>
-                        </select>
-                        {providerConfigs["groq"]?.activeProfileId && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (confirm("Delete this profile?")) {
-                                deleteProfile("groq", providerConfigs["groq"].activeProfileId!);
-                              }
-                            }}
-                            className="px-3 py-2 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* API Key - only show if profile is selected */}
-                    {providerConfigs["groq"]?.activeProfileId && (
-                      <>
-                        <div>
-                          <label className="block text-xs text-zinc-400 mb-1">API Key</label>
-                          <input
-                            type="password"
-                            value={getActiveProfile("groq")?.apiKey || ""}
-                            onChange={(e) => {
-                              const profileId = providerConfigs["groq"].activeProfileId;
-                              if (!profileId) return;
-                              setProviderConfigs(prev => ({
-                                ...prev,
-                                "groq": {
-                                  ...prev["groq"],
-                                  profiles: prev["groq"].profiles.map(p =>
-                                    p.id === profileId ? { ...p, apiKey: e.target.value } : p
-                                  )
-                                }
-                              }));
-                            }}
-                            placeholder="Enter your Groq API key"
-                            className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          />
-                        </div>
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                               onClick={() => handleConnectProvider("groq")}
-                               className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                             >
-                               Connect
-                             </button>
-                          </div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Open Router */}
-              <div className="p-3 bg-zinc-800/50 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${
-                      connectionStatus["open-router"]?.status === "connected" ? "bg-green-500" :
-                      connectionStatus["open-router"]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
-                      connectionStatus["open-router"]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
-                    }`} />
-                    <span className="text-sm font-medium text-white">Open Router</span>
-                    {activeProvider === "open-router" && (
-                      <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setEditingProvider(editingProvider === 'open-router' ? null : 'open-router')}
-                    className="text-xs text-blue-400 hover:text-blue-300"
-                  >
-                    {editingProvider === 'open-router' ? 'Hide' : 'Configure'}
-                  </button>
-                </div>
-                {connectionStatus["open-router"]?.message && (
-                  <p className={`text-xs mb-2 ${
-                    connectionStatus["open-router"]?.status === "connected" ? "text-green-400" :
-                    connectionStatus["open-router"]?.status === "error" ? "text-red-400" : "text-zinc-400"
-                  }`}>
-                    {connectionStatus["open-router"].message}
-                  </p>
-                )}
-                {editingProvider === 'open-router' && (
-                  <div className="mt-3 space-y-3">
-                    {/* Profile Selection */}
-                    <div>
-                      <label className="block text-xs text-zinc-400 mb-1">Profile</label>
-                      <div className="flex gap-2">
-                        <select
-                          value={providerConfigs["open-router"]?.activeProfileId || ""}
-                          onChange={(e) => {
-                            if (e.target.value === "__new__") {
-                              const name = prompt("Enter profile name (or leave empty for date/time):");
-                              if (name !== null) {
-                                createProfile("open-router", {
-                                  name: name.trim() || new Date().toLocaleString(),
-                                  apiKey: ""
-                                });
-                              }
-                            } else {
-                              selectProfile("open-router", e.target.value);
-                            }
-                          }}
-                          className="flex-1 bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        >
-                          <option value="">Select a profile...</option>
-                          {providerConfigs["open-router"]?.profiles.map(profile => (
-                            <option key={profile.id} value={profile.id}>{profile.name}</option>
-                          ))}
-                          <option value="__new__">+ Add New Profile</option>
-                        </select>
-                        {providerConfigs["open-router"]?.activeProfileId && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (confirm("Delete this profile?")) {
-                                deleteProfile("open-router", providerConfigs["open-router"].activeProfileId!);
-                              }
-                            }}
-                            className="px-3 py-2 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* API Key - only show if profile is selected */}
-                    {providerConfigs["open-router"]?.activeProfileId && (
-                      <>
-                        <div>
-                          <label className="block text-xs text-zinc-400 mb-1">API Key</label>
-                          <input
-                            type="password"
-                            value={getActiveProfile("open-router")?.apiKey || ""}
-                            onChange={(e) => {
-                              const profileId = providerConfigs["open-router"].activeProfileId;
-                              if (!profileId) return;
-                              setProviderConfigs(prev => ({
-                                ...prev,
-                                "open-router": {
-                                  ...prev["open-router"],
-                                  profiles: prev["open-router"].profiles.map(p =>
-                                    p.id === profileId ? { ...p, apiKey: e.target.value } : p
-                                  )
-                                }
-                              }));
-                            }}
-                            placeholder="Enter your Open Router API key"
-                            className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          />
-                        </div>
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => handleConnectProvider("open-router")}
-                              className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                            >
-                              Connect
-                            </button>
-                          </div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-
-                {/* KoboldAI Horde */}
-                <div className="p-3 bg-zinc-800/50 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
+              {/* Selected Provider Config Panel */}
+              {editingProvider && (
+                <div className="p-3 bg-zinc-800/50 rounded-lg space-y-3">
+                  {/* Status Indicator and Active Badge */}
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className={`w-2 h-2 rounded-full ${
-                        connectionStatus["kobold-horde"]?.status === "connected" ? "bg-green-500" :
-                        connectionStatus["kobold-horde"]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
-                        connectionStatus["kobold-horde"]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
+                        connectionStatus[editingProvider]?.status === "connected" ? "bg-green-500" :
+                        connectionStatus[editingProvider]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
+                        connectionStatus[editingProvider]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
                       }`} />
-                      <span className="text-sm font-medium text-white">KoboldAI Horde</span>
-                      {activeProvider === "kobold-horde" && (
+                      <span className="text-sm font-medium text-white">
+                        {AVAILABLE_PROVIDERS.find(p => p.id === editingProvider)?.name || editingProvider}
+                      </span>
+                      {activeProvider === editingProvider && (
                         <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
                       )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setEditingProvider(editingProvider === 'kobold-horde' ? null : 'kobold-horde')}
-                      className="text-xs text-blue-400 hover:text-blue-300"
-                    >
-                      {editingProvider === 'kobold-horde' ? 'Hide' : 'Configure'}
-                    </button>
                   </div>
-                  {connectionStatus["kobold-horde"]?.message && (
-                    <p className={`text-xs mb-2 ${
-                      connectionStatus["kobold-horde"]?.status === "connected" ? "text-green-400" :
-                      connectionStatus["kobold-horde"]?.status === "error" ? "text-red-400" : "text-zinc-400"
+
+                  {/* Status Message */}
+                  {connectionStatus[editingProvider]?.message && (
+                    <p className={`text-xs ${
+                      connectionStatus[editingProvider]?.status === "connected" ? "text-green-400" :
+                      connectionStatus[editingProvider]?.status === "error" ? "text-red-400" : "text-zinc-400"
                     }`}>
-                      {connectionStatus["kobold-horde"].message}
+                      {connectionStatus[editingProvider].message}
                     </p>
                   )}
+
+                  {/* Profile Selection */}
+                  <div>
+                    <label className="block text-xs text-zinc-400 mb-1">Profile</label>
+                    <div className="flex gap-2">
+                      <select
+                        value={providerConfigs[editingProvider]?.activeProfileId || ""}
+                        onChange={(e) => {
+                          if (e.target.value === "__new__") {
+                            const name = prompt("Enter profile name (or leave empty for date/time):");
+                            if (name !== null) {
+                              createProfile(editingProvider, {
+                                name: name.trim() || new Date().toLocaleString(),
+                                apiKey: ""
+                              });
+                            }
+                          } else {
+                            selectProfile(editingProvider, e.target.value);
+                          }
+                        }}
+                        className="flex-1 bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      >
+                        <option value="">Select a profile...</option>
+                        {providerConfigs[editingProvider]?.profiles.map(profile => (
+                          <option key={profile.id} value={profile.id}>{profile.name}</option>
+                        ))}
+                        <option value="__new__">+ Add New Profile</option>
+                      </select>
+                      {providerConfigs[editingProvider]?.activeProfileId && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm("Delete this profile?")) {
+                              deleteProfile(editingProvider, providerConfigs[editingProvider].activeProfileId!);
+                            }
+                          }}
+                          className="px-3 py-2 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Google AI Studio */}
+                  {editingProvider === 'google-ai-studio' && providerConfigs["google-ai-studio"]?.activeProfileId && (
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                      <input
+                        type="password"
+                        value={getActiveProfile("google-ai-studio")?.apiKey || ""}
+                        onChange={(e) => {
+                          const profileId = providerConfigs["google-ai-studio"].activeProfileId;
+                          if (!profileId) return;
+                          setProviderConfigs(prev => ({
+                            ...prev,
+                            "google-ai-studio": {
+                              ...prev["google-ai-studio"],
+                              profiles: prev["google-ai-studio"].profiles.map(p =>
+                                p.id === profileId ? { ...p, apiKey: e.target.value } : p
+                              )
+                            }
+                          }));
+                        }}
+                        placeholder="Enter your Google AI Studio API key"
+                        className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          type="button"
+                          onClick={() => handleConnectProvider("google-ai-studio")}
+                          className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                        >
+                          Connect
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Google Vertex AI */}
+                  {editingProvider === 'google-vertex' && providerConfigs["google-vertex"]?.activeProfileId && (
+                    <>
+                      <div>
+                        <label className="block text-xs text-zinc-400 mb-1">Mode</label>
+                        <select
+                          value={getActiveProfile("google-vertex")?.vertexMode || "express"}
+                          onChange={(e) => {
+                            const profileId = providerConfigs["google-vertex"].activeProfileId;
+                            if (!profileId) return;
+                            setProviderConfigs(prev => ({
+                              ...prev,
+                              "google-vertex": {
+                                ...prev["google-vertex"],
+                                profiles: prev["google-vertex"].profiles.map(p =>
+                                  p.id === profileId ? { ...p, vertexMode: e.target.value as VertexMode } : p
+                                )
+                              }
+                            }));
+                          }}
+                          className="w-full bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                          <option value="express">Express (API Key + Project ID)</option>
+                          <option value="full">Full (Service Account)</option>
+                        </select>
+                        <p className="text-xs text-zinc-500 mt-1">
+                          Express mode uses API key authentication. Full mode requires a Google Cloud Service Account JSON.
+                        </p>
+                      </div>
+                      {getActiveProfile("google-vertex")?.vertexMode === "full" && (
+                        <div>
+                          <label className="block text-xs text-zinc-400 mb-1">Service Account JSON <span className="text-red-400">*</span></label>
+                          <textarea
+                            value={getActiveProfile("google-vertex")?.serviceAccountJson || ""}
+                            onChange={(e) => {
+                              const profileId = providerConfigs["google-vertex"].activeProfileId;
+                              if (!profileId) return;
+                              setProviderConfigs(prev => ({
+                                ...prev,
+                                "google-vertex": {
+                                  ...prev["google-vertex"],
+                                  profiles: prev["google-vertex"].profiles.map(p =>
+                                    p.id === profileId ? { ...p, serviceAccountJson: e.target.value } : p
+                                  )
+                                }
+                              }));
+                            }}
+                            placeholder='{"type": "service_account", "project_id": "..."}'
+                            rows={4}
+                            className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono text-xs"
+                          />
+                          <p className="text-xs text-zinc-500 mt-1">
+                            Paste your service account JSON key from the Google Cloud Console
+                          </p>
+                        </div>
+                      )}
+                      <div>
+                        <label className="block text-xs text-zinc-400 mb-1">Google Cloud Project ID <span className="text-red-400">*</span></label>
+                        <input
+                          type="text"
+                          value={getActiveProfile("google-vertex")?.projectId || ""}
+                          onChange={(e) => {
+                            const profileId = providerConfigs["google-vertex"].activeProfileId;
+                            if (!profileId) return;
+                            setProviderConfigs(prev => ({
+                              ...prev,
+                              "google-vertex": {
+                                ...prev["google-vertex"],
+                                profiles: prev["google-vertex"].profiles.map(p =>
+                                  p.id === profileId ? { ...p, projectId: e.target.value } : p
+                                )
+                              }
+                            }));
+                          }}
+                          placeholder="your-project-id"
+                          className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <p className="text-xs text-zinc-500 mt-1">
+                          Find your Project ID in the <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Google Cloud Console</a>
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-zinc-400 mb-1">Server Location</label>
+                        <select
+                          value={getActiveProfile("google-vertex")?.vertexLocation || "global"}
+                          onChange={(e) => {
+                            const profileId = providerConfigs["google-vertex"].activeProfileId;
+                            if (!profileId) return;
+                            setProviderConfigs(prev => ({
+                              ...prev,
+                              "google-vertex": {
+                                ...prev["google-vertex"],
+                                profiles: prev["google-vertex"].profiles.map(p =>
+                                  p.id === profileId ? { ...p, vertexLocation: e.target.value as VertexLocation } : p
+                                )
+                              }
+                            }));
+                          }}
+                          className="w-full bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                          <option value="global">Global (Auto-routing)</option>
+                          <option value="us-central1">US Central (Iowa)</option>
+                          <option value="us-east1">US East (South Carolina)</option>
+                          <option value="us-west1">US West (Oregon)</option>
+                          <option value="europe-west1">Europe West (Belgium)</option>
+                          <option value="europe-west4">Europe West (Netherlands)</option>
+                          <option value="asia-east1">Asia East (Taiwan)</option>
+                          <option value="asia-northeast1">Asia Northeast (Tokyo)</option>
+                          <option value="asia-southeast1">Asia Southeast (Singapore)</option>
+                        </select>
+                        <p className="text-xs text-zinc-500 mt-1">
+                          Choose the closest region for lower latency
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                        <input
+                          type="password"
+                          value={getActiveProfile("google-vertex")?.apiKey || ""}
+                          onChange={(e) => {
+                            const profileId = providerConfigs["google-vertex"].activeProfileId;
+                            if (!profileId) return;
+                            setProviderConfigs(prev => ({
+                              ...prev,
+                              "google-vertex": {
+                                ...prev["google-vertex"],
+                                profiles: prev["google-vertex"].profiles.map(p =>
+                                  p.id === profileId ? { ...p, apiKey: e.target.value } : p
+                                )
+                              }
+                            }));
+                          }}
+                          placeholder="Enter your Google API key"
+                          className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleConnectProvider("google-vertex")}
+                          className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                        >
+                          Connect
+                        </button>
+                      </div>
+                    </>
+                  )}
+
+                  {/* NVIDIA NIM */}
+                  {editingProvider === 'nvidia-nim' && providerConfigs["nvidia-nim"]?.activeProfileId && (
+                    <>
+                      <div>
+                        <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                        <input
+                          type="password"
+                          value={getActiveProfile("nvidia-nim")?.apiKey || ""}
+                          onChange={(e) => {
+                            const profileId = providerConfigs["nvidia-nim"].activeProfileId;
+                            if (!profileId) return;
+                            setProviderConfigs(prev => ({
+                              ...prev,
+                              "nvidia-nim": {
+                                ...prev["nvidia-nim"],
+                                profiles: prev["nvidia-nim"].profiles.map(p =>
+                                  p.id === profileId ? { ...p, apiKey: e.target.value } : p
+                                )
+                              }
+                            }));
+                          }}
+                          placeholder="Enter your NVIDIA NIM API key"
+                          className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleConnectProvider("nvidia-nim")}
+                          className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                        >
+                          Connect
+                        </button>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Groq */}
+                  {editingProvider === 'groq' && providerConfigs["groq"]?.activeProfileId && (
+                    <>
+                      <div>
+                        <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                        <input
+                          type="password"
+                          value={getActiveProfile("groq")?.apiKey || ""}
+                          onChange={(e) => {
+                            const profileId = providerConfigs["groq"].activeProfileId;
+                            if (!profileId) return;
+                            setProviderConfigs(prev => ({
+                              ...prev,
+                              "groq": {
+                                ...prev["groq"],
+                                profiles: prev["groq"].profiles.map(p =>
+                                  p.id === profileId ? { ...p, apiKey: e.target.value } : p
+                                )
+                              }
+                            }));
+                          }}
+                          placeholder="Enter your Groq API key"
+                          className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleConnectProvider("groq")}
+                          className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                        >
+                          Connect
+                        </button>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Open Router */}
+                  {editingProvider === 'open-router' && providerConfigs["open-router"]?.activeProfileId && (
+                    <>
+                      <div>
+                        <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                        <input
+                          type="password"
+                          value={getActiveProfile("open-router")?.apiKey || ""}
+                          onChange={(e) => {
+                            const profileId = providerConfigs["open-router"].activeProfileId;
+                            if (!profileId) return;
+                            setProviderConfigs(prev => ({
+                              ...prev,
+                              "open-router": {
+                                ...prev["open-router"],
+                                profiles: prev["open-router"].profiles.map(p =>
+                                  p.id === profileId ? { ...p, apiKey: e.target.value } : p
+                                )
+                              }
+                            }));
+                          }}
+                          placeholder="Enter your Open Router API key"
+                          className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleConnectProvider("open-router")}
+                          className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                        >
+                          Connect
+                        </button>
+                      </div>
+                    </>
+                  )}
+
+                  {/* KoboldAI Horde */}
                   {editingProvider === 'kobold-horde' && (
-                    <div className="mt-3 space-y-3">
+                    <>
                       <div>
                         <label className="block text-xs text-zinc-400 mb-1">API Key</label>
                         <input
                           type="password"
                           value={providerConfigs["kobold-horde"]?.profiles?.[0]?.apiKey || ""}
                           onChange={(e) => {
-                            // Single profile for Kobold Horde (no profile system)
                             setProviderConfigs(prev => ({
                               ...prev,
                               "kobold-horde": {
@@ -1614,52 +1273,90 @@ export function SettingsModal({
                         </p>
                       </div>
                       <div className="flex gap-2">
-                         <button
-                           type="button"
-                           onClick={() => handleConnectProvider("kobold-horde")}
-                           className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                         >
-                           Connect
-                         </button>
+                        <button
+                          type="button"
+                          onClick={() => handleConnectProvider("kobold-horde")}
+                          className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                        >
+                          Connect
+                        </button>
                       </div>
-                    </div>
+                    </>
+                  )}
+
+                  {/* Ollama */}
+                  {editingProvider === 'ollama' && (
+                    <>
+                      <div>
+                        <label className="block text-xs text-zinc-400 mb-1">Endpoint Preset</label>
+                        <select
+                          value={providerConfigs["ollama"]?.profiles?.[0]?.lastUsedPreset || ""}
+                          onChange={(e) => {
+                            const preset = ollamaPresets.find(p => p.value === e.target.value);
+                            if (preset && preset.label !== "Custom") {
+                              const profileId = providerConfigs["ollama"]?.activeProfileId;
+                              if (profileId) {
+                                setProviderConfigs(prev => ({
+                                  ...prev,
+                                  "ollama": {
+                                    ...prev["ollama"],
+                                    profiles: (prev["ollama"]?.profiles || []).map(p =>
+                                      p.id === profileId
+                                        ? { ...p, baseUrl: preset.value, lastUsedPreset: preset.value }
+                                        : p
+                                    )
+                                  }
+                                }));
+                              }
+                            }
+                          }}
+                          className="w-full bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                          <option value="">Select a preset...</option>
+                          {ollamaPresets.map(preset => (
+                            <option key={preset.value} value={preset.value}>{preset.label} {preset.note ? `(${preset.note})` : ''}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-zinc-400 mb-1">Base URL</label>
+                        <input
+                          type="text"
+                          value={providerConfigs["ollama"]?.profiles?.[0]?.baseUrl || ""}
+                          onChange={(e) => {
+                            setProviderConfigs(prev => ({
+                              ...prev,
+                              "ollama": {
+                                ...prev["ollama"],
+                                profiles: [{
+                                  id: "ollama-single",
+                                  name: "Default",
+                                  baseUrl: e.target.value,
+                                  lastUsedPreset: "",
+                                  createdAt: Date.now()
+                                }],
+                                activeProfileId: "ollama-single"
+                              }
+                            }));
+                          }}
+                          placeholder="http://localhost:11434/api/chat"
+                          className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleConnectProvider("ollama")}
+                          className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                        >
+                          Connect
+                        </button>
+                      </div>
+                    </>
                   )}
                 </div>
-
-                 {/* Ollama */}
-                 <div className="p-3 bg-zinc-800/50 rounded-lg">
-                   <div className="flex items-center justify-between mb-2">
-                     <div className="flex items-center gap-2">
-                       <div className={`w-2 h-2 rounded-full ${
-                         connectionStatus["ollama"]?.status === "connected" ? "bg-green-500" :
-                         connectionStatus["ollama"]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
-                         connectionStatus["ollama"]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
-                       }`} />
-                       <span className="text-sm font-medium text-white">Self-Hosted (Ollama)</span>
-                       {activeProvider === "ollama" && (
-                         <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
-                       )}
-                     </div>
-                     <button
-                       type="button"
-                       onClick={() => setEditingProvider(editingProvider === 'ollama' ? null : 'ollama')}
-                       className="text-xs text-blue-400 hover:text-blue-300"
-                     >
-                       {editingProvider === 'ollama' ? 'Hide' : 'Configure'}
-                     </button>
-                   </div>
-                   {connectionStatus["ollama"]?.message && (
-                     <p className={`text-xs mb-2 ${
-                       connectionStatus["ollama"]?.status === "connected" ? "text-green-400" :
-                       connectionStatus["ollama"]?.status === "error" ? "text-red-400" : "text-zinc-400"
-                     }`}>
-                       {connectionStatus["ollama"].message}
-                     </p>
-                   )}
-                  </div>
-
-             </div>
-           </div>
+              )}
+            </div>
 
            {/* Data Export/Import */}
           <div className="border-t border-zinc-700 pt-6">
