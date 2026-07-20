@@ -43,8 +43,6 @@ import { useChatState } from "@/components/chat/hooks/useChatState";
 import * as ui from "@/components/chat/styles";
 
 // Custom UI components
-import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
 
 // Types - using imported Message interface
 export interface Persona {
