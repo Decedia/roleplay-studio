@@ -187,13 +187,20 @@ export function SettingsModal({
       handleConnectProviderRef.current = handleConnectProvider;
     });
 
+    const hasAutoConnectedRef = useRef(false);
     useEffect(() => {
-      if (!show) return;
+      if (!show) {
+        hasAutoConnectedRef.current = false;
+        return;
+      }
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setEditingProvider(activeProvider);
-      const status = connectionStatus[activeProvider]?.status;
-      if (status !== "connected") {
-        handleConnectProviderRef.current(activeProvider);
+      if (!hasAutoConnectedRef.current) {
+        hasAutoConnectedRef.current = true;
+        const status = connectionStatus[activeProvider]?.status;
+        if (status !== "connected") {
+          handleConnectProviderRef.current(activeProvider);
+        }
       }
     }, [show, activeProvider, connectionStatus]);
 
