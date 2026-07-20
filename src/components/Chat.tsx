@@ -1336,7 +1336,28 @@ export default function Chat() {
   useEffect(() => {
     localStorage.setItem(CONNECTION_STATUS_KEY, JSON.stringify(connectionStatus));
   }, [connectionStatus]);
-  
+
+  // Auto-reconnect on initial load using saved provider/profile/model
+  const hasAutoConnectedRef = useRef(false);
+  const handleConnectProviderRef = useRef<((providerType: LLMProviderType) => void) | null>(null);
+  useEffect(() => {
+    handleConnectProviderRef.current = handleConnectProvider;
+  });
+
+  useEffect(() => {
+    if (hasAutoConnectedRef.current) return;
+    const config = providerConfigs[activeProvider];
+    if (!config) return;
+    const activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
+    if (!activeProfile) return;
+    const hasCredentials = activeProvider === "kobold-horde"
+      || Boolean(activeProfile.apiKey || activeProfile.projectId || activeProfile.serviceAccountJson || activeProfile.baseUrl);
+    if (activeProvider && hasCredentials) {
+      hasAutoConnectedRef.current = true;
+      handleConnectProviderRef.current?.(activeProvider);
+    }
+  }, [providerConfigs, activeProvider]);
+
   // Save auto-export settings to localStorage
   useEffect(() => {
     localStorage.setItem(AUTO_EXPORT_KEY, JSON.stringify(autoExport));
