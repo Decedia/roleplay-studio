@@ -7,6 +7,26 @@
 Currently modularizing `src/components/Chat.tsx` (11,200 lines) into smaller files under `src/components/chat/`. Completed Steps 1-3 of the module plan. Build compiles successfully.
 
 ## Recently Completed
+- [x] **Completely removed character generator, instructions generator, and VN generator**
+  - Removed all generator/VN types from `src/lib/types.ts` (`GeneratorConversation`, `GlobalInstructions.generatorInstructions`, `GlobalInstructions.vnInstructions`, `ViewType` generator/vn values)
+  - Removed generator constants from `src/lib/constants.ts` (`DEFAULT_GENERATOR_INSTRUCTIONS`, `DEFAULT_VN_INSTRUCTIONS`)
+  - Removed generator storage functions from `src/lib/storage.ts` (`loadGeneratorConversations`, `saveGeneratorConversations`)
+  - Removed all generator/VN state, types, and exports from `src/components/chat/hooks/useChatState.ts`
+  - Removed generator/VN storage keys from `src/components/chat/constants/storage.ts`
+  - Removed generator/VN default instructions from `src/components/chat/constants/settings.ts`
+  - Removed `ChatButtonInput` component from `src/components/chat/components/ChatInput.tsx`
+  - Removed all generator/VN code from `src/components/Chat.tsx`:
+    - Removed 14 generator/VN functions
+    - Removed all generator/VN state variables
+    - Removed all generator/VN localStorage load/save effects
+    - Removed entire generator and VN generator JSX views
+    - Removed generator/VN buttons from home view and mobile menus
+    - Updated `ViewType` to only include `"home" | "personas" | "characters" | "conversations" | "chat" | "brainstorm"`
+    - Updated error display to only show `error` (removed `generatorError`, `brainstormError`, `vnError`)
+    - Updated SettingsModal instruction tabs to only show `chat` and `brainstorm`
+  - Updated `src/components/chat/components/SettingsModal.tsx` to remove generator/vn instruction tab
+  - Typecheck and lint pass successfully
+
 - [x] **Extracted SettingsModal from Chat.tsx into its own file**
   - Created `src/components/chat/components/SettingsModal.tsx` with all necessary imports and local type definitions
   - Updated `src/components/chat/components/index.ts` to export SettingsModal

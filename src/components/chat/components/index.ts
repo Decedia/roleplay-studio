@@ -5,4 +5,4 @@ export { FormattedText } from "./FormattedText";
 export { SettingsModal } from "./SettingsModal";
 export { ChatHeader, SessionsDropdown } from "./ChatHeader";
 export { ChatMessage } from "./ChatMessage";
-export { ChatInput, ChatButtonInput } from "./ChatInput";
+export { ChatInput } from "./ChatInput";

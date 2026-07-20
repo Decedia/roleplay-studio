@@ -17,7 +17,7 @@ export const layout = {
   /** Content container with max-width and padding */
   contentContainer: "max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6",
   
-  /** Content container for generator/brainstorm views (more bottom padding for input) */
+  /** Content container with more bottom padding for input views */
   contentContainerWithInput: "max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-28 sm:pb-32",
 } as const;
 

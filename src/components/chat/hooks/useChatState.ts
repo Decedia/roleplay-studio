@@ -38,7 +38,7 @@ export interface Conversation {
   lastSummarizedIndex?: number;
 }
 
-export type ViewType = "home" | "personas" | "characters" | "conversations" | "chat" | "generator" | "brainstorm" | "vn-generator";
+export type ViewType = "home" | "personas" | "characters" | "conversations" | "chat" | "brainstorm";
 
 export type BrainstormConversation = {
   id: string;
@@ -47,25 +47,6 @@ export type BrainstormConversation = {
   updatedAt: number;
   providerConfig?: any;
 };
-
-export type GeneratorConversation = {
-  id: string;
-  messages: Array<{ role: "user" | "assistant"; content: string; isContinue?: boolean }>;
-  createdAt: number;
-  updatedAt: number;
-  providerConfig?: any;
-};
-
-export type VNProject = {
-  id: string;
-  premise: string;
-  characters: Character[];
-  plot: string;
-  createdAt: number;
-  updatedAt: number;
-};
-
-export type VNStep = "premise" | "characters" | "plot" | "generating" | "complete";
 
 export interface InstructionPreset {
   id: string;
@@ -186,40 +167,17 @@ export const useChatState = () => {
   const [appliedInstructions, setAppliedInstructions] = useState<Set<string>>(new Set());
   const [brainstormInstructions, setBrainstormInstructions] = useState<string>("");
   
-  // Generator states
-  const [generatorMessages, setGeneratorMessages] = useState<Array<{role: "user" | "assistant", content: string, isContinue?: boolean}>>([]);
-  const [generatorInput, setGeneratorInput] = useState("");
-  const [generatorSessions, setGeneratorSessions] = useState<GeneratorConversation[]>([]);
-  const [currentGeneratorSession, setCurrentGeneratorSession] = useState<GeneratorConversation | null>(null);
-  const [generatedCharacter, setGeneratedCharacter] = useState<Character | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generatorError, setGeneratorError] = useState<string | null>(null);
-  const [brainstormError, setBrainstormError] = useState<string | null>(null);
-  const [vnError, setVnError] = useState<string | null>(null);
-  const [vnInstructions, setVnInstructions] = useState<string>("");
-  
-  // VN Generator states
-  const [vnStep, setVnStep] = useState<VNStep>("premise");
-  const [vnProject, setVnProject] = useState<VNProject | null>(null);
-  const [vnPremise, setVnPremise] = useState("");
-  const [vnIsGenerating, setVnIsGenerating] = useState(false);
-  const [vnPremiseResponse, setVnPremiseResponse] = useState<string>("");
-  const [vnPlotResponse, setVnPlotResponse] = useState<string>("");
-  
-  // Message editing states
-  const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
-  const [editingMessageContent, setEditingMessageContent] = useState<string>("");
-  const [showMessageMenu, setShowMessageMenu] = useState<number | null>(null);
-  const [editingGeneratorIndex, setEditingGeneratorIndex] = useState<number | null>(null);
-  const [editingGeneratorContent, setEditingGeneratorContent] = useState<string>("");
-  const [editingBrainstormIndex, setEditingBrainstormIndex] = useState<number | null>(null);
-  const [editingBrainstormContent, setEditingBrainstormContent] = useState<string>("");
-  const [editingVnIndex, setEditingVnIndex] = useState<{segIdx: number, content: string} | null>(null);
-  
-  // Other editing states
-  const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
-  const [editingCharacter, setEditingCharacter] = useState<Character | null>(null);
-  const [activeInstructionTab, setActiveInstructionTab] = useState<"chat" | "generator" | "brainstorm" | "vn">("chat");
+   // Message editing states
+   const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
+   const [editingMessageContent, setEditingMessageContent] = useState<string>("");
+   const [showMessageMenu, setShowMessageMenu] = useState<number | null>(null);
+   const [editingBrainstormIndex, setEditingBrainstormIndex] = useState<number | null>(null);
+   const [editingBrainstormContent, setEditingBrainstormContent] = useState<string>("");
+   
+   // Other editing states
+   const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
+   const [editingCharacter, setEditingCharacter] = useState<Character | null>(null);
+   const [activeInstructionTab, setActiveInstructionTab] = useState<"chat" | "brainstorm">("chat");
   const [chatInstructions, setChatInstructions] = useState<string>("");
   const [instructionPresets, setInstructionPresets] = useState<InstructionPreset[]>([]);
   const [selectedPresetId, setSelectedPresetId] = useState<string>("");
@@ -233,9 +191,8 @@ export const useChatState = () => {
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
   
-  // Instructions states
-  const [globalInstructions, setGlobalInstructions] = useState<GlobalInstructions>({} as GlobalInstructions);
-  const [generatorInstructions, setGeneratorInstructions] = useState<string>("");
+   // Instructions states
+   const [globalInstructions, setGlobalInstructions] = useState<GlobalInstructions>({} as GlobalInstructions);
   
   // Provider configuration states
   const [providerConfigs, setProviderConfigs] = useState<Record<string, any>>({
@@ -363,35 +320,12 @@ export const useChatState = () => {
     appliedInstructions, setAppliedInstructions,
     brainstormInstructions, setBrainstormInstructions,
     
-    // Generator states
-    generatorMessages, setGeneratorMessages,
-    generatorInput, setGeneratorInput,
-    generatorSessions, setGeneratorSessions,
-    currentGeneratorSession, setCurrentGeneratorSession,
-    generatedCharacter, setGeneratedCharacter,
-    isGenerating, setIsGenerating,
-    generatorError, setGeneratorError,
-    brainstormError, setBrainstormError,
-    vnError, setVnError,
-    vnInstructions, setVnInstructions,
-    
-    // VN Generator states
-    vnStep, setVnStep,
-    vnProject, setVnProject,
-    vnPremise, setVnPremise,
-    vnIsGenerating, setVnIsGenerating,
-    vnPremiseResponse, setVnPremiseResponse,
-    vnPlotResponse, setVnPlotResponse,
-    
     // Message editing states
     editingMessageIndex, setEditingMessageIndex,
     editingMessageContent, setEditingMessageContent,
     showMessageMenu, setShowMessageMenu,
-    editingGeneratorIndex, setEditingGeneratorIndex,
-    editingGeneratorContent, setEditingGeneratorContent,
     editingBrainstormIndex, setEditingBrainstormIndex,
     editingBrainstormContent, setEditingBrainstormContent,
-    editingVnIndex, setEditingVnIndex,
     
     // Other editing states
     editingPersona, setEditingPersona,
@@ -412,7 +346,6 @@ export const useChatState = () => {
     
     // Instructions states
     globalInstructions, setGlobalInstructions,
-    generatorInstructions, setGeneratorInstructions,
     
     // Provider configuration states
     providerConfigs, setProviderConfigs,

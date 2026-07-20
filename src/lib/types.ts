@@ -269,10 +269,6 @@ export interface GlobalInstructions {
   enableJailbreak?: boolean;
   jailbreakInstructions?: string;
   continueInstruction?: string;
-  // Mode-specific instructions
-  generatorInstructions?: string;
-  brainstormInstructions?: string;
-  vnInstructions?: string;
 }
 
 // Model cost structure
@@ -284,7 +280,7 @@ export interface ModelCost {
 }
 
 // Missing types for Chat component
-export type ViewType = "home" | "chat" | "generator" | "brainstorm" | "vn";
+export type ViewType = "home" | "chat" | "brainstorm";
 
 export interface FetchedModel {
    id: string;

@@ -59,22 +59,6 @@ export const saveConversations = (conversations: Conversation[]): void => {
   localStorage.setItem("conversations", JSON.stringify(conversations));
 };
 
-// Generator conversation storage
-export const loadGeneratorConversations = (): GeneratorConversation[] => {
-  if (typeof window === "undefined") return [];
-  try {
-    const data = localStorage.getItem("generatorConversations");
-    return data ? JSON.parse(data) : [];
-  } catch {
-    return [];
-  }
-};
-
-export const saveGeneratorConversations = (conversations: GeneratorConversation[]): void => {
-  if (typeof window === "undefined") return;
-  localStorage.setItem("generatorConversations", JSON.stringify(conversations));
-};
-
 // Brainstorm conversation storage
 export const loadBrainstormConversations = (): BrainstormConversation[] => {
   if (typeof window === "undefined") return [];

@@ -174,7 +174,7 @@ export function SettingsModal({
   const modelSearchInputRef = useRef<HTMLInputElement>(null);
   const [editingProvider, setEditingProvider] = useState<LLMProviderType | null>(activeProvider);
    const [showAdvancedInstructions, setShowAdvancedInstructions] = useState(true);
-   const [activeInstructionsTab, setActiveInstructionsTab] = useState<"chat" | "generator" | "brainstorm" | "vn">("chat");
+    const [activeInstructionsTab, setActiveInstructionsTab] = useState<"chat" | "brainstorm">("chat");
    const dropdownRef = useRef<HTMLDivElement>(null);
    const instructionsFileInputRef = useRef<HTMLInputElement>(null);
    const dataImportInputRef = useRef<HTMLInputElement>(null);
