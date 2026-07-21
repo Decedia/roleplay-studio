@@ -36,7 +36,7 @@ import { Character as CharacterType, CharacterBook, CharacterBookEntry, Provider
 import { parseRoleplayText, getSegmentClasses, TextSegment } from "@/lib/text-formatter";
 
 // Import from modular chat structure
-import { ThinkingSection, ThinkingPanel, CollapsibleTagSection, FormattedText, SettingsModal } from "@/components/chat/components";
+import { ThinkingSection, ThinkingPanel, CollapsibleTagSection, FormattedText, SettingsModal, ChatInput, ChatMessage } from "@/components/chat/components";
 import { useChatState } from "@/components/chat/hooks/useChatState";
 
 // Import UI styles
@@ -599,6 +599,8 @@ export default function Chat() {
   const [generatorSessions, setGeneratorSessions] = useState<GeneratorConversation[]>([]);
   const [currentGeneratorSession, setCurrentGeneratorSession] = useState<GeneratorConversation | null>(null);
   const [showGeneratorSessions, setShowGeneratorSessions] = useState(false);
+  const [generatorInput, setGeneratorInput] = useState("");
+  const [isGeneratorLoading, setIsGeneratorLoading] = useState(false);
   
   // Reset visible message count when conversation changes
   useEffect(() => {
@@ -3875,15 +3877,56 @@ if (modelsResult.models.length > 0) {
                       Back to Sessions
                     </button>
                   </div>
-                  <div className="text-center py-16">
-                    <div className="w-16 h-16 rounded-2xl bg-zinc-800 flex items-center justify-center mx-auto mb-4">
-                      <span className="text-2xl text-zinc-600">🎭</span>
-                    </div>
-                    <h3 className="text-xl font-medium text-white mb-2">Session opened</h3>
-                    <p className="text-zinc-500 mb-6 max-w-md mx-auto">
-                      Character generation functionality coming soon.
-                    </p>
+                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-4 pb-32">
+                    {currentGeneratorSession.messages.length === 0 ? (
+                      <div className="text-center py-8">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mx-auto mb-3">
+                          <span className="text-xl text-white font-semibold">🎭</span>
+                        </div>
+                        <h3 className="text-lg font-medium text-white mb-1">Start chatting</h3>
+                        <p className="text-sm text-zinc-400">Describe the character you want to create</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {currentGeneratorSession.messages.map((message, idx) => (
+                          <div
+                            key={idx}
+                            className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                          >
+                            {message.role === "assistant" && (
+                              <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                                <span className="text-sm text-white font-semibold">🎭</span>
+                              </div>
+                            )}
+                            <div
+                              className={`rounded-2xl px-4 py-3 ${
+                                message.role === "user"
+                                  ? "bg-zinc-700 text-white"
+                                  : "bg-zinc-800 text-zinc-100 border border-zinc-700/50"
+                              }`}
+                            >
+                              <FormattedText content={message.content} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
+                  <ChatInput
+                    value={generatorInput}
+                    onChange={setGeneratorInput}
+                    onSubmit={() => {
+                      if (!generatorInput.trim() || !currentGeneratorSession) return;
+                      const newMessages = [...currentGeneratorSession.messages, { role: "user" as const, content: generatorInput.trim() }];
+                      setCurrentGeneratorSession({ ...currentGeneratorSession, messages: newMessages, updatedAt: Date.now() });
+                      setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: newMessages, updatedAt: Date.now() } : s));
+                      setGeneratorInput("");
+                    }}
+                    placeholder="Describe the character you want to create..."
+                    disabled={isGeneratorLoading}
+                    isLoading={isGeneratorLoading}
+                    accentColor="purple"
+                  />
                 </div>
               )}
             </div>
@@ -5623,7 +5666,7 @@ if (modelsResult.models.length > 0) {
              <div className="flex-1 overflow-y-auto p-6 space-y-6">
                 {/* Chat Instructions Tab */}
                 {activeInstructionTab === 'chat' && (
-                  <div className="space-y-6">
+                <div className="pb-32 space-y-6">
                     {/* Formatting Prompt */}
                     <div>
                       <label className="block text-sm font-medium text-zinc-300 mb-2">
