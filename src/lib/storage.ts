@@ -7,8 +7,6 @@ import {
   GlobalInstructions,
   ProviderConfig,
   AutoExportSettings,
-  GeneratorConversation,
-  BrainstormConversation,
 } from "./types";
 
 // Persona storage
@@ -57,22 +55,6 @@ export const loadConversations = (): Conversation[] => {
 export const saveConversations = (conversations: Conversation[]): void => {
   if (typeof window === "undefined") return;
   localStorage.setItem("conversations", JSON.stringify(conversations));
-};
-
-// Brainstorm conversation storage
-export const loadBrainstormConversations = (): BrainstormConversation[] => {
-  if (typeof window === "undefined") return [];
-  try {
-    const data = localStorage.getItem("brainstormConversations");
-    return data ? JSON.parse(data) : [];
-  } catch {
-    return [];
-  }
-};
-
-export const saveBrainstormConversations = (conversations: BrainstormConversation[]): void => {
-  if (typeof window === "undefined") return;
-  localStorage.setItem("brainstormConversations", JSON.stringify(conversations));
 };
 
 // Global settings storage

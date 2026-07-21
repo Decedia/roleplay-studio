@@ -30,7 +30,7 @@ import {
   type SummarizationResult,
 } from "@/lib/summarization";
 import { readCharacterFile, buildFullSystemPrompt } from "@/lib/character-import";
-import { Character as CharacterType, CharacterBook, CharacterBookEntry, ProviderProfile, GeneratorConversation, BrainstormConversation, Instruction, InstructionRole, InstructionPosition, InstructionPreset } from "@/lib/types";
+import { Character as CharacterType, CharacterBook, CharacterBookEntry, ProviderProfile, Instruction, InstructionRole, InstructionPosition, InstructionPreset } from "@/lib/types";
 import { parseRoleplayText, getSegmentClasses, TextSegment } from "@/lib/text-formatter";
 import * as ui from "@/components/chat/styles";
 
@@ -174,7 +174,7 @@ export function SettingsModal({
   const modelSearchInputRef = useRef<HTMLInputElement>(null);
   const [editingProvider, setEditingProvider] = useState<LLMProviderType | null>(activeProvider);
    const [showAdvancedInstructions, setShowAdvancedInstructions] = useState(true);
-    const [activeInstructionsTab, setActiveInstructionsTab] = useState<"chat" | "brainstorm">("chat");
+    const [activeInstructionsTab, setActiveInstructionsTab] = useState<"chat">("chat");
    const dropdownRef = useRef<HTMLDivElement>(null);
    const instructionsFileInputRef = useRef<HTMLInputElement>(null);
    const dataImportInputRef = useRef<HTMLInputElement>(null);

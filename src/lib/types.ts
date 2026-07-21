@@ -123,24 +123,6 @@ export interface Conversation {
   lastSummarizedIndex?: number; // Index of last message included in summary
 }
 
-// Generator conversation (standalone session for character generation)
-export interface GeneratorConversation {
-  id: string;
-  name?: string;
-  messages: Array<{role: "user" | "assistant", content: string, isContinue?: boolean}>;
-  createdAt: number;
-  updatedAt: number;
-}
-
-// Brainstorm conversation (standalone session for instruction brainstorming)
-export interface BrainstormConversation {
-  id: string;
-  name?: string;
-  messages: Array<{role: "user" | "assistant", content: string, isContinue?: boolean}>;
-  createdAt: number;
-  updatedAt: number;
-}
-
 // LLM Provider types
 export type LLMProviderType = "google-ai-studio" | "google-vertex" | "nvidia-nim" | "groq" | "open-router" | "kobold-horde" | "ollama";
 
@@ -280,7 +262,7 @@ export interface ModelCost {
 }
 
 // Missing types for Chat component
-export type ViewType = "home" | "chat" | "brainstorm";
+export type ViewType = "home" | "chat";
 
 export interface FetchedModel {
    id: string;

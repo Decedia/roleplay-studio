@@ -38,15 +38,7 @@ export interface Conversation {
   lastSummarizedIndex?: number;
 }
 
-export type ViewType = "home" | "personas" | "characters" | "conversations" | "chat" | "brainstorm";
-
-export type BrainstormConversation = {
-  id: string;
-  messages: Array<{ role: "user" | "assistant"; content: string; isContinue?: boolean }>;
-  createdAt: number;
-  updatedAt: number;
-  providerConfig?: any;
-};
+export type ViewType = "home" | "personas" | "characters" | "conversations" | "chat";
 
 export interface InstructionPreset {
   id: string;
@@ -158,26 +150,15 @@ export const useChatState = () => {
   const [visibleMessageCount, setVisibleMessageCount] = useState<number>(20);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   
-  // Brainstorm states
-  const [brainstormMessages, setBrainstormMessages] = useState<Array<{role: "user" | "assistant", content: string, isContinue?: boolean}>>([]);
-  const [brainstormInput, setBrainstormInput] = useState("");
-  const [brainstormSessions, setBrainstormSessions] = useState<BrainstormConversation[]>([]);
-  const [currentBrainstormSession, setCurrentBrainstormSession] = useState<BrainstormConversation | null>(null);
-  const [isBrainstorming, setIsBrainstorming] = useState(false);
-  const [appliedInstructions, setAppliedInstructions] = useState<Set<string>>(new Set());
-  const [brainstormInstructions, setBrainstormInstructions] = useState<string>("");
-  
    // Message editing states
    const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
    const [editingMessageContent, setEditingMessageContent] = useState<string>("");
    const [showMessageMenu, setShowMessageMenu] = useState<number | null>(null);
-   const [editingBrainstormIndex, setEditingBrainstormIndex] = useState<number | null>(null);
-   const [editingBrainstormContent, setEditingBrainstormContent] = useState<string>("");
    
    // Other editing states
    const [editingPersona, setEditingPersona] = useState<Persona | null>(null);
    const [editingCharacter, setEditingCharacter] = useState<Character | null>(null);
-   const [activeInstructionTab, setActiveInstructionTab] = useState<"chat" | "brainstorm">("chat");
+   const [activeInstructionTab, setActiveInstructionTab] = useState<"chat">("chat");
   const [chatInstructions, setChatInstructions] = useState<string>("");
   const [instructionPresets, setInstructionPresets] = useState<InstructionPreset[]>([]);
   const [selectedPresetId, setSelectedPresetId] = useState<string>("");
@@ -311,21 +292,10 @@ export const useChatState = () => {
     visibleMessageCount, setVisibleMessageCount,
     showScrollToBottom, setShowScrollToBottom,
     
-    // Brainstorm states
-    brainstormMessages, setBrainstormMessages,
-    brainstormInput, setBrainstormInput,
-    brainstormSessions, setBrainstormSessions,
-    currentBrainstormSession, setCurrentBrainstormSession,
-    isBrainstorming, setIsBrainstorming,
-    appliedInstructions, setAppliedInstructions,
-    brainstormInstructions, setBrainstormInstructions,
-    
     // Message editing states
     editingMessageIndex, setEditingMessageIndex,
     editingMessageContent, setEditingMessageContent,
     showMessageMenu, setShowMessageMenu,
-    editingBrainstormIndex, setEditingBrainstormIndex,
-    editingBrainstormContent, setEditingBrainstormContent,
     
     // Other editing states
     editingPersona, setEditingPersona,

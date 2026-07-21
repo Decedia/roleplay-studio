@@ -4,5 +4,3 @@ export const DEFAULT_FORMATTING_PROMPT = "Format your response naturally and eng
 export const DEFAULT_CONTINUE_INSTRUCTION = "Continue the story naturally from the previous message.";
 
 export const DEFAULT_IMAGE_GENERATION_INSTRUCTIONS = "Generate high-quality, detailed images that match the scene description.";
-
-export const DEFAULT_BRAINSTORM_INSTRUCTIONS = "You are a creative brainstorming assistant. Help generate ideas and explore concepts in depth.";

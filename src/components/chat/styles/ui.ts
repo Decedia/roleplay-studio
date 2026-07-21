@@ -424,7 +424,7 @@ toastContent: "flex items-center gap-3",
 };
 
 // ============================================================================
-// Step Indicator Styles (for VN Generator)
+// Step Indicator Styles
 // ============================================================================
 
 export const steps = {

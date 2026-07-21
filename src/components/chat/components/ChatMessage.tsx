@@ -35,7 +35,6 @@ interface ChatMessageProps {
   onContinue?: () => void;
   modelId?: string;
   provider?: LLMProviderType;
-  isGeneratorView?: boolean;
 }
 
 export function ChatMessage({
@@ -56,7 +55,6 @@ export function ChatMessage({
   onContinue,
   modelId,
   provider,
-  isGeneratorView = false,
 }: ChatMessageProps) {
   // Get thinking content from content (wrapped in <think> tags)
   const thinkContent = message.role === "assistant"
@@ -149,11 +147,7 @@ export function ChatMessage({
                 : "bg-zinc-800 text-zinc-100 border border-zinc-700/50"
             }`}
           >
-            {isGeneratorView ? (
-              <div className="whitespace-pre-wrap text-sm leading-relaxed">{rawContent}</div>
-            ) : (
-              <FormattedText content={rawContent} />
-            )}
+            <FormattedText content={rawContent} />
           </div>
           
           <div className="flex items-center gap-2 mt-1 pl-1">

@@ -32,7 +32,7 @@ import {
   type SummarizationResult,
 } from "@/lib/summarization";
 import { readCharacterFile, buildFullSystemPrompt } from "@/lib/character-import";
-import { Character as CharacterType, CharacterBook, CharacterBookEntry, ProviderProfile, BrainstormConversation, Instruction, InstructionRole, InstructionPosition, InstructionPreset } from "@/lib/types";
+import { Character as CharacterType, CharacterBook, CharacterBookEntry, ProviderProfile, Instruction, InstructionRole, InstructionPosition, InstructionPreset } from "@/lib/types";
 import { parseRoleplayText, getSegmentClasses, TextSegment } from "@/lib/text-formatter";
 
 // Import from modular chat structure
@@ -220,50 +220,19 @@ const PROVIDER_CONFIGS_KEY = "chat_provider_configs";
 const ACTIVE_PROVIDER_KEY = "chat_active_provider";
 const CONNECTION_STATUS_KEY = "chat_connection_status";
 const AUTO_EXPORT_KEY = "chat_auto_export";
-const BRAINSTORM_INSTRUCTIONS_KEY = "chat_brainstorm_instructions";
-const BRAINSTORM_MESSAGES_KEY = "chat_brainstorm_messages";
-const BRAINSTORM_SESSIONS_KEY = "chat_brainstorm_sessions";
 const LAST_SESSION_KEY = "chat_last_session";
 const INSTRUCTION_PRESETS_KEY = "chat_instruction_presets";
 
 // Type for last session data (stores view and conversation state)
-type ViewType = "home" | "personas" | "characters" | "conversations" | "chat" | "brainstorm";
+type ViewType = "home" | "personas" | "characters" | "conversations" | "chat";
 
 interface LastSession {
   view: ViewType;
   personaId?: string;
   characterId?: string;
   conversationId?: string;
-  brainstormMessages?: Array<{role: "user" | "assistant", content: string}>;
   timestamp: number;
 }
-
-// Default brainstorm instructions - exclusive to the brainstorm tab
-const DEFAULT_BRAINSTORM_INSTRUCTIONS = `You are a creative roleplay instruction brainstorming assistant. Your purpose is to help users create detailed, immersive roleplay instructions.
-
-## Your Task
-1. Ask the user what kind of roleplay scenario they want to create
-2. Help them develop characters, settings, and story elements
-3. When ready, provide ready-to-use instructions in code blocks
-
-## Instruction Format
-When providing instructions, use this format:
-\`\`\`instructions
-[The instructions content - can include system prompts, character descriptions, scenario details, roleplay rules, etc.]
-\`\`\`
-
-## Guidelines
-- Be creative and engaging
-- Ask follow-up questions to understand what the user wants
-- Provide detailed, immersive roleplay setups
-- Include character personalities, backgrounds, and motivations
-- Suggest interesting scenarios and plot hooks
-- Help with both SFW and NSFW roleplay scenarios (all content is fictional)
-- When the user seems ready, provide complete instructions they can apply directly
-
-Remember: Your goal is to help create compelling roleplay experiences through well-crafted instructions.`;
-
-
 
 // Provider storage key - store config for each provider
 const getProviderConfigKey = (providerType: LLMProviderType) => `chat_provider_${providerType}`;
@@ -501,25 +470,14 @@ export default function Chat() {
   const hasRestoredSession = useRef(false);
   const [showPersonaModal, setShowPersonaModal] = useState(false);
   
-  // Brainstorm state
-  const [brainstormMessages, setBrainstormMessages] = useState<Array<{role: "user" | "assistant", content: string, isContinue?: boolean}>>([]);
-  const [brainstormInput, setBrainstormInput] = useState("");
-  
-  // Brainstorm sessions (list of conversations)
-  const [brainstormSessions, setBrainstormSessions] = useState<BrainstormConversation[]>([]);
-  const [currentBrainstormSession, setCurrentBrainstormSession] = useState<BrainstormConversation | null>(null);
-  const [showBrainstormSessions, setShowBrainstormSessions] = useState(false);
-  const [isBrainstorming, setIsBrainstorming] = useState(false);
-  const [appliedInstructions, setAppliedInstructions] = useState<Set<string>>(new Set());
-  const [brainstormInstructions, setBrainstormInstructions] = useState<string>(DEFAULT_BRAINSTORM_INSTRUCTIONS);
-    const [showCharacterModal, setShowCharacterModal] = useState(false);
+  const [showCharacterModal, setShowCharacterModal] = useState(false);
   const [showCharacterCardModal, setShowCharacterCardModal] = useState(false);
   const [characterSortOrder, setCharacterSortOrder] = useState<'added' | 'lastChat' | 'name'>('added');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showModelsModal, setShowModelsModal] = useState(false);
   const [showInstructionsModal, setShowInstructionsModal] = useState(false);
   const [showInstructionModal, setShowInstructionModal] = useState(false);
-  const [activeInstructionTab, setActiveInstructionTab] = useState<'chat' | 'brainstorm'>('chat');
+  const [activeInstructionTab, setActiveInstructionTab] = useState<'chat'>('chat');
   const [chatInstructions, setChatInstructions] = useState<string>('');
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showHeaderActions, setShowHeaderActions] = useState(false);
@@ -748,8 +706,6 @@ export default function Chat() {
   const [autoExport, setAutoExport] = useState<AutoExportSettings>(DEFAULT_AUTO_EXPORT);
   const autoExportTimerRef = useRef<NodeJS.Timeout | null>(null);
   
-      
-              const [brainstormError, setBrainstormError] = useState<string | null>(null);
   const [appliedCharacters, setAppliedCharacters] = useState<Set<string>>(new Set());
   
   // Undo state for deleted items
@@ -766,11 +722,6 @@ export default function Chat() {
   const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
   const [editingMessageContent, setEditingMessageContent] = useState<string>("");
   const [showMessageMenu, setShowMessageMenu] = useState<number | null>(null);
-
-    
-  // Brainstorm message editing state
-  const [editingBrainstormIndex, setEditingBrainstormIndex] = useState<number | null>(null);
-  const [editingBrainstormContent, setEditingBrainstormContent] = useState<string>("");
 
   // VN segment editing state
   
@@ -863,37 +814,6 @@ export default function Chat() {
       }
     }
     
-    // Load brainstorm instructions
-    const storedBrainstormInstructions = localStorage.getItem(BRAINSTORM_INSTRUCTIONS_KEY);
-    if (storedBrainstormInstructions) {
-      setBrainstormInstructions(storedBrainstormInstructions);
-    }
-    
-    // Load brainstorm messages
-    const storedBrainstormMessages = localStorage.getItem(BRAINSTORM_MESSAGES_KEY);
-    if (storedBrainstormMessages) {
-      try {
-        const messages = JSON.parse(storedBrainstormMessages) as Array<{role: "user" | "assistant", content: string}>;
-        setBrainstormMessages(messages);
-      } catch (e) {
-        console.error("Failed to parse brainstorm messages:", e);
-      }
-    }
-    
-    
-    
-    
-    // Load brainstorm sessions
-    const storedBrainstormSessions = localStorage.getItem(BRAINSTORM_SESSIONS_KEY);
-    if (storedBrainstormSessions) {
-      try {
-        const sessions = JSON.parse(storedBrainstormSessions) as BrainstormConversation[];
-        setBrainstormSessions(sessions);
-      } catch (e) {
-        console.error("Failed to parse brainstorm sessions:", e);
-      }
-    }
-    
     // Load last session (but don't restore automatically - user must click continue)
     const storedLastSession = localStorage.getItem(LAST_SESSION_KEY);
     if (storedLastSession) {
@@ -928,13 +848,12 @@ export default function Chat() {
       personaId: selectedPersona?.id,
       characterId: selectedCharacter?.id,
       conversationId: currentConversation?.id,
-      brainstormMessages: brainstormMessages,
       timestamp: Date.now(),
     };
     
     localStorage.setItem(LAST_SESSION_KEY, JSON.stringify(session));
     lastSessionRef.current = session;
-  }, [view, selectedPersona, selectedCharacter, currentConversation, brainstormMessages]);
+  }, [view, selectedPersona, selectedCharacter, currentConversation]);
 
   // Save personas to localStorage
   useEffect(() => {
@@ -971,31 +890,6 @@ export default function Chat() {
   useEffect(() => {
     localStorage.setItem(GLOBAL_SETTINGS_KEY, JSON.stringify(globalSettings));
   }, [globalSettings]);
-  
-  // Save brainstorm instructions to localStorage
-  useEffect(() => {
-    localStorage.setItem(BRAINSTORM_INSTRUCTIONS_KEY, brainstormInstructions);
-  }, [brainstormInstructions]);
-  
-  // Save brainstorm messages to localStorage
-  useEffect(() => {
-    localStorage.setItem(BRAINSTORM_MESSAGES_KEY, JSON.stringify(brainstormMessages));
-  }, [brainstormMessages]);
-  
-  
-  
-  
-  // Save brainstorm messages
-  useEffect(() => {
-    localStorage.setItem(BRAINSTORM_MESSAGES_KEY, JSON.stringify(brainstormMessages));
-  }, [brainstormMessages]);
-  
-  // Save brainstorm sessions
-  useEffect(() => {
-    if (brainstormSessions.length > 0 || localStorage.getItem(BRAINSTORM_SESSIONS_KEY)) {
-      localStorage.setItem(BRAINSTORM_SESSIONS_KEY, JSON.stringify(brainstormSessions));
-    }
-  }, [brainstormSessions]);
   
   // Load provider configs from localStorage
   useEffect(() => {
@@ -1854,250 +1748,6 @@ if (modelsResult.models.length > 0) {
   
   // Import generated character to the character list
   
-  // Brainstorm function - AI helps user create roleplay instructions
-  const sendBrainstormMessage = async () => {
-    if (isBrainstorming) return;
-    
-    let messageToSend: string;
-    
-    // If input is empty, resend the last user message - don't add duplicate to state
-    if (!brainstormInput.trim()) {
-      // Find the last user message
-      const lastUserMsg = brainstormMessages.filter(m => m.role === "user").pop();
-      if (!lastUserMsg) return; // No user message to resend
-      
-      messageToSend = lastUserMsg.content;
-      // Don't add to state - the message is already in brainstormMessages
-      // Just use it for the API call below
-    } else {
-      messageToSend = brainstormInput.trim();
-      setBrainstormInput("");
-      setBrainstormMessages(prev => [...prev, { role: "user", content: messageToSend }]);
-    }
-    setIsBrainstorming(true);
-      
-      // Use the exclusive brainstorm instructions
-      let systemPrompt = brainstormInstructions;
-      
-      // Add jailbreak after exclusive instructions
-      if (globalInstructions.enableJailbreak && globalInstructions.jailbreakInstructions) {
-        systemPrompt = `${systemPrompt}\n\n${globalInstructions.jailbreakInstructions}`;
-      }
-      
-      try {
-        const config = providerConfigs[activeProvider];
-        const activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
-        
-        // Build config from active profile
-        const profileConfig = {
-          ...config,
-          apiKey: activeProfile?.apiKey || "",
-          projectId: activeProfile?.projectId || "",
-          serviceAccountJson: activeProfile?.serviceAccountJson,
-          vertexMode: activeProfile?.vertexMode,
-          vertexLocation: activeProfile?.vertexLocation,
-          selectedModel: globalSettings.modelId || activeProfile?.selectedModel
-        };
-        
-        // Build messages for resend
-        const messages: Message[] = [
-          { role: "system", content: systemPrompt },
-          ...brainstormMessages.map(msg => ({
-            role: msg.role as "user" | "assistant",
-            content: msg.content
-          })),
-          { role: "user", content: messageToSend }
-        ];
-        
-        setApiDebugPayload(JSON.stringify({
-          model: profileConfig.selectedModel,
-          characterContext: systemPrompt.substring(0, 500) + (systemPrompt.length > 500 ? '...[truncated]' : ''),
-          instructions: [],
-          messages: messages.map(m => ({ role: m.role, content: m.content.substring(0, 200) + (m.content.length > 200 ? '...[truncated]' : '') })),
-          options: {
-            temperature: 0.8,
-            maxTokens: 2000,
-            topP: 0.9,
-            topK: 40,
-            enableThinking: false,
-          }
-        }, null, 2));
-        
-        let responseText: string;
-        const configWithModel = profileConfig;
-        
-        if (globalSettings.enableStreaming) {
-          // Use streaming
-          let streamedContent = "";
-          await streamChatMessage(
-            messages,
-            configWithModel,
-            {
-              temperature: 0.8,
-              maxTokens: 2000,
-              topP: 0.9,
-              topK: 40,
-              enableThinking: false,
-            },
-            (chunk) => {
-              if (chunk.error) {
-                throw new Error(chunk.error);
-              }
-              if (chunk.content !== undefined) {
-                streamedContent = chunk.content;
-              }
-              if (chunk.done) {
-                responseText = chunk.content || "";
-              }
-            }
-          );
-        } else {
-          // Use non-streaming
-          const response = await sendChatMessage(
-            messages,
-            configWithModel,
-            {
-              temperature: 0.8,
-              maxTokens: 2000,
-              topP: 0.9,
-              topK: 40,
-              enableThinking: false,
-            }
-          );
-          if (response.error) {
-            throw new Error(response.error);
-          }
-          responseText = response.content || "";
-        }
-        
-        setBrainstormMessages(prev => [...prev, { role: "assistant", content: responseText }]);
-      } catch (error) {
-        console.error("Brainstorm error:", error);
-        setBrainstormError(error instanceof Error ? error.message : "An error occurred. Please try again.");
-      } finally {
-        setIsBrainstorming(false);
-      }
-  };
-
-
-  // Continue the last AI response in brainstorm (for incomplete responses)
-  const handleBrainstormContinue = async () => {
-    if (isBrainstorming) return;
-    
-    // Find the last assistant message
-    const lastAssistantIdx = brainstormMessages.findLastIndex(m => m.role === "assistant");
-    if (lastAssistantIdx === -1) return;
-    
-    // Get the continue instruction
-    const continueInstruction = globalInstructions.continueInstruction || DEFAULT_CONTINUE_INSTRUCTION;
-    
-    // Add a user message with the continue instruction (marked to hide in UI)
-    const messagesWithContinue = [
-      ...brainstormMessages,
-      { role: "user" as const, content: continueInstruction, isContinue: true }
-    ];
-    
-    setIsBrainstorming(true);
-    setBrainstormError(null);
-    
-    try {
-      const config = providerConfigs[activeProvider];
-      const activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
-      
-      // Build config from active profile
-      const profileConfig = {
-        ...config,
-        apiKey: activeProfile?.apiKey || "",
-        projectId: activeProfile?.projectId || "",
-        serviceAccountJson: activeProfile?.serviceAccountJson,
-        vertexMode: activeProfile?.vertexMode,
-        vertexLocation: activeProfile?.vertexLocation,
-        selectedModel: globalSettings.modelId || activeProfile?.selectedModel
-      };
-      
-      let systemPrompt = brainstormInstructions;
-      
-      // Add jailbreak after exclusive instructions
-      if (globalInstructions.enableJailbreak && globalInstructions.jailbreakInstructions) {
-        systemPrompt = `${systemPrompt}\n\n${globalInstructions.jailbreakInstructions}`;
-      }
-      
-      const messages: Message[] = [
-        { role: "system", content: systemPrompt },
-        ...messagesWithContinue.map(msg => ({
-          role: msg.role as "user" | "assistant",
-          content: msg.content
-        }))
-      ];
-      
-      let responseText: string;
-      
-      const configWithModel = profileConfig;
-        
-        if (globalSettings.enableStreaming) {
-          let streamedContent = "";
-          await streamChatMessage(
-            messages,
-            configWithModel,
-            {
-              temperature: 0.8,
-              maxTokens: 2000,
-              topP: 0.9,
-              topK: 40,
-              enableThinking: false,
-            },
-            (chunk) => {
-              if (chunk.error) {
-                throw new Error(chunk.error);
-              }
-              if (chunk.content !== undefined) {
-                streamedContent = chunk.content;
-              }
-              if (chunk.done) {
-                responseText = chunk.content || "";
-              }
-            }
-          );
-        } else {
-          const response = await sendChatMessage(
-            messages,
-            configWithModel,
-            {
-              temperature: 0.8,
-              maxTokens: 2000,
-              topP: 0.9,
-              topK: 40,
-              enableThinking: false,
-            }
-          );
-          if (response.error) {
-            throw new Error(response.error);
-          }
-          responseText = response.content || "";
-        }
-
-      // Append to existing assistant message instead of creating new one
-      setBrainstormMessages(prev => {
-        const updated = [...prev];
-        const lastAssistantIdx = updated.findLastIndex(m => m.role === 'assistant');
-        if (lastAssistantIdx !== -1) {
-          updated[lastAssistantIdx] = {
-            ...updated[lastAssistantIdx],
-            content: updated[lastAssistantIdx].content + responseText
-          };
-        } else {
-          updated.push({ role: 'assistant', content: responseText });
-        }
-        return updated;
-      });
-    } catch (error) {
-      console.error("Brainstorm continue error:", error);
-      setBrainstormError(error instanceof Error ? error.message : "An error occurred. Please try again.");
-    } finally {
-      setIsBrainstorming(false);
-    }
-  };
-  
   // Extract instructions from code blocks
   const extractInstructions = (content: string): string[] => {
     const regex = /```instructions\n([\s\S]*?)```/g;
@@ -2176,32 +1826,13 @@ if (modelsResult.models.length > 0) {
             return updated;
           });
           break;
-
-        case 'brainstorm':
-          setBrainstormInstructions(prev => {
-            const updated = (prev ? prev + '\n\n' : '') + instructions;
-            return updated;
-          });
-          break;
-
       }
     }
-    
-    // Mark as applied for visual feedback
-    setAppliedInstructions(prev => new Set(prev).add(instructions));
-    // Clear the applied status after 3 seconds
-    setTimeout(() => {
-      setAppliedInstructions(prev => {
-        const next = new Set(prev);
-        next.delete(instructions);
-        return next;
-      });
-    }, 3000);
   };
-  
-  
-  
-  
+   
+   
+   
+   
   
 
   // Navigation functions
@@ -2281,48 +1912,6 @@ if (modelsResult.models.length > 0) {
 
 
 
-
-  // Brainstorm session management
-  const createBrainstormSession = () => {
-    const sessionCount = brainstormSessions.length + 1;
-    const newSession: BrainstormConversation = {
-      id: `brain_${Date.now()}`,
-      name: `Session ${sessionCount}`,
-      messages: [],
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    };
-    setBrainstormSessions(prev => [...prev, newSession]);
-    setCurrentBrainstormSession(newSession);
-    setBrainstormMessages([]);
-    setShowBrainstormSessions(false);
-  };
-
-  const selectBrainstormSession = (session: BrainstormConversation) => {
-    setCurrentBrainstormSession(session);
-    setBrainstormMessages(session.messages);
-    setShowBrainstormSessions(false);
-  };
-
-  const deleteBrainstormSession = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setBrainstormSessions(prev => prev.filter(s => s.id !== id));
-    if (currentBrainstormSession?.id === id) {
-      setCurrentBrainstormSession(null);
-      setBrainstormMessages([]);
-    }
-  };
-
-  // Save brainstorm session when messages change
-  const saveBrainstormSession = () => {
-    if (currentBrainstormSession) {
-      setBrainstormSessions(prev => prev.map(s =>
-        s.id === currentBrainstormSession.id
-          ? { ...s, messages: brainstormMessages, updatedAt: Date.now() }
-          : s
-      ));
-    }
-  };
 
   // Undo delete function
   const handleUndoDelete = () => {
@@ -3373,9 +2962,6 @@ if (modelsResult.models.length > 0) {
       setView("home");
       setSelectedPersona(null);
       setView("home");
-    } else if (view === "brainstorm") {
-      setView("home");
-      setView("home");
     }
   };
 
@@ -3403,12 +2989,6 @@ if (modelsResult.models.length > 0) {
         // If any not found, go to personas
         setView("personas");
       }
-    } else if (lastSession.view === "brainstorm") {
-      // Restore brainstorm messages if available
-      if (lastSession.brainstormMessages) {
-        setBrainstormMessages(lastSession.brainstormMessages);
-      }
-      setView("brainstorm");
     } else if (lastSession.view === "characters" && lastSession.personaId) {
       const persona = personas.find(p => p.id === lastSession.personaId);
       
@@ -3511,9 +3091,7 @@ if (modelsResult.models.length > 0) {
                     : view === "conversations" && selectedPersona && selectedCharacter
                     ? `${selectedPersona.name} × ${selectedCharacter.name}`
                     : view === "characters" && selectedPersona
-                    ? `${selectedPersona.name} - Select Character`
-                    : view === "brainstorm"
-                    ? "Instructions Generator"
+                    ? `${selectedPersona.name} - Select Character"`
                     : "Roleplay Studio"}
                 </h1>
                 <p className="text-sm text-zinc-500 truncate">
@@ -3525,8 +3103,6 @@ if (modelsResult.models.length > 0) {
                     ? "Select AI character"
                     : view === "conversations"
                     ? "Select or start a conversation"
-                    : view === "brainstorm"
-                    ? "Generate roleplay instructions with AI"
                     : `~${contextTokens.toLocaleString()} context tokens • ${AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || 'AI'}`}
                 </p>
               </div>
@@ -3590,11 +3166,11 @@ if (modelsResult.models.length > 0) {
                      <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.333.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.333.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.333.477-4.5 1.253" />
                      </svg>
-                     <div>
-                       <div className="text-sm text-white">Instructions</div>
-                       <div className="text-xs text-zinc-500">Chat, Brainstorm</div>
-                     </div>
-                   </button>
+                      <div>
+                        <div className="text-sm text-white">Instructions</div>
+                        <div className="text-xs text-zinc-500">Chat</div>
+                      </div>
+                    </button>
 
                    {/* Character Card */}
                   <button
@@ -3752,24 +3328,6 @@ if (modelsResult.models.length > 0) {
                   </svg>
                 </button>
                 
-                
-                {/* Instructions Generator */}
-                <button
-                  onClick={() => setView("brainstorm")}
-                  className="w-full flex items-center gap-4 p-6 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl hover:from-amber-600 hover:to-orange-600 transition-all transform hover:scale-[1.02] shadow-lg"
-                >
-                  <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
-                    <span className="text-3xl">✨</span>
-                  </div>
-                  <div className="text-left">
-                    <h3 className="text-xl font-bold">Instructions Generator</h3>
-                    <p className="text-amber-100 text-sm">Brainstorm roleplay instructions and scenarios</p>
-                  </div>
-                  <svg className="w-6 h-6 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-                
               </div>
             </div>
           )}
@@ -3861,470 +3419,7 @@ if (modelsResult.models.length > 0) {
           )}
 
 
-          {/* Brainstorm View */}
-          {view === "brainstorm" && (
-            <div className="pb-32">
-              <div className="flex justify-between items-center gap-2">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setView("home")}
-                    className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
-                    title="Back to Home"
-                  >
-                    <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  <h2 className="text-lg font-medium text-white">🎭 Roleplay Brainstorm</h2>
-                  
-                  {/* Sessions dropdown */}
-                  <div className="relative">
-                    <button
-                      onClick={() => setShowBrainstormSessions(!showBrainstormSessions)}
-                      className="ml-2 px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm flex items-center gap-1"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                      </svg>
-                      Sessions
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                    
-                    {/* Sessions dropdown menu */}
-                    {showBrainstormSessions && (
-                      <div className="absolute right-0 top-full mt-2 w-72 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50 max-h-80 overflow-y-auto">
-                        <div className="p-2">
-                          <button
-                            onClick={() => createBrainstormSession()}
-                            className="w-full flex items-center gap-2 px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                            </svg>
-                            New Session
-                          </button>
-                        </div>
-                        
-                        {brainstormSessions.length > 0 && (
-                          <div className="border-t border-zinc-800">
-                            {brainstormSessions
-                              .sort((a, b) => b.updatedAt - a.updatedAt)
-                              .map((session) => (
-                                <div
-                                  key={session.id}
-                                  onClick={() => selectBrainstormSession(session)}
-                                  className={`flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-zinc-800 transition-colors ${
-                                    currentBrainstormSession?.id === session.id ? 'bg-zinc-800' : ''
-                                  }`}
-                                >
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm text-white truncate">
-                                      {session.name || `Session ${brainstormSessions.indexOf(session) + 1}`} ({session.messages.length} msgs)
-                                    </p>
-                                    <p className="text-xs text-zinc-500">
-                                      {new Date(session.updatedAt).toLocaleDateString()}
-                                    </p>
-                                  </div>
-                                  <button
-                                    onClick={(e) => deleteBrainstormSession(session.id, e)}
-                                    className="p-1 hover:bg-zinc-700 rounded transition-colors"
-                                    title="Delete"
-                                  >
-                                    <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                  </button>
-                                </div>
-                              ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Navigation buttons - hidden on mobile */}
-                <div className="hidden md:flex gap-2">
-
-                  <button
-                    onClick={() => {
-                      if (selectedPersona && selectedCharacter) {
-                        setView("conversations");
-                      } else {
-                        setView("characters");
-                      }
-                    }}
-                    className="px-3 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors text-sm"
-                  >
-                    Chats
-                  </button>
-                </div>
-                
-                {/* Mobile hamburger menu button */}
-                <button
-                  onClick={() => setShowMobileMenu(!showMobileMenu)}
-                  className="md:hidden p-2 hover:bg-zinc-800 rounded-lg transition-colors"
-                >
-                  <svg className="w-6 h-6 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    {showMobileMenu ? (
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    ) : (
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                    )}
-                  </svg>
-                </button>
-              </div>
-              
-              {/* Mobile menu dropdown for brainstorm */}
-              {showMobileMenu && view === "brainstorm" && (
-                <div className="md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2">
-                  <button
-                    onClick={() => {
-                      setView("home");
-                      setShowMobileMenu(false);
-                    }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                    </svg>
-                    <span>Home</span>
-                  </button>
-
-
-                  <button
-                    onClick={() => {
-                      if (selectedPersona && selectedCharacter) {
-                        setView("conversations");
-                      } else {
-                        setView("characters");
-                      }
-                      setShowMobileMenu(false);
-                    }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                    <span>Chats</span>
-                  </button>
-                </div>
-              )}
-              
-              <div className="text-sm text-zinc-500 mb-2">
-                Chat with AI to brainstorm roleplay ideas. When ready, apply the generated instructions to your global settings.
-              </div>
-              
-
-              {/* Chat messages */}
-              <div className="space-y-4 bg-zinc-900/50 rounded-xl p-4 min-h-[400px] max-h-[500px] overflow-y-auto">
-                {brainstormMessages.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center mx-auto mb-4">
-                      <span className="text-2xl">🎭</span>
-                    </div>
-                    <h3 className="text-lg font-medium text-white mb-2">Start Brainstorming</h3>
-                    <p className="text-zinc-500 max-w-md mx-auto">
-                      Tell me what kind of roleplay you want to play. I&apos;ll help you create characters, settings, and instructions.
-                    </p>
-                  </div>
-                ) : (
-                  brainstormMessages
-                    .map((msg, originalIdx) => ({ msg, originalIdx }))
-                    .filter(({ msg }) => !msg.isContinue)
-                    .map(({ msg, originalIdx: idx }) => {
-                    
-                    const instructions = msg.role === "assistant" ? extractInstructions(msg.content) : [];
-                    const contentWithoutInstructions = msg.role === "assistant" 
-                      ? msg.content.replace(/```instructions\n[\s\S]*?```/g, "").trim()
-                      : msg.content;
-                    
-                    // Extract thinking content for assistant messages
-                    const thinkContent = msg.role === "assistant" 
-                      ? extractThinkContent(msg.content)
-                      : null;
-                    const displayContent = thinkContent 
-                      ? msg.content.replace(/<think\s*>[\s\S]*?<\/think>/gi, "").trim()
-                      : contentWithoutInstructions;
-                    
-                    const isLastMessage = idx === brainstormMessages.length - 1;
-                    const isAssistantMessage = msg.role === "assistant";
-                    const isLastAssistantMessage = isAssistantMessage && isLastMessage;
-                    
-                    return (
-                      <div key={idx} className={`flex gap-4 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                        {msg.role === "assistant" && (
-                          <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
-                            <span className="text-sm text-white font-semibold">AI</span>
-                          </div>
-                        )}
-                        <div className={`max-w-[80%] ${msg.role === "user" ? "order-first" : ""}`}>
-                          <div className={`rounded-2xl px-4 py-3 ${
-                            msg.role === "user" 
-                              ? "bg-zinc-700 text-white" 
-                              : "bg-zinc-800 text-zinc-200"
-                          }`}>
-                            {editingBrainstormIndex === idx ? (
-                              <div className="space-y-2">
-                                <textarea
-                                  value={editingBrainstormContent}
-                                  onChange={(e) => setEditingBrainstormContent(e.target.value)}
-                                  className="w-full bg-zinc-900 text-white rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700"
-                                  rows={3}
-                                  autoFocus
-                                />
-                                <div className="flex gap-2 justify-end">
-                                  <button
-                                    onClick={() => {
-                                      setEditingBrainstormIndex(null);
-                                      setEditingBrainstormContent("");
-                                    }}
-                                    className="px-3 py-1 text-sm bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
-                                  >
-                                    Cancel
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      setBrainstormMessages(prev => prev.map((m, i) => i === idx ? { ...m, content: editingBrainstormContent } : m));
-                                      setEditingBrainstormIndex(null);
-                                      setEditingBrainstormContent("");
-                                    }}
-                                    className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                                  >
-                                    Save
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <>
-                                {thinkContent && (
-                                  <ThinkingSection content={thinkContent} />
-                                )}
-                                <FormattedText content={displayContent} />
-                              </>
-                            )}
-                          </div>
-                          
-                          {/* Message actions - edit, delete on all messages */}
-                          {editingBrainstormIndex !== idx && (
-                            <div className="flex gap-1 mt-1 justify-start">
-                              {/* Edit button - for all messages */}
-                              <button
-                                onClick={() => {
-                                  setEditingBrainstormIndex(idx);
-                                  setEditingBrainstormContent(msg.content);
-                                }}
-                                className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors"
-                                title="Edit message"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                              </button>
-                              {/* Delete button */}
-                              <button
-                                onClick={() => {
-                                  setBrainstormMessages(prev => prev.filter((_, i) => i !== idx));
-                                }}
-                                className="p-1 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded transition-colors"
-                                title="Delete message"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
-                              {/* Refresh/Regenerate button - only for last assistant message */}
-                              {isLastAssistantMessage && (
-                              <button
-                                onClick={() => {
-                                  // Find the last user message and resend
-                                  const lastUserIdx = brainstormMessages.map((m, i) => m.role === "user" ? i : -1).filter(i => i >= 0).pop();
-                                  if (lastUserIdx !== undefined && lastUserIdx >= 0) {
-                                    const lastUserMsg = brainstormMessages[lastUserIdx].content;
-                                    // Remove messages after last user message
-                                    setBrainstormMessages(prev => prev.slice(0, lastUserIdx + 1));
-                                    // Resend the message
-                                    setTimeout(() => {
-                                      setBrainstormInput(lastUserMsg);
-                                      setTimeout(() => {
-                                        sendBrainstormMessage();
-                                      }, 50);
-                                    }, 50);
-                                  }
-                                }}
-                                disabled={isBrainstorming}
-                                className="p-1 text-zinc-500 hover:text-blue-400 hover:bg-zinc-800 rounded transition-colors disabled:opacity-50"
-                                title="Regenerate response"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                </svg>
-                              </button>
-                              )}
-                              {/* Continue button - for continuing incomplete responses, only for last assistant */}
-                              {isLastAssistantMessage && (
-                                <button
-                                  onClick={handleBrainstormContinue}
-                                  disabled={isBrainstorming}
-                                  className="p-1 text-zinc-500 hover:text-green-400 hover:bg-zinc-800 rounded transition-colors disabled:opacity-50"
-                                  title="Continue response"
-                                >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                                  </svg>
-                                </button>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Instruction blocks with apply buttons */}
-                          {instructions.length > 0 && (
-                            <div className="mt-2 space-y-2">
-                              {instructions.map((instr, i) => {
-                                const isApplied = appliedInstructions.has(instr);
-                                return (
-                                  <div key={i} className={`bg-zinc-800 border rounded-lg overflow-hidden ${isApplied ? 'border-green-500' : 'border-zinc-700'}`}>
-                                    <div className="bg-zinc-700/50 px-3 py-1.5 flex justify-between items-center gap-2">
-                                      <span className="text-xs text-zinc-400">Instructions</span>
-                                      <div className="flex flex-wrap gap-2">
-                                        <button
-                                          onClick={() => {
-                                            setBrainstormInput(`Please implement this instruction:\n\`\`\`\n${instr}\n\`\`\``);
-                                          }}
-                                          disabled={isBrainstorming}
-                                          className="text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded font-medium bg-blue-600 text-white hover:bg-blue-700 cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                          <span className="hidden sm:inline">Add to Next Response</span>
-                                          <span className="sm:hidden">Add</span>
-                                        </button>
-                                        <button
-                                          onClick={() => applyInstructions(instr)}
-                                          disabled={isApplied}
-                                          className={`text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded font-medium transition-all ${
-                                            isApplied 
-                                              ? 'bg-green-600 text-white cursor-default' 
-                                              : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
-                                          }`}
-                                        >
-{isApplied ? (
-                                             <span className="flex items-center gap-1">
-                                               <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                               </svg>
-                                               <span className="hidden sm:inline">Applied!</span>
-                                               <span className="sm:hidden">✓</span>
-                                             </span>
-                                           ) : (
-                                             <span>
-                                               <span className="hidden sm:inline">{selectedPresetId ? 'Apply to Selected Preset' : 'Apply to Global Instructions'}</span>
-                                               <span className="sm:hidden">Apply</span>
-                                             </span>
-                                           )}
-                                        </button>
-                                      </div>
-                                    </div>
-                                    <pre className="p-3 text-xs text-zinc-300 overflow-x-auto whitespace-pre-wrap max-h-40 overflow-y-auto">{instr}</pre>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                        {msg.role === "user" && (
-                          <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-                            <span className="text-sm text-white font-semibold">You</span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
-                
-                {isBrainstorming && (
-                  <div className="flex gap-4 justify-start">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
-                      <span className="text-sm text-white font-semibold">AI</span>
-                    </div>
-                    <div className="bg-zinc-800 rounded-2xl px-4 py-3">
-                      <div className="flex gap-1">
-                        <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
-                        <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
-                        <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              {/* Scroll to bottom button for brainstorm */}
-              {view === "brainstorm" && showScrollToBottom && (
-                <button
-                  onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })}
-                  className="fixed bottom-52 sm:bottom-56 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2 px-4 py-2 bg-zinc-800 text-white rounded-full shadow-lg hover:bg-zinc-700 transition-all opacity-90 hover:opacity-100"
-                  title="Scroll to bottom"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                  </svg>
-                  <span className="text-sm">Scroll to bottom</span>
-                </button>
-              )}
-              
-              {/* Input area - fixed at bottom for brainstorm */}
-              <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-800 bg-black/80 backdrop-blur-xl z-50">
-                <div className="max-w-4xl mx-auto px-4 py-4">
-                  <div className="flex items-center gap-3 bg-zinc-900 rounded-2xl border border-zinc-800 p-2">
-                    <div className="flex-1 relative">
-                      <textarea
-                        value={brainstormInput}
-                        onChange={(e) => setBrainstormInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            sendBrainstormMessage();
-                          }
-                        }}
-                        placeholder="Describe the roleplay you want to play..."
-                        className="w-full bg-transparent text-white placeholder-zinc-500 px-3 py-2 resize-none focus:outline-none"
-                        style={{ minHeight: "40px", maxHeight: "60px" }}
-                        disabled={isBrainstorming}
-                        rows={1}
-                        onInput={(e) => {
-                          const target = e.target as HTMLTextAreaElement;
-                          target.style.height = "auto";
-                          target.style.height = Math.min(target.scrollHeight, 60) + "px";
-                        }}
-                      />
-                    </div>
-                    <button
-                      onClick={sendBrainstormMessage}
-                      disabled={isBrainstorming}
-                      className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl hover:from-amber-400 hover:to-orange-400 transition-all shadow-lg shadow-amber-500/20 disabled:opacity-50"
-                    >
-                      {isBrainstorming ? (
-                        <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                      ) : (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                        </svg>
-                      )}
-                    </button>
-                  </div>
-                  <p className="text-xs text-zinc-600 mt-2 text-center">
-                    Press Enter to send, Shift+Enter for new line.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-
-          {/* Characters View */}
+           {/* Characters View */}
           {view === "characters" && selectedPersona && (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
@@ -4398,19 +3493,21 @@ if (modelsResult.models.length > 0) {
                     <span>Roleplay with AI</span>
                   </button>
 
-                  <button
-                    onClick={() => {
-                      setView("brainstorm");
-                      setShowMobileMenu(false);
-                    }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-colors"
-                  >
-                    <span className="text-lg">🎭</span>
-                    <span>Instructions Generator</span>
-                  </button>
+                   <button
+                     onClick={() => {
+                       setShowCharacterModal(true);
+                       setShowMobileMenu(false);
+                     }}
+                     className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+                   >
+                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                     </svg>
+                     <span>Roleplay with AI</span>
+                   </button>
 
-                  <input
-                    type="file"
+                   <input
+                     type="file"
                     ref={fileInputRef}
                     accept=".json"
                     onChange={handleImportCharacter}
@@ -6273,7 +5370,7 @@ if (modelsResult.models.length > 0) {
              <div className="flex items-center justify-between p-4 border-b border-zinc-800">
                <div>
                  <h2 className="text-lg font-semibold text-white">Instructions</h2>
-                 <p className="text-sm text-zinc-500">Exclusive to each mode - Chat, Generator, Brainstorm, VN</p>
+                  <p className="text-sm text-zinc-500">Exclusive to each mode - Chat</p>
                </div>
                <button
                  onClick={() => setShowInstructionModal(false)}
@@ -6285,24 +5382,21 @@ if (modelsResult.models.length > 0) {
                </button>
              </div>
 
-             {/* Tabbed Navigation */}
-             <div className="flex-shrink-0 border-b border-zinc-800">
-               <div className="flex gap-0">
-                 {['chat', 'brainstorm'].map((mode) => (
-                   <button
-                     key={mode}
-                     onClick={() => setActiveInstructionTab(mode as any)}
-                     className={`px-6 py-3 text-sm font-medium transition-all ${
-                       activeInstructionTab === mode
-                         ? 'text-blue-400 border-b-2 border-blue-500'
-                         : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
-                     }`}
-                   >
-                     {mode.charAt(0).toUpperCase() + mode.slice(1)}
-                   </button>
-                 ))}
-             </div>
-           </div>
+              {/* Tabbed Navigation */}
+              <div className="flex-shrink-0 border-b border-zinc-800">
+                <div className="flex gap-0">
+                  <button
+                    onClick={() => setActiveInstructionTab('chat')}
+                    className={`px-6 py-3 text-sm font-medium transition-all ${
+                      activeInstructionTab === 'chat'
+                        ? 'text-blue-400 border-b-2 border-blue-500'
+                        : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                    }`}
+                  >
+                    Chat
+                  </button>
+              </div>
+            </div>
 
 
 
@@ -6761,26 +5855,9 @@ if (modelsResult.models.length > 0) {
                          )}
                        </div>
                      </div>
-                   </div>
-                 )}
-                 
-                {/* Generator Instructions Tab */}
-
-                {/* Brainstorm Instructions Tab */}
-                {activeInstructionTab === 'brainstorm' && (
-                  <div className="space-y-4">
-                    <h3 className="text-sm font-semibold text-white">Brainstorm Instructions</h3>
-                    <textarea
-                      value={brainstormInstructions}
-                      onChange={(e) => setBrainstormInstructions(e.target.value)}
-                      placeholder="Enter brainstorm assistant instructions..."
-                      className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
-                      rows={6}
-                    />
-                  </div>
-                )}
-
-                 
+                    </div>
+                   )}
+                  
               </div>
 
               {/* Modal Footer */}
