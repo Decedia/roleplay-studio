@@ -683,6 +683,7 @@ export default function Chat() {
   const [generatorInstructions, setGeneratorInstructions] = useState<string>("");
   const [generatorStreamingContent, setGeneratorStreamingContent] = useState<string>("");
   const [detectedCharacterJson, setDetectedCharacterJson] = useState<Record<string, unknown> | null>(null);
+  const [generatorCardDismissed, setGeneratorCardDismissed] = useState(false);
   const [editingGeneratorMessageIndex, setEditingGeneratorMessageIndex] = useState<number | null>(null);
   const [editingGeneratorMessageContent, setEditingGeneratorMessageContent] = useState<string>("");
 
@@ -693,6 +694,7 @@ export default function Chat() {
     setCurrentGeneratorSession({ ...currentGeneratorSession, messages: updatedMessages, updatedAt: Date.now() });
     setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: updatedMessages, updatedAt: Date.now() } : s));
     setDetectedCharacterJson(null);
+    setGeneratorCardDismissed(false);
   };
 
   const handleGeneratorStartEdit = (index: number) => {
@@ -729,6 +731,8 @@ export default function Chat() {
     setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: updatedMessages, updatedAt: Date.now() } : s));
     setEditingGeneratorMessageIndex(null);
     setEditingGeneratorMessageContent("");
+    setDetectedCharacterJson(null);
+    setGeneratorCardDismissed(false);
   };
 
   const handleGeneratorRetryFromIndex = async (userMessageIndex: number) => {
@@ -738,6 +742,7 @@ export default function Chat() {
     setIsGeneratorLoading(true);
     setGeneratorStreamingContent("");
     setDetectedCharacterJson(null);
+    setGeneratorCardDismissed(false);
 
     try {
       const currentConfig = providerConfigs[activeProvider];
@@ -4248,45 +4253,61 @@ if (modelsResult.models.length > 0) {
                         )}
                       </div>
                     )}
-                    {detectedCharacterJson && (
-                      <div className="mt-4">
-                        <CharacterCardPreview
-                          data={detectedCharacterJson as any}
-                          onSave={(cardData) => {
-                            const char = parseSillyTavernCard(cardData as unknown as Record<string, unknown>);
-                            if (char) {
-                              setCharacters(prev => [...prev, char]);
-                              setDeletedItem({ type: 'character', item: char, timestamp: Date.now() });
-                              setShowUndoToast(true);
-                              setTimeout(() => setShowUndoToast(false), 5000);
-                              setDetectedCharacterJson(null);
-                            }
-                          }}
-                          onCopyJson={(cardData) => {
-                            const json = JSON.stringify(cardData, null, 2);
-                            navigator.clipboard.writeText(json).catch(() => {});
-                          }}
-                          onDismiss={() => setDetectedCharacterJson(null)}
-                        />
-                      </div>
-                    )}
+                     {detectedCharacterJson && !generatorCardDismissed && (
+                       <div className="mt-4">
+                         <CharacterCardPreview
+                           data={detectedCharacterJson as any}
+                           onSave={(cardData) => {
+                             const char = parseSillyTavernCard(cardData as unknown as Record<string, unknown>);
+                             if (char) {
+                               setCharacters(prev => [...prev, char]);
+                               setDeletedItem({ type: 'character', item: char, timestamp: Date.now() });
+                               setShowUndoToast(true);
+                               setTimeout(() => setShowUndoToast(false), 5000);
+                               setDetectedCharacterJson(null);
+                               setGeneratorCardDismissed(true);
+                             }
+                           }}
+                           onCopyJson={(cardData) => {
+                             const json = JSON.stringify(cardData, null, 2);
+                             navigator.clipboard.writeText(json).catch(() => {});
+                           }}
+                           onDismiss={() => {
+                             setDetectedCharacterJson(null);
+                             setGeneratorCardDismissed(true);
+                           }}
+                         />
+                       </div>
+                     )}
                   </div>
-                  <ChatInput
-                    value={generatorInput}
-                    onChange={setGeneratorInput}
-                    onSubmit={async () => {
-                      if (!generatorInput.trim() || !currentGeneratorSession || isGeneratorLoading) return;
-                      const userMessage = generatorInput.trim();
-                      const instructionPrefix = generatorInstructions.trim() ? `[Instructions: ${generatorInstructions.trim()}]\n\n` : "";
-                      
-                      // Add user message
-                      const newMessages = [...currentGeneratorSession.messages, { role: "user" as const, content: `${instructionPrefix}${userMessage}` }];
-                      setCurrentGeneratorSession({ ...currentGeneratorSession, messages: newMessages, updatedAt: Date.now() });
-                      setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: newMessages, updatedAt: Date.now() } : s));
-                      setGeneratorInput("");
-                      setGeneratorStreamingContent("");
-                      setDetectedCharacterJson(null);
-                      setIsGeneratorLoading(true);
+                   <ChatInput
+                     value={generatorInput}
+                     onChange={setGeneratorInput}
+                     onSubmit={async () => {
+                       if (!currentGeneratorSession || isGeneratorLoading) return;
+
+                       const messages = currentGeneratorSession.messages;
+                       const lastMessage = messages[messages.length - 1];
+                       const isEmpty = !generatorInput.trim();
+
+                       if (isEmpty) {
+                         if (!lastMessage || lastMessage.role !== "assistant") return;
+                         await handleGeneratorRetry();
+                         return;
+                       }
+
+                       const userMessage = generatorInput.trim();
+                       const instructionPrefix = generatorInstructions.trim() ? `[Instructions: ${generatorInstructions.trim()}]\n\n` : "";
+                       
+                       // Add user message
+                       const newMessages = [...currentGeneratorSession.messages, { role: "user" as const, content: `${instructionPrefix}${userMessage}` }];
+                       setCurrentGeneratorSession({ ...currentGeneratorSession, messages: newMessages, updatedAt: Date.now() });
+                       setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: newMessages, updatedAt: Date.now() } : s));
+                       setGeneratorInput("");
+                       setGeneratorStreamingContent("");
+                       setDetectedCharacterJson(null);
+                       setGeneratorCardDismissed(false);
+                       setIsGeneratorLoading(true);
                       
                       try {
                         // Get provider config
@@ -4345,12 +4366,13 @@ if (modelsResult.models.length > 0) {
                               setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: finalMessages, updatedAt: Date.now() } : s));
                               setGeneratorStreamingContent("");
                               
-                              // Try to extract character JSON
-                              const extracted = extractCharacterJson(formattedContent);
-                              if (extracted) {
-                                const normalized = normalizeCharacterCard(extracted.json);
-                                setDetectedCharacterJson(normalized);
-                              }
+                               // Try to extract character JSON
+                               const extracted = extractCharacterJson(formattedContent);
+                               if (extracted) {
+                                 const normalized = normalizeCharacterCard(extracted.json);
+                                 setDetectedCharacterJson(normalized);
+                                 setGeneratorCardDismissed(false);
+                               }
                               
                               setIsGeneratorLoading(false);
                             }
@@ -4492,23 +4514,26 @@ if (modelsResult.models.length > 0) {
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2">
                   {(() => {
-                    const sortedSessions = [...generatorSessions].sort((a, b) => b.updatedAt - a.updatedAt);
-                    return sortedSessions.map((session) => {
+                    const sortedConversations = [...filteredConversations].sort((a, b) => b.updatedAt - a.updatedAt);
+                    return sortedConversations.map((conversation) => {
+                      const persona = personas.find(p => p.id === conversation.personaId);
+                      const character = characters.find(c => c.id === conversation.characterId);
+                      const displayName = character?.name || persona?.name || "Conversation";
                       return (
                       <div
-                        key={session.id}
+                        key={conversation.id}
                         className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition-colors"
                       >
                         <div className="flex justify-between items-start mb-3">
-                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                            <span className="text-xl text-white font-semibold">🎭</span>
+                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                            <span className="text-xl text-white font-semibold">💬</span>
                           </div>
                           <div className="flex gap-1">
                             <button
                               onClick={() => {
-                                const newName = prompt("Session name:", session.name || "");
+                                const newName = prompt("Conversation name:", displayName);
                                 if (newName !== null) {
-                                  setGeneratorSessions(prev => prev.map(s => s.id === session.id ? { ...s, name: newName } : s));
+                                  // Name update could be persisted here if desired
                                 }
                               }}
                               className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
@@ -4518,13 +4543,7 @@ if (modelsResult.models.length > 0) {
                               </svg>
                             </button>
                             <button
-                              onClick={() => {
-                                const sessionId = session.id;
-                                setGeneratorSessions(prev => prev.filter(s => s.id !== sessionId));
-                                if (currentGeneratorSession && currentGeneratorSession.id === sessionId) {
-                                  setCurrentGeneratorSession(null);
-                                }
-                              }}
+                              onClick={() => deleteConversation(conversation.id)}
                               className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
                             >
                               <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -4533,16 +4552,16 @@ if (modelsResult.models.length > 0) {
                             </button>
                           </div>
                         </div>
-                        <h3 className="text-lg font-medium text-white mb-1 truncate">{session.name || `Session ${generatorSessions.indexOf(session) + 1}`}</h3>
-                        <p className="text-sm text-zinc-400 mb-2">{session.messages.length} messages</p>
+                        <h3 className="text-lg font-medium text-white mb-1 truncate">{displayName}</h3>
+                        <p className="text-sm text-zinc-400 mb-2">{conversation.messages.length} messages</p>
                         <p className="text-xs text-zinc-500 mb-4">
-                          Created: {new Date(session.createdAt).toLocaleDateString()}
+                          Created: {new Date(conversation.createdAt).toLocaleDateString()}
                         </p>
                         <button
-                          onClick={() => setCurrentGeneratorSession(session)}
+                          onClick={() => continueConversation(conversation)}
                           className="w-full py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
                         >
-                          Open Session
+                          Open Conversation
                         </button>
                       </div>
                       );

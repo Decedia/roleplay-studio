@@ -34,6 +34,15 @@ export function ChatInput({
     blue: "from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700",
   };
 
+  React.useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    if (!value) {
+      el.style.height = "auto";
+      el.style.height = "24px";
+    }
+  }, [value]);
+
   const handleInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
     const target = e.target as HTMLTextAreaElement;
     target.style.height = "auto";
