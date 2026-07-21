@@ -4143,7 +4143,7 @@ if (modelsResult.models.length > 0) {
                                 </div>
                               )}
                               <div
-                                className={`rounded-2xl px-4 py-3 ${
+                                className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-4 py-3 ${
                                   message.role === "user"
                                     ? "bg-zinc-700 text-white"
                                     : "bg-zinc-800 text-zinc-100 border border-zinc-700/50"
@@ -4175,7 +4175,16 @@ if (modelsResult.models.length > 0) {
                                   </div>
                                 ) : (
                                   <>
-                                    <FormattedText content={message.content} />
+                                    {isLastAssistant && detectedCharacterJson ? (
+                                      <div className="flex items-center gap-2 text-sm text-green-400 bg-green-900/20 border border-green-700/40 rounded-lg px-3 py-2">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        <span>Character card generated</span>
+                                      </div>
+                                    ) : (
+                                      <FormattedText content={message.content} />
+                                    )}
                                     {isLastAssistant && !isGeneratorLoading && (
                                       <div className="mt-2 flex justify-end">
                                         <button
@@ -4223,7 +4232,7 @@ if (modelsResult.models.length > 0) {
                             <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
                               <span className="text-sm text-white font-semibold">🎭</span>
                             </div>
-                            <div className="rounded-2xl px-4 py-3 bg-zinc-800 text-zinc-100 border border-zinc-700/50">
+                            <div className="max-w-[85%] sm:max-w-[80%] rounded-2xl px-4 py-3 bg-zinc-800 text-zinc-100 border border-zinc-700/50">
                               <FormattedText content={generatorStreamingContent} />
                             </div>
                           </div>
