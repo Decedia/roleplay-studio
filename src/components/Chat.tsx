@@ -36,7 +36,7 @@ import { Character as CharacterType, CharacterBook, CharacterBookEntry, Provider
 import { parseRoleplayText, getSegmentClasses, TextSegment } from "@/lib/text-formatter";
 
 // Import from modular chat structure
-import { ThinkingSection, ThinkingPanel, CollapsibleTagSection, FormattedText, SettingsModal, ChatInput, ChatMessage } from "@/components/chat/components";
+import { ThinkingSection, ThinkingPanel, CollapsibleTagSection, FormattedText, SettingsModal, ChatInput, ChatMessage, CharacterCardPreview } from "@/components/chat/components";
 import { useChatState } from "@/components/chat/hooks/useChatState";
 
 // Import UI styles
@@ -4026,20 +4026,11 @@ if (modelsResult.models.length > 0) {
                       </div>
                     )}
                     {detectedCharacterJson && (
-                      <div className="mt-4 p-4 bg-green-900/20 border border-green-700/50 rounded-xl">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="text-sm font-medium text-green-400">Character JSON Detected</h4>
-                          <button
-                            onClick={() => setDetectedCharacterJson(null)}
-                            className="text-xs text-zinc-500 hover:text-zinc-300"
-                          >
-                            Dismiss
-                          </button>
-                        </div>
-                        <p className="text-xs text-zinc-400 mb-3">A character card was detected in the response. You can save it to your characters.</p>
-                        <button
-                          onClick={() => {
-                            const char = parseSillyTavernCard(detectedCharacterJson);
+                      <div className="mt-4">
+                        <CharacterCardPreview
+                          data={detectedCharacterJson as any}
+                          onSave={(cardData) => {
+                            const char = parseSillyTavernCard(cardData as unknown as Record<string, unknown>);
                             if (char) {
                               setCharacters(prev => [...prev, char]);
                               setDeletedItem({ type: 'character', item: char, timestamp: Date.now() });
@@ -4048,10 +4039,12 @@ if (modelsResult.models.length > 0) {
                               setDetectedCharacterJson(null);
                             }
                           }}
-                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
-                        >
-                          Save Character
-                        </button>
+                          onCopyJson={(cardData) => {
+                            const json = JSON.stringify(cardData, null, 2);
+                            navigator.clipboard.writeText(json).catch(() => {});
+                          }}
+                          onDismiss={() => setDetectedCharacterJson(null)}
+                        />
                       </div>
                     )}
                   </div>
