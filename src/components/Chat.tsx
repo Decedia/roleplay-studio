@@ -112,6 +112,17 @@ const extractCharacterJson = (content: string): { json: Record<string, unknown>;
   return null;
 };
 
+// Normalize character card data to a consistent flat format
+const normalizeCharacterCard = (data: Record<string, unknown>): Record<string, unknown> => {
+  // Handle V2 format (spec: "chara_card_v2" with data wrapper)
+  if (data.spec === "chara_card_v2" && data.data && typeof data.data === "object") {
+    return data.data as Record<string, unknown>;
+  }
+  
+  // Already flat V1 format
+  return data;
+};
+
 // Types - using imported Message interface
 export interface Persona {
   id: string;
@@ -672,7 +683,83 @@ export default function Chat() {
   const [generatorInstructions, setGeneratorInstructions] = useState<string>("");
   const [generatorStreamingContent, setGeneratorStreamingContent] = useState<string>("");
   const [detectedCharacterJson, setDetectedCharacterJson] = useState<Record<string, unknown> | null>(null);
-  
+
+  // Generator chat helpers
+  const handleGeneratorRetry = async () => {
+    if (isGeneratorLoading || !currentGeneratorSession) return;
+    const messages = currentGeneratorSession.messages;
+    const lastUserIndex = messages.map(m => m.role).lastIndexOf("user");
+    if (lastUserIndex === -1) return;
+
+    const retryMessages = messages.slice(0, lastUserIndex + 1);
+    setCurrentGeneratorSession({ ...currentGeneratorSession, messages: retryMessages, updatedAt: Date.now() });
+    setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: retryMessages, updatedAt: Date.now() } : s));
+    setGeneratorStreamingContent("");
+    setDetectedCharacterJson(null);
+    setIsGeneratorLoading(true);
+
+    try {
+      const currentConfig = providerConfigs[activeProvider];
+      const activeProfile = currentConfig.profiles.find(p => p.id === currentConfig.activeProfileId);
+      if (!activeProfile) throw new Error("No active provider profile selected.");
+
+      const profileConfig = {
+        ...currentConfig,
+        apiKey: activeProfile?.apiKey || "",
+        projectId: activeProfile?.projectId || "",
+        serviceAccountJson: activeProfile?.serviceAccountJson,
+        vertexMode: activeProfile?.vertexMode,
+        vertexLocation: activeProfile?.vertexLocation,
+        selectedModel: globalSettings.modelId || activeProfile?.selectedModel,
+      };
+
+      const apiMessages: Message[] = [
+        { role: "system", content: DEFAULT_GENERATOR_SYSTEM_PROMPT },
+        ...retryMessages.map(m => ({ role: m.role as "user" | "assistant", content: m.content })),
+      ];
+
+      await streamChatMessage(
+        apiMessages,
+        profileConfig,
+        {
+          temperature: globalSettings.temperature,
+          maxTokens: globalSettings.maxTokens,
+          topP: globalSettings.topP,
+          topK: globalSettings.topK,
+          systemPrompt: "",
+          enableThinking: globalSettings.enableThinking,
+          thinkingLevel: globalSettings.thinkingLevel,
+          thinkingBudget: globalSettings.thinkingBudget,
+        },
+        (chunk) => {
+          if (chunk.error) {
+            setError(chunk.error);
+            setIsGeneratorLoading(false);
+            return;
+          }
+          if (chunk.content !== undefined) {
+            setGeneratorStreamingContent(prev => prev + chunk.content);
+          }
+          if (chunk.done) {
+            const formattedContent = formatResponse(chunk.content || "");
+            const finalMessages = [...retryMessages, { role: "assistant" as const, content: formattedContent }];
+            setCurrentGeneratorSession(prev => prev ? { ...prev, messages: finalMessages, updatedAt: Date.now() } : null);
+            setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: finalMessages, updatedAt: Date.now() } : s));
+            setGeneratorStreamingContent("");
+            const extracted = extractCharacterJson(formattedContent);
+            if (extracted) setDetectedCharacterJson(normalizeCharacterCard(extracted.json));
+            setIsGeneratorLoading(false);
+          }
+        }
+      );
+    } catch (err) {
+      console.error("Generator retry error:", err);
+      setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
+      setIsGeneratorLoading(false);
+      setGeneratorStreamingContent("");
+    }
+  };
+
   // Reset visible message count when conversation changes
   useEffect(() => {
     setVisibleMessageCount(20);
@@ -3990,29 +4077,46 @@ if (modelsResult.models.length > 0) {
                         <h3 className="text-lg font-medium text-white mb-1">Start chatting</h3>
                         <p className="text-sm text-zinc-400">Describe the character you want to create</p>
                       </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {currentGeneratorSession.messages.map((message, idx) => (
-                          <div
-                            key={idx}
-                            className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
-                          >
-                            {message.role === "assistant" && (
-                              <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                                <span className="text-sm text-white font-semibold">🎭</span>
-                              </div>
-                            )}
-                            <div
-                              className={`rounded-2xl px-4 py-3 ${
-                                message.role === "user"
-                                  ? "bg-zinc-700 text-white"
-                                  : "bg-zinc-800 text-zinc-100 border border-zinc-700/50"
-                              }`}
-                            >
-                              <FormattedText content={message.content} />
-                            </div>
-                          </div>
-                        ))}
+                     ) : (
+                       <div className="space-y-4">
+                         {currentGeneratorSession.messages.map((message, idx) => {
+                           const isLastAssistant = message.role === "assistant" && idx === currentGeneratorSession.messages.length - 1;
+                           return (
+                           <div
+                             key={idx}
+                             className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                           >
+                             {message.role === "assistant" && (
+                               <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                                 <span className="text-sm text-white font-semibold">🎭</span>
+                               </div>
+                             )}
+                             <div
+                               className={`rounded-2xl px-4 py-3 ${
+                                 message.role === "user"
+                                   ? "bg-zinc-700 text-white"
+                                   : "bg-zinc-800 text-zinc-100 border border-zinc-700/50"
+                               }`}
+                             >
+                               <FormattedText content={message.content} />
+                               {isLastAssistant && !isGeneratorLoading && (
+                                 <div className="mt-2 flex justify-end">
+                                   <button
+                                     onClick={handleGeneratorRetry}
+                                     className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
+                                     title="Regenerate response"
+                                   >
+                                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                     </svg>
+                                     Regenerate
+                                   </button>
+                                 </div>
+                               )}
+                             </div>
+                           </div>
+                           );
+                        })}
                         {generatorStreamingContent && (
                           <div className="flex gap-3 justify-start">
                             <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
@@ -4125,7 +4229,8 @@ if (modelsResult.models.length > 0) {
                               // Try to extract character JSON
                               const extracted = extractCharacterJson(formattedContent);
                               if (extracted) {
-                                setDetectedCharacterJson(extracted.json);
+                                const normalized = normalizeCharacterCard(extracted.json);
+                                setDetectedCharacterJson(normalized);
                               }
                               
                               setIsGeneratorLoading(false);
