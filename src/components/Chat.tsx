@@ -3193,9 +3193,8 @@ if (modelsResult.models.length > 0) {
       setView("characters");
       setSelectedCharacter(null);
     } else if (view === "characters") {
-      setView("home");
-      setSelectedPersona(null);
-      setView("home");
+      setView("personas");
+      setSelectedCharacter(null);
     } else if (view === "generator") {
       setView("home");
       setCurrentGeneratorSession(null);
