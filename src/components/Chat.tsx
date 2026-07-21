@@ -707,14 +707,14 @@ export default function Chat() {
     setEditingGeneratorMessageContent("");
   };
 
-  const handleGeneratorSaveEdit = async (index: number) => {
+  const handleGeneratorSaveEdit = async (index: number, retry: boolean = true) => {
     if (!currentGeneratorSession || !editingGeneratorMessageContent.trim()) return;
     const message = currentGeneratorSession.messages[index];
     const updatedMessages = [...currentGeneratorSession.messages];
     updatedMessages[index] = { ...message, content: editingGeneratorMessageContent.trim() };
 
-    // If editing a user message, remove all messages after it and regenerate
-    if (message.role === "user") {
+    // If editing a user message and retry is enabled, regenerate
+    if (message.role === "user" && retry) {
       const messagesAfterEdit = updatedMessages.slice(0, index + 1);
       setCurrentGeneratorSession({ ...currentGeneratorSession, messages: messagesAfterEdit, updatedAt: Date.now() });
       setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: messagesAfterEdit, updatedAt: Date.now() } : s));
@@ -2993,7 +2993,7 @@ if (modelsResult.models.length > 0) {
   };
 
   // Save edited message
-  const handleSaveEdit = async (index: number) => {
+  const handleSaveEdit = async (index: number, retry: boolean = true) => {
     if (!currentConversation || !selectedPersona || !selectedCharacter) return;
     if (!editingMessageContent.trim()) return;
     
@@ -3001,8 +3001,8 @@ if (modelsResult.models.length > 0) {
     const updatedMessages = [...currentConversation.messages];
     updatedMessages[index] = { ...message, content: editingMessageContent.trim() };
     
-    // If editing a user message, we need to regenerate the AI response
-    if (message.role === "user") {
+    // If editing a user message and retry is enabled, regenerate the AI response
+    if (message.role === "user" && retry) {
       // Remove all messages after this one
       const messagesAfterEdit = updatedMessages.slice(0, index + 1);
       updateConversationMessages(messagesAfterEdit);
@@ -3056,18 +3056,18 @@ if (modelsResult.models.length > 0) {
           messagesForApi,
           globalSettings.maxContextTokens,
           systemPromptTokens
-       );
+        );
 
-       // Inject inline instructions into the conversation
-       const messagesWithInline = injectInlineInstructions(truncatedMessages, inlineInstructions);
+        // Inject inline instructions into the conversation
+        const messagesWithInline = injectInlineInstructions(truncatedMessages, inlineInstructions);
 
-       // Combine messages with correct position: [character context] -> [before instructions] -> [conversation with inline] -> [after instructions]
-       const messagesWithInstructions = [
-         characterContext,
-         ...beforeContextInstructions,
-         ...messagesWithInline,
-         ...afterContextInstructions
-       ];
+        // Combine messages with correct position: [character context] -> [before instructions] -> [conversation with inline] -> [after instructions]
+        const messagesWithInstructions = [
+          characterContext,
+          ...beforeContextInstructions,
+          ...messagesWithInline,
+          ...afterContextInstructions
+        ];
 
       // Capture debug payload for utility panel
       setApiDebugPayload(JSON.stringify({
@@ -4166,18 +4166,15 @@ if (modelsResult.models.length > 0) {
                                         Cancel
                                       </button>
                                       <button
-                                        onClick={() => handleGeneratorSaveEdit(idx)}
-                                        className="px-3 py-1 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                                        onClick={() => handleGeneratorSaveEdit(idx, false)}
+                                        className="px-3 py-1 text-sm bg-zinc-600 text-white rounded-lg hover:bg-zinc-500 transition-colors"
                                       >
-                                        Save & {message.role === "user" ? "Retry" : "Update"}
+                                        Save
                                       </button>
-                                      {message.role === "assistant" && (
+                                      {message.role === "user" && (
                                         <button
-                                          onClick={() => {
-                                            handleGeneratorSaveEdit(idx);
-                                            handleGeneratorRetry();
-                                          }}
-                                          className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                          onClick={() => handleGeneratorRetryFromIndex(idx)}
+                                          className="px-3 py-1 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                                         >
                                           Save & Retry
                                         </button>
@@ -4655,18 +4652,15 @@ if (modelsResult.models.length > 0) {
                                     Cancel
                                   </button>
                                   <button
-                                    onClick={() => handleSaveEdit(originalIndex)}
-                                    className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                    onClick={() => handleSaveEdit(originalIndex, false)}
+                                    className="px-3 py-1 text-sm bg-zinc-600 text-white rounded-lg hover:bg-zinc-500 transition-colors"
                                   >
-                                    Save & {message.role === "user" ? "Retry" : "Update"}
+                                    Save
                                   </button>
-                                  {message.role === "assistant" && (
+                                  {message.role === "user" && (
                                     <button
-                                      onClick={() => {
-                                        handleSaveEdit(originalIndex);
-                                        handleRetry();
-                                      }}
-                                      className="px-3 py-1 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                                      onClick={() => handleRetry()}
+                                      className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                                     >
                                       Save & Retry
                                     </button>
