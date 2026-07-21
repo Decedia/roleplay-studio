@@ -32,7 +32,7 @@ import {
   type SummarizationResult,
 } from "@/lib/summarization";
 import { readCharacterFile, buildFullSystemPrompt } from "@/lib/character-import";
-import { Character as CharacterType, CharacterBook, CharacterBookEntry, ProviderProfile, Instruction, InstructionRole, InstructionPosition, InstructionPreset } from "@/lib/types";
+import { Character as CharacterType, CharacterBook, CharacterBookEntry, ProviderProfile, GeneratorConversation, Instruction, InstructionRole, InstructionPosition, InstructionPreset } from "@/lib/types";
 import { parseRoleplayText, getSegmentClasses, TextSegment } from "@/lib/text-formatter";
 
 // Import from modular chat structure
@@ -222,9 +222,10 @@ const CONNECTION_STATUS_KEY = "chat_connection_status";
 const AUTO_EXPORT_KEY = "chat_auto_export";
 const LAST_SESSION_KEY = "chat_last_session";
 const INSTRUCTION_PRESETS_KEY = "chat_instruction_presets";
+const GENERATOR_SESSIONS_KEY = "chat_generator_sessions";
 
 // Type for last session data (stores view and conversation state)
-type ViewType = "home" | "personas" | "characters" | "conversations" | "chat";
+type ViewType = "home" | "personas" | "characters" | "conversations" | "chat" | "generator";
 
 interface LastSession {
   view: ViewType;
@@ -594,6 +595,11 @@ export default function Chat() {
   const abortControllerRef = useRef<AbortController | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
+  // Generator state
+  const [generatorSessions, setGeneratorSessions] = useState<GeneratorConversation[]>([]);
+  const [currentGeneratorSession, setCurrentGeneratorSession] = useState<GeneratorConversation | null>(null);
+  const [showGeneratorSessions, setShowGeneratorSessions] = useState(false);
+  
   // Reset visible message count when conversation changes
   useEffect(() => {
     setVisibleMessageCount(20);
@@ -836,6 +842,17 @@ export default function Chat() {
         console.error("Failed to parse instruction presets:", e);
       }
     }
+    
+    // Load generator sessions
+    const storedGeneratorSessions = localStorage.getItem(GENERATOR_SESSIONS_KEY);
+    if (storedGeneratorSessions) {
+      try {
+        const sessions = JSON.parse(storedGeneratorSessions) as GeneratorConversation[];
+        setGeneratorSessions(sessions);
+      } catch (e) {
+        console.error("Failed to parse generator sessions:", e);
+      }
+    }
   }, []);
 
   // Save last session when view or related state changes
@@ -885,6 +902,13 @@ export default function Chat() {
   useEffect(() => {
     localStorage.setItem(INSTRUCTION_PRESETS_KEY, JSON.stringify(instructionPresets));
   }, [instructionPresets]);
+
+  // Save generator sessions to localStorage
+  useEffect(() => {
+    if (generatorSessions.length > 0 || localStorage.getItem(GENERATOR_SESSIONS_KEY)) {
+      localStorage.setItem(GENERATOR_SESSIONS_KEY, JSON.stringify(generatorSessions));
+    }
+  }, [generatorSessions]);
 
   // Save global settings to localStorage
   useEffect(() => {
@@ -2962,6 +2986,9 @@ if (modelsResult.models.length > 0) {
       setView("home");
       setSelectedPersona(null);
       setView("home");
+    } else if (view === "generator") {
+      setView("home");
+      setCurrentGeneratorSession(null);
     }
   };
 
@@ -3000,6 +3027,8 @@ if (modelsResult.models.length > 0) {
       }
     } else if (lastSession.view === "personas") {
       setView("personas");
+    } else if (lastSession.view === "generator") {
+      setView("generator");
     } else {
       setView("home");
     }
@@ -3330,7 +3359,7 @@ if (modelsResult.models.length > 0) {
                 
                 {/* Character Generator */}
                 <button
-                  onClick={() => {}}
+                  onClick={() => setView("generator")}
                   className="w-full flex items-center gap-4 p-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-[1.02] shadow-lg"
                 >
                   <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
@@ -3684,6 +3713,131 @@ if (modelsResult.models.length > 0) {
             </div>
           )}
 
+          {/* Generator View */}
+          {view === "generator" && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg font-medium text-white">Character Generator</h2>
+                
+                {/* Desktop buttons - hidden on mobile */}
+                <div className="hidden md:flex gap-2">
+                  <button
+                    onClick={() => {
+                      const newSession: GeneratorConversation = {
+                        id: crypto.randomUUID(),
+                        name: `Session ${generatorSessions.length + 1}`,
+                        messages: [],
+                        createdAt: Date.now(),
+                        updatedAt: Date.now(),
+                      };
+                      setGeneratorSessions(prev => [...prev, newSession]);
+                      setCurrentGeneratorSession(newSession);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    New Session
+                  </button>
+                </div>
+                
+                {/* Mobile hamburger menu button */}
+                <button
+                  onClick={() => setShowMobileMenu(!showMobileMenu)}
+                  className="md:hidden p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                >
+                  <svg className="w-6 h-6 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {showMobileMenu ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    )}
+                  </svg>
+                </button>
+              </div>
+              
+              {/* Mobile menu dropdown for generator */}
+              {showMobileMenu && view === "generator" && (
+                <div className="md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2">
+                  <button
+                    onClick={() => {
+                      const newSession: GeneratorConversation = {
+                        id: crypto.randomUUID(),
+                        name: `Session ${generatorSessions.length + 1}`,
+                        messages: [],
+                        createdAt: Date.now(),
+                        updatedAt: Date.now(),
+                      };
+                      setGeneratorSessions(prev => [...prev, newSession]);
+                      setCurrentGeneratorSession(newSession);
+                      setShowMobileMenu(false);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span>New Session</span>
+                  </button>
+                </div>
+              )}
+
+              {generatorSessions.length === 0 ? (
+                <div className="text-center py-16">
+                  <div className="w-16 h-16 rounded-2xl bg-zinc-800 flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-medium text-white mb-2">No generator sessions yet</h3>
+                  <p className="text-zinc-500 mb-6 max-w-md mx-auto">
+                    Create a new session to start generating characters.
+                  </p>
+                  <button
+                    onClick={() => {
+                      const newSession: GeneratorConversation = {
+                        id: crypto.randomUUID(),
+                        name: `Session ${generatorSessions.length + 1}`,
+                        messages: [],
+                        createdAt: Date.now(),
+                        updatedAt: Date.now(),
+                      };
+                      setGeneratorSessions(prev => [...prev, newSession]);
+                      setCurrentGeneratorSession(newSession);
+                    }}
+                    className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    Create Your First Session
+                  </button>
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {(() => {
+                    const sortedSessions = [...generatorSessions].sort((a, b) => b.updatedAt - a.updatedAt);
+                    return sortedSessions.map((session) => {
+                      return (
+                      <div
+                        key={session.id}
+                        className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition-colors"
+                      >
+                        <h3 className="text-lg font-medium text-white mb-1 truncate">{session.name || `Session ${generatorSessions.indexOf(session) + 1}`}</h3>
+                        <p className="text-sm text-zinc-400 mb-2">{session.messages.length} messages</p>
+                        <button
+                          onClick={() => setCurrentGeneratorSession(session)}
+                          className="w-full py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
+                        >
+                          Open Session
+                        </button>
+                      </div>
+                      );
+                    });
+                  })()}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Conversations View */}
           {view === "conversations" && selectedPersona && selectedCharacter && (
             <div className="space-y-6">
@@ -3801,67 +3955,63 @@ if (modelsResult.models.length > 0) {
                   </button>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {filteredConversations
-                    .sort((a, b) => b.updatedAt - a.updatedAt)
-                    .map((conversation) => (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {(() => {
+                    const sortedSessions = [...generatorSessions].sort((a, b) => b.updatedAt - a.updatedAt);
+                    return sortedSessions.map((session) => {
+                      return (
                       <div
-                        key={conversation.id}
+                        key={session.id}
                         className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition-colors"
                       >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                          <div className="flex-1 cursor-pointer group" onClick={() => continueConversation(conversation)}>
-                            <p className="text-white font-medium group-hover:text-blue-400 transition-colors line-clamp-1">
-                              {conversation.messages.length > 1
-                                ? conversation.messages[1].content
-                                : "New conversation"}
-                            </p>
-                            <p className="text-xs text-zinc-500 mt-1">
-                              <span className="inline-flex items-center gap-1">
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                                </svg>
-                                {conversation.messages.length} messages
-                              </span>
-                              <span className="mx-2">•</span>
-                              <span className="inline-flex items-center gap-1">
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                {new Date(conversation.updatedAt).toLocaleDateString()}
-                              </span>
-                            </p>
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                            <span className="text-xl text-white font-semibold">🎭</span>
                           </div>
-                          <div className="flex items-center gap-2 w-full sm:w-auto">
+                          <div className="flex gap-1">
                             <button
-                              onClick={() => continueConversation(conversation)}
-                              className="flex-1 sm:flex-none px-4 py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors text-sm font-medium border border-zinc-700"
+                              onClick={() => {
+                                const newName = prompt("Session name:", session.name || "");
+                                if (newName !== null) {
+                                  setGeneratorSessions(prev => prev.map(s => s.id === session.id ? { ...s, name: newName } : s));
+                                }
+                              }}
+                              className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
                             >
-                              Continue
+                              <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
                             </button>
                             <button
                               onClick={() => {
-                                setViewingConversation(conversation);
-                                setShowConversationHistory(true);
+                                setGeneratorSessions(prev => prev.filter(s => s.id !== session.id));
+                                if (currentGeneratorSession?.id === session.id) {
+                                  setCurrentGeneratorSession(null);
+                                }
                               }}
-                              className="flex-1 sm:flex-none px-4 py-2 bg-blue-600/10 text-blue-400 rounded-lg hover:bg-blue-600/20 transition-colors text-sm font-medium border border-blue-600/20"
-                              title="View conversation history"
+                              className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
                             >
-                              History
-                            </button>
-                            <button
-                              onClick={() => deleteConversation(conversation.id)}
-                              className="p-2 hover:bg-red-500/10 text-zinc-500 hover:text-red-400 rounded-lg transition-all"
-                              title="Delete conversation"
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                               </svg>
                             </button>
                           </div>
                         </div>
+                        <h3 className="text-lg font-medium text-white mb-1 truncate">{session.name || `Session ${generatorSessions.indexOf(session) + 1}`}</h3>
+                        <p className="text-sm text-zinc-400 mb-2">{session.messages.length} messages</p>
+                        <p className="text-xs text-zinc-500 mb-4">
+                          Created: {new Date(session.createdAt).toLocaleDateString()}
+                        </p>
+                        <button
+                          onClick={() => setCurrentGeneratorSession(session)}
+                          className="w-full py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
+                        >
+                          Open Session
+                        </button>
                       </div>
-                    ))}
+                      );
+                    });
+                  })()}
                 </div>
               )}
             </div>
