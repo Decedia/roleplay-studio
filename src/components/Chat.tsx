@@ -601,6 +601,7 @@ export default function Chat() {
   const [showGeneratorSessions, setShowGeneratorSessions] = useState(false);
   const [generatorInput, setGeneratorInput] = useState("");
   const [isGeneratorLoading, setIsGeneratorLoading] = useState(false);
+  const [generatorInstructions, setGeneratorInstructions] = useState<string>("");
   
   // Reset visible message count when conversation changes
   useEffect(() => {
@@ -3843,6 +3844,22 @@ if (modelsResult.models.length > 0) {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                   </svg>
                                 </button>
+                                <button
+                                  onClick={() => {
+                                    const sid = session.id;
+                                    setGeneratorSessions(prev => prev.filter(s => s.id !== sid));
+                                    const current = currentGeneratorSession as GeneratorConversation | null;
+                                    if (current && current.id === sid) {
+                                      setCurrentGeneratorSession(null);
+                                    }
+                                  }}
+                                  className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                                  title="Delete session"
+                                >
+                                  <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
                               </div>
                             </div>
                             <h3 className="text-lg font-medium text-white mb-1 truncate">{session.name || `Session ${generatorSessions.indexOf(session) + 1}`}</h3>
@@ -3878,6 +3895,23 @@ if (modelsResult.models.length > 0) {
                     </button>
                   </div>
                   <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-4 pb-32">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium text-zinc-300">Generator Instructions</label>
+                        <button
+                          onClick={() => setGeneratorInstructions("")}
+                          className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                      <textarea
+                        value={generatorInstructions}
+                        onChange={(e) => setGeneratorInstructions(e.target.value)}
+                        placeholder="Enter instructions for the character generator..."
+                        className="w-full bg-zinc-800 text-zinc-100 border border-zinc-700 rounded-lg px-3 py-2 text-sm min-h-[80px] resize-y focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
                     {currentGeneratorSession.messages.length === 0 ? (
                       <div className="text-center py-8">
                         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mx-auto mb-3">
@@ -3917,7 +3951,9 @@ if (modelsResult.models.length > 0) {
                     onChange={setGeneratorInput}
                     onSubmit={() => {
                       if (!generatorInput.trim() || !currentGeneratorSession) return;
-                      const newMessages = [...currentGeneratorSession.messages, { role: "user" as const, content: generatorInput.trim() }];
+                      const userMessage = generatorInput.trim();
+                      const instructionPrefix = generatorInstructions.trim() ? `[Instructions: ${generatorInstructions.trim()}]\n\n` : "";
+                      const newMessages = [...currentGeneratorSession.messages, { role: "user" as const, content: `${instructionPrefix}${userMessage}` }];
                       setCurrentGeneratorSession({ ...currentGeneratorSession, messages: newMessages, updatedAt: Date.now() });
                       setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: newMessages, updatedAt: Date.now() } : s));
                       setGeneratorInput("");
