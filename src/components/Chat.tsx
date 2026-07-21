@@ -3716,123 +3716,174 @@ if (modelsResult.models.length > 0) {
           {/* Generator View */}
           {view === "generator" && (
             <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <h2 className="text-lg font-medium text-white">Character Generator</h2>
-                
-                {/* Desktop buttons - hidden on mobile */}
-                <div className="hidden md:flex gap-2">
-                  <button
-                    onClick={() => {
-                      const newSession: GeneratorConversation = {
-                        id: crypto.randomUUID(),
-                        name: `Session ${generatorSessions.length + 1}`,
-                        messages: [],
-                        createdAt: Date.now(),
-                        updatedAt: Date.now(),
-                      };
-                      setGeneratorSessions(prev => [...prev, newSession]);
-                      setCurrentGeneratorSession(newSession);
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    New Session
-                  </button>
-                </div>
-                
-                {/* Mobile hamburger menu button */}
-                <button
-                  onClick={() => setShowMobileMenu(!showMobileMenu)}
-                  className="md:hidden p-2 hover:bg-zinc-800 rounded-lg transition-colors"
-                >
-                  <svg className="w-6 h-6 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    {showMobileMenu ? (
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    ) : (
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                    )}
-                  </svg>
-                </button>
-              </div>
-              
-              {/* Mobile menu dropdown for generator */}
-              {showMobileMenu && view === "generator" && (
-                <div className="md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2">
-                  <button
-                    onClick={() => {
-                      const newSession: GeneratorConversation = {
-                        id: crypto.randomUUID(),
-                        name: `Session ${generatorSessions.length + 1}`,
-                        messages: [],
-                        createdAt: Date.now(),
-                        updatedAt: Date.now(),
-                      };
-                      setGeneratorSessions(prev => [...prev, newSession]);
-                      setCurrentGeneratorSession(newSession);
-                      setShowMobileMenu(false);
-                    }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    <span>New Session</span>
-                  </button>
-                </div>
-              )}
-
-              {generatorSessions.length === 0 ? (
-                <div className="text-center py-16">
-                  <div className="w-16 h-16 rounded-2xl bg-zinc-800 flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                  </div>
-                  <h3 className="text-xl font-medium text-white mb-2">No generator sessions yet</h3>
-                  <p className="text-zinc-500 mb-6 max-w-md mx-auto">
-                    Create a new session to start generating characters.
-                  </p>
-                  <button
-                    onClick={() => {
-                      const newSession: GeneratorConversation = {
-                        id: crypto.randomUUID(),
-                        name: `Session ${generatorSessions.length + 1}`,
-                        messages: [],
-                        createdAt: Date.now(),
-                        updatedAt: Date.now(),
-                      };
-                      setGeneratorSessions(prev => [...prev, newSession]);
-                      setCurrentGeneratorSession(newSession);
-                    }}
-                    className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                  >
-                    Create Your First Session
-                  </button>
-                </div>
-              ) : (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {(() => {
-                    const sortedSessions = [...generatorSessions].sort((a, b) => b.updatedAt - a.updatedAt);
-                    return sortedSessions.map((session) => {
-                      return (
-                      <div
-                        key={session.id}
-                        className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition-colors"
+              {!currentGeneratorSession ? (
+                <>
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-lg font-medium text-white">Character Generator</h2>
+                    
+                    {/* Desktop buttons - hidden on mobile */}
+                    <div className="hidden md:flex gap-2">
+                      <button
+                        onClick={() => {
+                          const newSession: GeneratorConversation = {
+                            id: crypto.randomUUID(),
+                            name: `Session ${generatorSessions.length + 1}`,
+                            messages: [],
+                            createdAt: Date.now(),
+                            updatedAt: Date.now(),
+                          };
+                          setGeneratorSessions(prev => [...prev, newSession]);
+                          setCurrentGeneratorSession(newSession);
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
                       >
-                        <h3 className="text-lg font-medium text-white mb-1 truncate">{session.name || `Session ${generatorSessions.indexOf(session) + 1}`}</h3>
-                        <p className="text-sm text-zinc-400 mb-2">{session.messages.length} messages</p>
-                        <button
-                          onClick={() => setCurrentGeneratorSession(session)}
-                          className="w-full py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
-                        >
-                          Open Session
-                        </button>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        New Session
+                      </button>
+                    </div>
+                    
+                    {/* Mobile hamburger menu button */}
+                    <button
+                      onClick={() => setShowMobileMenu(!showMobileMenu)}
+                      className="md:hidden p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                    >
+                      <svg className="w-6 h-6 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        {showMobileMenu ? (
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        ) : (
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                        )}
+                      </svg>
+                    </button>
+                  </div>
+                  
+                  {/* Mobile menu dropdown for generator */}
+                  {showMobileMenu && view === "generator" && (
+                    <div className="md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2">
+                      <button
+                        onClick={() => {
+                          const newSession: GeneratorConversation = {
+                            id: crypto.randomUUID(),
+                            name: `Session ${generatorSessions.length + 1}`,
+                            messages: [],
+                            createdAt: Date.now(),
+                            updatedAt: Date.now(),
+                          };
+                          setGeneratorSessions(prev => [...prev, newSession]);
+                          setCurrentGeneratorSession(newSession);
+                          setShowMobileMenu(false);
+                        }}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span>New Session</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {generatorSessions.length === 0 ? (
+                    <div className="text-center py-16">
+                      <div className="w-16 h-16 rounded-2xl bg-zinc-800 flex items-center justify-center mx-auto mb-4">
+                        <svg className="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
                       </div>
-                      );
-                    });
-                  })()}
+                      <h3 className="text-xl font-medium text-white mb-2">No generator sessions yet</h3>
+                      <p className="text-zinc-500 mb-6 max-w-md mx-auto">
+                        Create a new session to start generating characters.
+                      </p>
+                      <button
+                        onClick={() => {
+                          const newSession: GeneratorConversation = {
+                            id: crypto.randomUUID(),
+                            name: `Session ${generatorSessions.length + 1}`,
+                            messages: [],
+                            createdAt: Date.now(),
+                            updatedAt: Date.now(),
+                          };
+                          setGeneratorSessions(prev => [...prev, newSession]);
+                          setCurrentGeneratorSession(newSession);
+                        }}
+                        className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                      >
+                        Create Your First Session
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {(() => {
+                        const sortedSessions: GeneratorConversation[] = [...generatorSessions].sort((a, b) => b.updatedAt - a.updatedAt);
+                        return sortedSessions.map((session) => {
+                          return (
+                          <div
+                            key={session.id}
+                            className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition-colors"
+                          >
+                            <div className="flex justify-between items-start mb-3">
+                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                                <span className="text-xl text-white font-semibold">🎭</span>
+                              </div>
+                              <div className="flex gap-1">
+                                <button
+                                  onClick={() => {
+                                    const newName = prompt("Session name:", session.name || "");
+                                    if (newName !== null) {
+                                      setGeneratorSessions(prev => prev.map(s => s.id === session.id ? { ...s, name: newName } : s));
+                                    }
+                                  }}
+                                  className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                                >
+                                  <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                            <h3 className="text-lg font-medium text-white mb-1 truncate">{session.name || `Session ${generatorSessions.indexOf(session) + 1}`}</h3>
+                            <p className="text-sm text-zinc-400 mb-2">{session.messages.length} messages</p>
+                            <p className="text-xs text-zinc-500 mb-4">
+                              Created: {new Date(session.createdAt).toLocaleDateString()}
+                            </p>
+                            <button
+                              onClick={() => setCurrentGeneratorSession(session)}
+                              className="w-full py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
+                            >
+                              Open Session
+                            </button>
+                          </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="space-y-6">
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-lg font-medium text-white">{currentGeneratorSession.name || `Session ${generatorSessions.indexOf(currentGeneratorSession) + 1}`}</h2>
+                    <button
+                      onClick={() => setCurrentGeneratorSession(null)}
+                      className="flex items-center gap-2 px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors text-sm"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                      </svg>
+                      Back to Sessions
+                    </button>
+                  </div>
+                  <div className="text-center py-16">
+                    <div className="w-16 h-16 rounded-2xl bg-zinc-800 flex items-center justify-center mx-auto mb-4">
+                      <span className="text-2xl text-zinc-600">🎭</span>
+                    </div>
+                    <h3 className="text-xl font-medium text-white mb-2">Session opened</h3>
+                    <p className="text-zinc-500 mb-6 max-w-md mx-auto">
+                      Character generation functionality coming soon.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
@@ -3984,8 +4035,9 @@ if (modelsResult.models.length > 0) {
                             </button>
                             <button
                               onClick={() => {
-                                setGeneratorSessions(prev => prev.filter(s => s.id !== session.id));
-                                if (currentGeneratorSession?.id === session.id) {
+                                const sessionId = session.id;
+                                setGeneratorSessions(prev => prev.filter(s => s.id !== sessionId));
+                                if (currentGeneratorSession && currentGeneratorSession.id === sessionId) {
                                   setCurrentGeneratorSession(null);
                                 }
                               }}
