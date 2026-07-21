@@ -4148,7 +4148,7 @@ if (modelsResult.models.length > 0) {
                               )}
                               <div className="flex flex-col">
                                 <div
-                                  className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-4 py-3 ${
+                                  className={`w-full rounded-2xl px-4 py-3 ${
                                     message.role === "user"
                                       ? "bg-zinc-700 text-white"
                                       : "bg-zinc-800 text-zinc-100 border border-zinc-700/50"
@@ -4248,7 +4248,7 @@ if (modelsResult.models.length > 0) {
                             <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
                               <span className="text-sm text-white font-semibold">🎭</span>
                             </div>
-                            <div className="max-w-[85%] sm:max-w-[80%] rounded-2xl px-4 py-3 bg-zinc-800 text-zinc-100 border border-zinc-700/50">
+                            <div className="w-full rounded-2xl px-4 py-3 bg-zinc-800 text-zinc-100 border border-zinc-700/50">
                               <FormattedText content={generatorStreamingContent} />
                             </div>
                           </div>
