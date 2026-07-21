@@ -738,7 +738,7 @@ export default function Chat() {
             return;
           }
           if (chunk.content !== undefined) {
-            setGeneratorStreamingContent(prev => prev + chunk.content);
+            setGeneratorStreamingContent(chunk.content);
           }
           if (chunk.done) {
             const formattedContent = formatResponse(chunk.content || "");
@@ -4216,7 +4216,7 @@ if (modelsResult.models.length > 0) {
                             }
                             
                             if (chunk.content !== undefined) {
-                              setGeneratorStreamingContent(prev => prev + chunk.content);
+                              setGeneratorStreamingContent(chunk.content);
                             }
                             
                             if (chunk.done) {
