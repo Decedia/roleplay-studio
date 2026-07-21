@@ -31,7 +31,7 @@ import {
   type SummarizationConfig,
   type SummarizationResult,
 } from "@/lib/summarization";
-import { readCharacterFile, buildFullSystemPrompt } from "@/lib/character-import";
+import { readCharacterFile, buildFullSystemPrompt, parseSillyTavernCard } from "@/lib/character-import";
 import { Character as CharacterType, CharacterBook, CharacterBookEntry, ProviderProfile, GeneratorConversation, Instruction, InstructionRole, InstructionPosition, InstructionPreset } from "@/lib/types";
 import { parseRoleplayText, getSegmentClasses, TextSegment } from "@/lib/text-formatter";
 
@@ -43,6 +43,74 @@ import { useChatState } from "@/components/chat/hooks/useChatState";
 import * as ui from "@/components/chat/styles";
 
 // Custom UI components
+
+// Default generator system prompt for SillyTavern character creation
+const DEFAULT_GENERATOR_SYSTEM_PROMPT = `You are a character creator for roleplay. Your task is to help users create detailed, interesting characters for roleplay based on their descriptions.
+
+## Output Format
+When the user asks you to create or generate a character, respond with a brief introduction followed by ONLY a JSON object in a code block:
+\`\`\`json
+{
+  "name": "Character Name",
+  "description": "Detailed character description including personality, appearance, background, and traits. Be creative and detailed.",
+  "first_mes": "A greeting or opening message the character would say when first meeting someone. Should be in character and engaging.",
+  "alternate_greetings": ["Alternative greeting 1 - different tone or context", "Alternative greeting 2 - another variation", "Alternative greeting 3 - yet another option"],
+  "scenario": "The setting or scenario where this character exists",
+  "mes_example": "Example dialogue showing how the character speaks and behaves. Use {{char}} for character name and {{user}} for user.",
+  "creator_notes": "Optional notes about the character for the user",
+  "system_prompt": "Optional system prompt for how the character should behave",
+  "post_history_instructions": "Optional instructions to apply after the conversation history"
+}
+\`\`\`
+
+## Required Fields
+- **name**: Character's name (required)
+- **description**: Character's detailed description (required)
+- **first_mes**: The primary greeting message (required)
+- **alternate_greetings**: An array of 2-4 alternative greetings (recommended)
+
+## Guidelines
+- Generate characters that are interesting, well-rounded, and suitable for roleplay
+- Include flaws and quirks to make them feel real
+- Give them distinct personalities with clear motivations
+- Create engaging first messages that set the tone
+- Consider the character's background and how it shapes their behavior
+- Add unique mannerisms or speech patterns
+- Make the scenario interesting and open-ended
+- If the user provides specific requests, follow them closely
+- Only output the JSON when the user explicitly asks for the character to be created/generated
+- Otherwise, chat normally and ask follow-up questions to refine the character`;
+
+// Extract character JSON from AI response
+const extractCharacterJson = (content: string): { json: Record<string, unknown>; raw: string } | null => {
+  // Try to find JSON in code blocks
+  const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlockMatch) {
+    try {
+      const parsed = JSON.parse(codeBlockMatch[1].trim());
+      if (parsed && typeof parsed === "object" && (parsed as Record<string, unknown>).name) {
+        return { json: parsed as Record<string, unknown>, raw: codeBlockMatch[1].trim() };
+      }
+    } catch {
+      // Not valid JSON, continue searching
+    }
+  }
+  
+  // Try to find JSON object directly in the content
+  const jsonObjectMatch = content.match(/\{[\s\S]*"name"[\s\S]*\}/);
+  if (jsonObjectMatch) {
+    try {
+      const parsed = JSON.parse(jsonObjectMatch[0]);
+      if (parsed && typeof parsed === "object" && (parsed as Record<string, unknown>).name) {
+        return { json: parsed as Record<string, unknown>, raw: jsonObjectMatch[0] };
+      }
+    } catch {
+      // Not valid JSON
+    }
+  }
+  
+  return null;
+};
 
 // Types - using imported Message interface
 export interface Persona {
@@ -602,6 +670,8 @@ export default function Chat() {
   const [generatorInput, setGeneratorInput] = useState("");
   const [isGeneratorLoading, setIsGeneratorLoading] = useState(false);
   const [generatorInstructions, setGeneratorInstructions] = useState<string>("");
+  const [generatorStreamingContent, setGeneratorStreamingContent] = useState<string>("");
+  const [detectedCharacterJson, setDetectedCharacterJson] = useState<Record<string, unknown> | null>(null);
   
   // Reset visible message count when conversation changes
   useEffect(() => {
@@ -3912,7 +3982,7 @@ if (modelsResult.models.length > 0) {
                         className="w-full bg-zinc-800 text-zinc-100 border border-zinc-700 rounded-lg px-3 py-2 text-sm min-h-[80px] resize-y focus:outline-none focus:ring-2 focus:ring-purple-500"
                       />
                     </div>
-                    {currentGeneratorSession.messages.length === 0 ? (
+                    {currentGeneratorSession.messages.length === 0 && !generatorStreamingContent ? (
                       <div className="text-center py-8">
                         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mx-auto mb-3">
                           <span className="text-xl text-white font-semibold">🎭</span>
@@ -3943,20 +4013,138 @@ if (modelsResult.models.length > 0) {
                             </div>
                           </div>
                         ))}
+                        {generatorStreamingContent && (
+                          <div className="flex gap-3 justify-start">
+                            <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                              <span className="text-sm text-white font-semibold">🎭</span>
+                            </div>
+                            <div className="rounded-2xl px-4 py-3 bg-zinc-800 text-zinc-100 border border-zinc-700/50">
+                              <FormattedText content={generatorStreamingContent} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {detectedCharacterJson && (
+                      <div className="mt-4 p-4 bg-green-900/20 border border-green-700/50 rounded-xl">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-sm font-medium text-green-400">Character JSON Detected</h4>
+                          <button
+                            onClick={() => setDetectedCharacterJson(null)}
+                            className="text-xs text-zinc-500 hover:text-zinc-300"
+                          >
+                            Dismiss
+                          </button>
+                        </div>
+                        <p className="text-xs text-zinc-400 mb-3">A character card was detected in the response. You can save it to your characters.</p>
+                        <button
+                          onClick={() => {
+                            const char = parseSillyTavernCard(detectedCharacterJson);
+                            if (char) {
+                              setCharacters(prev => [...prev, char]);
+                              setDeletedItem({ type: 'character', item: char, timestamp: Date.now() });
+                              setShowUndoToast(true);
+                              setTimeout(() => setShowUndoToast(false), 5000);
+                              setDetectedCharacterJson(null);
+                            }
+                          }}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                        >
+                          Save Character
+                        </button>
                       </div>
                     )}
                   </div>
                   <ChatInput
                     value={generatorInput}
                     onChange={setGeneratorInput}
-                    onSubmit={() => {
-                      if (!generatorInput.trim() || !currentGeneratorSession) return;
+                    onSubmit={async () => {
+                      if (!generatorInput.trim() || !currentGeneratorSession || isGeneratorLoading) return;
                       const userMessage = generatorInput.trim();
                       const instructionPrefix = generatorInstructions.trim() ? `[Instructions: ${generatorInstructions.trim()}]\n\n` : "";
+                      
+                      // Add user message
                       const newMessages = [...currentGeneratorSession.messages, { role: "user" as const, content: `${instructionPrefix}${userMessage}` }];
                       setCurrentGeneratorSession({ ...currentGeneratorSession, messages: newMessages, updatedAt: Date.now() });
                       setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: newMessages, updatedAt: Date.now() } : s));
                       setGeneratorInput("");
+                      setGeneratorStreamingContent("");
+                      setDetectedCharacterJson(null);
+                      setIsGeneratorLoading(true);
+                      
+                      try {
+                        // Get provider config
+                        const currentConfig = providerConfigs[activeProvider];
+                        const activeProfile = currentConfig.profiles.find(p => p.id === currentConfig.activeProfileId);
+                        
+                        if (!activeProfile) {
+                          throw new Error("No active provider profile selected. Please configure a provider in settings.");
+                        }
+                        
+                        const profileConfig = {
+                          ...currentConfig,
+                          apiKey: activeProfile?.apiKey || "",
+                          projectId: activeProfile?.projectId || "",
+                          serviceAccountJson: activeProfile?.serviceAccountJson,
+                          vertexMode: activeProfile?.vertexMode,
+                          vertexLocation: activeProfile?.vertexLocation,
+                          selectedModel: globalSettings.modelId || activeProfile?.selectedModel
+                        };
+                        
+                        // Build messages for API - convert generator messages to Message format
+                        const apiMessages: Message[] = [
+                          { role: "system", content: DEFAULT_GENERATOR_SYSTEM_PROMPT },
+                          ...newMessages.map(m => ({ role: m.role as "user" | "assistant", content: m.content }))
+                        ];
+                        
+                        // Use streaming
+                        await streamChatMessage(
+                          apiMessages,
+                          profileConfig,
+                          {
+                            temperature: globalSettings.temperature,
+                            maxTokens: globalSettings.maxTokens,
+                            topP: globalSettings.topP,
+                            topK: globalSettings.topK,
+                            systemPrompt: "",
+                            enableThinking: globalSettings.enableThinking,
+                            thinkingLevel: globalSettings.thinkingLevel,
+                            thinkingBudget: globalSettings.thinkingBudget,
+                          },
+                          (chunk) => {
+                            if (chunk.error) {
+                              setError(chunk.error);
+                              setIsGeneratorLoading(false);
+                              return;
+                            }
+                            
+                            if (chunk.content !== undefined) {
+                              setGeneratorStreamingContent(prev => prev + chunk.content);
+                            }
+                            
+                            if (chunk.done) {
+                              const formattedContent = formatResponse(chunk.content || "");
+                              const finalMessages = [...newMessages, { role: "assistant" as const, content: formattedContent }];
+                              setCurrentGeneratorSession(prev => prev ? { ...prev, messages: finalMessages, updatedAt: Date.now() } : null);
+                              setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: finalMessages, updatedAt: Date.now() } : s));
+                              setGeneratorStreamingContent("");
+                              
+                              // Try to extract character JSON
+                              const extracted = extractCharacterJson(formattedContent);
+                              if (extracted) {
+                                setDetectedCharacterJson(extracted.json);
+                              }
+                              
+                              setIsGeneratorLoading(false);
+                            }
+                          }
+                        );
+                      } catch (err) {
+                        console.error("Generator error:", err);
+                        setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
+                        setIsGeneratorLoading(false);
+                        setGeneratorStreamingContent("");
+                      }
                     }}
                     placeholder="Describe the character you want to create..."
                     disabled={isGeneratorLoading}
