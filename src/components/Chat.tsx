@@ -3328,6 +3328,23 @@ if (modelsResult.models.length > 0) {
                   </svg>
                 </button>
                 
+                {/* Character Generator */}
+                <button
+                  onClick={() => {}}
+                  className="w-full flex items-center gap-4 p-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-[1.02] shadow-lg"
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
+                    <span className="text-3xl">🎭</span>
+                  </div>
+                  <div className="text-left">
+                    <h3 className="text-xl font-bold">Character Generator</h3>
+                    <p className="text-purple-100 text-sm">Create detailed AI characters</p>
+                  </div>
+                  <svg className="w-6 h-6 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+                
               </div>
             </div>
           )}
