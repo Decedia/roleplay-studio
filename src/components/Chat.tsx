@@ -4133,10 +4133,12 @@ if (modelsResult.models.length > 0) {
                       </div>
                       ) : (
                         <div className="space-y-4">
-                          {currentGeneratorSession.messages.map((message, idx) => {
-                            const isLastAssistant = message.role === "assistant" && idx === currentGeneratorSession.messages.length - 1;
-                            const isEditing = editingGeneratorMessageIndex === idx;
-                            return (
+                           {currentGeneratorSession.messages.map((message, idx) => {
+                             const isLastAssistant = message.role === "assistant" && idx === currentGeneratorSession.messages.length - 1;
+                             const isEditing = editingGeneratorMessageIndex === idx;
+                             const lastUserIndex = currentGeneratorSession.messages.map(m => m.role).lastIndexOf("user");
+                             const isLastUserMessage = message.role === "user" && idx === lastUserIndex;
+                             return (
                             <div
                               key={idx}
                               className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
@@ -4227,6 +4229,17 @@ if (modelsResult.models.length > 0) {
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                         </svg>
                                       </button>
+                                      {isLastUserMessage && idx < currentGeneratorSession.messages.length - 1 && (
+                                        <button
+                                          onClick={() => handleGeneratorRetryFromIndex(idx)}
+                                          className="p-1 text-zinc-500 hover:text-purple-400 hover:bg-zinc-800 rounded transition-colors"
+                                          title="Retry from this message"
+                                        >
+                                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                          </svg>
+                                        </button>
+                                      )}
                                       <button
                                         onClick={() => handleGeneratorDeleteMessage(idx)}
                                         className="p-1 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded transition-colors"
