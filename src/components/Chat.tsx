@@ -4169,8 +4169,19 @@ if (modelsResult.models.length > 0) {
                                         onClick={() => handleGeneratorSaveEdit(idx)}
                                         className="px-3 py-1 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                                       >
-                                        Save & {message.role === "user" ? "Regenerate" : "Update"}
+                                        Save & {message.role === "user" ? "Retry" : "Update"}
                                       </button>
+                                      {message.role === "assistant" && (
+                                        <button
+                                          onClick={() => {
+                                            handleGeneratorSaveEdit(idx);
+                                            handleGeneratorRetry();
+                                          }}
+                                          className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                        >
+                                          Save & Retry
+                                        </button>
+                                      )}
                                     </div>
                                   </div>
                                 ) : (
@@ -4647,8 +4658,19 @@ if (modelsResult.models.length > 0) {
                                     onClick={() => handleSaveEdit(originalIndex)}
                                     className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                                   >
-                                    Save & {message.role === "user" ? "Regenerate" : "Update"}
+                                    Save & {message.role === "user" ? "Retry" : "Update"}
                                   </button>
+                                  {message.role === "assistant" && (
+                                    <button
+                                      onClick={() => {
+                                        handleSaveEdit(originalIndex);
+                                        handleRetry();
+                                      }}
+                                      className="px-3 py-1 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                                    >
+                                      Save & Retry
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             ) : (
