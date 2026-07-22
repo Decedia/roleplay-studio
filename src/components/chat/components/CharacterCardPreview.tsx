@@ -28,7 +28,6 @@ export interface CharacterCardData {
 interface CharacterCardPreviewProps {
   data: CharacterCardData;
   onSave?: (data: CharacterCardData) => void;
-  onDismiss?: () => void;
   onCopyJson?: (data: CharacterCardData) => void;
 }
 
@@ -50,7 +49,7 @@ function getAlternateGreetings(data: CharacterCardData): string[] {
   return arr.filter((g): g is string => typeof g === "string" && g.trim().length > 0);
 }
 
-export function CharacterCardPreview({ data, onSave, onDismiss, onCopyJson }: CharacterCardPreviewProps) {
+export function CharacterCardPreview({ data, onSave, onCopyJson }: CharacterCardPreviewProps) {
   const [expanded, setExpanded] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -202,14 +201,6 @@ export function CharacterCardPreview({ data, onSave, onDismiss, onCopyJson }: Ch
           >
             <Save className="w-4 h-4" />
             Save Character
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => onDismiss?.()}
-            className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 ml-auto"
-          >
-            <X className="w-4 h-4" />
-            Dismiss
           </Button>
         </div>
       </div>
