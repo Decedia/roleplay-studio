@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Copy, Save, X, ChevronDown, ChevronUp, MessageSquare, BookOpen, Tags, FileText, Sparkles } from "lucide-react";
+import { Save, X, ChevronDown, ChevronUp, MessageSquare, BookOpen, Tags, FileText, Sparkles } from "lucide-react";
 
 export interface CharacterCardData {
   name?: string;
@@ -202,14 +202,6 @@ export function CharacterCardPreview({ data, onSave, onDismiss, onCopyJson }: Ch
           >
             <Save className="w-4 h-4" />
             Save Character
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => onCopyJson?.(data)}
-            className="flex items-center gap-2 border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white"
-          >
-            <Copy className="w-4 h-4" />
-            Copy JSON
           </Button>
           <Button
             variant="ghost"

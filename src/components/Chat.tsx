@@ -31,12 +31,12 @@ import {
   type SummarizationConfig,
   type SummarizationResult,
 } from "@/lib/summarization";
-import { readCharacterFile, buildFullSystemPrompt } from "@/lib/character-import";
+import { readCharacterFile, buildFullSystemPrompt, parseSillyTavernCard } from "@/lib/character-import";
 import { Character as CharacterType, CharacterBook, CharacterBookEntry, ProviderProfile, GeneratorConversation, Instruction, InstructionRole, InstructionPosition, InstructionPreset } from "@/lib/types";
 import { parseRoleplayText, getSegmentClasses, TextSegment } from "@/lib/text-formatter";
 
 // Import from modular chat structure
-import { ThinkingSection, ThinkingPanel, CollapsibleTagSection, FormattedText, SettingsModal, ChatInput, ChatMessage } from "@/components/chat/components";
+import { ThinkingSection, ThinkingPanel, CollapsibleTagSection, FormattedText, SettingsModal, ChatInput, ChatMessage, CharacterCardPreview } from "@/components/chat/components";
 import { useChatState } from "@/components/chat/hooks/useChatState";
 
 // Import UI styles
@@ -80,6 +80,57 @@ When the user asks you to create or generate a character, respond with a brief i
 - If the user provides specific requests, follow them closely
 - Only output the JSON when the user explicitly asks for the character to be created/generated
 - Otherwise, chat normally and ask follow-up questions to refine the character`;
+
+// Extract character JSON from AI response
+const extractCharacterJson = (content: string): { json: Record<string, unknown>; raw: string } | null => {
+  // Try to find JSON in code blocks - prefer the last code block which typically contains the final card
+  const codeBlockMatches = [...content.matchAll(/```(?:json)?\s*([\s\S]*?)```/g)].reverse();
+  for (const match of codeBlockMatches) {
+    try {
+      const parsed = JSON.parse(match[1].trim());
+      if (parsed && typeof parsed === "object" && (parsed as Record<string, unknown>).name) {
+        return { json: parsed as Record<string, unknown>, raw: match[1].trim() };
+      }
+    } catch {
+      // continue searching
+    }
+  }
+
+  // Try to find JSON object directly in the content - start from the last { to avoid matching earlier text
+  const lastBraceIndex = content.lastIndexOf("{");
+  if (lastBraceIndex !== -1) {
+    const jsonCandidate = content.slice(lastBraceIndex);
+    try {
+      const parsed = JSON.parse(jsonCandidate);
+      if (parsed && typeof parsed === "object" && (parsed as Record<string, unknown>).name) {
+        return { json: parsed as Record<string, unknown>, raw: jsonCandidate };
+      }
+    } catch {
+      // Try progressively trimming from the end to handle trailing text
+      for (let i = jsonCandidate.length - 1; i > 20; i--) {
+        try {
+          const trimmed = jsonCandidate.slice(0, i);
+          const parsed = JSON.parse(trimmed);
+          if (parsed && typeof parsed === "object" && (parsed as Record<string, unknown>).name) {
+            return { json: parsed as Record<string, unknown>, raw: trimmed };
+          }
+        } catch {
+          // continue
+        }
+      }
+    }
+  }
+
+  return null;
+};
+
+// Normalize character card data to a consistent flat format
+const normalizeCharacterCard = (data: Record<string, unknown>): Record<string, unknown> => {
+  if (data.spec === "chara_card_v2" && data.data && typeof data.data === "object") {
+    return data.data as Record<string, unknown>;
+  }
+  return data;
+};
 
 // Types - using imported Message interface
 export interface Persona {
@@ -640,6 +691,7 @@ export default function Chat() {
   const [isGeneratorLoading, setIsGeneratorLoading] = useState(false);
   const [generatorInstructions, setGeneratorInstructions] = useState<string>("");
   const [generatorStreamingContent, setGeneratorStreamingContent] = useState<string>("");
+  const [detectedCharacterJson, setDetectedCharacterJson] = useState<Record<string, unknown> | null>(null);
   const [editingGeneratorMessageIndex, setEditingGeneratorMessageIndex] = useState<number | null>(null);
   const [editingGeneratorMessageContent, setEditingGeneratorMessageContent] = useState<string>("");
 
@@ -4085,6 +4137,10 @@ if (modelsResult.models.length > 0) {
                              const isEditing = editingGeneratorMessageIndex === idx;
                              const lastUserIndex = currentGeneratorSession.messages.map(m => m.role).lastIndexOf("user");
                              const isLastUserMessage = message.role === "user" && idx === lastUserIndex;
+
+                             const extractedJson = isLastAssistant ? extractCharacterJson(message.content) : null;
+                             const displayContent = extractedJson ? message.content.replace(extractedJson.raw, "").trim() : message.content;
+
                              return (
                             <div
                               key={idx}
@@ -4137,7 +4193,16 @@ if (modelsResult.models.length > 0) {
                                     </div>
                                  ) : (
                                    <>
-                                     <FormattedText content={message.content} />
+                                     {isLastAssistant && extractedJson ? (
+                                       <div className="flex items-center gap-2 text-sm text-green-400 bg-green-900/20 border border-green-700/40 rounded-lg px-3 py-2">
+                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                         </svg>
+                                         <span>Character card generated</span>
+                                       </div>
+                                     ) : (
+                                       <FormattedText content={displayContent} />
+                                     )}
                                      {isLastAssistant && !isGeneratorLoading && (
                                         <div className="mt-2 flex justify-end">
                                           <button
@@ -4189,11 +4254,27 @@ if (modelsResult.models.length > 0) {
                                       </button>
                                     </div>
                                   </div>
-                                )}
-                              </div>
-                            </div>
-                            );
-                          })}
+                                 )}
+                               </div>
+                               {isLastAssistant && extractedJson && (
+                                 <div className="mt-3">
+                                   <CharacterCardPreview
+                                     data={normalizeCharacterCard(extractedJson.json) as any}
+                                     onSave={(cardData) => {
+                                       const char = parseSillyTavernCard(cardData as unknown as Record<string, unknown>);
+                                       if (char) {
+                                         setCharacters(prev => [...prev, char]);
+                                         setDeletedItem({ type: 'character', item: char, timestamp: Date.now() });
+                                         setShowUndoToast(true);
+                                         setTimeout(() => setShowUndoToast(false), 5000);
+                                       }
+                                     }}
+                                   />
+                                 </div>
+                               )}
+                             </div>
+                           );
+                         })}
                         {generatorStreamingContent && (
                           <div className="flex gap-3 justify-start">
                             <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
