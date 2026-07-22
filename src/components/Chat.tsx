@@ -31,12 +31,12 @@ import {
   type SummarizationConfig,
   type SummarizationResult,
 } from "@/lib/summarization";
-import { readCharacterFile, buildFullSystemPrompt, parseSillyTavernCard } from "@/lib/character-import";
+import { readCharacterFile, buildFullSystemPrompt } from "@/lib/character-import";
 import { Character as CharacterType, CharacterBook, CharacterBookEntry, ProviderProfile, GeneratorConversation, Instruction, InstructionRole, InstructionPosition, InstructionPreset } from "@/lib/types";
 import { parseRoleplayText, getSegmentClasses, TextSegment } from "@/lib/text-formatter";
 
 // Import from modular chat structure
-import { ThinkingSection, ThinkingPanel, CollapsibleTagSection, FormattedText, SettingsModal, ChatInput, ChatMessage, CharacterCardPreview } from "@/components/chat/components";
+import { ThinkingSection, ThinkingPanel, CollapsibleTagSection, FormattedText, SettingsModal, ChatInput, ChatMessage } from "@/components/chat/components";
 import { useChatState } from "@/components/chat/hooks/useChatState";
 
 // Import UI styles
@@ -80,48 +80,6 @@ When the user asks you to create or generate a character, respond with a brief i
 - If the user provides specific requests, follow them closely
 - Only output the JSON when the user explicitly asks for the character to be created/generated
 - Otherwise, chat normally and ask follow-up questions to refine the character`;
-
-// Extract character JSON from AI response
-const extractCharacterJson = (content: string): { json: Record<string, unknown>; raw: string } | null => {
-  // Try to find JSON in code blocks
-  const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (codeBlockMatch) {
-    try {
-      const parsed = JSON.parse(codeBlockMatch[1].trim());
-      if (parsed && typeof parsed === "object" && (parsed as Record<string, unknown>).name) {
-        return { json: parsed as Record<string, unknown>, raw: codeBlockMatch[1].trim() };
-      }
-    } catch {
-      // Not valid JSON, continue searching
-    }
-  }
-  
-  // Try to find JSON object directly in the content
-  const jsonObjectMatch = content.match(/\{[\s\S]*"name"[\s\S]*\}/);
-  if (jsonObjectMatch) {
-    try {
-      const parsed = JSON.parse(jsonObjectMatch[0]);
-      if (parsed && typeof parsed === "object" && (parsed as Record<string, unknown>).name) {
-        return { json: parsed as Record<string, unknown>, raw: jsonObjectMatch[0] };
-      }
-    } catch {
-      // Not valid JSON
-    }
-  }
-  
-  return null;
-};
-
-// Normalize character card data to a consistent flat format
-const normalizeCharacterCard = (data: Record<string, unknown>): Record<string, unknown> => {
-  // Handle V2 format (spec: "chara_card_v2" with data wrapper)
-  if (data.spec === "chara_card_v2" && data.data && typeof data.data === "object") {
-    return data.data as Record<string, unknown>;
-  }
-  
-  // Already flat V1 format
-  return data;
-};
 
 // Types - using imported Message interface
 export interface Persona {
@@ -682,8 +640,6 @@ export default function Chat() {
   const [isGeneratorLoading, setIsGeneratorLoading] = useState(false);
   const [generatorInstructions, setGeneratorInstructions] = useState<string>("");
   const [generatorStreamingContent, setGeneratorStreamingContent] = useState<string>("");
-  const [detectedCharacterJson, setDetectedCharacterJson] = useState<Record<string, unknown> | null>(null);
-  const [generatorCardDismissed, setGeneratorCardDismissed] = useState(false);
   const [editingGeneratorMessageIndex, setEditingGeneratorMessageIndex] = useState<number | null>(null);
   const [editingGeneratorMessageContent, setEditingGeneratorMessageContent] = useState<string>("");
 
@@ -693,8 +649,6 @@ export default function Chat() {
     const updatedMessages = currentGeneratorSession.messages.filter((_, i) => i !== index);
     setCurrentGeneratorSession({ ...currentGeneratorSession, messages: updatedMessages, updatedAt: Date.now() });
     setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: updatedMessages, updatedAt: Date.now() } : s));
-    setDetectedCharacterJson(null);
-    setGeneratorCardDismissed(false);
   };
 
   const handleGeneratorStartEdit = (index: number) => {
@@ -722,7 +676,6 @@ export default function Chat() {
       setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: messagesAfterEdit, updatedAt: Date.now() } : s));
       setEditingGeneratorMessageIndex(null);
       setEditingGeneratorMessageContent("");
-      setDetectedCharacterJson(null);
       await handleGeneratorRetryFromIndex(index);
       return;
     }
@@ -731,8 +684,6 @@ export default function Chat() {
     setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: updatedMessages, updatedAt: Date.now() } : s));
     setEditingGeneratorMessageIndex(null);
     setEditingGeneratorMessageContent("");
-    setDetectedCharacterJson(null);
-    setGeneratorCardDismissed(false);
   };
 
   const handleGeneratorRetryFromIndex = async (userMessageIndex: number) => {
@@ -741,8 +692,6 @@ export default function Chat() {
     const retryMessages = messages.slice(0, userMessageIndex + 1);
     setIsGeneratorLoading(true);
     setGeneratorStreamingContent("");
-    setDetectedCharacterJson(null);
-    setGeneratorCardDismissed(false);
 
     try {
       const currentConfig = providerConfigs[activeProvider];
@@ -792,8 +741,6 @@ export default function Chat() {
             setCurrentGeneratorSession(prev => prev ? { ...prev, messages: finalMessages, updatedAt: Date.now() } : null);
             setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: finalMessages, updatedAt: Date.now() } : s));
             setGeneratorStreamingContent("");
-            const extracted = extractCharacterJson(formattedContent);
-            if (extracted) setDetectedCharacterJson(normalizeCharacterCard(extracted.json));
             setIsGeneratorLoading(false);
           }
         }
@@ -4188,19 +4135,10 @@ if (modelsResult.models.length > 0) {
                                         )}
                                       </div>
                                     </div>
-                                  ) : (
-                                    <>
-                                      {isLastAssistant && detectedCharacterJson ? (
-                                        <div className="flex items-center gap-2 text-sm text-green-400 bg-green-900/20 border border-green-700/40 rounded-lg px-3 py-2">
-                                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                          </svg>
-                                          <span>Character card generated</span>
-                                        </div>
-                                      ) : (
-                                        <FormattedText content={message.content} />
-                                      )}
-                                      {isLastAssistant && !isGeneratorLoading && (
+                                 ) : (
+                                   <>
+                                     <FormattedText content={message.content} />
+                                     {isLastAssistant && !isGeneratorLoading && (
                                         <div className="mt-2 flex justify-end">
                                           <button
                                             onClick={handleGeneratorRetry}
@@ -4267,35 +4205,9 @@ if (modelsResult.models.length > 0) {
                           </div>
                         )}
                       </div>
-                    )}
-                     {detectedCharacterJson && !generatorCardDismissed && (
-                       <div className="mt-4">
-                         <CharacterCardPreview
-                           data={detectedCharacterJson as any}
-                           onSave={(cardData) => {
-                             const char = parseSillyTavernCard(cardData as unknown as Record<string, unknown>);
-                             if (char) {
-                               setCharacters(prev => [...prev, char]);
-                               setDeletedItem({ type: 'character', item: char, timestamp: Date.now() });
-                               setShowUndoToast(true);
-                               setTimeout(() => setShowUndoToast(false), 5000);
-                               setDetectedCharacterJson(null);
-                               setGeneratorCardDismissed(true);
-                             }
-                           }}
-                           onCopyJson={(cardData) => {
-                             const json = JSON.stringify(cardData, null, 2);
-                             navigator.clipboard.writeText(json).catch(() => {});
-                           }}
-                           onDismiss={() => {
-                             setDetectedCharacterJson(null);
-                             setGeneratorCardDismissed(true);
-                           }}
-                         />
-                       </div>
-                     )}
-                  </div>
-                   <ChatInput
+                      )}
+                   </div>
+                    <ChatInput
                      value={generatorInput}
                      onChange={setGeneratorInput}
                      onSubmit={async () => {
@@ -4317,12 +4229,10 @@ if (modelsResult.models.length > 0) {
                        // Add user message
                        const newMessages = [...currentGeneratorSession.messages, { role: "user" as const, content: `${instructionPrefix}${userMessage}` }];
                        setCurrentGeneratorSession({ ...currentGeneratorSession, messages: newMessages, updatedAt: Date.now() });
-                       setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: newMessages, updatedAt: Date.now() } : s));
-                       setGeneratorInput("");
-                       setGeneratorStreamingContent("");
-                       setDetectedCharacterJson(null);
-                       setGeneratorCardDismissed(false);
-                       setIsGeneratorLoading(true);
+                        setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: newMessages, updatedAt: Date.now() } : s));
+                        setGeneratorInput("");
+                        setGeneratorStreamingContent("");
+                        setIsGeneratorLoading(true);
                       
                       try {
                         // Get provider config
@@ -4381,15 +4291,7 @@ if (modelsResult.models.length > 0) {
                               setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: finalMessages, updatedAt: Date.now() } : s));
                               setGeneratorStreamingContent("");
                               
-                               // Try to extract character JSON
-                               const extracted = extractCharacterJson(formattedContent);
-                               if (extracted) {
-                                 const normalized = normalizeCharacterCard(extracted.json);
-                                 setDetectedCharacterJson(normalized);
-                                 setGeneratorCardDismissed(false);
-                               }
-                              
-                              setIsGeneratorLoading(false);
+                               setIsGeneratorLoading(false);
                             }
                           }
                         );
