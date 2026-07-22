@@ -83,20 +83,18 @@ When the user asks you to create or generate a character, respond with a brief i
 
 // Extract character JSON from AI response
 const extractCharacterJson = (content: string): { json: Record<string, unknown>; raw: string } | null => {
-  // Try to find JSON in code blocks - prefer the last code block which typically contains the final card
-  const codeBlockMatches = [...content.matchAll(/```(?:json)?\s*([\s\S]*?)```/g)].reverse();
+  const codeBlockMatches = [...content.matchAll(/```(\w*)\n?([\s\S]*?)```/g)].reverse();
   for (const match of codeBlockMatches) {
     try {
-      const parsed = JSON.parse(match[1].trim());
+      const parsed = JSON.parse(match[2].trim());
       if (parsed && typeof parsed === "object" && (parsed as Record<string, unknown>).name) {
-        return { json: parsed as Record<string, unknown>, raw: match[1].trim() };
+        return { json: parsed as Record<string, unknown>, raw: match[2].trim() };
       }
     } catch {
       // continue searching
     }
   }
 
-  // Try to find JSON object directly in the content - start from the last { to avoid matching earlier text
   const lastBraceIndex = content.lastIndexOf("{");
   if (lastBraceIndex !== -1) {
     const jsonCandidate = content.slice(lastBraceIndex);
@@ -106,7 +104,6 @@ const extractCharacterJson = (content: string): { json: Record<string, unknown>;
         return { json: parsed as Record<string, unknown>, raw: jsonCandidate };
       }
     } catch {
-      // Try progressively trimming from the end to handle trailing text
       for (let i = jsonCandidate.length - 1; i > 20; i--) {
         try {
           const trimmed = jsonCandidate.slice(0, i);
