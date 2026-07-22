@@ -4305,32 +4305,41 @@ if (modelsResult.models.length > 0) {
                        </div>
                       )}
                     </div>
-                    <ChatInput
-                     value={generatorInput}
-                     onChange={setGeneratorInput}
-                     onSubmit={async () => {
-                       if (!currentGeneratorSession || isGeneratorLoading) return;
+                     <ChatInput
+                      value={generatorInput}
+                      onChange={setGeneratorInput}
+                      onSubmit={async () => {
+                        if (!currentGeneratorSession || isGeneratorLoading) return;
 
-                       const messages = currentGeneratorSession.messages;
-                       const lastMessage = messages[messages.length - 1];
-                       const isEmpty = !generatorInput.trim();
+                        const messages = currentGeneratorSession.messages;
+                        const lastMessage = messages[messages.length - 1];
+                        const isEmpty = !generatorInput.trim();
 
-                       if (isEmpty) {
-                         if (!lastMessage || lastMessage.role !== "assistant") return;
-                         await handleGeneratorRetry();
-                         return;
-                       }
+                        if (isEmpty) {
+                          if (!lastMessage) return;
+                          if (lastMessage.role === "assistant") {
+                            await handleGeneratorRetry();
+                            return;
+                          }
+                          if (lastMessage.role === "user") {
+                            const lastUserIndex = messages.map(m => m.role).lastIndexOf("user");
+                            if (lastUserIndex >= 0) {
+                              await handleGeneratorRetryFromIndex(lastUserIndex);
+                            }
+                            return;
+                          }
+                        }
 
-                       const userMessage = generatorInput.trim();
-                       const instructionPrefix = generatorInstructions.trim() ? `[Instructions: ${generatorInstructions.trim()}]\n\n` : "";
-                       
-                       // Add user message
-                       const newMessages = [...currentGeneratorSession.messages, { role: "user" as const, content: `${instructionPrefix}${userMessage}` }];
-                       setCurrentGeneratorSession({ ...currentGeneratorSession, messages: newMessages, updatedAt: Date.now() });
-                        setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: newMessages, updatedAt: Date.now() } : s));
-                        setGeneratorInput("");
-                        setGeneratorStreamingContent("");
-                        setIsGeneratorLoading(true);
+                        const userMessage = generatorInput.trim();
+                        const instructionPrefix = generatorInstructions.trim() ? `[Instructions: ${generatorInstructions.trim()}]\n\n` : "";
+                        
+                        // Add user message
+                        const newMessages = [...currentGeneratorSession.messages, { role: "user" as const, content: `${instructionPrefix}${userMessage}` }];
+                        setCurrentGeneratorSession({ ...currentGeneratorSession, messages: newMessages, updatedAt: Date.now() });
+                         setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: newMessages, updatedAt: Date.now() } : s));
+                         setGeneratorInput("");
+                         setGeneratorStreamingContent("");
+                         setIsGeneratorLoading(true);
                       
                       try {
                         // Get provider config
