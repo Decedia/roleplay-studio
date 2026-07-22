@@ -4133,13 +4133,13 @@ if (modelsResult.models.length > 0) {
                       ) : (
                         <div className="space-y-4">
                            {currentGeneratorSession.messages.map((message, idx) => {
-                             const isLastAssistant = message.role === "assistant" && idx === currentGeneratorSession.messages.length - 1;
-                             const isEditing = editingGeneratorMessageIndex === idx;
-                             const lastUserIndex = currentGeneratorSession.messages.map(m => m.role).lastIndexOf("user");
-                             const isLastUserMessage = message.role === "user" && idx === lastUserIndex;
+                              const isLastAssistant = message.role === "assistant" && idx === currentGeneratorSession.messages.length - 1;
+                              const isEditing = editingGeneratorMessageIndex === idx;
+                              const lastUserIndex = currentGeneratorSession.messages.map(m => m.role).lastIndexOf("user");
+                              const isLastUserMessage = message.role === "user" && idx === lastUserIndex;
 
-                             const extractedJson = isLastAssistant ? extractCharacterJson(message.content) : null;
-                             const displayContent = extractedJson ? message.content.replace(extractedJson.raw, "").trim() : message.content;
+                              const extractedJson = message.role === "assistant" ? extractCharacterJson(message.content) : null;
+                              const displayContent = extractedJson ? message.content.replace(extractedJson.raw, "").trim() : message.content;
 
                              return (
                             <div
