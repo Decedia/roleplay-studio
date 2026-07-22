@@ -4231,9 +4231,9 @@ if (modelsResult.models.length > 0) {
                                     </>
                                   )}
                                 </div>
-                                {!isEditing && (
-                                  <div className="flex justify-center mt-1">
-                                    <div className="flex gap-1">
+                                 {!isEditing && (
+                                   <div className="flex justify-start mt-1">
+                                     <div className="flex gap-1">
                                       <button
                                         onClick={() => handleGeneratorStartEdit(idx)}
                                         className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors"
