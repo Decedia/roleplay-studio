@@ -767,6 +767,43 @@ export function SettingsModal({
                     </>
                   )}
 
+                  {/* Cohere */}
+                  {editingProvider === 'cohere' && providerConfigs["cohere"]?.activeProfileId && (
+                    <>
+                      <div>
+                        <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                        <input
+                          type="password"
+                          value={getActiveProfile("cohere")?.apiKey || ""}
+                          onChange={(e) => {
+                            const profileId = providerConfigs["cohere"].activeProfileId;
+                            if (!profileId) return;
+                            setProviderConfigs(prev => ({
+                              ...prev,
+                              "cohere": {
+                                ...prev["cohere"],
+                                profiles: prev["cohere"].profiles.map(p =>
+                                  p.id === profileId ? { ...p, apiKey: e.target.value } : p
+                                )
+                              }
+                            }));
+                          }}
+                          placeholder="Enter your Cohere API key"
+                          className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleConnectProvider("cohere")}
+                          className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                        >
+                          Connect
+                        </button>
+                      </div>
+                    </>
+                  )}
+
                   {/* KoboldAI Horde */}
                   {editingProvider === 'kobold-horde' && (
                     <>

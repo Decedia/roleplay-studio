@@ -203,6 +203,7 @@ export const useChatState = () => {
     "groq": false,
     "open-router": false,
     "kobold-horde": false,
+    "cohere": false,
     "ollama": false,
   });
   
@@ -215,6 +216,7 @@ export const useChatState = () => {
     "groq": { status: "disconnected" },
     "open-router": { status: "disconnected" },
     "kobold-horde": { status: "disconnected" },
+    "cohere": { status: "disconnected" },
     "ollama": { status: "disconnected" },
   });
   
