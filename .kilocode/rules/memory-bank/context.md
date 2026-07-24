@@ -7,6 +7,14 @@
 Currently modularizing `src/components/Chat.tsx` (11,200 lines) into smaller files under `src/components/chat/`. Completed Steps 1-3 of the module plan. Build compiles successfully.
 
 ## Recently Completed
+- [x] **Expanded macro system with MacroContext**
+  - Added `MacroContext` type in `src/components/chat/utils/macroUtils.ts` with all available fields
+  - Added 14 new macros: `{{user_description}}`, `{{char_description}}`, `{{scenario}}`, `{{first_message}}`, `{{mes_example}}`, `{{creator_notes}}`, `{{tags}}`, `{{model}}`, `{{max_tokens}}`, `{{temperature}}`, `{{context_window}}`, `{{provider}}`, `{{datetime}}`, `{{date}}`, `{{time}}`, `{{message_count}}`
+  - Updated `Chat.tsx` `replaceMacros` function to build full `MacroContext` from closure state variables (selectedPersona, selectedCharacter, globalSettings, activeProvider, etc.)
+  - Centralized macro replacement in `macroUtils.ts`, updated `character-import.ts` and `lib/macros.ts` to use `replaceMacrosSimple`
+  - UI hint updated to list all available placeholders
+  - Typecheck and lint pass
+
 - [x] **Completely removed character generator, instructions generator, and VN generator**
   - Removed all generator/VN types from `src/lib/types.ts` (`GeneratorConversation`, `GlobalInstructions.generatorInstructions`, `GlobalInstructions.vnInstructions`, `ViewType` generator/vn values)
   - Removed generator constants from `src/lib/constants.ts` (`DEFAULT_GENERATOR_INSTRUCTIONS`, `DEFAULT_VN_INSTRUCTIONS`)
@@ -624,6 +632,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 | 2026-02-16 | Moved Clear/Import buttons above description in character generator preview                                                                                                                                                                                                                                                                           |
 | 2026-02-16 | Added Brainstorm tab - AI-assisted roleplay instruction brainstorming with apply-to-global-instructions buttons                                                                                                                                                                                                                                       |
 | 2026-02-16 | Added {{user}} macro replacement - automatically replaces {{user}} with current persona name in conversations                                                                                                                                                                                                                                         |
+| 2026-07-24 | Expanded macro system with MacroContext - added {{char_description}}, {{scenario}}, {{first_message}}, {{mes_example}}, {{creator_notes}}, {{tags}}, {{model}}, {{max_tokens}}, {{temperature}}, {{context_window}}, {{provider}}, {{datetime}}, {{date}}, {{time}}, {{message_count}} macros. Centralized replacement in macroUtils.ts and updated Chat.tsx, character-import.ts, and macros.ts |
 | 2026-02-16 | Added AI-powered character generator tab - create characters from text descriptions with one-click import                                                                                                                                                                                                                                             |
 | 2026-02-16 | Added NVIDIA NIM thinking/reasoning support - DeepSeek R1 model with reasoning_content parsing for both streaming and non-streaming responses                                                                                                                                                                                                         |
 | 2026-02-16 | Added Max Context Tokens slider - controls conversation history limit sent to AI, auto-sets to model's context window on selection                                                                                                                                                                                                                    |

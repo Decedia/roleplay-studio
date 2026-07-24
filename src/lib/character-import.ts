@@ -2,6 +2,7 @@
 // Only extracts: name, description, firstMessage, scenario
 
 import { Character, Message, GlobalInstructions, CharacterBook } from "./types";
+import { replaceMacrosSimple } from "@/components/chat/utils/macroUtils";
 
 // Generate a unique ID
 export const generateId = (): string => {
@@ -167,9 +168,7 @@ export const buildCharacterSystemPrompt = (
   
   // Example messages (dialogue examples)
   if (character.mesExample) {
-    const exampleText = character.mesExample
-      .replace(/\{\{char\}\}/gi, character.name)
-      .replace(/\{\{user\}\}/gi, personaName);
+    const exampleText = replaceMacrosSimple(character.mesExample, personaName, character.name);
     contextSections.push(`[Example Dialogue]\n${exampleText}`);
   }
   
@@ -209,12 +208,7 @@ const scanForLorebookEntries = (
   const messagesToScan = messages.slice(-scanDepth);
   
   // Combine message content for scanning
-  const recentText = messagesToScan
-    .map(m => m.content)
-    .join(" ")
-    .replace(/\{\{char\}\}/gi, characterName)
-    .replace(/\{\{user\}\}/gi, personaName)
-    .toLowerCase();
+  const recentText = replaceMacrosSimple(messagesToScan.map(m => m.content).join(" "), personaName, characterName).toLowerCase();
   
   const matchedContents: string[] = [];
   
@@ -223,9 +217,7 @@ const scanForLorebookEntries = (
     
     // Constant entries are always included
     if (entry.constant) {
-      const content = entry.content
-        .replace(/\{\{char\}\}/gi, characterName)
-        .replace(/\{\{user\}\}/gi, personaName);
+      const content = replaceMacrosSimple(entry.content, personaName, characterName);
       matchedContents.push(content);
       continue;
     }
@@ -262,9 +254,7 @@ const scanForLorebookEntries = (
     }
     
     if (primaryMatch) {
-      const content = entry.content
-        .replace(/\{\{char\}\}/gi, characterName)
-        .replace(/\{\{user\}\}/gi, personaName);
+      const content = replaceMacrosSimple(entry.content, personaName, characterName);
       matchedContents.push(content);
     }
   }
@@ -355,9 +345,7 @@ export const buildFullSystemPrompt = (
   
   // Example messages (dialogue examples)
   if (character.mesExample) {
-    const exampleText = character.mesExample
-      .replace(/\{\{char\}\}/gi, character.name)
-      .replace(/\{\{user\}\}/gi, personaName);
+    const exampleText = replaceMacrosSimple(character.mesExample, personaName, character.name);
     contextSections.push(`[Example Dialogue]\n${exampleText}`);
   }
   

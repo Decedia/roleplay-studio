@@ -34,6 +34,7 @@ import {
 import { readCharacterFile, buildFullSystemPrompt, parseSillyTavernCard } from "@/lib/character-import";
 import { Character as CharacterType, CharacterBook, CharacterBookEntry, ProviderProfile, GeneratorConversation, Instruction, InstructionRole, InstructionPosition, InstructionPreset } from "@/lib/types";
 import { parseRoleplayText, getSegmentClasses, TextSegment } from "@/lib/text-formatter";
+import { replaceMacros as replaceMacrosWithContext, type MacroContext } from "@/components/chat/utils/macroUtils";
 
 // Import from modular chat structure
 import { ThinkingSection, ThinkingPanel, CollapsibleTagSection, FormattedText, SettingsModal, ChatInput, ChatMessage, CharacterCardPreview } from "@/components/chat/components";
@@ -56,7 +57,7 @@ When the user asks you to create or generate a character, respond with a brief i
   "first_mes": "A greeting or opening message the character would say when first meeting someone. Should be in character and engaging.",
   "alternate_greetings": ["Alternative greeting 1 - different tone or context", "Alternative greeting 2 - another variation", "Alternative greeting 3 - yet another option"],
   "scenario": "The setting or scenario where this character exists",
-  "mes_example": "Example dialogue showing how the character speaks and behaves. Use {{char}} for character name and {{user}} for user.",
+  "mes_example": "Example dialogue showing how the character speaks and behaves. Use {{char}} for character name, {{user}} for user, {{scenario}} for setting, {{first_message}} for greeting, {{date}} and {{time}} for timestamps.",
   "creator_notes": "Optional notes about the character for the user",
   "system_prompt": "Optional system prompt for how the character should behave",
   "post_history_instructions": "Optional instructions to apply after the conversation history"
@@ -502,13 +503,6 @@ function formatResponse(content: string): string {
   return formatted;
 }
 
-// Macro replacement function - replaces {{user}} with persona name and {{char}} with character name
-function replaceMacros(content: string, personaName: string, characterName: string): string {
-  return content
-    .replace(/\{\{user\}\}/gi, personaName)
-    .replace(/\{\{char\}\}/gi, characterName);
-}
-
 // Helper function to get thought signature for Gemini models
 function getThoughtSignature(modelId: string, provider: LLMProviderType): { signature: string; modelName: string } | null {
   if (provider !== "google-ai-studio" && provider !== "google-vertex") {
@@ -810,6 +804,36 @@ export default function Chat() {
     if (lastUserIndex === -1) return;
     await handleGeneratorRetryFromIndex(lastUserIndex);
   };
+
+  function replaceMacros(content: string, personaName?: string, characterName?: string): string {
+    const providerName = AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || "";
+    const models = providerModels[activeProvider] || [];
+    const modelId = globalSettings.modelId;
+    const model = modelId
+      ? models.find(m => m.id === modelId)?.name || modelId
+      : "";
+
+    const ctx: MacroContext = {
+      personaName: personaName || selectedPersona?.name || "",
+      characterName: characterName || selectedCharacter?.name || "",
+      personaDescription: selectedPersona?.description,
+      characterDescription: selectedCharacter?.description,
+      scenario: selectedCharacter?.scenario,
+      firstMessage: selectedCharacter?.firstMessage,
+      mesExample: selectedCharacter?.mesExample,
+      creatorNotes: selectedCharacter?.creatorNotes,
+      tags: selectedCharacter?.tags,
+      model,
+      maxTokens: globalSettings.maxTokens,
+      temperature: globalSettings.temperature,
+      contextWindow: globalSettings.maxContextTokens,
+      provider: providerName,
+      currentDateTime: new Date(),
+      messageCount: currentConversation?.messages.length,
+    };
+
+    return replaceMacrosWithContext(content, ctx);
+  }
 
   // Reset visible message count when conversation changes
   useEffect(() => {
@@ -5778,7 +5802,7 @@ if (modelsResult.models.length > 0) {
                       rows={3}
                       className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none text-sm font-mono"
                     />
-                    <p className="text-xs text-zinc-500 mt-1">Use {`{{char}}`} and {`{{user}}`} placeholders</p>
+                    <p className="text-xs text-zinc-500 mt-1">Use {`{{char}}`}, {`{{user}}`}, {`{{scenario}}`}, {`{{date}}`}, {`{{time}}`}, {`{{model}}`}, {`{{max_tokens}}`}, {`{{temperature}}`} placeholders</p>
                   </div>
                 </div>
               </div>
