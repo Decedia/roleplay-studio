@@ -330,50 +330,50 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
    {
      id: "kobold-horde",
      name: "KoboldAI Horde",
-     description: "Distributed AI text generation via KoboldAI Horde network",
+     description: "Distributed AI text generation via AI Horde network",
      requiresApiKey: true,
-     models: [
-       {
-         id: DEFAULT_KOBOLD_HORDE_MODEL,
-         name: "Llama 3.1 8B Stheno v3.4",
-         provider: "kobold-horde",
-         contextWindow: 8192,
-         maxTokens: 4096,
-         supportsThinking: false,
-       },
-       {
-         id: "koboldcpp/L3-8B-Stheno-v3.2",
-         name: "L3 8B Stheno v3.2",
-         provider: "kobold-horde",
-         contextWindow: 8192,
-         maxTokens: 4096,
-         supportsThinking: false,
-       },
-       {
-         id: "koboldcpp/mini-magnum-12b-v1.1",
-         name: "Mini Magnum 12B v1.1",
-         provider: "kobold-horde",
-         contextWindow: 4096,
-         maxTokens: 2048,
-         supportsThinking: false,
-       },
-       {
-         id: "koboldcpp/Gemma-4-31B-it",
-         name: "Gemma 4 31B Instruct",
-         provider: "kobold-horde",
-         contextWindow: 8192,
-         maxTokens: 4096,
-         supportsThinking: false,
-       },
-       {
-         id: "koboldcpp/Cydonia-24B-v4.3",
-         name: "Cydonia 24B v4.3",
-         provider: "kobold-horde",
-         contextWindow: 8192,
-         maxTokens: 4096,
-         supportsThinking: false,
-       },
-     ],
+    models: [
+      {
+        id: DEFAULT_KOBOLD_HORDE_MODEL,
+        name: "L3 8B Stheno v3.2",
+        provider: "kobold-horde",
+        contextWindow: 8192,
+        maxTokens: 4096,
+        supportsThinking: false,
+      },
+      {
+        id: "koboldcpp/mini-magnum-12b-v1.1",
+        name: "Mini Magnum 12B v1.1",
+        provider: "kobold-horde",
+        contextWindow: 4096,
+        maxTokens: 2048,
+        supportsThinking: false,
+      },
+      {
+        id: "koboldcpp/gemma-4-31B-it-heretic",
+        name: "Gemma 4 31B Instruct",
+        provider: "kobold-horde",
+        contextWindow: 8192,
+        maxTokens: 4096,
+        supportsThinking: false,
+      },
+      {
+        id: "koboldcpp/Cydonia-24B-v4.3",
+        name: "Cydonia 24B v4.3",
+        provider: "kobold-horde",
+        contextWindow: 8192,
+        maxTokens: 4096,
+        supportsThinking: false,
+      },
+      {
+        id: "koboldcpp/Dolphin3.0-Llama3.1-8B-Q8_0",
+        name: "Dolphin 3.0 Llama 3.1 8B",
+        provider: "kobold-horde",
+        contextWindow: 8192,
+        maxTokens: 4096,
+        supportsThinking: false,
+      },
+    ],
    },
    {
      id: "ollama",
@@ -1563,7 +1563,7 @@ export const chatWithKoboldHorde: ChatFunction = async (
            await new Promise(resolve => setTimeout(resolve, delay));
            
            try {
-             const statusResponse = await fetch(`https://aihorde.net/api/v2/generate/text/check/${data.task_id}`, {
+             const statusResponse = await fetch(`https://aihorde.net/api/v2/generate/text/status/${data.task_id}`, {
                headers: {
                  "apikey": config.apiKey,
                },
@@ -1601,7 +1601,8 @@ export const chatWithKoboldHorde: ChatFunction = async (
      }
    };
 
-// KoboldAI Horde streaming implementation - uses direct API to avoid CORS
+// KoboldAI Horde streaming implementation - falls back to async+status polling
+// because the /v2/generate/text/stream endpoint is no longer available.
 export const streamWithKoboldHorde = async (
    messages: Message[],
    config: ProviderConfig,
@@ -1623,25 +1624,20 @@ export const streamWithKoboldHorde = async (
      return;
    }
 
-   // Get the selected model's context window, fallback to 8192
    const availableModels = getModelsForProvider("kobold-horde");
    const selectedModel = availableModels.find(m => m.id === (config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL));
    const maxContextLength = selectedModel?.contextWindow || 8192;
 
    try {
-     // Combine all messages into a single prompt for KoboldAI Horde
      const systemMessages = messages.filter(m => m.role === "system");
      const nonSystemMessages = messages.filter(m => m.role !== "system");
 
      let prompt = "";
-
-     // Add system prompt if provided
      const systemContent = systemMessages.map(m => m.content).join("\n\n");
      if (systemContent || options.systemPrompt) {
-       prompt += (systemContent || options.systemPrompt) + "\n\n";
+       prompt += (systemContent || options.systemPrompt || "") + "\n\n";
      }
 
-     // Add conversation history
      for (const message of nonSystemMessages) {
        if (message.role === "user") {
          prompt += `User: ${message.content}\n\n`;
@@ -1650,56 +1646,55 @@ export const streamWithKoboldHorde = async (
        }
      }
 
-     // Add final assistant prompt
      prompt += "Assistant: ";
 
-      const response = await fetch("https://aihorde.net/api/v2/generate/text/stream", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": config.apiKey,
-          "Client-Agent": "roleplay-studio:1.0.0",
-        },
-         body: JSON.stringify({
-           prompt,
-           params: {
-             temperature: options.temperature,
-             top_p: options.topP,
-             top_k: options.topK,
-             typical: 1,
-             frmtadsnsp: false,
-             frmtrmblln: false,
-             frmtrmspch: false,
-             frmttriminc: false,
-             rep_pen: 1.1,
-             rep_pen_range: 4096,
-             rep_pen_slope: 10,
-             singleline: false,
-             smoothing_factor: 0,
-             dynatemp_range: 0,
-             dynatemp_exponent: 1,
-             n: 1,
-             max_context_length: maxContextLength,
-             max_length: options.maxTokens,
-             min_p: 0,
-             use_default_badwordsids: true,
-             sampler_order: [0],
-             stop_sequence: [],
-           },
-           trusted_workers: false,
-           validated_backends: true,
-           slow_workers: true,
-           workers: [],
-           worker_blacklist: false,
-           models: [config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL],
-           dry_run: false,
-           allow_downgrade: false,
-           disable_batching: false,
-           extra_source_images: [],
-           softprompt: "",
-           extra_slow_workers: false,
-         }),
-      });
+     const response = await fetch("https://aihorde.net/api/v2/generate/text/async", {
+       method: "POST",
+       headers: {
+         "Content-Type": "application/json",
+         apikey: config.apiKey,
+         "Client-Agent": "roleplay-studio:1.0.0",
+       },
+       body: JSON.stringify({
+         prompt,
+         params: {
+           temperature: options.temperature,
+           top_p: options.topP,
+           top_k: options.topK,
+           typical: 1,
+           frmtadsnsp: false,
+           frmtrmblln: false,
+           frmtrmspch: false,
+           frmttriminc: false,
+           rep_pen: 1.1,
+           rep_pen_range: 4096,
+           rep_pen_slope: 10,
+           singleline: false,
+           smoothing_factor: 0,
+           dynatemp_range: 0,
+           dynatemp_exponent: 1,
+           n: 1,
+           max_context_length: maxContextLength,
+           max_length: options.maxTokens,
+           min_p: 0,
+           use_default_badwordsids: true,
+           sampler_order: [0],
+           stop_sequence: [],
+         },
+         trusted_workers: false,
+         validated_backends: true,
+         slow_workers: true,
+         workers: [],
+         worker_blacklist: false,
+         models: [config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL],
+         dry_run: false,
+         allow_downgrade: false,
+         disable_batching: false,
+         extra_source_images: [],
+         softprompt: "",
+         extra_slow_workers: false,
+       }),
+     });
 
      if (!response.ok) {
        const errorData = await response.json();
@@ -1707,41 +1702,56 @@ export const streamWithKoboldHorde = async (
        return;
      }
 
-     const reader = response.body?.getReader();
-     if (!reader) {
-       onChunk({ error: "Failed to get response stream" });
+     const data = await response.json();
+     const requestId = data.id;
+     if (!requestId) {
+       onChunk({ error: "No request ID returned from AI Horde" });
        return;
      }
 
-     const decoder = new TextDecoder();
-     let buffer = "";
+     let lastText = "";
+     const maxAttempts = 60;
+     const baseDelay = 1000;
 
-     try {
-       while (true) {
-         const { done, value } = await reader.read();
-         if (done) break;
+     for (let i = 0; i < maxAttempts; i++) {
+       await new Promise(resolve => setTimeout(resolve, baseDelay));
 
-         buffer += decoder.decode(value, { stream: true });
-         const lines = buffer.split("\n");
-         buffer = lines.pop() || "";
-
-         for (const line of lines) {
-           if (line.trim()) {
-             try {
-               const data = JSON.parse(line);
-               if (data.text) {
-                 onChunk({ content: data.text });
-               }
-             } catch (e) {
-               // Ignore parsing errors
-             }
+       try {
+         const statusResponse = await fetch(
+           `https://aihorde.net/api/v2/generate/text/status/${requestId}`,
+           {
+             headers: { apikey: config.apiKey },
            }
+         );
+
+         if (!statusResponse.ok) continue;
+
+         const statusData = await statusResponse.json();
+         if (statusData.faulted) {
+           onChunk({ error: "AI Horde generation faulted" });
+           return;
          }
+
+         const currentText = statusData.generations?.[0]?.text || "";
+         if (currentText && currentText !== lastText) {
+           const delta = currentText.slice(lastText.length);
+           lastText = currentText;
+           onChunk({ content: currentText });
+         }
+
+         if (statusData.done) {
+           onChunk({ content: lastText, done: true });
+           return;
+         }
+       } catch {
+         continue;
        }
-     } catch (error) {
-       onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
-     } finally {
-       reader.releaseLock();
+     }
+
+     if (lastText) {
+       onChunk({ content: lastText, done: true });
+     } else {
+       onChunk({ error: "Timeout waiting for AI Horde generation" });
      }
    } catch (error) {
      onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
