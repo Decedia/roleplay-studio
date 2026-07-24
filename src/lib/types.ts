@@ -133,7 +133,7 @@ export interface GeneratorConversation {
 }
 
 // LLM Provider types
-export type LLMProviderType = "google-ai-studio" | "google-vertex" | "nvidia-nim" | "groq" | "open-router" | "kobold-horde" | "ollama";
+export type LLMProviderType = "google-ai-studio" | "google-vertex" | "nvidia-nim" | "groq" | "open-router" | "kobold-horde" | "ollama" | "cohere";
 
 export interface LLMProvider {
   id: LLMProviderType;

@@ -376,12 +376,36 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
     ],
    },
    {
-     id: "ollama",
-     name: "Self-Hosted (Ollama)",
-     description: "Self-hosted LLMs via Ollama with OpenAI-compatible API",
-     requiresApiKey: false, // API key is optional for remote setups
-     models: [], // Models are fetched dynamically from the Ollama server
-   },
+    id: "ollama",
+    name: "Self-Hosted (Ollama)",
+    description: "Self-hosted LLMs via Ollama with OpenAI-compatible API",
+    requiresApiKey: false, // API key is optional for remote setups
+    models: [], // Models are fetched dynamically from the Ollama server
+  },
+  {
+    id: "cohere",
+    name: "Cohere",
+    description: "Cohere free tier models via OpenAI-compatible API",
+    requiresApiKey: true,
+    models: [
+      {
+        id: "command-r7b-12-2025",
+        name: "Command R7B",
+        provider: "cohere",
+        contextWindow: 128000,
+        maxTokens: 4096,
+        supportsThinking: false,
+      },
+      {
+        id: "command-r-08-2025",
+        name: "Command R",
+        provider: "cohere",
+        contextWindow: 128000,
+        maxTokens: 4096,
+        supportsThinking: false,
+      },
+    ],
+  },
  ];
 
 // Chat response interface
@@ -1758,6 +1782,180 @@ export const streamWithKoboldHorde = async (
    }
  };
 
+// Cohere chat implementation - uses OpenAI-compatible API via server proxy
+export const chatWithCohere: ChatFunction = async (
+  messages,
+  config,
+  options
+) => {
+  if (!config.apiKey) {
+    return { error: "Cohere API key is required" };
+  }
+
+  try {
+    const systemMessages = messages.filter(m => m.role === "system");
+    const nonSystemMessages = messages.filter(m => m.role !== "system");
+
+    const formattedMessages = nonSystemMessages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    const systemContent = systemMessages.map(m => m.content).join("\n\n");
+    const messagesWithSystem = systemContent || options.systemPrompt
+      ? [{ role: "system", content: systemContent || options.systemPrompt || "" }, ...formattedMessages]
+      : formattedMessages;
+
+    const response = await fetch("/api/cohere", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        endpoint: "chat/completions",
+        apiKey: config.apiKey,
+        payload: {
+          model: config.selectedModel,
+          messages: messagesWithSystem,
+          temperature: options.temperature,
+          max_tokens: options.maxTokens,
+          top_p: options.topP,
+        },
+        signal: options.abortController?.signal,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        error: data.error || `HTTP ${response.status}`,
+      };
+    }
+
+    const content = data.choices?.[0]?.message?.content || "";
+
+    return { content };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+};
+
+// Cohere streaming implementation - uses server-side proxy
+export const streamWithCohere = async (
+  messages: Message[],
+  config: ProviderConfig,
+  options: {
+    temperature: number;
+    maxTokens: number;
+    topP: number;
+    topK: number;
+    systemPrompt?: string;
+    enableThinking?: boolean;
+    thinkingLevel?: ThinkingLevel;
+    thinkingBudget?: ThinkingBudget;
+    abortController?: AbortController;
+  },
+  onChunk: StreamCallback
+): Promise<void> => {
+  if (!config.apiKey) {
+    onChunk({ error: "Cohere API key is required" });
+    return;
+  }
+
+  try {
+    const systemMessages = messages.filter(m => m.role === "system");
+    const nonSystemMessages = messages.filter(m => m.role !== "system");
+
+    const formattedMessages = nonSystemMessages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    const systemContent = systemMessages.map(m => m.content).join("\n\n");
+    const messagesWithSystem = systemContent || options.systemPrompt
+      ? [{ role: "system", content: systemContent || options.systemPrompt || "" }, ...formattedMessages]
+      : formattedMessages;
+
+    const response = await fetch("/api/cohere", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        endpoint: "chat/completions",
+        apiKey: config.apiKey,
+        payload: {
+          model: config.selectedModel,
+          messages: messagesWithSystem,
+          temperature: options.temperature,
+          max_tokens: options.maxTokens,
+          top_p: options.topP,
+          stream: true,
+        },
+        stream: true,
+        signal: options.abortController?.signal,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      onChunk({ error: errorData.error || `HTTP ${response.status}` });
+      return;
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      onChunk({ error: "Failed to get response stream" });
+      return;
+    }
+
+    const decoder = new TextDecoder();
+    let fullContent = "";
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr || jsonStr === "[DONE]") continue;
+
+          try {
+            const data = JSON.parse(jsonStr);
+
+            if (data.error) {
+              onChunk({ error: data.error });
+              return;
+            }
+
+            const delta = data.choices?.[0]?.delta;
+
+            if (delta?.content) {
+              fullContent += delta.content;
+              onChunk({ content: fullContent });
+            }
+          } catch {
+            // Skip invalid JSON
+          }
+        }
+      }
+    }
+
+    onChunk({ content: fullContent, done: true });
+  } catch (error) {
+    onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
+  }
+};
+
 // Main chat function that routes to the correct provider
 export const sendChatMessage = async (
   messages: Message[],
@@ -1787,6 +1985,8 @@ export const sendChatMessage = async (
       return chatWithOpenRouter(messages, config, options);
     case "kobold-horde":
       return chatWithKoboldHorde(messages, config, options);
+    case "cohere":
+      return chatWithCohere(messages, config, options);
     case "ollama":
       return chatWithOllama(messages, config, options);
     default:
