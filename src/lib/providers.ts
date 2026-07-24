@@ -17,7 +17,7 @@ import {
 export type { LLMProviderType, ProviderConfig, Message, LLMModel, LLMProvider, VertexMode, VertexLocation, ThinkingLevel, ThinkingBudget, FetchedModel };
 
 // Default models for providers
-export const DEFAULT_KOBOLD_HORDE_MODEL = "koboldcpp/Llama-3.1-8B-Stheno-v3.4";
+export const DEFAULT_KOBOLD_HORDE_MODEL = "koboldcpp/L3-8B-Stheno-v3.2";
 
 // Available providers configuration
 export const AVAILABLE_PROVIDERS: LLMProvider[] = [
