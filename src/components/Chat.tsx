@@ -633,6 +633,7 @@ export default function Chat() {
     "groq": { type: "groq", isEnabled: false, profiles: [], activeProfileId: null },
     "open-router": { type: "open-router", isEnabled: false, profiles: [], activeProfileId: null },
     "kobold-horde": { type: "kobold-horde", isEnabled: false, profiles: [], activeProfileId: null },
+    "cohere": { type: "cohere", isEnabled: false, profiles: [], activeProfileId: null },
     "ollama": { type: "ollama", isEnabled: false, profiles: [], activeProfileId: null },
   });
   
@@ -644,6 +645,7 @@ export default function Chat() {
     "groq": [],
     "open-router": [],
     "kobold-horde": [],
+    "cohere": [],
     "ollama": [],
   });
   const [modelsFetching, setModelsFetching] = useState<Record<LLMProviderType, boolean>>({
@@ -653,6 +655,7 @@ export default function Chat() {
     "groq": false,
     "open-router": false,
     "kobold-horde": false,
+    "cohere": false,
     "ollama": false,
   });
   
@@ -879,6 +882,7 @@ export default function Chat() {
     "groq": { status: "disconnected" },
     "open-router": { status: "disconnected" },
     "kobold-horde": { status: "disconnected" },
+    "cohere": { status: "disconnected" },
     "ollama": { status: "disconnected" },
   });
 
@@ -1222,7 +1226,7 @@ export default function Chat() {
           }
           
           // Ensure all providers exist in loaded configs
-          const allProviders: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim", "groq", "open-router"];
+          const allProviders: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim", "groq", "open-router", "kobold-horde", "cohere", "ollama"];
           allProviders.forEach(key => {
             if (!configs[key]) {
               configs[key] = { type: key, isEnabled: false, profiles: [], activeProfileId: null };
@@ -1235,7 +1239,7 @@ export default function Chat() {
         }
       } else {
         // Check for old per-provider storage (for users upgrading from older versions)
-        const providers: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim", "groq", "open-router", "kobold-horde", "ollama"];
+        const providers: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim", "groq", "open-router", "kobold-horde", "cohere", "ollama"];
         const migratedConfigs: Record<LLMProviderType, ProviderConfig> = {
           "google-ai-studio": { type: "google-ai-studio", isEnabled: false, profiles: [], activeProfileId: null },
           "google-vertex": { type: "google-vertex", isEnabled: false, profiles: [], activeProfileId: null },
@@ -1243,6 +1247,7 @@ export default function Chat() {
           "groq": { type: "groq", isEnabled: false, profiles: [], activeProfileId: null },
           "open-router": { type: "open-router", isEnabled: false, profiles: [], activeProfileId: null },
           "kobold-horde": { type: "kobold-horde", isEnabled: false, profiles: [], activeProfileId: null },
+          "cohere": { type: "cohere", isEnabled: false, profiles: [], activeProfileId: null },
           "ollama": { type: "ollama", isEnabled: false, profiles: [], activeProfileId: null },
         };
         

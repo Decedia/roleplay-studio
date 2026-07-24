@@ -2024,6 +2024,8 @@ export const streamChatMessage = async (
       return streamWithOpenRouter(messages, config, options, onChunk);
     case "kobold-horde":
       return streamWithKoboldHorde(messages, config, options, onChunk);
+    case "cohere":
+      return streamWithCohere(messages, config, options, onChunk);
     case "ollama":
       return streamWithOllama(messages, config, options, onChunk);
     default:
@@ -2219,7 +2221,40 @@ export const testProviderConnection = async (
         return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
       }
     }
-    
+
+    case "cohere": {
+      if (!config.apiKey) {
+        return { success: false, message: "API key is required." };
+      }
+      try {
+        // Test with a minimal chat request using server-side proxy to avoid CORS
+        const response = await fetch("/api/cohere", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            endpoint: "chat/completions",
+            apiKey: config.apiKey,
+            payload: {
+              model: config.selectedModel || "command-r7b-12-2025",
+              messages: [{ role: "user", content: "Hi" }],
+              max_tokens: 5,
+            },
+          }),
+        });
+
+        if (response.ok) {
+          return { success: true, message: "Cohere connection successful!" };
+        }
+
+        const errorData = await response.json();
+        return { success: false, message: errorData.error || `HTTP ${response.status}` };
+      } catch (error) {
+        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
+      }
+    }
+
     case "kobold-horde": {
       if (!config.apiKey) {
         return { success: false, message: "API key is required." };
@@ -2610,10 +2645,47 @@ export const fetchModelsFromProvider = async (
           return { models: [], error: openRouterData.error || `HTTP ${openRouterResponse.status}` };
         }
 
-        return { models: openRouterData.models || [] };
+      return { models: openRouterData.models || [] };
+    }
+
+    case "cohere": {
+      if (!config.apiKey) {
+        return { models: [], error: "API key is required" };
       }
 
-      case "google-vertex": {
+      try {
+        const response = await fetch("/api/cohere", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            endpoint: "models",
+            apiKey: config.apiKey,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          return { models: [], error: errorData.error || `HTTP ${response.status}` };
+        }
+
+        const data = await response.json();
+        const models: FetchedModel[] = (data.models || [])
+          .filter((model: any) => model.id && !model.id.includes("embed"))
+          .map((model: any) => ({
+            id: model.id,
+            provider: "cohere",
+            name: model.name || model.id,
+          }));
+
+        return { models };
+      } catch (error) {
+        return { models: getModelsForProvider("cohere") };
+      }
+    }
+
+    case "google-vertex": {
         try {
           // Google Vertex AI currently uses static model list
           // API integration requires OAuth2 credentials which are not implemented yet
