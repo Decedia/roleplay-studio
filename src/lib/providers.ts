@@ -11,10 +11,13 @@ import {
   ThinkingLevel,
   ThinkingBudget,
   FetchedModel,
+  ChatResponse,
+  StreamCallback,
+  TestConnectionResult,
 } from "./types";
 
 // Re-export types for convenience
-export type { LLMProviderType, ProviderConfig, Message, LLMModel, LLMProvider, VertexMode, VertexLocation, ThinkingLevel, ThinkingBudget, FetchedModel };
+export type { LLMProviderType, ProviderConfig, Message, LLMModel, LLMProvider, VertexMode, VertexLocation, ThinkingLevel, ThinkingBudget, FetchedModel, ChatResponse, StreamCallback, TestConnectionResult };
 
 // Default models for providers
 export const DEFAULT_KOBOLD_HORDE_MODEL = "koboldcpp/L3-8B-Stheno-v3.2";
@@ -408,15 +411,8 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
   },
  ];
 
-// Chat response interface
-export interface ChatResponse {
-  content?: string;
-  thinking?: string;
-  error?: string;
-}
-
-// Streaming callback type
-export type StreamCallback = (chunk: { content?: string; thinking?: string; done?: boolean; error?: string }) => void;
+// Chat response interface - now imported from types.ts
+// Streaming callback type - now imported from types.ts
 
 // Base chat function type
 type ChatFunction = (
@@ -1972,26 +1968,11 @@ export const sendChatMessage = async (
     abortController?: AbortController;
   }
 ): Promise<ChatResponse> => {
-  switch (config.type) {
-    case "google-ai-studio":
-      return chatWithGoogleAIStudio(messages, config, options);
-    case "google-vertex":
-      return chatWithVertexAI(messages, config, options);
-    case "nvidia-nim":
-      return chatWithNvidiaNIM(messages, config, options);
-    case "groq":
-      return chatWithGroq(messages, config, options);
-    case "open-router":
-      return chatWithOpenRouter(messages, config, options);
-    case "kobold-horde":
-      return chatWithKoboldHorde(messages, config, options);
-    case "cohere":
-      return chatWithCohere(messages, config, options);
-    case "ollama":
-      return chatWithOllama(messages, config, options);
-    default:
-      return { error: `Unknown provider: ${config.type}` };
+  const provider = providerRegistry.get(config.type);
+  if (!provider) {
+    return { error: `Unknown provider: ${config.type}` };
   }
+  return provider.chat(messages, config, options);
 };
 
 // Main streaming function that routes to the correct provider
@@ -2011,334 +1992,32 @@ export const streamChatMessage = async (
   },
   onChunk: StreamCallback
 ): Promise<void> => {
-  switch (config.type) {
-    case "google-ai-studio":
-      return streamWithGoogleAIStudio(messages, config, options, onChunk);
-    case "google-vertex":
-      return streamWithVertexAI(messages, config, options, onChunk);
-    case "nvidia-nim":
-      return streamWithNvidiaNIM(messages, config, options, onChunk);
-    case "groq":
-      return streamWithGroq(messages, config, options, onChunk);
-    case "open-router":
-      return streamWithOpenRouter(messages, config, options, onChunk);
-    case "kobold-horde":
-      return streamWithKoboldHorde(messages, config, options, onChunk);
-    case "cohere":
-      return streamWithCohere(messages, config, options, onChunk);
-    case "ollama":
-      return streamWithOllama(messages, config, options, onChunk);
-    default:
-      onChunk({ error: `Unknown provider: ${config.type}` });
-      return;
+  const provider = providerRegistry.get(config.type);
+  if (!provider) {
+    onChunk({ error: `Unknown provider: ${config.type}` });
+    return;
   }
+  return provider.stream(messages, config, options, onChunk);
 };
 
 // Get models for a provider
 export const getModelsForProvider = (
   providerType: LLMProviderType
 ): LLMModel[] => {
-  const provider = AVAILABLE_PROVIDERS.find((p) => p.id === providerType);
+  const provider = providerRegistry.get(providerType);
   return provider?.models || [];
 };
-
-// Test connection result
-export interface TestConnectionResult {
-  success: boolean;
-  message: string;
-}
 
 // Test connection for a provider
 export const testProviderConnection = async (
   providerType: LLMProviderType,
   config: ProviderConfig
 ): Promise<TestConnectionResult> => {
-  switch (providerType) {
-    case "google-ai-studio": {
-      if (!config.apiKey) {
-        return { success: false, message: "API key is required." };
-      }
-      try {
-        // Test by listing models or making a minimal request
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models?key=${config.apiKey}`,
-          { method: "GET" }
-        );
-        if (response.ok) {
-          return { success: true, message: "Google AI Studio connection successful!" };
-        }
-        const errorData = await response.json();
-        return { success: false, message: errorData.error?.message || `HTTP ${response.status}` };
-      } catch (error) {
-        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
-      }
-    }
-    
-    case "google-vertex": {
-      const location = config.vertexLocation || "global";
-      
-      if (!config.apiKey) {
-        return { success: false, message: "API key is required." };
-      }
-      if (!config.projectId) {
-        return { success: false, message: "Project ID is required for Vertex AI. Please enter your Google Cloud project ID." };
-      }
-      try {
-        // Test with Vertex AI endpoint using server-side proxy to avoid CORS
-        const response = await fetch("/api/vertex-ai", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            endpoint: "gemini-2.0-flash:generateContent",
-            apiKey: config.apiKey,
-            projectId: config.projectId,
-            location: location,
-            payload: {
-              contents: [{ role: "user", parts: [{ text: "test" }] }],
-              generationConfig: { maxOutputTokens: 1 },
-            },
-          }),
-        });
-        
-        if (response.ok) {
-          return { success: true, message: `Google Vertex AI (${location}) connection successful!` };
-        }
-        const errorData = await response.json();
-        return { success: false, message: errorData.error || `HTTP ${response.status}` };
-      } catch (error) {
-        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
-      }
-    }
-    
-    case "nvidia-nim": {
-      if (!config.apiKey) {
-        return { success: false, message: "API key is required." };
-      }
-      try {
-        // Test with a minimal chat request using server-side proxy to avoid CORS
-        const response = await fetch("/api/nvidia-nim", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            endpoint: "chat/completions",
-            apiKey: config.apiKey,
-            payload: {
-              model: "moonshotai/kimi-k2-thinking",
-              messages: [{ role: "user", content: "Hi" }],
-              max_tokens: 5,
-            },
-          }),
-        });
-        
-        // 200 and 202 are success codes
-        if (response.status === 200 || response.status === 202) {
-          return { success: true, message: "NVIDIA NIM connection successful!" };
-        }
-        
-        // Parse error response
-        const errorData = await response.json();
-        
-        if (response.status === 422) {
-          return { success: false, message: errorData.error || "Validation error (422)" };
-        }
-        
-        if (response.status === 500) {
-          return { success: false, message: "Server error (500) - please try again later" };
-        }
-        
-        return { success: false, message: errorData.error || `HTTP ${response.status}` };
-      } catch (error) {
-        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
-      }
-    }
-    
-    case "groq": {
-      if (!config.apiKey) {
-        return { success: false, message: "API key is required." };
-      }
-      try {
-        // Test with a minimal chat request using server-side proxy to avoid CORS
-        const response = await fetch("/api/groq", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            endpoint: "chat/completions",
-            apiKey: config.apiKey,
-            payload: {
-              model: "llama-3.1-8b-instant",
-              messages: [{ role: "user", content: "Hi" }],
-              max_tokens: 5,
-            },
-          }),
-        });
-        
-        if (response.ok) {
-          return { success: true, message: "Groq connection successful!" };
-        }
-        
-        const errorData = await response.json();
-        return { success: false, message: errorData.error || `HTTP ${response.status}` };
-      } catch (error) {
-        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
-      }
-    }
-    
-    case "open-router": {
-      if (!config.apiKey) {
-        return { success: false, message: "API key is required." };
-      }
-      try {
-        const response = await fetch("/api/open-router", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            endpoint: "chat/completions",
-            apiKey: config.apiKey,
-            payload: {
-              model: "google/gemini-2.0-flash",
-              messages: [{ role: "user", content: "Hi" }],
-              max_tokens: 5,
-              user: "chat-user",
-            },
-          }),
-        });
-        
-        if (response.ok) {
-          return { success: true, message: "Open Router connection successful!" };
-        }
-        
-        const errorData = await response.json();
-        return { success: false, message: errorData.error || `HTTP ${response.status}` };
-      } catch (error) {
-        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
-      }
-    }
-
-    case "cohere": {
-      if (!config.apiKey) {
-        return { success: false, message: "API key is required." };
-      }
-      try {
-        // Test with a minimal chat request using server-side proxy to avoid CORS
-        const response = await fetch("/api/cohere", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            endpoint: "chat/completions",
-            apiKey: config.apiKey,
-            payload: {
-              model: config.selectedModel || "command-r7b-12-2025",
-              messages: [{ role: "user", content: "Hi" }],
-              max_tokens: 5,
-            },
-          }),
-        });
-
-        if (response.ok) {
-          return { success: true, message: "Cohere connection successful!" };
-        }
-
-        const errorData = await response.json();
-        return { success: false, message: errorData.error || `HTTP ${response.status}` };
-      } catch (error) {
-        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
-      }
-    }
-
-    case "kobold-horde": {
-      if (!config.apiKey) {
-        return { success: false, message: "API key is required." };
-      }
-       try {
-         // Test with a minimal text generation request using the async API to avoid CORS
-       const response = await fetch("https://aihorde.net/api/v2/generate/text/async", {
-         method: "POST",
-         headers: {
-           "Content-Type": "application/json",
-           "apikey": config.apiKey,
-         },
-         body: JSON.stringify({
-           prompt: "Hello",
-           params: {
-             temperature: 0.1,
-             max_length: 16, // Minimum allowed by the API
-           },
-           models: [config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL],
-         }),
-       });
-
-        if (response.ok) {
-          const result = await response.json();
-          if (result.task_id) {
-            return { success: true, message: "KoboldAI Horde connection successful!" };
-          }
-          return { success: false, message: "Unexpected response format (no task_id)" };
-        }
-
-        const errorData = await response.json();
-        return { success: false, message: errorData.error || `HTTP ${response.status}` };
-      } catch (error) {
-        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
-      }
-    }
-
-    case "ollama": {
-      // Ollama doesn't require an API key, but we can use one if provided
-      const apiKey = config.apiKey || "";
-      // Get active profile or create a default one if none exists
-      let activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
-      if (!activeProfile && config.profiles.length > 0) {
-        activeProfile = config.profiles[0];
-      }
-      // If still no active profile (empty profiles array), create a default one
-      if (!activeProfile) {
-        activeProfile = {
-          id: `ollama-default-${Date.now()}`,
-          name: "Default",
-          apiKey: "",
-          baseUrl: "http://localhost:11434/v1",
-          selectedModel: "",
-          createdAt: Date.now()
-        };
-      }
-      const baseUrl = (activeProfile.baseUrl?.endsWith('/') ? activeProfile.baseUrl.slice(0, -1) : activeProfile.baseUrl) || "http://localhost:11434/v1";
-      try {
-        // Test by fetching models from the Ollama server using server-side proxy
-        const response = await fetch("/api/ollama", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            endpoint: `${baseUrl}/api/tags`, // Ollama's models endpoint
-            apiKey: apiKey,
-          }),
-        });
-        
-        if (response.ok) {
-          return { success: true, message: "Ollama connection successful!" };
-        }
-        
-        const errorData = await response.json();
-        return { success: false, message: errorData.error || `HTTP ${response.status}` };
-      } catch (error) {
-        return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
-      }
-    }
-
-    default:
-      return { success: false, message: `Unknown provider: ${providerType}` };
+  const provider = providerRegistry.get(providerType);
+  if (!provider) {
+    return { success: false, message: `Unknown provider: ${providerType}` };
   }
+  return provider.connectionTest(config);
 };
 
 // Ollama chat implementation - uses server-side proxy to avoid CORS
@@ -2558,187 +2237,16 @@ export const fetchModelsFromProvider = async (
   config: ProviderConfig
 ): Promise<{ models: FetchedModel[]; error?: string }> => {
   try {
-    switch (providerType) {
-      case "nvidia-nim": {
-        if (!config.apiKey) {
-          return { models: [], error: "API key is required" };
-        }
-
-        const response = await fetch(`/api/models?provider=nvidia-nim&apiKey=${encodeURIComponent(config.apiKey)}`);
-        const data = await response.json();
-
-        if (!response.ok) {
-          return { models: [], error: data.error || `HTTP ${response.status}` };
-        }
-
-        return { models: data.models || [] };
-      }
-
-      case "google-ai-studio": {
-        if (!config.apiKey) {
-          return { models: [], error: "API key is required" };
-        }
-
-        const response = await fetch(`/api/models?provider=google-ai-studio&apiKey=${encodeURIComponent(config.apiKey)}`);
-        const data = await response.json();
-
-        if (!response.ok) {
-          return { models: [], error: data.error || `HTTP ${response.status}` };
-        }
-
-        return { models: data.models || [] };
-      }
-
-      case "groq": {
-        if (!config.apiKey) {
-          return { models: [], error: "API key is required" };
-        }
-
-        const groqResponse = await fetch(`/api/models?provider=groq&apiKey=${encodeURIComponent(config.apiKey)}`);
-        const groqData = await groqResponse.json();
-
-        if (!groqResponse.ok) {
-          return { models: [], error: groqData.error || `HTTP ${groqResponse.status}` };
-        }
-
-        return { models: groqData.models || [] };
-      }
-
-      case "kobold-horde": {
-        try {
-          // KoboldAI Horde API returns models with workers count - filters by type already in URL
-          const response = await fetch("https://aihorde.net/api/v2/status/models?type=text");
-          const data = await response.json();
-
-          if (!response.ok) {
-            return { models: [], error: `HTTP ${response.status}` };
-          }
-
-          // Transform Horde models to our format
-          // Each model has: name (full path like "koboldcpp/L3-8B-Stheno-v3.2"), type, count, performance
-          const models: FetchedModel[] = data
-            .filter((model: any) => model.count > 0) // Only include models with available workers
-            .map((model: any) => ({
-              id: model.name,
-              provider: "kobold-horde",
-              name: model.name,
-              workerCount: model.count,
-              performance: model.performance,
-            }));
-
-          return { models };
-        } catch (error) {
-          // Fall back to static models if API fails
-          return { models: getModelsForProvider("kobold-horde") };
-        }
-      }
-
-      case "open-router": {
-        if (!config.apiKey) {
-          return { models: [], error: "API key is required" };
-        }
-
-        const openRouterResponse = await fetch(`/api/models?provider=open-router&apiKey=${encodeURIComponent(config.apiKey)}`);
-        const openRouterData = await openRouterResponse.json();
-
-        if (!openRouterResponse.ok) {
-          return { models: [], error: openRouterData.error || `HTTP ${openRouterResponse.status}` };
-        }
-
-      return { models: openRouterData.models || [] };
+    const provider = providerRegistry.get(providerType);
+    if (!provider) {
+      return { models: [], error: `Unknown provider: ${providerType}` };
     }
 
-    case "cohere": {
-      if (!config.apiKey) {
-        return { models: [], error: "API key is required" };
-      }
-
-      try {
-        const response = await fetch("/api/cohere", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            endpoint: "models",
-            apiKey: config.apiKey,
-          }),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          return { models: [], error: errorData.error || `HTTP ${response.status}` };
-        }
-
-        const data = await response.json();
-        const models: FetchedModel[] = (data.models || [])
-          .filter((model: any) => model.id && !model.id.includes("embed"))
-          .map((model: any) => ({
-            id: model.id,
-            provider: "cohere",
-            name: model.name || model.id,
-          }));
-
-        return { models };
-      } catch (error) {
-        return { models: getModelsForProvider("cohere") };
-      }
+    if (!provider.supportsModelFetch || !provider.modelFetch) {
+      return { models: provider.models.map((m) => ({ id: m.id, name: m.name, provider: providerType })) };
     }
 
-    case "google-vertex": {
-        try {
-          // Google Vertex AI currently uses static model list
-          // API integration requires OAuth2 credentials which are not implemented yet
-          return { models: getModelsForProvider("google-vertex") };
-        } catch (error) {
-          // Fall back to static models on any error
-          return { models: getModelsForProvider("google-vertex") };
-        }
-      }
-
-      case "ollama": {
-        try {
-          // Fetch models from Ollama server using server-side proxy
-          // Ollama's models endpoint is /api/tags
-          const apiKey = config.apiKey || "";
-          const activeProfile = config.profiles.find(p => p.id === config.activeProfileId) || config.profiles[0];
-          const baseUrl = (activeProfile?.baseUrl?.endsWith('/') ? activeProfile.baseUrl.slice(0, -1) : activeProfile?.baseUrl) || "http://localhost:11434/v1";
-          const response = await fetch(`/api/ollama`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              endpoint: `${baseUrl}/api/tags`,
-              apiKey: apiKey,
-            }),
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            return { models: [], error: errorData.error || `HTTP ${response.status}` };
-          }
-
-          const data = await response.json();
-          
-          // Transform Ollama models to our format
-          // Ollama returns: { models: [{ name: "llama3.2", modified_at: "...", size: ... }, ...] }
-          const models: FetchedModel[] = data.models?.map((model: any) => ({
-            id: model.name,
-            provider: "ollama",
-            name: model.name,
-          })) || [];
-
-          return { models };
-        } catch (error) {
-          // Return empty models array on error
-          return { models: [] };
-        }
-      }
-
-      default:
-        return { models: [], error: `Unknown provider: ${providerType}` };
-    }
+    return provider.modelFetch(config);
   } catch (error) {
     return { 
       models: [], 
@@ -2746,3 +2254,128 @@ export const fetchModelsFromProvider = async (
     };
   }
 };
+
+// Register all providers in the registry
+import { providerRegistry } from "./providers/registry";
+
+providerRegistry.register({
+  id: "google-ai-studio",
+  name: "Google AI Studio",
+  description: "Google's Gemini models via AI Studio API",
+  requiresApiKey: true,
+  supportsProfiles: false,
+  supportsModelFetch: true,
+  defaultModel: "gemini-2.0-flash",
+  models: AVAILABLE_PROVIDERS.find((p) => p.id === "google-ai-studio")?.models || [],
+  chat: chatWithGoogleAIStudio,
+  stream: streamWithGoogleAIStudio,
+  connectionTest: testProviderConnection.bind(null, "google-ai-studio"),
+  modelFetch: fetchModelsFromProvider.bind(null, "google-ai-studio"),
+});
+
+providerRegistry.register({
+  id: "google-vertex",
+  name: "Google Vertex AI",
+  description: "Enterprise Google AI via Vertex AI platform",
+  requiresApiKey: true,
+  requiresProjectId: true,
+  requiresServiceAccount: true,
+  supportsProfiles: false,
+  supportsModelFetch: false,
+  defaultModel: "gemini-2.0-flash",
+  models: AVAILABLE_PROVIDERS.find((p) => p.id === "google-vertex")?.models || [],
+  chat: chatWithVertexAI,
+  stream: streamWithVertexAI,
+  connectionTest: testProviderConnection.bind(null, "google-vertex"),
+});
+
+providerRegistry.register({
+  id: "nvidia-nim",
+  name: "NVIDIA NIM",
+  description: "NVIDIA's AI models via NIM API",
+  requiresApiKey: true,
+  supportsProfiles: false,
+  supportsModelFetch: true,
+  defaultModel: "moonshotai/kimi-k2-thinking",
+  models: AVAILABLE_PROVIDERS.find((p) => p.id === "nvidia-nim")?.models || [],
+  chat: chatWithNvidiaNIM,
+  stream: streamWithNvidiaNIM,
+  connectionTest: testProviderConnection.bind(null, "nvidia-nim"),
+  modelFetch: fetchModelsFromProvider.bind(null, "nvidia-nim"),
+});
+
+providerRegistry.register({
+  id: "groq",
+  name: "Groq",
+  description: "Fast AI inference via Groq API",
+  requiresApiKey: true,
+  supportsProfiles: false,
+  supportsModelFetch: true,
+  defaultModel: "llama-3.1-8b-instant",
+  models: AVAILABLE_PROVIDERS.find((p) => p.id === "groq")?.models || [],
+  chat: chatWithGroq,
+  stream: streamWithGroq,
+  connectionTest: testProviderConnection.bind(null, "groq"),
+  modelFetch: fetchModelsFromProvider.bind(null, "groq"),
+});
+
+providerRegistry.register({
+  id: "open-router",
+  name: "Open Router",
+  description: "Access multiple AI models through Open Router",
+  requiresApiKey: true,
+  supportsProfiles: false,
+  supportsModelFetch: true,
+  defaultModel: "google/gemini-2.0-flash",
+  models: AVAILABLE_PROVIDERS.find((p) => p.id === "open-router")?.models || [],
+  chat: chatWithOpenRouter,
+  stream: streamWithOpenRouter,
+  connectionTest: testProviderConnection.bind(null, "open-router"),
+  modelFetch: fetchModelsFromProvider.bind(null, "open-router"),
+});
+
+providerRegistry.register({
+  id: "kobold-horde",
+  name: "AI Horde",
+  description: "Distributed AI text generation via AI Horde network",
+  requiresApiKey: true,
+  supportsProfiles: false,
+  supportsModelFetch: true,
+  defaultModel: DEFAULT_KOBOLD_HORDE_MODEL,
+  models: AVAILABLE_PROVIDERS.find((p) => p.id === "kobold-horde")?.models || [],
+  chat: chatWithKoboldHorde,
+  stream: streamWithKoboldHorde,
+  connectionTest: testProviderConnection.bind(null, "kobold-horde"),
+  modelFetch: fetchModelsFromProvider.bind(null, "kobold-horde"),
+});
+
+providerRegistry.register({
+  id: "cohere",
+  name: "Cohere",
+  description: "Cohere free tier models via OpenAI-compatible API",
+  requiresApiKey: true,
+  supportsProfiles: false,
+  supportsModelFetch: true,
+  defaultModel: "command-r7b-12-2025",
+  models: AVAILABLE_PROVIDERS.find((p) => p.id === "cohere")?.models || [],
+  chat: chatWithCohere,
+  stream: streamWithCohere,
+  connectionTest: testProviderConnection.bind(null, "cohere"),
+  modelFetch: fetchModelsFromProvider.bind(null, "cohere"),
+});
+
+providerRegistry.register({
+  id: "ollama",
+  name: "Self-Hosted (Ollama)",
+  description: "Self-hosted LLMs via Ollama with OpenAI-compatible API",
+  requiresApiKey: false,
+  supportsProfiles: true,
+  supportsModelFetch: true,
+  models: AVAILABLE_PROVIDERS.find((p) => p.id === "ollama")?.models || [],
+  chat: chatWithOllama,
+  stream: streamWithOllama,
+  connectionTest: testProviderConnection.bind(null, "ollama"),
+  modelFetch: fetchModelsFromProvider.bind(null, "ollama"),
+});
+
+export { providerRegistry };

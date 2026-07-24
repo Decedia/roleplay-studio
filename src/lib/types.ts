@@ -284,6 +284,22 @@ export interface FetchedModel {
    performance?: number;
  }
 
+// Provider chat response interface
+export interface ChatResponse {
+  content?: string;
+  thinking?: string;
+  error?: string;
+}
+
+// Streaming callback type for provider responses
+export type StreamCallback = (chunk: { content?: string; thinking?: string; done?: boolean; error?: string }) => void;
+
+// Provider connection test result interface
+export interface TestConnectionResult {
+  success: boolean;
+  message: string;
+}
+
 export interface ConnectionStatus {
   status: "disconnected" | "connecting" | "connected" | "error";
   message?: string;
