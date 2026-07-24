@@ -2255,6 +2255,161 @@ export const fetchModelsFromProvider = async (
   }
 };
 
+// Model fetch implementations for each provider
+const fetchGoogleAIStudioModels = async (config: ProviderConfig): Promise<{ models: FetchedModel[]; error?: string }> => {
+  if (!config.apiKey) {
+    return { models: [], error: "API key is required" };
+  }
+  try {
+    const response = await fetch(`/api/models?provider=google-ai-studio&apiKey=${encodeURIComponent(config.apiKey)}`);
+    const data = await response.json();
+    if (!response.ok) {
+      return { models: [], error: data.error || `HTTP ${response.status}` };
+    }
+    return { models: data.models || [] };
+  } catch (error) {
+    return { models: [], error: error instanceof Error ? error.message : "Unknown error" };
+  }
+};
+
+const fetchGoogleVertexModels = async (config: ProviderConfig): Promise<{ models: FetchedModel[]; error?: string }> => {
+  return { models: getModelsForProvider("google-vertex") };
+};
+
+const fetchNvidiaNimModels = async (config: ProviderConfig): Promise<{ models: FetchedModel[]; error?: string }> => {
+  if (!config.apiKey) {
+    return { models: [], error: "API key is required" };
+  }
+  try {
+    const response = await fetch(`/api/models?provider=nvidia-nim&apiKey=${encodeURIComponent(config.apiKey)}`);
+    const data = await response.json();
+    if (!response.ok) {
+      return { models: [], error: data.error || `HTTP ${response.status}` };
+    }
+    return { models: data.models || [] };
+  } catch (error) {
+    return { models: [], error: error instanceof Error ? error.message : "Unknown error" };
+  }
+};
+
+const fetchGroqModels = async (config: ProviderConfig): Promise<{ models: FetchedModel[]; error?: string }> => {
+  if (!config.apiKey) {
+    return { models: [], error: "API key is required" };
+  }
+  try {
+    const groqResponse = await fetch(`/api/models?provider=groq&apiKey=${encodeURIComponent(config.apiKey)}`);
+    const groqData = await groqResponse.json();
+    if (!groqResponse.ok) {
+      return { models: [], error: groqData.error || `HTTP ${groqResponse.status}` };
+    }
+    return { models: groqData.models || [] };
+  } catch (error) {
+    return { models: [], error: error instanceof Error ? error.message : "Unknown error" };
+  }
+};
+
+const fetchOpenRouterModels = async (config: ProviderConfig): Promise<{ models: FetchedModel[]; error?: string }> => {
+  if (!config.apiKey) {
+    return { models: [], error: "API key is required" };
+  }
+  try {
+    const response = await fetch(`/api/models?provider=open-router&apiKey=${encodeURIComponent(config.apiKey)}`);
+    const data = await response.json();
+    if (!response.ok) {
+      return { models: [], error: data.error || `HTTP ${response.status}` };
+    }
+    return { models: data.models || [] };
+  } catch (error) {
+    return { models: [], error: error instanceof Error ? error.message : "Unknown error" };
+  }
+};
+
+const fetchKoboldHordeModels = async (config: ProviderConfig): Promise<{ models: FetchedModel[]; error?: string }> => {
+  try {
+    const response = await fetch("https://aihorde.net/api/v2/status/models?type=text");
+    const data = await response.json();
+    if (!response.ok) {
+      return { models: [], error: `HTTP ${response.status}` };
+    }
+    const models: FetchedModel[] = data
+      .filter((model: any) => model.count > 0)
+      .map((model: any) => ({
+        id: model.name,
+        provider: "kobold-horde",
+        name: model.name,
+        workerCount: model.count,
+        performance: model.performance,
+      }));
+    return { models };
+  } catch (error) {
+    return { models: getModelsForProvider("kobold-horde") };
+  }
+};
+
+const fetchCohereModels = async (config: ProviderConfig): Promise<{ models: FetchedModel[]; error?: string }> => {
+  if (!config.apiKey) {
+    return { models: [], error: "API key is required" };
+  }
+  try {
+    const response = await fetch("/api/cohere", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        endpoint: "models",
+        apiKey: config.apiKey,
+      }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      return { models: [], error: errorData.error || `HTTP ${response.status}` };
+    }
+    const data = await response.json();
+    const models: FetchedModel[] = (data.models || [])
+      .filter((model: any) => model.id && !model.id.includes("embed"))
+      .map((model: any) => ({
+        id: model.id,
+        provider: "cohere",
+        name: model.name || model.id,
+      }));
+    return { models };
+  } catch (error) {
+    return { models: getModelsForProvider("cohere") };
+  }
+};
+
+const fetchOllamaModels = async (config: ProviderConfig): Promise<{ models: FetchedModel[]; error?: string }> => {
+  try {
+    const apiKey = config.apiKey || "";
+    const activeProfile = config.profiles.find(p => p.id === config.activeProfileId) || config.profiles[0];
+    const baseUrl = (activeProfile?.baseUrl?.endsWith('/') ? activeProfile.baseUrl.slice(0, -1) : activeProfile?.baseUrl) || "http://localhost:11434/v1";
+    const response = await fetch(`/api/ollama`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        endpoint: `${baseUrl}/api/tags`,
+        apiKey: apiKey,
+      }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      return { models: [], error: errorData.error || `HTTP ${response.status}` };
+    }
+    const data = await response.json();
+    const models: FetchedModel[] = data.models?.map((model: any) => ({
+      id: model.name,
+      provider: "ollama",
+      name: model.name,
+    })) || [];
+    return { models };
+  } catch (error) {
+    return { models: [] };
+  }
+};
+
 // Register all providers in the registry
 import { providerRegistry } from "./providers/registry";
 
@@ -2270,7 +2425,7 @@ providerRegistry.register({
   chat: chatWithGoogleAIStudio,
   stream: streamWithGoogleAIStudio,
   connectionTest: testProviderConnection.bind(null, "google-ai-studio"),
-  modelFetch: fetchModelsFromProvider.bind(null, "google-ai-studio"),
+  modelFetch: fetchGoogleAIStudioModels,
 });
 
 providerRegistry.register({
@@ -2301,7 +2456,7 @@ providerRegistry.register({
   chat: chatWithNvidiaNIM,
   stream: streamWithNvidiaNIM,
   connectionTest: testProviderConnection.bind(null, "nvidia-nim"),
-  modelFetch: fetchModelsFromProvider.bind(null, "nvidia-nim"),
+  modelFetch: fetchNvidiaNimModels,
 });
 
 providerRegistry.register({
@@ -2316,7 +2471,7 @@ providerRegistry.register({
   chat: chatWithGroq,
   stream: streamWithGroq,
   connectionTest: testProviderConnection.bind(null, "groq"),
-  modelFetch: fetchModelsFromProvider.bind(null, "groq"),
+  modelFetch: fetchGroqModels,
 });
 
 providerRegistry.register({
@@ -2331,7 +2486,7 @@ providerRegistry.register({
   chat: chatWithOpenRouter,
   stream: streamWithOpenRouter,
   connectionTest: testProviderConnection.bind(null, "open-router"),
-  modelFetch: fetchModelsFromProvider.bind(null, "open-router"),
+  modelFetch: fetchOpenRouterModels,
 });
 
 providerRegistry.register({
@@ -2346,7 +2501,7 @@ providerRegistry.register({
   chat: chatWithKoboldHorde,
   stream: streamWithKoboldHorde,
   connectionTest: testProviderConnection.bind(null, "kobold-horde"),
-  modelFetch: fetchModelsFromProvider.bind(null, "kobold-horde"),
+  modelFetch: fetchKoboldHordeModels,
 });
 
 providerRegistry.register({
@@ -2361,7 +2516,7 @@ providerRegistry.register({
   chat: chatWithCohere,
   stream: streamWithCohere,
   connectionTest: testProviderConnection.bind(null, "cohere"),
-  modelFetch: fetchModelsFromProvider.bind(null, "cohere"),
+  modelFetch: fetchCohereModels,
 });
 
 providerRegistry.register({
@@ -2375,7 +2530,7 @@ providerRegistry.register({
   chat: chatWithOllama,
   stream: streamWithOllama,
   connectionTest: testProviderConnection.bind(null, "ollama"),
-  modelFetch: fetchModelsFromProvider.bind(null, "ollama"),
+  modelFetch: fetchOllamaModels,
 });
 
 export { providerRegistry };

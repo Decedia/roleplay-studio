@@ -21,6 +21,7 @@ import {
   fetchModelsFromProvider,
   FetchedModel,
   DEFAULT_KOBOLD_HORDE_MODEL,
+  providerRegistry,
 } from "@/lib/providers";
 import { useToast } from "@/hooks/useToast";
 import {
@@ -626,37 +627,30 @@ export default function Chat() {
   }, [globalSettings.dingWhenUnfocused]);
   
   // Provider configuration state
-  const [providerConfigs, setProviderConfigs] = useState<Record<LLMProviderType, ProviderConfig>>({
-    "google-ai-studio": { type: "google-ai-studio", isEnabled: false, profiles: [], activeProfileId: null },
-    "google-vertex": { type: "google-vertex", isEnabled: false, profiles: [], activeProfileId: null },
-    "nvidia-nim": { type: "nvidia-nim", isEnabled: false, profiles: [], activeProfileId: null },
-    "groq": { type: "groq", isEnabled: false, profiles: [], activeProfileId: null },
-    "open-router": { type: "open-router", isEnabled: false, profiles: [], activeProfileId: null },
-    "kobold-horde": { type: "kobold-horde", isEnabled: false, profiles: [], activeProfileId: null },
-    "cohere": { type: "cohere", isEnabled: false, profiles: [], activeProfileId: null },
-    "ollama": { type: "ollama", isEnabled: false, profiles: [], activeProfileId: null },
-  });
+  const getDefaultProviderConfig = (): Record<LLMProviderType, ProviderConfig> => {
+    const configs: Record<string, ProviderConfig> = {};
+    providerRegistry.getAll().forEach((p) => {
+      configs[p.id] = { type: p.id, isEnabled: false, profiles: [], activeProfileId: null };
+    });
+    return configs as Record<LLMProviderType, ProviderConfig>;
+  };
+
+  const [providerConfigs, setProviderConfigs] = useState<Record<LLMProviderType, ProviderConfig>>(getDefaultProviderConfig());
   
   // Provider-specific models (fetched from API after connection)
-  const [providerModels, setProviderModels] = useState<Record<LLMProviderType, FetchedModel[]>>({
-    "google-ai-studio": [],
-    "google-vertex": [],
-    "nvidia-nim": [],
-    "groq": [],
-    "open-router": [],
-    "kobold-horde": [],
-    "cohere": [],
-    "ollama": [],
+  const [providerModels, setProviderModels] = useState<Record<LLMProviderType, FetchedModel[]>>(() => {
+    const models: Record<string, FetchedModel[]> = {};
+    providerRegistry.getAll().forEach((p) => {
+      models[p.id] = [];
+    });
+    return models as Record<LLMProviderType, FetchedModel[]>;
   });
-  const [modelsFetching, setModelsFetching] = useState<Record<LLMProviderType, boolean>>({
-    "google-ai-studio": false,
-    "google-vertex": false,
-    "nvidia-nim": false,
-    "groq": false,
-    "open-router": false,
-    "kobold-horde": false,
-    "cohere": false,
-    "ollama": false,
+  const [modelsFetching, setModelsFetching] = useState<Record<LLMProviderType, boolean>>(() => {
+    const fetching: Record<string, boolean> = {};
+    providerRegistry.getAll().forEach((p) => {
+      fetching[p.id] = false;
+    });
+    return fetching as Record<LLMProviderType, boolean>;
   });
   
   // Active provider state - default to Google AI Studio (not Puter)
@@ -875,15 +869,12 @@ export default function Chat() {
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
   
   // Connection status state for each provider
-  const [connectionStatus, setConnectionStatus] = useState<Record<LLMProviderType, ConnectionStatus>>({
-    "google-ai-studio": { status: "disconnected" },
-    "google-vertex": { status: "disconnected" },
-    "nvidia-nim": { status: "disconnected" },
-    "groq": { status: "disconnected" },
-    "open-router": { status: "disconnected" },
-    "kobold-horde": { status: "disconnected" },
-    "cohere": { status: "disconnected" },
-    "ollama": { status: "disconnected" },
+  const [connectionStatus, setConnectionStatus] = useState<Record<LLMProviderType, ConnectionStatus>>(() => {
+    const status: Record<string, ConnectionStatus> = {};
+    providerRegistry.getAll().forEach((p) => {
+      status[p.id] = { status: "disconnected" };
+    });
+    return status as Record<LLMProviderType, ConnectionStatus>;
   });
 
   // Profile management functions - defined early so they're available throughout the component
