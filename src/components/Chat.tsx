@@ -45,6 +45,7 @@ import { useChatState } from "@/components/chat/hooks/useChatState";
 import * as ui from "@/components/chat/styles";
 
 import { getLogs, clearLogs, exportLogs } from "@/lib/debugLogger";
+import { loadConversations as loadConversationsFromDB, saveConversation as saveConversationToDB, deleteConversation as deleteConversationFromDB, migrateConversationsFromLocalStorage } from "@/lib/conversationStorage";
 
 // Default generator system prompt for SillyTavern character creation
 const DEFAULT_GENERATOR_SYSTEM_PROMPT = `You are a character creator for roleplay. Your task is to help users create detailed, interesting characters for roleplay based on their descriptions.
@@ -1008,7 +1009,6 @@ export default function Chat() {
   useEffect(() => {
     const storedPersonas = localStorage.getItem(PERSONAS_KEY);
     const storedCharacters = localStorage.getItem(CHARACTERS_KEY);
-    const storedConversations = localStorage.getItem(CONVERSATIONS_KEY);
     const storedInstructions = localStorage.getItem(GLOBAL_INSTRUCTIONS_KEY);
     const storedSettings = localStorage.getItem(GLOBAL_SETTINGS_KEY);
     const storedActiveProvider = localStorage.getItem(ACTIVE_PROVIDER_KEY);
@@ -1020,9 +1020,17 @@ export default function Chat() {
     if (storedCharacters) {
       setCharacters(JSON.parse(storedCharacters));
     }
-    if (storedConversations) {
-      setConversations(JSON.parse(storedConversations));
-    }
+
+    (async () => {
+      const migrated = await migrateConversationsFromLocalStorage();
+      if (migrated.length > 0) {
+        setConversations(migrated);
+      } else {
+        const dbConversations = await loadConversationsFromDB();
+        setConversations(dbConversations);
+      }
+    })();
+
     if (storedInstructions) {
       try {
         const parsed = JSON.parse(storedInstructions);
@@ -1159,10 +1167,12 @@ export default function Chat() {
     }
   }, [characters]);
 
-  // Save conversations to localStorage
+  // Save conversations to IndexedDB
   useEffect(() => {
-    if (conversations.length > 0 || localStorage.getItem(CONVERSATIONS_KEY)) {
-      safeLocalStorageSetItem(CONVERSATIONS_KEY, JSON.stringify(conversations));
+    if (conversations.length > 0) {
+      conversations.forEach(conversation => {
+        saveConversationToDB(conversation);
+      });
     }
   }, [conversations]);
 
@@ -2206,8 +2216,7 @@ if (modelsResult.models.length > 0) {
     setView("chat");
   };
 
-  const deleteConversation = (id: string) => {
-    // Store for potential undo
+  const deleteConversation = async (id: string) => {
     const deleted = conversations.find(c => c.id === id);
     if (deleted) {
       setDeletedItem({
@@ -2217,7 +2226,6 @@ if (modelsResult.models.length > 0) {
       });
       setShowUndoToast(true);
       
-      // Clear undo after 5 seconds
       setTimeout(() => {
         setShowUndoToast(false);
         setDeletedItem(null);
@@ -2225,6 +2233,7 @@ if (modelsResult.models.length > 0) {
     }
     
     setConversations((prev) => prev.filter((c) => c.id !== id));
+    await deleteConversationFromDB(id);
     if (currentConversation?.id === id) {
       setCurrentConversation(null);
     }
