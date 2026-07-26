@@ -16,6 +16,8 @@ import {
   TestConnectionResult,
 } from "./types";
 
+import { extractErrorMessage } from "./errorUtils";
+
 // Re-export types for convenience
 export type { LLMProviderType, ProviderConfig, Message, LLMModel, LLMProvider, VertexMode, VertexLocation, ThinkingLevel, ThinkingBudget, FetchedModel, ChatResponse, StreamCallback, TestConnectionResult };
 
@@ -899,7 +901,7 @@ export const streamWithNvidiaNIM = async (
 
     if (!response.ok) {
       const errorData = await response.json();
-      onChunk({ error: errorData.error || `HTTP ${response.status}` });
+      onChunk({ error: extractErrorMessage(errorData.error) });
       return;
     }
 
@@ -1087,7 +1089,7 @@ export const streamWithGroq = async (
 
     if (!response.ok) {
       const errorData = await response.json();
-      onChunk({ error: errorData.error || `HTTP ${response.status}` });
+      onChunk({ error: extractErrorMessage(errorData.error) });
       return;
     }
 
@@ -1259,7 +1261,7 @@ export const streamWithOpenRouter = async (
 
     if (!response.ok) {
       const errorData = await response.json();
-      onChunk({ error: errorData.error || `HTTP ${response.status}` });
+      onChunk({ error: extractErrorMessage(errorData.error) });
       return;
     }
 
@@ -1419,7 +1421,7 @@ export const streamWithVertexAI = async (
 
     if (!response.ok) {
       const errorData = await response.json();
-      onChunk({ error: errorData.error || `HTTP ${response.status}` });
+      onChunk({ error: extractErrorMessage(errorData.error) });
       return;
     }
 
@@ -1718,7 +1720,7 @@ export const streamWithKoboldHorde = async (
 
      if (!response.ok) {
        const errorData = await response.json();
-       onChunk({ error: errorData.error || `HTTP ${response.status}` });
+       onChunk({ error: extractErrorMessage(errorData.error) });
        return;
      }
 
@@ -1898,7 +1900,7 @@ export const streamWithCohere = async (
 
     if (!response.ok) {
       const errorData = await response.json();
-      onChunk({ error: errorData.error || `HTTP ${response.status}` });
+      onChunk({ error: extractErrorMessage(errorData.error) });
       return;
     }
 
@@ -2169,7 +2171,7 @@ export const streamWithOllama = async (
 
     if (!response.ok) {
       const errorData = await response.json();
-      onChunk({ error: errorData.error || `HTTP ${response.status}` });
+      onChunk({ error: extractErrorMessage(errorData.error) });
       return;
     }
 
@@ -2363,7 +2365,7 @@ const fetchCohereModels = async (config: ProviderConfig): Promise<{ models: Fetc
     });
     if (!response.ok) {
       const errorData = await response.json();
-      return { models: [], error: errorData.error || `HTTP ${response.status}` };
+      return { models: [], error: extractErrorMessage(errorData.error) || `HTTP ${response.status}` };
     }
     const data = await response.json();
     const models: FetchedModel[] = (data.models || [])
@@ -2396,7 +2398,7 @@ const fetchOllamaModels = async (config: ProviderConfig): Promise<{ models: Fetc
     });
     if (!response.ok) {
       const errorData = await response.json();
-      return { models: [], error: errorData.error || `HTTP ${response.status}` };
+      return { models: [], error: extractErrorMessage(errorData.error) || `HTTP ${response.status}` };
     }
     const data = await response.json();
     const models: FetchedModel[] = data.models?.map((model: any) => ({

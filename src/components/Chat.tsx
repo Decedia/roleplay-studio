@@ -46,6 +46,7 @@ import * as ui from "@/components/chat/styles";
 
 import { getLogs, clearLogs, exportLogs } from "@/lib/debugLogger";
 import { loadConversations as loadConversationsFromDB, saveConversation as saveConversationToDB, deleteConversation as deleteConversationFromDB, migrateConversationsFromLocalStorage } from "@/lib/conversationStorage";
+import { extractErrorMessage } from "@/lib/errorUtils";
 
 // Default generator system prompt for SillyTavern character creation
 const DEFAULT_GENERATOR_SYSTEM_PROMPT = `You are a character creator for roleplay. Your task is to help users create detailed, interesting characters for roleplay based on their descriptions.
@@ -841,7 +842,7 @@ export default function Chat() {
         },
         (chunk) => {
           if (chunk.error) {
-            setError(chunk.error);
+            setError(extractErrorMessage(chunk.error));
             setIsGeneratorLoading(false);
             return;
           }
@@ -860,7 +861,7 @@ export default function Chat() {
       );
     } catch (err) {
       console.error("Generator retry error:", err);
-      setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
+      setError(extractErrorMessage(err));
       setIsGeneratorLoading(false);
       setGeneratorStreamingContent("");
     }
@@ -1673,7 +1674,7 @@ export default function Chat() {
       setImportSuccess("Data imported successfully! All your personas, characters, and conversations have been restored.");
       setTimeout(() => setImportSuccess(null), 5000);
     } catch (error) {
-       setImportError(`Failed to import data: ${error instanceof Error ? error.message : "Invalid JSON file"}`);
+       setImportError(`Failed to import data: ${extractErrorMessage(error)}`);
        setTimeout(() => setImportError(null), 5000);
      }
    };
@@ -2036,7 +2037,7 @@ if (modelsResult.models.length > 0) {
       
     } catch (error) {
       console.error("Image generation error:", error);
-      setImageGenerationError(error instanceof Error ? error.message : "Failed to generate image. Please try again.");
+      setImageGenerationError(extractErrorMessage(error));
     } finally {
       setIsGeneratingImage(false);
     }
@@ -2095,7 +2096,7 @@ if (modelsResult.models.length > 0) {
     const result = await readCharacterFile(file);
     
     if ("error" in result) {
-      setImportError(result.error);
+      setImportError(extractErrorMessage(result.error));
     } else {
       setCharacters((prev) => [...prev, result]);
       setImportSuccess(`Successfully imported character: ${result.name}`);
@@ -2428,7 +2429,7 @@ if (modelsResult.models.length > 0) {
           },
           (chunk) => {
             if (chunk.error) {
-              setError(chunk.error);
+              setError(extractErrorMessage(chunk.error));
               return;
             }
             
@@ -2482,7 +2483,7 @@ if (modelsResult.models.length > 0) {
         );
         
         if (response.error) {
-          setError(response.error);
+          setError(extractErrorMessage(response.error));
         } else {
           const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
           // Format the response content
@@ -2505,7 +2506,7 @@ if (modelsResult.models.length > 0) {
       }
     } catch (err) {
       console.error("Chat error:", err);
-      setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
+      setError(extractErrorMessage(err));
     } finally {
       setIsLoading(false);
       setIsSending(false);
@@ -2631,7 +2632,7 @@ if (modelsResult.models.length > 0) {
 
       if (result.error) {
         console.error("Summarization error:", result.error);
-        setError(`Summarization failed: ${result.error}`);
+        setError(`Summarization failed: ${extractErrorMessage(result.error)}`);
         return;
       }
 
@@ -2651,7 +2652,7 @@ if (modelsResult.models.length > 0) {
       );
     } catch (err) {
       console.error("Summarization error:", err);
-      setError(err instanceof Error ? err.message : "Summarization failed.");
+      setError(extractErrorMessage(err));
     } finally {
       setIsSummarizing(false);
     }
@@ -2798,7 +2799,7 @@ if (modelsResult.models.length > 0) {
           },
           (chunk) => {
             if (chunk.error) {
-              setError(chunk.error);
+              setError(extractErrorMessage(chunk.error));
               return;
             }
             
@@ -2851,7 +2852,7 @@ if (modelsResult.models.length > 0) {
         );
         
         if (response.error) {
-          setError(response.error);
+          setError(extractErrorMessage(response.error));
         } else {
           // Format the response content
           const formattedContent = formatResponse(response.content || "");
@@ -2868,7 +2869,7 @@ if (modelsResult.models.length > 0) {
       }
     } catch (err) {
       console.error("Retry error:", err);
-      setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
+      setError(extractErrorMessage(err));
     } finally {
       setIsLoading(false);
       playNotificationSound();
@@ -2989,7 +2990,7 @@ if (modelsResult.models.length > 0) {
           },
           (chunk) => {
             if (chunk.error) {
-              setError(chunk.error);
+              setError(extractErrorMessage(chunk.error));
               return;
             }
             
@@ -3055,7 +3056,7 @@ if (modelsResult.models.length > 0) {
         );
         
         if (response.error) {
-          setError(response.error);
+          setError(extractErrorMessage(response.error));
         } else {
           // Append to existing assistant message instead of creating new one
           const existingMessages = [...messagesWithContinue];
@@ -3091,7 +3092,7 @@ if (modelsResult.models.length > 0) {
       }
     } catch (err) {
       console.error("Continue error:", err);
-      setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
+      setError(extractErrorMessage(err));
     } finally {
       setIsLoading(false);
       playNotificationSound();
@@ -3236,7 +3237,7 @@ if (modelsResult.models.length > 0) {
           },
             (chunk) => {
               if (chunk.error) {
-                setError(chunk.error);
+                setError(extractErrorMessage(chunk.error));
                 return;
               }
 
@@ -3283,7 +3284,7 @@ if (modelsResult.models.length > 0) {
         );
         
         if (response.error) {
-          setError(response.error);
+          setError(extractErrorMessage(response.error));
           } else {
             const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
             // Wrap thinking in <think> tags if present
@@ -3299,7 +3300,7 @@ if (modelsResult.models.length > 0) {
         }
       } catch (err) {
         console.error("Edit regenerate error:", err);
-        setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
+        setError(extractErrorMessage(err));
       } finally {
         setIsLoading(false);
         playNotificationSound();
@@ -4490,7 +4491,7 @@ if (modelsResult.models.length > 0) {
                           },
                           (chunk) => {
                             if (chunk.error) {
-                              setError(chunk.error);
+                              setError(extractErrorMessage(chunk.error));
                               setIsGeneratorLoading(false);
                               return;
                             }
@@ -4512,7 +4513,7 @@ if (modelsResult.models.length > 0) {
                         );
                       } catch (err) {
                         console.error("Generator error:", err);
-                        setError(err instanceof Error ? err.message : "An error occurred. Please try again.");
+                        setError(extractErrorMessage(err));
                         setIsGeneratorLoading(false);
                         setGeneratorStreamingContent("");
                       }

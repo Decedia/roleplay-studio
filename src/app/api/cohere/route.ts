@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { extractErrorMessage } from "@/lib/errorUtils";
 
 // Cohere API route - uses server-side proxy to avoid CORS
 export async function POST(request: NextRequest) {
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       return NextResponse.json(
-        { error: errorData.error?.message || `HTTP ${response.status}` },
+        { error: extractErrorMessage(errorData.error) || `HTTP ${response.status}` },
         { status: response.status }
       );
     }
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Cohere API error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unknown error" },
+      { error: extractErrorMessage(error) },
       { status: 500 }
     );
   }

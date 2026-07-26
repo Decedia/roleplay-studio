@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { extractErrorMessage } from "@/lib/errorUtils";
 
 // NVIDIA NIM API proxy to avoid CORS issues
 // Timeout in milliseconds (90 seconds - below Cloudflare's 100s limit)
@@ -135,7 +136,7 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: data.error?.message || `HTTP ${response.status}` },
+        { error: extractErrorMessage(data.error) || `HTTP ${response.status}` },
         { status: response.status }
       );
     }
@@ -211,7 +212,7 @@ export async function GET(request: NextRequest) {
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: data.error?.message || `HTTP ${response.status}` },
+        { error: extractErrorMessage(data.error) || `HTTP ${response.status}` },
         { status: response.status }
       );
     }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { extractErrorMessage } from "@/lib/errorUtils";
 
 // KoboldAI Horde API route - uses server-side proxy to avoid CORS
 export async function POST(request: NextRequest) {
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
     if (!submitResponse.ok) {
       const errorData = await submitResponse.json().catch(() => ({}));
       return NextResponse.json(
-        { error: errorData.message || `HTTP ${submitResponse.status}` },
+        { error: extractErrorMessage(errorData) || `HTTP ${submitResponse.status}` },
         { status: submitResponse.status }
       );
     }
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("KoboldAI Horde API error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unknown error" },
+      { error: extractErrorMessage(error) },
       { status: 500 }
     );
   }

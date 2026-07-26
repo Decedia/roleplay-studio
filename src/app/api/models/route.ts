@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { extractErrorMessage } from "@/lib/errorUtils";
 
 // Models API route - fetches available models from different providers
 export async function GET(request: NextRequest) {
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
         if (!response.ok) {
           const errorData = await response.json();
           return NextResponse.json(
-            { error: errorData.error?.message || `HTTP ${response.status}` },
+            { error: extractErrorMessage(errorData.error) || `HTTP ${response.status}` },
             { status: response.status }
           );
         }
@@ -67,7 +68,7 @@ export async function GET(request: NextRequest) {
         if (!response.ok) {
           const errorData = await response.json();
           return NextResponse.json(
-            { error: errorData.error?.message || `HTTP ${response.status}` },
+            { error: extractErrorMessage(errorData.error) || `HTTP ${response.status}` },
             { status: response.status }
           );
         }
@@ -255,7 +256,7 @@ export async function GET(request: NextRequest) {
         if (!response.ok) {
           const errorData = await response.json();
           return NextResponse.json(
-            { error: errorData.error?.message || `HTTP ${response.status}` },
+            { error: extractErrorMessage(errorData.error) || `HTTP ${response.status}` },
             { status: response.status }
           );
         }
@@ -300,7 +301,7 @@ export async function GET(request: NextRequest) {
         if (!response.ok) {
           const errorData = await response.json();
           return NextResponse.json(
-            { error: errorData.error?.message || `HTTP ${response.status}` },
+            { error: extractErrorMessage(errorData.error) || `HTTP ${response.status}` },
             { status: response.status }
           );
         }
@@ -364,7 +365,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error(`Error fetching models for ${provider}:`, error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unknown error" },
+      { error: extractErrorMessage(error) },
       { status: 500 }
     );
   }

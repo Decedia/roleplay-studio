@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { extractErrorMessage } from "@/lib/errorUtils";
 
 // Vertex AI proxy route to avoid CORS issues
 export async function POST(request: NextRequest) {
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: data.error?.message || `HTTP ${response.status}` },
+        { error: extractErrorMessage(data.error) || `HTTP ${response.status}` },
         { status: response.status }
       );
     }
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Vertex AI proxy error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unknown error occurred" },
+      { error: extractErrorMessage(error) },
       { status: 500 }
     );
   }
@@ -90,7 +91,7 @@ export async function PATCH(request: NextRequest) {
     if (!response.ok) {
       const errorData = await response.json();
       return NextResponse.json(
-        { error: errorData.error?.message || `HTTP ${response.status}` },
+        { error: extractErrorMessage(errorData.error) || `HTTP ${response.status}` },
         { status: response.status }
       );
     }
@@ -137,7 +138,7 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error("Vertex AI streaming proxy error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unknown error occurred" },
+      { error: extractErrorMessage(error) },
       { status: 500 }
     );
   }
