@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { Checkbox } from "@/components/ui/checkbox";
+
 
 
 // Import our custom types and utilities

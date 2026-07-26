@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { Checkbox } from "@/components/ui/checkbox";
+import { ToggleSwitch } from "@/components/ui/toggle-switch";
 
 import {
   LLMProviderType,
@@ -1181,30 +1181,28 @@ export function SettingsModal({
                  </p>
                </div>
 
-               {/* Custom Size Toggle */}
-               <div className="flex items-center gap-3 mb-4">
-                 <Checkbox
-                   id="useCustomSize"
-                   checked={globalSettings.useCustomSize}
-                   onCheckedChange={(useCustom) => {
-                     if (!useCustom && selectedModel) {
-                       // Reset to model max when disabling custom size
-                       setGlobalSettings({ 
-                         ...globalSettings, 
-                         useCustomSize: false,
-                         maxTokens: selectedModel.max_tokens || 4000,
-                         maxContextTokens: selectedModel.context || 128000
-                       });
-                     } else {
-                       setGlobalSettings({ ...globalSettings, useCustomSize: useCustom as boolean });
-                     }
-                   }}
-                   className="data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                 />
-                 <label htmlFor="useCustomSize" className="text-sm text-zinc-300 cursor-pointer">
-                   Use custom output/context sizes
-                 </label>
-               </div>
+                {/* Custom Size Toggle */}
+                <div className="flex items-center gap-3 mb-4">
+                  <ToggleSwitch
+                    id="useCustomSize"
+                    checked={globalSettings.useCustomSize}
+                    onCheckedChange={(useCustom) => {
+                      if (!useCustom && selectedModel) {
+                        setGlobalSettings({ 
+                          ...globalSettings, 
+                          useCustomSize: false,
+                          maxTokens: selectedModel.max_tokens || 4000,
+                          maxContextTokens: selectedModel.context || 128000
+                        });
+                      } else {
+                        setGlobalSettings({ ...globalSettings, useCustomSize: useCustom });
+                      }
+                    }}
+                  />
+                  <label htmlFor="useCustomSize" className="text-sm text-zinc-300 cursor-pointer">
+                    Use custom output/context sizes
+                  </label>
+                </div>
 
                {/* Max Output Tokens */}
                <div className={globalSettings.useCustomSize ? "" : "opacity-50 pointer-events-none"}>
@@ -1512,11 +1510,10 @@ export function SettingsModal({
             {/* Auto-export settings */}
             <div className="mt-4 p-3 bg-zinc-800 rounded-lg">
               <div className="flex items-center gap-3 mb-3">
-                <Checkbox
+                <ToggleSwitch
                   id="autoExport"
                   checked={autoExport.enabled}
-                  onCheckedChange={(checked) => setAutoExport(prev => ({ ...prev, enabled: checked as boolean }))}
-                  className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                  onCheckedChange={(checked) => setAutoExport(prev => ({ ...prev, enabled: checked }))}
                 />
                 <label htmlFor="autoExport" className="text-sm text-white cursor-pointer">
                   Auto-export every
