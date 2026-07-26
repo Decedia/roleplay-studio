@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
+
 import {
   LLMProviderType,
   ProviderConfig,
@@ -1335,10 +1335,11 @@ export function SettingsModal({
                  <label className="block text-sm font-medium text-zinc-300 mb-2">
                    Enable Thinking
                  </label>
-                 <Switch
+                 <input
+                   type="checkbox"
                    checked={globalSettings.enableThinking}
-                   onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, enableThinking: checked })}
-                   className="data-[state=checked]:bg-blue-600"
+                   onChange={(e) => setGlobalSettings({ ...globalSettings, enableThinking: e.target.checked })}
+                   className="h-4 w-4"
                  />
                  <p className="text-xs text-zinc-500 mt-1">
                    Show AI reasoning process (Gemini models only)
@@ -1350,10 +1351,11 @@ export function SettingsModal({
                  <label className="block text-sm font-medium text-zinc-300 mb-2">
                    Enable Streaming
                  </label>
-                 <Switch
+                 <input
+                   type="checkbox"
                    checked={globalSettings.enableStreaming}
-                   onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, enableStreaming: checked })}
-                   className="data-[state=checked]:bg-blue-600"
+                   onChange={(e) => setGlobalSettings({ ...globalSettings, enableStreaming: e.target.checked })}
+                   className="h-4 w-4"
                  />
                  <p className="text-xs text-zinc-500 mt-1">
                    Stream AI responses in real-time
@@ -1365,10 +1367,11 @@ export function SettingsModal({
                  <label className="block text-sm font-medium text-zinc-300 mb-2">
                    Ding When Unfocused
                  </label>
-                 <Switch
+                 <input
+                   type="checkbox"
                    checked={globalSettings.dingWhenUnfocused}
-                   onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, dingWhenUnfocused: checked })}
-                   className="data-[state=checked]:bg-blue-600"
+                   onChange={(e) => setGlobalSettings({ ...globalSettings, dingWhenUnfocused: e.target.checked })}
+                   className="h-4 w-4"
                  />
                  <p className="text-xs text-zinc-500 mt-1">
                    Play a notification sound when AI finishes and window is not focused
