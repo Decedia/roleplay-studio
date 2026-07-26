@@ -1328,53 +1328,47 @@ export function SettingsModal({
                  </p>
                </div>
 
-               {/* Enable Thinking */}
-               <div>
-                 <label className="block text-sm font-medium text-zinc-300 mb-2">
-                   Enable Thinking
-                 </label>
-                 <input
-                   type="checkbox"
-                   checked={globalSettings.enableThinking}
-                   onChange={(e) => setGlobalSettings({ ...globalSettings, enableThinking: e.target.checked })}
-                   className="h-4 w-4"
-                 />
-                 <p className="text-xs text-zinc-500 mt-1">
-                   Show AI reasoning process (Gemini models only)
-                 </p>
-               </div>
+                {/* Enable Thinking */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                    Enable Thinking
+                  </label>
+                  <ToggleSwitch
+                    checked={globalSettings.enableThinking}
+                    onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, enableThinking: checked })}
+                  />
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Show AI reasoning process (Gemini models only)
+                  </p>
+                </div>
 
-               {/* Enable Streaming */}
-               <div>
-                 <label className="block text-sm font-medium text-zinc-300 mb-2">
-                   Enable Streaming
-                 </label>
-                 <input
-                   type="checkbox"
-                   checked={globalSettings.enableStreaming}
-                   onChange={(e) => setGlobalSettings({ ...globalSettings, enableStreaming: e.target.checked })}
-                   className="h-4 w-4"
-                 />
-                 <p className="text-xs text-zinc-500 mt-1">
-                   Stream AI responses in real-time
-                 </p>
-               </div>
+                {/* Enable Streaming */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                    Enable Streaming
+                  </label>
+                  <ToggleSwitch
+                    checked={globalSettings.enableStreaming}
+                    onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, enableStreaming: checked })}
+                  />
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Stream AI responses in real-time
+                  </p>
+                </div>
 
-               {/* Ding When Unfocused */}
-               <div>
-                 <label className="block text-sm font-medium text-zinc-300 mb-2">
-                   Ding When Unfocused
-                 </label>
-                 <input
-                   type="checkbox"
-                   checked={globalSettings.dingWhenUnfocused}
-                   onChange={(e) => setGlobalSettings({ ...globalSettings, dingWhenUnfocused: e.target.checked })}
-                   className="h-4 w-4"
-                 />
-                 <p className="text-xs text-zinc-500 mt-1">
-                   Play a notification sound when AI finishes and window is not focused
-                 </p>
-               </div>
+                {/* Ding When Unfocused */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                    Ding When Unfocused
+                  </label>
+                  <ToggleSwitch
+                    checked={globalSettings.dingWhenUnfocused}
+                    onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, dingWhenUnfocused: checked })}
+                  />
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Play a notification sound when AI finishes and window is not focused
+                  </p>
+                </div>
              </div>
            </div>
 
