@@ -404,11 +404,11 @@ export const loading = {
 export const notifications = {
   /** Error banner */
   error: "fixed top-[73px] left-0 right-0 z-40 px-4 py-3",
-  errorInner: "bg-red-900/80 border border-red-700 rounded-lg px-4 py-3 text-red-200 shadow-xl backdrop-blur-sm",
-  errorContent: "overflow-y-auto whitespace-pre-wrap",
-  errorActions: "flex justify-end gap-2 mt-3 pt-3 border-t border-red-700/50",
+  errorInner: "bg-zinc-800/95 border border-zinc-700 rounded-lg px-4 py-3 text-zinc-200 shadow-xl backdrop-blur-sm border-l-4 border-l-red-500 flex items-start gap-3",
+  errorContent: "flex-1 overflow-y-auto whitespace-pre-wrap",
+  errorActions: "flex items-center gap-1.5 flex-shrink-0",
   
-/** Toast notification */
+  /** Toast notification */
 toast: "fixed bottom-32 left-0 right-0 z-[5000] px-4 py-3",
 toastInner: "bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white shadow-xl backdrop-blur-sm flex items-center justify-between",
 toastContent: "flex items-center gap-3",
