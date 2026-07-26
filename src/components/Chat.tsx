@@ -46,8 +46,6 @@ import * as ui from "@/components/chat/styles";
 
 import { getLogs, clearLogs, exportLogs } from "@/lib/debugLogger";
 
-// Custom UI components
-
 // Default generator system prompt for SillyTavern character creation
 const DEFAULT_GENERATOR_SYSTEM_PROMPT = `You are a character creator for roleplay. Your task is to help users create detailed, interesting characters for roleplay based on their descriptions.
 
@@ -686,6 +684,41 @@ export default function Chat() {
   const [editingGeneratorMessageIndex, setEditingGeneratorMessageIndex] = useState<number | null>(null);
   const [editingGeneratorMessageContent, setEditingGeneratorMessageContent] = useState<string>("");
 
+  function safeLocalStorageSetItem(key: string, value: string) {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      if (key === CONVERSATIONS_KEY) {
+        try {
+          const parsed = JSON.parse(value) as Conversation[];
+          const trimmed = parsed.slice(-50);
+          localStorage.setItem(key, JSON.stringify(trimmed));
+          setConversations(trimmed);
+        } catch {
+          try {
+            const parsed = JSON.parse(value) as Conversation[];
+            const trimmed = parsed.slice(-20).map(c => ({
+              ...c,
+              messages: c.messages.slice(-100),
+            }));
+            localStorage.setItem(key, JSON.stringify(trimmed));
+            setConversations(trimmed);
+          } catch {
+            localStorage.removeItem(key);
+          }
+        }
+      }
+    }
+  }
+
+  function safeLocalStorageRemoveItem(key: string) {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // ignore
+    }
+  }
+
   // Generator message helpers
   const handleGeneratorDeleteMessage = (index: number) => {
     if (!currentGeneratorSession || isGeneratorLoading) return;
@@ -1108,45 +1141,45 @@ export default function Chat() {
       timestamp: Date.now(),
     };
     
-    localStorage.setItem(LAST_SESSION_KEY, JSON.stringify(session));
+    safeLocalStorageSetItem(LAST_SESSION_KEY, JSON.stringify(session));
     lastSessionRef.current = session;
   }, [view, selectedPersona, selectedCharacter, currentConversation]);
 
   // Save personas to localStorage
   useEffect(() => {
     if (personas.length > 0 || localStorage.getItem(PERSONAS_KEY)) {
-      localStorage.setItem(PERSONAS_KEY, JSON.stringify(personas));
+      safeLocalStorageSetItem(PERSONAS_KEY, JSON.stringify(personas));
     }
   }, [personas]);
 
   // Save characters to localStorage
   useEffect(() => {
     if (characters.length > 0 || localStorage.getItem(CHARACTERS_KEY)) {
-      localStorage.setItem(CHARACTERS_KEY, JSON.stringify(characters));
+      safeLocalStorageSetItem(CHARACTERS_KEY, JSON.stringify(characters));
     }
   }, [characters]);
 
   // Save conversations to localStorage
   useEffect(() => {
     if (conversations.length > 0 || localStorage.getItem(CONVERSATIONS_KEY)) {
-      localStorage.setItem(CONVERSATIONS_KEY, JSON.stringify(conversations));
+      safeLocalStorageSetItem(CONVERSATIONS_KEY, JSON.stringify(conversations));
     }
   }, [conversations]);
 
   // Save global instructions to localStorage
   useEffect(() => {
-    localStorage.setItem(GLOBAL_INSTRUCTIONS_KEY, JSON.stringify(globalInstructions));
+    safeLocalStorageSetItem(GLOBAL_INSTRUCTIONS_KEY, JSON.stringify(globalInstructions));
   }, [globalInstructions]);
 
   // Save instruction presets to localStorage
   useEffect(() => {
-    localStorage.setItem(INSTRUCTION_PRESETS_KEY, JSON.stringify(instructionPresets));
+    safeLocalStorageSetItem(INSTRUCTION_PRESETS_KEY, JSON.stringify(instructionPresets));
   }, [instructionPresets]);
 
   // Save generator sessions to localStorage
   useEffect(() => {
     if (generatorSessions.length > 0 || localStorage.getItem(GENERATOR_SESSIONS_KEY)) {
-      localStorage.setItem(GENERATOR_SESSIONS_KEY, JSON.stringify(generatorSessions));
+      safeLocalStorageSetItem(GENERATOR_SESSIONS_KEY, JSON.stringify(generatorSessions));
     }
   }, [generatorSessions]);
 
@@ -1175,7 +1208,7 @@ export default function Chat() {
 
   // Save global settings to localStorage
   useEffect(() => {
-    localStorage.setItem(GLOBAL_SETTINGS_KEY, JSON.stringify(globalSettings));
+    safeLocalStorageSetItem(GLOBAL_SETTINGS_KEY, JSON.stringify(globalSettings));
   }, [globalSettings]);
   
   // Load provider configs from localStorage
@@ -1222,7 +1255,7 @@ export default function Chat() {
             }, {} as Record<LLMProviderType, ProviderConfig>);
             
             // Save migrated configs
-            localStorage.setItem(PROVIDER_CONFIGS_KEY, JSON.stringify(configs));
+            safeLocalStorageSetItem(PROVIDER_CONFIGS_KEY, JSON.stringify(configs));
             console.log("Migration completed successfully");
           }
           
@@ -1295,17 +1328,17 @@ export default function Chat() {
   
   // Save provider configs to localStorage
   useEffect(() => {
-    localStorage.setItem(PROVIDER_CONFIGS_KEY, JSON.stringify(providerConfigs));
+    safeLocalStorageSetItem(PROVIDER_CONFIGS_KEY, JSON.stringify(providerConfigs));
   }, [providerConfigs]);
 
   // Save active provider to localStorage
   useEffect(() => {
-    localStorage.setItem(ACTIVE_PROVIDER_KEY, activeProvider);
+    safeLocalStorageSetItem(ACTIVE_PROVIDER_KEY, activeProvider);
   }, [activeProvider]);
 
   // Save connection status to localStorage
   useEffect(() => {
-    localStorage.setItem(CONNECTION_STATUS_KEY, JSON.stringify(connectionStatus));
+    safeLocalStorageSetItem(CONNECTION_STATUS_KEY, JSON.stringify(connectionStatus));
   }, [connectionStatus]);
 
   // Auto-reconnect on initial load using saved provider/profile/model
@@ -1331,7 +1364,7 @@ export default function Chat() {
 
   // Save auto-export settings to localStorage
   useEffect(() => {
-    localStorage.setItem(AUTO_EXPORT_KEY, JSON.stringify(autoExport));
+    safeLocalStorageSetItem(AUTO_EXPORT_KEY, JSON.stringify(autoExport));
   }, [autoExport]);
   
   // Auto-export timer
