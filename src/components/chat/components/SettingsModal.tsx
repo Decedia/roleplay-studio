@@ -1330,56 +1330,50 @@ export function SettingsModal({
                  </p>
                </div>
 
-                {/* Enable Thinking */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-zinc-300">
-                      Enable Thinking
-                    </label>
-                    <p className="text-xs text-zinc-500 mt-0.5 sm:mt-1">
-                      Show AI reasoning process (Gemini models only)
-                    </p>
-                  </div>
-                  <Switch
-                    checked={globalSettings.enableThinking}
-                    onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, enableThinking: checked })}
-                    className="data-[state=checked]:bg-blue-600 flex-shrink-0"
-                  />
-                </div>
+               {/* Enable Thinking */}
+               <div>
+                 <label className="block text-sm font-medium text-zinc-300 mb-2">
+                   Enable Thinking
+                 </label>
+                 <Switch
+                   checked={globalSettings.enableThinking}
+                   onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, enableThinking: checked })}
+                   className="data-[state=checked]:bg-blue-600"
+                 />
+                 <p className="text-xs text-zinc-500 mt-1">
+                   Show AI reasoning process (Gemini models only)
+                 </p>
+               </div>
 
-                {/* Enable Streaming */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-zinc-300">
-                      Enable Streaming
-                    </label>
-                    <p className="text-xs text-zinc-500 mt-0.5 sm:mt-1">
-                      Stream AI responses in real-time
-                    </p>
-                  </div>
-                  <Switch
-                    checked={globalSettings.enableStreaming}
-                    onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, enableStreaming: checked })}
-                    className="data-[state=checked]:bg-blue-600 flex-shrink-0"
-                  />
-                </div>
+               {/* Enable Streaming */}
+               <div>
+                 <label className="block text-sm font-medium text-zinc-300 mb-2">
+                   Enable Streaming
+                 </label>
+                 <Switch
+                   checked={globalSettings.enableStreaming}
+                   onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, enableStreaming: checked })}
+                   className="data-[state=checked]:bg-blue-600"
+                 />
+                 <p className="text-xs text-zinc-500 mt-1">
+                   Stream AI responses in real-time
+                 </p>
+               </div>
 
-                {/* Ding When Unfocused */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-zinc-300">
-                      Ding When Unfocused
-                    </label>
-                    <p className="text-xs text-zinc-500 mt-0.5 sm:mt-1">
-                      Play a notification sound when AI finishes and window is not focused
-                    </p>
-                  </div>
-                  <Switch
-                    checked={globalSettings.dingWhenUnfocused}
-                    onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, dingWhenUnfocused: checked })}
-                    className="data-[state=checked]:bg-blue-600 flex-shrink-0"
-                  />
-                </div>
+               {/* Ding When Unfocused */}
+               <div>
+                 <label className="block text-sm font-medium text-zinc-300 mb-2">
+                   Ding When Unfocused
+                 </label>
+                 <Switch
+                   checked={globalSettings.dingWhenUnfocused}
+                   onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, dingWhenUnfocused: checked })}
+                   className="data-[state=checked]:bg-blue-600"
+                 />
+                 <p className="text-xs text-zinc-500 mt-1">
+                   Play a notification sound when AI finishes and window is not focused
+                 </p>
+               </div>
              </div>
            </div>
 
