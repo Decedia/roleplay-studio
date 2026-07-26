@@ -44,6 +44,8 @@ import { useChatState } from "@/components/chat/hooks/useChatState";
 // Import UI styles
 import * as ui from "@/components/chat/styles";
 
+import { getLogs, clearLogs, exportLogs } from "@/lib/debugLogger";
+
 // Custom UI components
 
 // Default generator system prompt for SillyTavern character creation
@@ -564,8 +566,9 @@ export default function Chat() {
   const [showHeaderActions, setShowHeaderActions] = useState(false);
   const [showUtilityPanel, setShowUtilityPanel] = useState(false);
   const [showUtilitiesModal, setShowUtilitiesModal] = useState(false);
-  const [utilityPanelTab, setUtilityPanelTab] = useState<'tags' | 'summarization' | 'debug'>('tags');
+  const [utilityPanelTab, setUtilityPanelTab] = useState<'tags' | 'summarization' | 'debug' | 'logs'>('tags');
   const [apiDebugPayload, setApiDebugPayload] = useState<string | null>(null);
+  const [debugLogs, setDebugLogs] = useState<Awaited<ReturnType<typeof getLogs>>>([]);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [showConversationHistory, setShowConversationHistory] = useState(false);
   const [viewingConversation, setViewingConversation] = useState<Conversation | null>(null);
@@ -851,6 +854,13 @@ export default function Chat() {
     scrollContainer.addEventListener("scroll", handleScroll, { passive: true });
     return () => scrollContainer.removeEventListener("scroll", handleScroll);
   }, [view]);
+  
+  // Load debug logs when utility panel opens or tab changes
+  useEffect(() => {
+    if (showUtilityPanel && utilityPanelTab === 'logs') {
+      setDebugLogs(getLogs());
+    }
+  }, [showUtilityPanel, utilityPanelTab]);
   
   // User menu state
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -3436,7 +3446,7 @@ if (modelsResult.models.length > 0) {
                     </svg>
                     <div>
                      <div className="text-sm text-white">Utilities</div>
-                       <div className="text-xs text-zinc-500">Tags, summarize, debug</div>
+                        <div className="text-xs text-zinc-500">Tags, summarize, debug, logs</div>
                      </div>
                    </button>
 
@@ -4940,6 +4950,21 @@ if (modelsResult.models.length > 0) {
                   Debug
                 </span>
               </button>
+              <button
+                onClick={() => setUtilityPanelTab('logs')}
+                className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                  utilityPanelTab === 'logs'
+                    ? 'bg-zinc-800 text-white'
+                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50'
+                }`}
+              >
+                <span className="flex items-center justify-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Logs
+                </span>
+              </button>
             </div>
 
             {/* Content */}
@@ -5368,6 +5393,154 @@ if (modelsResult.models.length > 0) {
                       >
                         Copy
                       </button>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Logs Section */}
+              {utilityPanelTab === 'logs' && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Debug Logs</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          const text = exportLogs();
+                          navigator.clipboard.writeText(text);
+                        }}
+                        className="text-xs text-zinc-500 hover:text-zinc-300"
+                      >
+                        Copy
+                      </button>
+                      <button
+                        onClick={() => {
+                          clearLogs();
+                          setDebugLogs([]);
+                        }}
+                        className="text-xs text-red-400 hover:text-red-300"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {debugLogs.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                      <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center mb-3">
+                        <svg className="w-6 h-6 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <p className="text-sm text-zinc-500">No logs yet</p>
+                      <p className="text-xs text-zinc-600 mt-1">Logs are saved automatically when errors occur</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {debugLogs.slice().reverse().map((log, idx) => (
+                        <div
+                          key={`${log.timestamp}-${idx}`}
+                          className={`rounded-lg border p-2.5 ${
+                            log.level === 'error'
+                              ? 'bg-red-950/30 border-red-900/50'
+                              : log.level === 'warn'
+                              ? 'bg-yellow-950/30 border-yellow-900/50'
+                              : 'bg-zinc-800/50 border-zinc-700/50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`text-xs font-mono font-semibold ${
+                              log.level === 'error'
+                                ? 'text-red-400'
+                                : log.level === 'warn'
+                                ? 'text-yellow-400'
+                                : 'text-zinc-400'
+                            }`}>
+                              {log.level.toUpperCase()}
+                            </span>
+                            <span className="text-xs text-zinc-600">
+                              {new Date(log.timestamp).toLocaleTimeString()}
+                            </span>
+                          </div>
+                          <div className="text-xs text-zinc-300 whitespace-pre-wrap break-words leading-relaxed">
+                            {log.args.join('\n')}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Logs Section */}
+              {utilityPanelTab === 'logs' && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Debug Logs</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          const text = exportLogs();
+                          navigator.clipboard.writeText(text);
+                        }}
+                        className="text-xs text-zinc-500 hover:text-zinc-300"
+                      >
+                        Copy
+                      </button>
+                      <button
+                        onClick={() => {
+                          clearLogs();
+                          setDebugLogs([]);
+                        }}
+                        className="text-xs text-red-400 hover:text-red-300"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {debugLogs.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                      <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center mb-3">
+                        <svg className="w-6 h-6 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <p className="text-sm text-zinc-500">No logs yet</p>
+                      <p className="text-xs text-zinc-600 mt-1">Logs are saved automatically when errors occur</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {debugLogs.slice().reverse().map((log, idx) => (
+                        <div
+                          key={`${log.timestamp}-${idx}`}
+                          className={`rounded-lg border p-2.5 ${
+                            log.level === 'error'
+                              ? 'bg-red-950/30 border-red-900/50'
+                              : log.level === 'warn'
+                              ? 'bg-yellow-950/30 border-yellow-900/50'
+                              : 'bg-zinc-800/50 border-zinc-700/50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`text-xs font-mono font-semibold ${
+                              log.level === 'error'
+                                ? 'text-red-400'
+                                : log.level === 'warn'
+                                ? 'text-yellow-400'
+                                : 'text-zinc-400'
+                            }`}>
+                              {log.level.toUpperCase()}
+                            </span>
+                            <span className="text-xs text-zinc-600">
+                              {new Date(log.timestamp).toLocaleTimeString()}
+                            </span>
+                          </div>
+                          <div className="text-xs text-zinc-300 whitespace-pre-wrap break-words leading-relaxed">
+                            {log.args.join('\n')}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -6664,7 +6837,7 @@ if (modelsResult.models.length > 0) {
              <div className="flex items-center justify-between p-4 border-b border-zinc-800">
                <div>
                  <h2 className="text-lg font-semibold text-white">Utilities</h2>
-                 <p className="text-sm text-zinc-500">Tags, summarize, debug</p>
+                 <p className="text-sm text-zinc-500">Tags, summarize, debug, logs</p>
                </div>
                <button
                  onClick={() => setShowUtilitiesModal(false)}
@@ -6721,13 +6894,28 @@ if (modelsResult.models.length > 0) {
                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                    </svg>
-                   Debug
-                 </span>
-               </button>
-             </div>
+                    Debug
+                  </span>
+                </button>
+                <button
+                  onClick={() => setUtilityPanelTab('logs')}
+                  className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                    utilityPanelTab === 'logs'
+                      ? 'bg-zinc-800 text-white'
+                      : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50'
+                  }`}
+                >
+                  <span className="flex items-center justify-center gap-1.5">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Logs
+                  </span>
+                </button>
+              </div>
 
-             {/* Content */}
-             <div className="flex-1 overflow-y-auto p-4">
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto p-4">
                {/* Tags Section */}
                {utilityPanelTab === 'tags' && (
                  <div className="space-y-3">
