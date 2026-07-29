@@ -1225,36 +1225,6 @@ export default function Chat() {
 
   // Save generator sessions to localStorage
   useEffect(() => {
-    if (generatorSessions.length > 0 || localStorage.getItem(GENERATOR_SESSIONS_KEY)) {
-      safeLocalStorageSetItem(GENERATOR_SESSIONS_KEY, JSON.stringify(generatorSessions));
-    }
-  }, [generatorSessions]);
-
-  // Hide embedded character JSON from generator assistant messages
-  useEffect(() => {
-    let changed = false;
-    const updated = generatorSessions.map(session => {
-      const updatedMessages = session.messages.map(message => {
-        if (message.role !== "assistant") return message;
-        const extracted = extractCharacterJson(message.content);
-        if (!extracted) return message;
-        const stripped = message.content.replace(extracted.raw, "").trim();
-        if (stripped === message.content) return message;
-        return { ...message, content: stripped };
-      });
-      if (updatedMessages.some((m, i) => m !== session.messages[i])) {
-        changed = true;
-        return { ...session, messages: updatedMessages };
-      }
-      return session;
-    });
-    if (changed) {
-      setGeneratorSessions(updated);
-    }
-  }, [generatorSessions, setGeneratorSessions]);
-
-  // Save global settings to localStorage
-  useEffect(() => {
     safeLocalStorageSetItem(GLOBAL_SETTINGS_KEY, JSON.stringify(globalSettings));
   }, [globalSettings]);
   
