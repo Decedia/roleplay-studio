@@ -4237,62 +4237,59 @@ if (modelsResult.models.length > 0) {
                               const lastUserIndex = currentGeneratorSession.messages.map(m => m.role).lastIndexOf("user");
                               const isLastUserMessage = message.role === "user" && idx === lastUserIndex;
 
-                              const extractedJson = message.role === "assistant" ? extractCharacterJson(message.content) : null;
-                              const displayContent = extractedJson ? message.content.replace(extractedJson.raw, "").trim() : message.content;
-
-                             return (
-                            <div
-                              key={idx}
-                              className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
-                            >
-                              {message.role === "assistant" && (
-                                <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                                  <span className="text-sm text-white font-semibold">🎭</span>
-                                </div>
-                              )}
-                              <div className="flex flex-col">
-                                <div
-                                  className={`w-full rounded-2xl px-4 py-3 ${
-                                    message.role === "user"
-                                      ? "bg-zinc-700 text-white"
-                                      : "bg-zinc-800 text-zinc-100 border border-zinc-700/50"
-                                  }`}
-                                >
-                                  {isEditing ? (
-                                    <div className="space-y-2">
-                                      <textarea
-                                        value={editingGeneratorMessageContent}
-                                        onChange={(e) => setEditingGeneratorMessageContent(e.target.value)}
-                                        className="w-full bg-zinc-900 text-white rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700"
-                                        rows={3}
-                                        autoFocus
-                                      />
-                                      <div className="flex gap-2 justify-end">
-                                        <button
-                                          onClick={handleGeneratorCancelEdit}
-                                          className="px-3 py-1 text-sm bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
-                                        >
-                                          Cancel
-                                        </button>
-                                        <button
-                                          onClick={() => handleGeneratorSaveEdit(idx, false)}
-                                          className="px-3 py-1 text-sm bg-zinc-600 text-white rounded-lg hover:bg-zinc-500 transition-colors"
-                                        >
-                                          Save
-                                        </button>
-                                        {message.role === "user" && (
-                                          <button
-                                            onClick={() => handleGeneratorRetryFromIndex(idx)}
-                                            className="px-3 py-1 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                                          >
-                                            Save & Retry
-                                          </button>
-                                        )}
-                                      </div>
-                                    </div>
-                                 ) : (
-                                   <>
-                                     <FormattedText content={displayContent} />
+                              return (
+                             <div
+                               key={idx}
+                               className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                             >
+                               {message.role === "assistant" && (
+                                 <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                                   <span className="text-sm text-white font-semibold">🎭</span>
+                                 </div>
+                               )}
+                               <div className="flex flex-col">
+                                 <div
+                                   className={`w-full rounded-2xl px-4 py-3 ${
+                                     message.role === "user"
+                                       ? "bg-zinc-700 text-white"
+                                       : "bg-zinc-800 text-zinc-100 border border-zinc-700/50"
+                                   }`}
+                                 >
+                                   {isEditing ? (
+                                     <div className="space-y-2">
+                                       <textarea
+                                         value={editingGeneratorMessageContent}
+                                         onChange={(e) => setEditingGeneratorMessageContent(e.target.value)}
+                                         className="w-full bg-zinc-900 text-white rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700"
+                                         rows={3}
+                                         autoFocus
+                                       />
+                                       <div className="flex gap-2 justify-end">
+                                         <button
+                                           onClick={handleGeneratorCancelEdit}
+                                           className="px-3 py-1 text-sm bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+                                         >
+                                           Cancel
+                                         </button>
+                                         <button
+                                           onClick={() => handleGeneratorSaveEdit(idx, false)}
+                                           className="px-3 py-1 text-sm bg-zinc-600 text-white rounded-lg hover:bg-zinc-500 transition-colors"
+                                         >
+                                           Save
+                                         </button>
+                                         {message.role === "user" && (
+                                           <button
+                                             onClick={() => handleGeneratorRetryFromIndex(idx)}
+                                             className="px-3 py-1 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                                           >
+                                             Save & Retry
+                                           </button>
+                                         )}
+                                       </div>
+                                     </div>
+                                  ) : (
+                                    <>
+                                      <FormattedText content={message.content} />
                                      {isLastAssistant && !isGeneratorLoading && (
                                         <div className="mt-2 flex justify-end">
                                           <button
@@ -4470,9 +4467,8 @@ if (modelsResult.models.length > 0) {
                               setGeneratorStreamingContent(chunk.content);
                             }
                             
-                            if (chunk.done) {
-                              const formattedContent = formatResponse(chunk.content || "");
-                              const finalMessages = [...newMessages, { role: "assistant" as const, content: formattedContent }];
+                             if (chunk.done) {
+                               const finalMessages = [...newMessages, { role: "assistant" as const, content: chunk.content || "" }];
                               setCurrentGeneratorSession(prev => prev ? { ...prev, messages: finalMessages, updatedAt: Date.now() } : null);
                               setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: finalMessages, updatedAt: Date.now() } : s));
                               setGeneratorStreamingContent("");
