@@ -92,7 +92,7 @@ const extractCharacterJson = (content: string): { json: Record<string, unknown>;
     try {
       const parsed = JSON.parse(match[2].trim());
       if (parsed && typeof parsed === "object" && (parsed as Record<string, unknown>).name) {
-        return { json: parsed as Record<string, unknown>, raw: match[2].trim() };
+        return { json: parsed as Record<string, unknown>, raw: match[0] };
       }
     } catch {
       // continue searching
