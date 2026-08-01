@@ -1,22 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractErrorMessage } from "@/lib/errorUtils";
+import { abortControllerStore } from "@/lib/abortControllerStore";
 
-// NVIDIA NIM API proxy to avoid CORS issues
-// Timeout in milliseconds (90 seconds - below Cloudflare's 100s limit)
 const NVIDIA_NIM_TIMEOUT = 90000;
 
 async function fetchWithTimeout(
   url: string,
   options: RequestInit,
-  timeoutMs: number
+  timeoutMs: number,
+  signal?: AbortSignal
 ): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  
+
   try {
     const response = await fetch(url, {
       ...options,
-      signal: controller.signal,
+      signal: signal ?? controller.signal,
     });
     clearTimeout(timeoutId);
     return response;
@@ -32,7 +32,7 @@ async function fetchWithTimeout(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { endpoint, apiKey, payload, stream } = body;
+    const { endpoint, apiKey, payload, stream, requestId } = body;
 
     if (!apiKey) {
       return NextResponse.json(
@@ -41,112 +41,116 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Proxy request to NVIDIA NIM API with timeout
-    const response = await fetchWithTimeout(
-      `https://integrate.api.nvidia.com/v1/${endpoint}`,
-      {
-        method: "POST",
-        headers: {
-          "Accept": stream ? "text/event-stream" : "application/json",
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify(payload),
-      },
-      NVIDIA_NIM_TIMEOUT
-    );
-
-    // Handle streaming response
-    if (stream && response.ok && response.body) {
-      const streamResponse = new ReadableStream({
-        async start(controller) {
-          const reader = response.body!.getReader();
-          
-          try {
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              
-              // Forward the chunk directly
-              controller.enqueue(value);
-            }
-            controller.close();
-          } catch (error) {
-            controller.error(error);
-          }
-        },
-      });
-
-      return new Response(streamResponse, {
-        headers: {
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
-          "Connection": "keep-alive",
-        },
-      });
+    const controller = new AbortController();
+    if (requestId && typeof requestId === "string") {
+      abortControllerStore.set(requestId, controller);
     }
 
-    // Handle non-OK streaming responses
-    if (stream && !response.ok) {
+    try {
+      const response = await fetchWithTimeout(
+        `https://integrate.api.nvidia.com/v1/${endpoint}`,
+        {
+          method: "POST",
+          headers: {
+            "Accept": stream ? "text/event-stream" : "application/json",
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify(payload),
+        },
+        NVIDIA_NIM_TIMEOUT,
+        controller.signal
+      );
+
+      if (stream && response.ok && response.body) {
+        const streamResponse = new ReadableStream({
+          async start(controller) {
+            const reader = response.body!.getReader();
+
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                controller.enqueue(value);
+              }
+              controller.close();
+            } catch (error) {
+              controller.error(error);
+            }
+          },
+        });
+
+        return new Response(streamResponse, {
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+          },
+        });
+      }
+
+      if (stream && !response.ok) {
+        const contentType = response.headers.get("content-type");
+        let errorMessage: string;
+
+        if (contentType?.includes("application/json")) {
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error?.message || `HTTP ${response.status}`;
+          } catch {
+            errorMessage = `HTTP ${response.status}: Failed to parse error response`;
+          }
+        } else {
+          errorMessage = await response.text() || `HTTP ${response.status}`;
+        }
+
+        return new Response(`event: error\ndata: ${JSON.stringify({ error: errorMessage })}\n\n`, {
+          status: 200,
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+          },
+        });
+      }
+
+      let data;
       const contentType = response.headers.get("content-type");
-      let errorMessage: string;
-      
+
       if (contentType?.includes("application/json")) {
         try {
-          const errorData = await response.json();
-          errorMessage = errorData.error?.message || `HTTP ${response.status}`;
+          data = await response.json();
         } catch {
-          errorMessage = `HTTP ${response.status}: Failed to parse error response`;
+          return NextResponse.json(
+            { error: `HTTP ${response.status}: Invalid JSON response from NVIDIA API` },
+            { status: response.status }
+          );
         }
       } else {
-        errorMessage = await response.text() || `HTTP ${response.status}`;
-      }
-      
-      // Return as SSE error event
-      return new Response(`event: error\ndata: ${JSON.stringify({ error: errorMessage })}\n\n`, {
-        status: 200, // Return 200 so client can parse the error
-        headers: {
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
-        },
-      });
-    }
-
-    // Try to parse JSON, but handle non-JSON responses (like Cloudflare errors)
-    let data;
-    const contentType = response.headers.get("content-type");
-    
-    if (contentType?.includes("application/json")) {
-      try {
-        data = await response.json();
-      } catch {
+        const textResponse = await response.text();
         return NextResponse.json(
-          { error: `HTTP ${response.status}: Invalid JSON response from NVIDIA API` },
+          { error: `HTTP ${response.status}: ${textResponse || "Unknown error from NVIDIA API"}` },
           { status: response.status }
         );
       }
-    } else {
-      // Handle non-JSON responses (e.g., Cloudflare timeout errors)
-      const textResponse = await response.text();
-      return NextResponse.json(
-        { error: `HTTP ${response.status}: ${textResponse || "Unknown error from NVIDIA API"}` },
-        { status: response.status }
-      );
-    }
 
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: extractErrorMessage(data.error) || `HTTP ${response.status}` },
-        { status: response.status }
-      );
-    }
+      if (!response.ok) {
+        return NextResponse.json(
+          { error: extractErrorMessage(data.error) || `HTTP ${response.status}` },
+          { status: response.status }
+        );
+      }
 
-    return NextResponse.json(data);
+      return NextResponse.json(data);
+    } finally {
+      if (requestId && typeof requestId === "string") {
+        abortControllerStore.delete(requestId);
+      }
+    }
   } catch (error) {
     console.error("NVIDIA NIM proxy error:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    
-    // Check if it's a timeout error
+
     if (errorMessage.includes("timed out")) {
       return NextResponse.json(
         {
@@ -156,7 +160,7 @@ export async function POST(request: NextRequest) {
         { status: 504 }
       );
     }
-    
+
     return NextResponse.json(
       { error: errorMessage },
       { status: 500 }
@@ -164,11 +168,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET endpoint for listing models
 export async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get("Authorization");
-    
+
     if (!authHeader) {
       return NextResponse.json(
         { error: "Authorization header is required" },
@@ -176,7 +179,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Proxy request to NVIDIA NIM API for model list with timeout
     const response = await fetchWithTimeout(
       "https://integrate.api.nvidia.com/v1/models",
       {
@@ -189,10 +191,9 @@ export async function GET(request: NextRequest) {
       NVIDIA_NIM_TIMEOUT
     );
 
-    // Try to parse JSON, but handle non-JSON responses
     let data;
     const contentType = response.headers.get("content-type");
-    
+
     if (contentType?.includes("application/json")) {
       try {
         data = await response.json();
@@ -221,8 +222,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("NVIDIA NIM models fetch error:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    
-    // Check if it's a timeout error
+
     if (errorMessage.includes("timed out")) {
       return NextResponse.json(
         {
@@ -232,7 +232,7 @@ export async function GET(request: NextRequest) {
         { status: 504 }
       );
     }
-    
+
     return NextResponse.json(
       { error: errorMessage },
       { status: 500 }

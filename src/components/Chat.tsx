@@ -708,6 +708,9 @@ export default function Chat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const chatRequestIdRef = useRef<string | null>(null);
+  const generatorAbortControllerRef = useRef<AbortController | null>(null);
+  const generatorRequestIdRef = useRef<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   // Generator state
@@ -806,6 +809,8 @@ export default function Chat() {
     const retryMessages = messages.slice(0, userMessageIndex + 1);
     setIsGeneratorLoading(true);
     setGeneratorStreamingContent("");
+    generatorAbortControllerRef.current = new AbortController();
+    generatorRequestIdRef.current = `generator_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
     try {
       const currentConfig = providerConfigs[activeProvider];
@@ -839,6 +844,8 @@ export default function Chat() {
           enableThinking: globalSettings.enableThinking,
           thinkingLevel: globalSettings.thinkingLevel,
           thinkingBudget: globalSettings.thinkingBudget,
+          abortController: generatorAbortControllerRef.current ?? undefined,
+          requestId: generatorRequestIdRef.current ?? undefined,
         },
         (chunk) => {
           if (chunk.error) {
@@ -864,6 +871,9 @@ export default function Chat() {
       setError(extractErrorMessage(err));
       setIsGeneratorLoading(false);
       setGeneratorStreamingContent("");
+    } finally {
+      generatorAbortControllerRef.current = null;
+      generatorRequestIdRef.current = null;
     }
   };
 
@@ -2307,6 +2317,7 @@ if (modelsResult.models.length > 0) {
     setStreamingContent("");
     setStreamingThinking("");
     abortControllerRef.current = new AbortController();
+    chatRequestIdRef.current = `chat_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
     try {
       // Get current provider config
@@ -2481,6 +2492,7 @@ if (modelsResult.models.length > 0) {
       setIsLoading(false);
       setIsSending(false);
       abortControllerRef.current = null;
+      chatRequestIdRef.current = null;
       playNotificationSound();
       inputRef.current?.focus();
       // Check if auto-summarization should trigger
@@ -2674,6 +2686,8 @@ if (modelsResult.models.length > 0) {
     setIsLoading(true);
     setStreamingContent("");
     setStreamingThinking("");
+    abortControllerRef.current = new AbortController();
+    chatRequestIdRef.current = `chat_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     
     // Update conversation to show only messages up to last user message
     updateConversationMessages(messagesBeforeRetry);
@@ -2766,6 +2780,8 @@ if (modelsResult.models.length > 0) {
             enableThinking: globalSettings.enableThinking,
             thinkingLevel: globalSettings.thinkingLevel,
             thinkingBudget: globalSettings.thinkingBudget,
+            abortController: abortControllerRef.current ?? undefined,
+            requestId: chatRequestIdRef.current ?? undefined,
           },
           (chunk) => {
             if (chunk.error) {
@@ -2818,6 +2834,8 @@ if (modelsResult.models.length > 0) {
             enableThinking: globalSettings.enableThinking,
             thinkingLevel: globalSettings.thinkingLevel,
             thinkingBudget: globalSettings.thinkingBudget,
+            abortController: abortControllerRef.current ?? undefined,
+            requestId: chatRequestIdRef.current ?? undefined,
           }
         );
         
@@ -2842,6 +2860,8 @@ if (modelsResult.models.length > 0) {
       setError(extractErrorMessage(err));
     } finally {
       setIsLoading(false);
+      abortControllerRef.current = null;
+      chatRequestIdRef.current = null;
       playNotificationSound();
       inputRef.current?.focus();
     }
@@ -2868,6 +2888,8 @@ if (modelsResult.models.length > 0) {
     setIsLoading(true);
     setStreamingContent("");
     setStreamingThinking("");
+    abortControllerRef.current = new AbortController();
+    chatRequestIdRef.current = `chat_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     
     // Update conversation with the continue message
     updateConversationMessages(messagesWithContinue);
@@ -2957,6 +2979,8 @@ if (modelsResult.models.length > 0) {
             enableThinking: globalSettings.enableThinking,
             thinkingLevel: globalSettings.thinkingLevel,
             thinkingBudget: globalSettings.thinkingBudget,
+            abortController: abortControllerRef.current ?? undefined,
+            requestId: chatRequestIdRef.current ?? undefined,
           },
           (chunk) => {
             if (chunk.error) {
@@ -3022,6 +3046,8 @@ if (modelsResult.models.length > 0) {
             enableThinking: globalSettings.enableThinking,
             thinkingLevel: globalSettings.thinkingLevel,
             thinkingBudget: globalSettings.thinkingBudget,
+            abortController: abortControllerRef.current ?? undefined,
+            requestId: chatRequestIdRef.current ?? undefined,
           }
         );
         
@@ -3065,6 +3091,8 @@ if (modelsResult.models.length > 0) {
       setError(extractErrorMessage(err));
     } finally {
       setIsLoading(false);
+      abortControllerRef.current = null;
+      chatRequestIdRef.current = null;
       playNotificationSound();
       inputRef.current?.focus();
     }
@@ -3204,6 +3232,7 @@ if (modelsResult.models.length > 0) {
             thinkingLevel: globalSettings.thinkingLevel,
             thinkingBudget: globalSettings.thinkingBudget,
             abortController: abortControllerRef.current ?? undefined,
+            requestId: chatRequestIdRef.current ?? undefined,
           },
             (chunk) => {
               if (chunk.error) {
@@ -3250,6 +3279,7 @@ if (modelsResult.models.length > 0) {
             thinkingLevel: globalSettings.thinkingLevel,
             thinkingBudget: globalSettings.thinkingBudget,
             abortController: abortControllerRef.current ?? undefined,
+            requestId: chatRequestIdRef.current ?? undefined,
           }
         );
         
@@ -4419,79 +4449,101 @@ if (modelsResult.models.length > 0) {
                          setGeneratorInput("");
                          setGeneratorStreamingContent("");
                          setIsGeneratorLoading(true);
-                      
-                      try {
-                        // Get provider config
-                        const currentConfig = providerConfigs[activeProvider];
-                        const activeProfile = currentConfig.profiles.find(p => p.id === currentConfig.activeProfileId);
-                        
-                        if (!activeProfile) {
-                          throw new Error("No active provider profile selected. Please configure a provider in settings.");
-                        }
-                        
-                        const profileConfig = {
-                          ...currentConfig,
-                          apiKey: activeProfile?.apiKey || "",
-                          projectId: activeProfile?.projectId || "",
-                          serviceAccountJson: activeProfile?.serviceAccountJson,
-                          vertexMode: activeProfile?.vertexMode,
-                          vertexLocation: activeProfile?.vertexLocation,
-                          selectedModel: globalSettings.modelId || activeProfile?.selectedModel
-                        };
-                        
-                        // Build messages for API - convert generator messages to Message format
-                        const apiMessages: Message[] = [
-                          { role: "system", content: DEFAULT_GENERATOR_SYSTEM_PROMPT },
-                          ...newMessages.map(m => ({ role: m.role as "user" | "assistant", content: m.content }))
-                        ];
-                        
-                        // Use streaming
-                        await streamChatMessage(
-                          apiMessages,
-                          profileConfig,
-                          {
-                            temperature: globalSettings.temperature,
-                            maxTokens: globalSettings.maxTokens,
-                            topP: globalSettings.topP,
-                            topK: globalSettings.topK,
-                            systemPrompt: "",
-                            enableThinking: globalSettings.enableThinking,
-                            thinkingLevel: globalSettings.thinkingLevel,
-                            thinkingBudget: globalSettings.thinkingBudget,
-                          },
-                          (chunk) => {
-                            if (chunk.error) {
-                              setError(extractErrorMessage(chunk.error));
-                              setIsGeneratorLoading(false);
-                              return;
-                            }
-                            
-                            if (chunk.content !== undefined) {
-                              setGeneratorStreamingContent(chunk.content);
-                            }
-                            
-                             if (chunk.done) {
-                               const finalMessages = [...newMessages, { role: "assistant" as const, content: chunk.content || "" }];
-                              setCurrentGeneratorSession(prev => prev ? { ...prev, messages: finalMessages, updatedAt: Date.now() } : null);
-                              setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: finalMessages, updatedAt: Date.now() } : s));
-                              setGeneratorStreamingContent("");
-                              
+                         generatorAbortControllerRef.current = new AbortController();
+                         generatorRequestIdRef.current = `generator_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+                       
+                       try {
+                         // Get provider config
+                         const currentConfig = providerConfigs[activeProvider];
+                         const activeProfile = currentConfig.profiles.find(p => p.id === currentConfig.activeProfileId);
+                         
+                         if (!activeProfile) {
+                           throw new Error("No active provider profile selected. Please configure a provider in settings.");
+                         }
+                         
+                         const profileConfig = {
+                           ...currentConfig,
+                           apiKey: activeProfile?.apiKey || "",
+                           projectId: activeProfile?.projectId || "",
+                           serviceAccountJson: activeProfile?.serviceAccountJson,
+                           vertexMode: activeProfile?.vertexMode,
+                           vertexLocation: activeProfile?.vertexLocation,
+                           selectedModel: globalSettings.modelId || activeProfile?.selectedModel
+                         };
+                         
+                         // Build messages for API - convert generator messages to Message format
+                         const apiMessages: Message[] = [
+                           { role: "system", content: DEFAULT_GENERATOR_SYSTEM_PROMPT },
+                           ...newMessages.map(m => ({ role: m.role as "user" | "assistant", content: m.content }))
+                         ];
+                         
+                         // Use streaming
+                         await streamChatMessage(
+                           apiMessages,
+                           profileConfig,
+                           {
+                             temperature: globalSettings.temperature,
+                             maxTokens: globalSettings.maxTokens,
+                             topP: globalSettings.topP,
+                             topK: globalSettings.topK,
+                             systemPrompt: "",
+                             enableThinking: globalSettings.enableThinking,
+                             thinkingLevel: globalSettings.thinkingLevel,
+                             thinkingBudget: globalSettings.thinkingBudget,
+                             abortController: generatorAbortControllerRef.current ?? undefined,
+                             requestId: generatorRequestIdRef.current ?? undefined,
+                           },
+                           (chunk) => {
+                             if (chunk.error) {
+                               setError(extractErrorMessage(chunk.error));
                                setIsGeneratorLoading(false);
-                            }
-                          }
-                        );
-                      } catch (err) {
-                        console.error("Generator error:", err);
-                        setError(extractErrorMessage(err));
-                        setIsGeneratorLoading(false);
-                        setGeneratorStreamingContent("");
-                      }
+                               return;
+                             }
+                             
+                             if (chunk.content !== undefined) {
+                               setGeneratorStreamingContent(chunk.content);
+                             }
+                             
+                              if (chunk.done) {
+                                const finalMessages = [...newMessages, { role: "assistant" as const, content: chunk.content || "" }];
+                               setCurrentGeneratorSession(prev => prev ? { ...prev, messages: finalMessages, updatedAt: Date.now() } : null);
+                               setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: finalMessages, updatedAt: Date.now() } : s));
+                               setGeneratorStreamingContent("");
+                               
+                                setIsGeneratorLoading(false);
+                             }
+                           }
+                         );
+                       } catch (err) {
+                         console.error("Generator error:", err);
+                         setError(extractErrorMessage(err));
+                         setIsGeneratorLoading(false);
+                         setGeneratorStreamingContent("");
+                       } finally {
+                         generatorAbortControllerRef.current = null;
+                         generatorRequestIdRef.current = null;
+                       }
                     }}
-                    placeholder="Describe the character you want to create..."
-                    disabled={isGeneratorLoading}
-                    isLoading={isGeneratorLoading}
-                    accentColor="purple"
-                  />
+                     placeholder="Describe the character you want to create..."
+                     disabled={isGeneratorLoading}
+                     isLoading={isGeneratorLoading}
+                     accentColor="purple"
+                     onCancel={isGeneratorLoading ? () => {
+                       generatorAbortControllerRef.current?.abort();
+                       const requestId = generatorRequestIdRef.current;
+                       if (requestId) {
+                         fetch("/api/cancel", {
+                           method: "POST",
+                           headers: { "Content-Type": "application/json" },
+                           body: JSON.stringify({ requestId }),
+                         }).catch(() => {});
+                       }
+                       setIsGeneratorLoading(false);
+                       setGeneratorStreamingContent("");
+                       generatorAbortControllerRef.current = null;
+                       generatorRequestIdRef.current = null;
+                     } : undefined}
+                   />
                 </div>
               )}
             </div>
@@ -5658,24 +5710,32 @@ if (modelsResult.models.length > 0) {
                     </svg>
                   )}
                 </button>
-                {isLoading && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      abortControllerRef.current?.abort();
-                      setIsLoading(false);
-                      setIsSending(false);
-                      setStreamingContent("");
-                      setStreamingThinking("");
-                    }}
-                    className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all"
-                    title="Cancel"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
+                 {isLoading && (
+                   <button
+                     type="button"
+                     onClick={() => {
+                       const requestId = chatRequestIdRef.current;
+                       abortControllerRef.current?.abort();
+                       if (requestId) {
+                         fetch("/api/cancel", {
+                           method: "POST",
+                           headers: { "Content-Type": "application/json" },
+                           body: JSON.stringify({ requestId }),
+                         }).catch(() => {});
+                       }
+                       setIsLoading(false);
+                       setIsSending(false);
+                       setStreamingContent("");
+                       setStreamingThinking("");
+                     }}
+                     className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all"
+                     title="Cancel"
+                   >
+                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                     </svg>
+                   </button>
+                 )}
               </div>
             </form>
             <p className="text-xs text-zinc-600 mt-2 text-center">

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractErrorMessage } from "@/lib/errorUtils";
+import { abortControllerStore } from "@/lib/abortControllerStore";
 
-// Groq API route - uses server-side proxy to avoid CORS
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { endpoint, apiKey, payload, stream } = body;
+    const { endpoint, apiKey, payload, stream, requestId } = body;
 
     if (!apiKey) {
       return NextResponse.json(
@@ -14,68 +14,77 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Groq uses OpenAI-compatible API at https://api.groq.com/openai/v1/
-    const baseUrl = "https://api.groq.com/openai/v1";
-    
-    const response = await fetch(`${baseUrl}/${endpoint}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-        ...(stream ? { "Accept": "text/event-stream" } : {}),
-      },
-      body: JSON.stringify(payload),
-      ...(stream ? { cache: "no-store" } : {}),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      return NextResponse.json(
-        { error: extractErrorMessage(errorData.error) || `HTTP ${response.status}` },
-        { status: response.status }
-      );
+    const controller = new AbortController();
+    if (requestId && typeof requestId === "string") {
+      abortControllerStore.set(requestId, controller);
     }
 
-    // Handle streaming response
-    if (stream) {
-      const reader = response.body?.getReader();
-      if (!reader) {
+    const baseUrl = "https://api.groq.com/openai/v1";
+
+    try {
+      const response = await fetch(`${baseUrl}/${endpoint}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+          ...(stream ? { "Accept": "text/event-stream" } : {}),
+        },
+        body: JSON.stringify(payload),
+        ...(stream ? { cache: "no-store" } : {}),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
         return NextResponse.json(
-          { error: "Failed to get response stream" },
-          { status: 500 }
+          { error: extractErrorMessage(errorData.error) || `HTTP ${response.status}` },
+          { status: response.status }
         );
       }
 
-      const encoder = new Encoder();
-      const decoder = new TextDecoder();
+      if (stream) {
+        const reader = response.body?.getReader();
+        if (!reader) {
+          return NextResponse.json(
+            { error: "Failed to get response stream" },
+            { status: 500 }
+          );
+        }
 
-      const stream = new ReadableStream({
-        async start(controller) {
-          try {
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              controller.enqueue(value);
+        const encoder = new TextEncoder();
+        const decoder = new TextDecoder();
+
+        const stream = new ReadableStream({
+          async start(controller) {
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                controller.enqueue(value);
+              }
+              controller.close();
+            } catch (error) {
+              controller.error(error);
             }
-            controller.close();
-          } catch (error) {
-            controller.error(error);
-          }
-        },
-      });
+          },
+        });
 
-      return new NextResponse(stream, {
-        headers: {
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
-          "Connection": "keep-alive",
-        },
-      });
+        return new NextResponse(stream, {
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+          },
+        });
+      }
+
+      const data = await response.json();
+      return NextResponse.json(data);
+    } finally {
+      if (requestId && typeof requestId === "string") {
+        abortControllerStore.delete(requestId);
+      }
     }
-
-    // Handle non-streaming response
-    const data = await response.json();
-    return NextResponse.json(data);
   } catch (error) {
     console.error("Groq API error:", error);
     return NextResponse.json(

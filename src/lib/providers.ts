@@ -18,6 +18,24 @@ import {
 
 import { extractErrorMessage } from "./errorUtils";
 
+let requestIdCounter = 0;
+function generateRequestId() {
+  requestIdCounter += 1;
+  return `req_${Date.now()}_${requestIdCounter}`;
+}
+
+async function cancelRequest(requestId: string) {
+  try {
+    await fetch("/api/cancel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ requestId }),
+    });
+  } catch {
+    // ignore cancel errors
+  }
+}
+
 // Re-export types for convenience
 export type { LLMProviderType, ProviderConfig, Message, LLMModel, LLMProvider, VertexMode, VertexLocation, ThinkingLevel, ThinkingBudget, FetchedModel, ChatResponse, StreamCallback, TestConnectionResult };
 
@@ -430,6 +448,7 @@ type ChatFunction = (
     thinkingLevel?: ThinkingLevel;
     thinkingBudget?: ThinkingBudget;
     abortController?: AbortController;
+    requestId?: string;
   }
 ) => Promise<ChatResponse>;
 
@@ -443,23 +462,18 @@ export const chatWithGoogleAIStudio: ChatFunction = async (
     return { error: "Google AI Studio API key is required" };
   }
 
-try {
-    // Extract system messages from instruction messages for Gemini API
+  try {
     const systemMessages = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
     
-    // Format non-system messages for Gemini API
     const formattedMessages = nonSystemMessages.map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
       parts: [{ text: m.content }],
     }));
 
-    // Send system messages as separate entries for Gemini API
-    // Send system messages as merged single entry for Gemini API (does not accept array)
     const systemInstructionText = systemMessages.map(m => m.content).join("\n\n");
     const systemInstruction = systemInstructionText ? { parts: [{ text: systemInstructionText }] } : undefined;
 
-    // Build generation config with optional thinking
     const generationConfig: Record<string, unknown> = {
       temperature: options.temperature,
       maxOutputTokens: options.maxTokens,
@@ -467,11 +481,9 @@ try {
       topK: options.topK,
     };
 
-    // Add thinking config for models that support it (Gemini 2.0+)
     if (options.enableThinking && config.selectedModel) {
       const modelId = config.selectedModel.toLowerCase();
       if (modelId.includes("gemini-2.5")) {
-        // Gemini 2.5 models use thinkingBudget (tokens)
         const budgetMap: Record<string, number> = {
           NONE: 0,
           LOW: 1024,
@@ -485,7 +497,6 @@ try {
           };
         }
       } else {
-        // Legacy thinking config for Gemini 2.0 and earlier
         generationConfig.thinkingConfig = {
           thinkingLevel: options.thinkingLevel || "HIGH"
         };
@@ -540,6 +551,7 @@ export const streamWithGoogleAIStudio = async (
     thinkingLevel?: ThinkingLevel;
     thinkingBudget?: ThinkingBudget;
     abortController?: AbortController;
+    requestId?: string;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -687,24 +699,21 @@ export const chatWithVertexAI: ChatFunction = async (
     return { error: "Vertex AI requires a Google Cloud Project ID. Please enter your project ID in the provider settings." };
   }
   
+  const requestId = options.requestId || generateRequestId();
   try {
-    // Extract system messages from instruction messages for Gemini API
     const systemMessages = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
     
-    // Format non-system messages for Gemini API
     const formattedMessages = nonSystemMessages.map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
       parts: [{ text: m.content }],
     }));
 
-    // Combine system instruction with any system messages from the instruction list
     const systemInstructionContent = systemMessages.map(m => m.content).join("\n\n");
     const systemInstruction = systemInstructionContent || options.systemPrompt
       ? { parts: [{ text: systemInstructionContent || options.systemPrompt || "" }] }
       : undefined;
 
-    // Build generation config with optional thinking
     const generationConfig: Record<string, unknown> = {
       temperature: options.temperature,
       maxOutputTokens: options.maxTokens,
@@ -712,11 +721,9 @@ export const chatWithVertexAI: ChatFunction = async (
       topK: options.topK,
     };
 
-    // Add thinking config for models that support it (Gemini 2.0+)
     if (options.enableThinking && config.selectedModel) {
       const modelId = config.selectedModel.toLowerCase();
       if (modelId.includes("gemini-2.5")) {
-        // Gemini 2.5 models use thinkingBudget (tokens)
         const budgetMap: Record<string, number> = {
           NONE: 0,
           LOW: 1024,
@@ -730,20 +737,19 @@ export const chatWithVertexAI: ChatFunction = async (
           };
         }
       } else {
-        // Legacy thinking config for Gemini 2.0 and earlier
         generationConfig.thinkingConfig = {
           thinkingLevel: options.thinkingLevel || "HIGH"
         };
       }
     }
 
-    // Use server-side proxy to avoid CORS issues
     const response = await fetch("/api/vertex-ai", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        requestId,
         endpoint: `${config.selectedModel}:generateContent`,
         apiKey: config.apiKey,
         projectId: config.projectId,
@@ -753,8 +759,8 @@ export const chatWithVertexAI: ChatFunction = async (
           systemInstruction,
           generationConfig,
         },
-        signal: options.abortController?.signal,
       }),
+      signal: options.abortController?.signal,
     });
 
     const data = await response.json();
@@ -769,6 +775,9 @@ export const chatWithVertexAI: ChatFunction = async (
 
     return { content };
   } catch (error) {
+    if (options.abortController?.signal.aborted) {
+      await cancelRequest(requestId);
+    }
     return {
       error: error instanceof Error ? error.message : "Unknown error occurred",
     };
@@ -786,6 +795,7 @@ export const chatWithNvidiaNIM: ChatFunction = async (
     return { error: "NVIDIA NIM API key is required" };
   }
 
+  const requestId = options.requestId || generateRequestId();
   try {
     const systemMessages = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -800,13 +810,13 @@ export const chatWithNvidiaNIM: ChatFunction = async (
       ? [{ role: "system", content: systemContent || options.systemPrompt || "" }, ...formattedMessages]
       : formattedMessages;
 
-    // Use server-side proxy to avoid CORS issues
     const response = await fetch("/api/nvidia-nim", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        requestId,
         endpoint: "chat/completions",
         apiKey: config.apiKey,
         payload: {
@@ -830,11 +840,13 @@ export const chatWithNvidiaNIM: ChatFunction = async (
     }
 
     const content = data.choices?.[0]?.message?.content || "";
-    // Handle reasoning_content (thinking) from reasoning models like DeepSeek R1
     const thinking = data.choices?.[0]?.message?.reasoning_content || "";
 
     return { content, thinking };
   } catch (error) {
+    if (options.abortController?.signal.aborted) {
+      await cancelRequest(requestId);
+    }
     return {
       error: error instanceof Error ? error.message : "Unknown error occurred",
     };
@@ -854,6 +866,7 @@ export const streamWithNvidiaNIM = async (
     systemPrompt?: string;
     enableThinking?: boolean;
     abortController?: AbortController;
+    requestId?: string;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -862,6 +875,7 @@ export const streamWithNvidiaNIM = async (
     return;
   }
 
+  const requestId = options.requestId || generateRequestId();
   try {
     const systemMessages = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -876,13 +890,13 @@ export const streamWithNvidiaNIM = async (
       ? [{ role: "system", content: systemContent || options.systemPrompt || "" }, ...formattedMessages]
       : formattedMessages;
 
-    // Use server-side proxy to avoid CORS issues
     const response = await fetch("/api/nvidia-nim", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        requestId,
         endpoint: "chat/completions",
         apiKey: config.apiKey,
         payload: {
@@ -895,8 +909,8 @@ export const streamWithNvidiaNIM = async (
           stream: true,
         },
         stream: true,
-        signal: options.abortController?.signal,
       }),
+      signal: options.abortController?.signal,
     });
 
     if (!response.ok) {
@@ -916,55 +930,60 @@ export const streamWithNvidiaNIM = async (
     let fullThinking = "";
     let buffer = "";
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
 
-      for (const line of lines) {
-        // Handle error events
-        if (line.startsWith("event: error")) {
-          // Next line will contain the error data
-          continue;
-        }
-        
-        if (line.startsWith("data: ")) {
-          const jsonStr = line.slice(6).trim();
-          if (!jsonStr || jsonStr === "[DONE]") continue;
+        for (const line of lines) {
+          // Handle error events
+          if (line.startsWith("event: error")) {
+            // Next line will contain the error data
+            continue;
+          }
+          
+          if (line.startsWith("data: ")) {
+            const jsonStr = line.slice(6).trim();
+            if (!jsonStr || jsonStr === "[DONE]") continue;
 
-          try {
-            const data = JSON.parse(jsonStr);
-            
-            // Check for error in stream
-            if (data.error) {
-              onChunk({ error: data.error });
-              return;
+            try {
+              const data = JSON.parse(jsonStr);
+              
+              // Check for error in stream
+              if (data.error) {
+                onChunk({ error: data.error });
+                return;
+              }
+              
+              const delta = data.choices?.[0]?.delta;
+              
+              // Handle reasoning_content (thinking) from reasoning models like DeepSeek R1
+              if (delta?.reasoning_content) {
+                fullThinking += delta.reasoning_content;
+                onChunk({ thinking: fullThinking });
+              }
+              
+              if (delta?.content) {
+                fullContent += delta.content;
+                onChunk({ content: fullContent });
+              }
+            } catch {
+              // Skip invalid JSON
             }
-            
-            const delta = data.choices?.[0]?.delta;
-            
-            // Handle reasoning_content (thinking) from reasoning models like DeepSeek R1
-            if (delta?.reasoning_content) {
-              fullThinking += delta.reasoning_content;
-              onChunk({ thinking: fullThinking });
-            }
-            
-            if (delta?.content) {
-              fullContent += delta.content;
-              onChunk({ content: fullContent });
-            }
-          } catch {
-            // Skip invalid JSON
           }
         }
       }
+    } finally {
+      onChunk({ content: fullContent, thinking: fullThinking, done: true });
     }
-
-    onChunk({ content: fullContent, thinking: fullThinking, done: true });
   } catch (error) {
+    if (options.abortController?.signal.aborted) {
+      await cancelRequest(requestId);
+    }
     onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
   }
 };
@@ -979,6 +998,7 @@ export const chatWithGroq: ChatFunction = async (
     return { error: "Groq API key is required" };
   }
 
+  const requestId = options.requestId || generateRequestId();
   try {
     const systemMessages = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -993,13 +1013,13 @@ export const chatWithGroq: ChatFunction = async (
       ? [{ role: "system", content: systemContent || options.systemPrompt || "" }, ...formattedMessages]
       : formattedMessages;
 
-    // Use server-side proxy to avoid CORS issues
     const response = await fetch("/api/groq", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        requestId,
         endpoint: "chat/completions",
         apiKey: config.apiKey,
         payload: {
@@ -1009,8 +1029,8 @@ export const chatWithGroq: ChatFunction = async (
           max_tokens: options.maxTokens,
           top_p: options.topP,
         },
-        signal: options.abortController?.signal,
       }),
+      signal: options.abortController?.signal,
     });
 
     const data = await response.json();
@@ -1025,6 +1045,9 @@ export const chatWithGroq: ChatFunction = async (
 
     return { content };
   } catch (error) {
+    if (options.abortController?.signal.aborted) {
+      await cancelRequest(requestId);
+    }
     return {
       error: error instanceof Error ? error.message : "Unknown error occurred",
     };
@@ -1043,6 +1066,7 @@ export const streamWithGroq = async (
     systemPrompt?: string;
     enableThinking?: boolean;
     abortController?: AbortController;
+    requestId?: string;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -1051,6 +1075,7 @@ export const streamWithGroq = async (
     return;
   }
 
+  const requestId = options.requestId || generateRequestId();
   try {
     const systemMessages = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -1065,13 +1090,13 @@ export const streamWithGroq = async (
       ? [{ role: "system", content: systemContent || options.systemPrompt || "" }, ...formattedMessages]
       : formattedMessages;
 
-    // Use server-side proxy with streaming
     const response = await fetch("/api/groq", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        requestId,
         endpoint: "chat/completions",
         apiKey: config.apiKey,
         payload: {
@@ -1083,8 +1108,8 @@ export const streamWithGroq = async (
           stream: true,
         },
         stream: true,
-        signal: options.abortController?.signal,
       }),
+      signal: options.abortController?.signal,
     });
 
     if (!response.ok) {
@@ -1103,43 +1128,48 @@ export const streamWithGroq = async (
     let fullContent = "";
     let buffer = "";
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
 
-      for (const line of lines) {
-        if (line.startsWith("data: ")) {
-          const jsonStr = line.slice(6).trim();
-          if (!jsonStr || jsonStr === "[DONE]") continue;
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const jsonStr = line.slice(6).trim();
+            if (!jsonStr || jsonStr === "[DONE]") continue;
 
-          try {
-            const data = JSON.parse(jsonStr);
-            
-            // Check for error in stream
-            if (data.error) {
-              onChunk({ error: data.error });
-              return;
+            try {
+              const data = JSON.parse(jsonStr);
+              
+              // Check for error in stream
+              if (data.error) {
+                onChunk({ error: data.error });
+                return;
+              }
+              
+              const delta = data.choices?.[0]?.delta;
+              
+              if (delta?.content) {
+                fullContent += delta.content;
+                onChunk({ content: fullContent });
+              }
+            } catch {
+              // Skip invalid JSON
             }
-            
-            const delta = data.choices?.[0]?.delta;
-            
-            if (delta?.content) {
-              fullContent += delta.content;
-              onChunk({ content: fullContent });
-            }
-          } catch {
-            // Skip invalid JSON
           }
         }
       }
+    } finally {
+      onChunk({ content: fullContent, done: true });
     }
-
-    onChunk({ content: fullContent, done: true });
   } catch (error) {
+    if (options.abortController?.signal.aborted) {
+      await cancelRequest(requestId);
+    }
     onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
   }
 };
@@ -1154,6 +1184,7 @@ export const chatWithOpenRouter: ChatFunction = async (
     return { error: "Open Router API key is required" };
   }
 
+  const requestId = options.requestId || generateRequestId();
   try {
     const systemMessagesFromInput = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -1172,6 +1203,7 @@ export const chatWithOpenRouter: ChatFunction = async (
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        requestId,
         endpoint: "chat/completions",
         apiKey: config.apiKey,
         payload: {
@@ -1182,8 +1214,8 @@ export const chatWithOpenRouter: ChatFunction = async (
           top_p: options.topP,
           top_k: options.topK,
         },
-        signal: options.abortController?.signal,
       }),
+      signal: options.abortController?.signal,
     });
 
     const data = await response.json();
@@ -1199,6 +1231,9 @@ export const chatWithOpenRouter: ChatFunction = async (
 
     return { content, thinking };
   } catch (error) {
+    if (options.abortController?.signal.aborted) {
+      await cancelRequest(requestId);
+    }
     return {
       error: error instanceof Error ? error.message : "Unknown error occurred",
     };
@@ -1217,6 +1252,7 @@ export const streamWithOpenRouter = async (
     systemPrompt?: string;
     enableThinking?: boolean;
     abortController?: AbortController;
+    requestId?: string;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -1225,6 +1261,7 @@ export const streamWithOpenRouter = async (
     return;
   }
 
+  const requestId = options.requestId || generateRequestId();
   try {
     const systemMessagesFromInput = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -1243,6 +1280,7 @@ export const streamWithOpenRouter = async (
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        requestId,
         endpoint: "chat/completions",
         apiKey: config.apiKey,
         payload: {
@@ -1255,8 +1293,8 @@ export const streamWithOpenRouter = async (
           stream: true,
         },
         stream: true,
-        signal: options.abortController?.signal,
       }),
+      signal: options.abortController?.signal,
     });
 
     if (!response.ok) {
@@ -1276,47 +1314,52 @@ export const streamWithOpenRouter = async (
     let fullThinking = "";
     let buffer = "";
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
 
-      for (const line of lines) {
-        if (line.startsWith("data: ")) {
-          const jsonStr = line.slice(6).trim();
-          if (!jsonStr || jsonStr === "[DONE]") continue;
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const jsonStr = line.slice(6).trim();
+            if (!jsonStr || jsonStr === "[DONE]") continue;
 
-          try {
-            const data = JSON.parse(jsonStr);
-            
-            if (data.error) {
-              onChunk({ error: data.error });
-              return;
+            try {
+              const data = JSON.parse(jsonStr);
+              
+              if (data.error) {
+                onChunk({ error: data.error });
+                return;
+              }
+              
+              const delta = data.choices?.[0]?.delta;
+              
+              if (delta?.reasoning_content) {
+                fullThinking += delta.reasoning_content;
+                onChunk({ thinking: fullThinking });
+              }
+              
+              if (delta?.content) {
+                fullContent += delta.content;
+                onChunk({ content: fullContent });
+              }
+            } catch {
+              // Skip invalid JSON
             }
-            
-            const delta = data.choices?.[0]?.delta;
-            
-            if (delta?.reasoning_content) {
-              fullThinking += delta.reasoning_content;
-              onChunk({ thinking: fullThinking });
-            }
-            
-            if (delta?.content) {
-              fullContent += delta.content;
-              onChunk({ content: fullContent });
-            }
-          } catch {
-            // Skip invalid JSON
           }
         }
       }
+    } finally {
+      onChunk({ content: fullContent, thinking: fullThinking, done: true });
     }
-
-    onChunk({ content: fullContent, thinking: fullThinking, done: true });
   } catch (error) {
+    if (options.abortController?.signal.aborted) {
+      await cancelRequest(requestId);
+    }
     onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
   }
 };
@@ -1335,6 +1378,7 @@ export const streamWithVertexAI = async (
     thinkingLevel?: ThinkingLevel;
     thinkingBudget?: ThinkingBudget;
     abortController?: AbortController;
+    requestId?: string;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -1350,23 +1394,19 @@ export const streamWithVertexAI = async (
     return;
   }
 
+  const requestId = options.requestId || generateRequestId();
   try {
-    // Extract system messages from instruction messages for Gemini API
     const systemMessages = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
     
-    // Format non-system messages for Gemini API
     const formattedMessages = nonSystemMessages.map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
       parts: [{ text: m.content }],
     }));
 
-    // Send system messages as separate entries for Gemini API
-    // Send system messages as merged single entry for Gemini API (does not accept array)
     const systemInstructionText = systemMessages.map(m => m.content).join("\n\n");
     const systemInstruction = systemInstructionText ? { parts: [{ text: systemInstructionText }] } : undefined;
 
-    // Build generation config with optional thinking
     const generationConfig: Record<string, unknown> = {
       temperature: options.temperature,
       maxOutputTokens: options.maxTokens,
@@ -1374,11 +1414,9 @@ export const streamWithVertexAI = async (
       topK: options.topK,
     };
 
-    // Add thinking config for models that support it (Gemini 2.0+)
     if (options.enableThinking && config.selectedModel) {
       const modelId = config.selectedModel.toLowerCase();
       if (modelId.includes("gemini-2.5")) {
-        // Gemini 2.5 models use thinkingBudget (tokens)
         const budgetMap: Record<string, number> = {
           NONE: 0,
           LOW: 1024,
@@ -1392,20 +1430,19 @@ export const streamWithVertexAI = async (
           };
         }
       } else {
-        // Legacy thinking config for Gemini 2.0 and earlier
         generationConfig.thinkingConfig = {
           thinkingLevel: options.thinkingLevel || "HIGH"
         };
       }
     }
 
-    // Use server-side proxy to avoid CORS issues
     const response = await fetch("/api/vertex-ai", {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        requestId,
         endpoint: `${config.selectedModel}:streamGenerateContent?alt=sse`,
         apiKey: config.apiKey,
         projectId: config.projectId,
@@ -1415,8 +1452,8 @@ export const streamWithVertexAI = async (
           systemInstruction,
           generationConfig,
         },
-        signal: options.abortController?.signal,
       }),
+      signal: options.abortController?.signal,
     });
 
     if (!response.ok) {
@@ -1436,42 +1473,47 @@ export const streamWithVertexAI = async (
     let fullThinking = "";
     let buffer = "";
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
 
-      for (const line of lines) {
-        if (line.startsWith("data: ")) {
-          const jsonStr = line.slice(6).trim();
-          if (!jsonStr || jsonStr === "[DONE]") continue;
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const jsonStr = line.slice(6).trim();
+            if (!jsonStr || jsonStr === "[DONE]") continue;
 
-          try {
-            const data = JSON.parse(jsonStr);
-            const parts = data.candidates?.[0]?.content?.parts || [];
-            
-            for (const part of parts) {
-              if (part.text) {
-                fullContent += part.text;
-                onChunk({ content: fullContent });
+            try {
+              const data = JSON.parse(jsonStr);
+              const parts = data.candidates?.[0]?.content?.parts || [];
+              
+              for (const part of parts) {
+                if (part.text) {
+                  fullContent += part.text;
+                  onChunk({ content: fullContent });
+                }
+                if (part.thought) {
+                  fullThinking += part.thought;
+                  onChunk({ thinking: fullThinking });
+                }
               }
-              if (part.thought) {
-                fullThinking += part.thought;
-                onChunk({ thinking: fullThinking });
-              }
+            } catch {
+              // Skip invalid JSON
             }
-          } catch {
-            // Skip invalid JSON
           }
         }
       }
+    } finally {
+      onChunk({ content: fullContent, thinking: fullThinking, done: true });
     }
-
-    onChunk({ content: fullContent, thinking: fullThinking, done: true });
   } catch (error) {
+    if (options.abortController?.signal.aborted) {
+      await cancelRequest(requestId);
+    }
     onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
   }
 };
@@ -1486,25 +1528,22 @@ export const chatWithKoboldHorde: ChatFunction = async (
       return { error: "KoboldAI Horde API key is required" };
     }
 
-    // Get the selected model's context window, fallback to 8192
     const availableModels = getModelsForProvider("kobold-horde");
     const selectedModel = availableModels.find(m => m.id === (config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL));
     const maxContextLength = selectedModel?.contextWindow || 8192;
 
+    const requestId = generateRequestId();
     try {
-      // Combine all messages into a single prompt for KoboldAI Horde
       const systemMessages = messages.filter(m => m.role === "system");
       const nonSystemMessages = messages.filter(m => m.role !== "system");
 
       let prompt = "";
 
-      // Add system prompt if provided
       const systemContent = systemMessages.map(m => m.content).join("\n\n");
       if (systemContent || options.systemPrompt) {
         prompt += (systemContent || options.systemPrompt) + "\n\n";
       }
 
-      // Add conversation history
       for (const message of nonSystemMessages) {
         if (message.role === "user") {
           prompt += `User: ${message.content}\n\n`;
@@ -1513,115 +1552,64 @@ export const chatWithKoboldHorde: ChatFunction = async (
         }
       }
 
-      // Add final assistant prompt
       prompt += "Assistant: ";
 
-       const response = await fetch("https://aihorde.net/api/v2/generate/text/async", {
-         method: "POST",
-         headers: {
-           "Content-Type": "application/json",
-           "apikey": config.apiKey,
-           "Client-Agent": "roleplay-studio:1.0.0",
-         },
-         body: JSON.stringify({
-           prompt,
-           params: {
-             temperature: options.temperature,
-             top_p: options.topP,
-             top_k: options.topK,
-             typical: 1,
-             frmtadsnsp: false,
-             frmtrmblln: false,
-             frmtrmspch: false,
-             frmttriminc: false,
-             rep_pen: 1.1,
-             rep_pen_range: 4096,
-             rep_pen_slope: 10,
-             singleline: false,
-             smoothing_factor: 0,
-             dynatemp_range: 0,
-             dynatemp_exponent: 1,
-             n: 1,
-             max_context_length: maxContextLength,
-             max_length: options.maxTokens,
-             min_p: 0,
-             use_default_badwordsids: true,
-             sampler_order: [0],
-             stop_sequence: [],
-           },
-           trusted_workers: false,
-           validated_backends: true,
-           slow_workers: true,
-           workers: [],
-           worker_blacklist: false,
-           models: [config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL],
-           dry_run: false,
-           allow_downgrade: false,
-           disable_batching: false,
-           extra_source_images: [],
-           softprompt: "",
-           extra_slow_workers: false,
-         }),
-       });
+      const response = await fetch("/api/kobold-horde", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          requestId,
+          apiKey: config.apiKey,
+          model: config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL,
+          prompt,
+          params: {
+            temperature: options.temperature,
+            top_p: options.topP,
+            top_k: options.topK,
+            typical: 1,
+            frmtadsnsp: false,
+            frmtrmblln: false,
+            frmtrmspch: false,
+            frmttriminc: false,
+            rep_pen: 1.1,
+            rep_pen_range: 4096,
+            rep_pen_slope: 10,
+            singleline: false,
+            smoothing_factor: 0,
+            dynatemp_range: 0,
+            dynatemp_exponent: 1,
+            n: 1,
+            max_context_length: maxContextLength,
+            max_length: options.maxTokens,
+            min_p: 0,
+            use_default_badwordsids: true,
+            sampler_order: [0],
+            stop_sequence: [],
+          },
+        }),
+        signal: options.abortController?.signal,
+      });
 
-       const data = await response.json();
+      const data = await response.json();
 
-       if (!response.ok) {
-         return {
-           error: data.error || `HTTP ${response.status}`,
-         };
-       }
+      if (!response.ok) {
+        return {
+          error: data.error || `HTTP ${response.status}`,
+        };
+      }
 
-       // For async endpoint, we need to poll for completion
-       if (data.task_id) {
-         // Poll for result with exponential backoff and timeout
-         const maxAttempts = 12; // Up to ~64 seconds total
-         const baseDelay = 1000; // 1 second
-         let result = null;
-         
-         for (let i = 0; i < maxAttempts; i++) {
-           // Exponential backoff: 1s, 2s, 4s, 8s, etc.
-           const delay = Math.min(baseDelay * Math.pow(2, i), 30000); // Cap at 30s
-           await new Promise(resolve => setTimeout(resolve, delay));
-           
-           try {
-             const statusResponse = await fetch(`https://aihorde.net/api/v2/generate/text/status/${data.task_id}`, {
-               headers: {
-                 "apikey": config.apiKey,
-               },
-             });
-             
-             if (statusResponse.ok) {
-               const statusData = await statusResponse.json();
-               if (statusData.finished && statusData.generations && statusData.generations.length > 0) {
-                 result = statusData.generations[0].text;
-                 break;
-               }
-               // If still processing, continue polling
-               if (statusData.done === false) {
-                 continue;
-               }
-             }
-           } catch (pollError) {
-             // Ignore individual poll errors and continue
-             continue;
-           }
-         }
-         
-         if (result) {
-           return { content: result };
-         } else {
-           return { error: "Timeout waiting for generation - task may still be processing" };
-         }
-       }
-        
-       return { error: "No task ID returned" };
-     } catch (error) {
-       return {
-         error: error instanceof Error ? error.message : "Unknown error occurred",
-       };
-     }
-   };
+      return { content: data.content || "" };
+    } catch (error) {
+      if (options.abortController?.signal.aborted) {
+        await cancelRequest(requestId);
+      }
+      return {
+        error: error instanceof Error ? error.message : "Unknown error occurred",
+      };
+    }
+  };
 
 // KoboldAI Horde streaming implementation - falls back to async+status polling
 // because the /v2/generate/text/stream endpoint is no longer available.
@@ -1638,9 +1626,10 @@ export const streamWithKoboldHorde = async (
      thinkingLevel?: ThinkingLevel;
      thinkingBudget?: ThinkingBudget;
      abortController?: AbortController;
+    requestId?: string;
    },
    onChunk: StreamCallback
-) => {
+ ) => {
    if (!config.apiKey) {
      onChunk({ error: "KoboldAI Horde API key is required" });
      return;
@@ -1650,6 +1639,7 @@ export const streamWithKoboldHorde = async (
    const selectedModel = availableModels.find(m => m.id === (config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL));
    const maxContextLength = selectedModel?.contextWindow || 8192;
 
+   const requestId = generateRequestId();
    try {
      const systemMessages = messages.filter(m => m.role === "system");
      const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -1670,14 +1660,15 @@ export const streamWithKoboldHorde = async (
 
      prompt += "Assistant: ";
 
-     const response = await fetch("https://aihorde.net/api/v2/generate/text/async", {
+     const response = await fetch("/api/kobold-horde", {
        method: "POST",
        headers: {
          "Content-Type": "application/json",
-         apikey: config.apiKey,
-         "Client-Agent": "roleplay-studio:1.0.0",
        },
        body: JSON.stringify({
+         requestId,
+         apiKey: config.apiKey,
+         model: config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL,
          prompt,
          params: {
            temperature: options.temperature,
@@ -1703,19 +1694,8 @@ export const streamWithKoboldHorde = async (
            sampler_order: [0],
            stop_sequence: [],
          },
-         trusted_workers: false,
-         validated_backends: true,
-         slow_workers: true,
-         workers: [],
-         worker_blacklist: false,
-         models: [config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL],
-         dry_run: false,
-         allow_downgrade: false,
-         disable_batching: false,
-         extra_source_images: [],
-         softprompt: "",
-         extra_slow_workers: false,
        }),
+       signal: options.abortController?.signal,
      });
 
      if (!response.ok) {
@@ -1725,57 +1705,18 @@ export const streamWithKoboldHorde = async (
      }
 
      const data = await response.json();
-     const requestId = data.id;
-     if (!requestId) {
-       onChunk({ error: "No request ID returned from AI Horde" });
-       return;
-     }
+     const content = data.content || "";
+     const done = data.done ?? true;
 
-     let lastText = "";
-     const maxAttempts = 60;
-     const baseDelay = 1000;
-
-     for (let i = 0; i < maxAttempts; i++) {
-       await new Promise(resolve => setTimeout(resolve, baseDelay));
-
-       try {
-         const statusResponse = await fetch(
-           `https://aihorde.net/api/v2/generate/text/status/${requestId}`,
-           {
-             headers: { apikey: config.apiKey },
-           }
-         );
-
-         if (!statusResponse.ok) continue;
-
-         const statusData = await statusResponse.json();
-         if (statusData.faulted) {
-           onChunk({ error: "AI Horde generation faulted" });
-           return;
-         }
-
-         const currentText = statusData.generations?.[0]?.text || "";
-         if (currentText && currentText !== lastText) {
-           const delta = currentText.slice(lastText.length);
-           lastText = currentText;
-           onChunk({ content: currentText });
-         }
-
-         if (statusData.done) {
-           onChunk({ content: lastText, done: true });
-           return;
-         }
-       } catch {
-         continue;
-       }
-     }
-
-     if (lastText) {
-       onChunk({ content: lastText, done: true });
-     } else {
-       onChunk({ error: "Timeout waiting for AI Horde generation" });
+     if (content) {
+       onChunk({ content, done });
+     } else if (data.error) {
+       onChunk({ error: data.error });
      }
    } catch (error) {
+     if (options.abortController?.signal.aborted) {
+       await cancelRequest(requestId);
+     }
      onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
    }
  };
@@ -1790,6 +1731,7 @@ export const chatWithCohere: ChatFunction = async (
     return { error: "Cohere API key is required" };
   }
 
+  const requestId = options.requestId || generateRequestId();
   try {
     const systemMessages = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -1810,6 +1752,7 @@ export const chatWithCohere: ChatFunction = async (
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        requestId,
         endpoint: "chat/completions",
         apiKey: config.apiKey,
         payload: {
@@ -1819,8 +1762,8 @@ export const chatWithCohere: ChatFunction = async (
           max_tokens: options.maxTokens,
           top_p: options.topP,
         },
-        signal: options.abortController?.signal,
       }),
+      signal: options.abortController?.signal,
     });
 
     const data = await response.json();
@@ -1835,6 +1778,9 @@ export const chatWithCohere: ChatFunction = async (
 
     return { content };
   } catch (error) {
+    if (options.abortController?.signal.aborted) {
+      await cancelRequest(requestId);
+    }
     return {
       error: error instanceof Error ? error.message : "Unknown error occurred",
     };
@@ -1855,6 +1801,7 @@ export const streamWithCohere = async (
     thinkingLevel?: ThinkingLevel;
     thinkingBudget?: ThinkingBudget;
     abortController?: AbortController;
+    requestId?: string;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -1863,6 +1810,7 @@ export const streamWithCohere = async (
     return;
   }
 
+  const requestId = options.requestId || generateRequestId();
   try {
     const systemMessages = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -1883,6 +1831,7 @@ export const streamWithCohere = async (
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        requestId,
         endpoint: "chat/completions",
         apiKey: config.apiKey,
         payload: {
@@ -1894,8 +1843,8 @@ export const streamWithCohere = async (
           stream: true,
         },
         stream: true,
-        signal: options.abortController?.signal,
       }),
+      signal: options.abortController?.signal,
     });
 
     if (!response.ok) {
@@ -1914,42 +1863,47 @@ export const streamWithCohere = async (
     let fullContent = "";
     let buffer = "";
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
 
-      for (const line of lines) {
-        if (line.startsWith("data: ")) {
-          const jsonStr = line.slice(6).trim();
-          if (!jsonStr || jsonStr === "[DONE]") continue;
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const jsonStr = line.slice(6).trim();
+            if (!jsonStr || jsonStr === "[DONE]") continue;
 
-          try {
-            const data = JSON.parse(jsonStr);
+            try {
+              const data = JSON.parse(jsonStr);
 
-            if (data.error) {
-              onChunk({ error: data.error });
-              return;
+              if (data.error) {
+                onChunk({ error: data.error });
+                return;
+              }
+
+              const delta = data.choices?.[0]?.delta;
+
+              if (delta?.content) {
+                fullContent += delta.content;
+                onChunk({ content: fullContent });
+              }
+            } catch {
+              // Skip invalid JSON
             }
-
-            const delta = data.choices?.[0]?.delta;
-
-            if (delta?.content) {
-              fullContent += delta.content;
-              onChunk({ content: fullContent });
-            }
-          } catch {
-            // Skip invalid JSON
           }
         }
       }
+    } finally {
+      onChunk({ content: fullContent, done: true });
     }
-
-    onChunk({ content: fullContent, done: true });
   } catch (error) {
+    if (options.abortController?.signal.aborted) {
+      await cancelRequest(requestId);
+    }
     onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
   }
 };
@@ -1968,6 +1922,7 @@ export const sendChatMessage = async (
     thinkingLevel?: ThinkingLevel;
     thinkingBudget?: ThinkingBudget;
     abortController?: AbortController;
+    requestId?: string;
   }
 ): Promise<ChatResponse> => {
   const provider = providerRegistry.get(config.type);
@@ -1991,6 +1946,7 @@ export const streamChatMessage = async (
     thinkingLevel?: ThinkingLevel;
     thinkingBudget?: ThinkingBudget;
     abortController?: AbortController;
+    requestId?: string;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -2028,14 +1984,11 @@ export const chatWithOllama: ChatFunction = async (
   config,
   options
 ) => {
-  // Ollama doesn't require an API key, but we can send one if provided for remote setups
   const apiKey = config.apiKey || "";
-  // Get active profile or create a default one if none exists
   let activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
   if (!activeProfile && config.profiles.length > 0) {
     activeProfile = config.profiles[0];
   }
-  // If still no active profile (empty profiles array), create a default one
   if (!activeProfile) {
     activeProfile = {
       id: `ollama-default-${Date.now()}`,
@@ -2048,6 +2001,7 @@ export const chatWithOllama: ChatFunction = async (
   }
   const baseUrl = (activeProfile.baseUrl?.endsWith('/') ? activeProfile.baseUrl.slice(0, -1) : activeProfile.baseUrl) || "http://localhost:11434/v1";
 
+  const requestId = options.requestId || generateRequestId();
   try {
     const systemMessages = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -2062,13 +2016,13 @@ export const chatWithOllama: ChatFunction = async (
       ? [{ role: "system", content: systemContent || options.systemPrompt || "" }, ...formattedMessages]
       : formattedMessages;
 
-    // Use server-side proxy to avoid CORS issues
     const response = await fetch("/api/ollama", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        requestId,
         endpoint: `${baseUrl}/chat/completions`,
         apiKey: apiKey,
         payload: {
@@ -2080,6 +2034,7 @@ export const chatWithOllama: ChatFunction = async (
           stream: false,
         },
       }),
+      signal: options.abortController?.signal,
     });
 
     const data = await response.json();
@@ -2094,6 +2049,9 @@ export const chatWithOllama: ChatFunction = async (
 
     return { content };
   } catch (error) {
+    if (options.abortController?.signal.aborted) {
+      await cancelRequest(requestId);
+    }
     return {
       error: error instanceof Error ? error.message : "Unknown error occurred",
     };
@@ -2112,16 +2070,15 @@ export const streamWithOllama = async (
     systemPrompt?: string;
     enableThinking?: boolean;
     abortController?: AbortController;
+    requestId?: string;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
   const apiKey = config.apiKey || "";
-  // Get active profile or create a default one if none exists
   let activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
   if (!activeProfile && config.profiles.length > 0) {
     activeProfile = config.profiles[0];
   }
-  // If still no active profile (empty profiles array), create a default one
   if (!activeProfile) {
     activeProfile = {
       id: `ollama-default-${Date.now()}`,
@@ -2134,6 +2091,7 @@ export const streamWithOllama = async (
   }
   const baseUrl = (activeProfile.baseUrl?.endsWith('/') ? activeProfile.baseUrl.slice(0, -1) : activeProfile.baseUrl) || "http://localhost:11434/v1";
 
+  const requestId = options.requestId || generateRequestId();
   try {
     const systemMessages = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -2148,13 +2106,13 @@ export const streamWithOllama = async (
       ? [{ role: "system", content: systemContent || options.systemPrompt || "" }, ...formattedMessages]
       : formattedMessages;
 
-    // Use server-side proxy to avoid CORS issues
     const response = await fetch("/api/ollama", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        requestId,
         endpoint: `${baseUrl}/chat/completions`,
         apiKey: apiKey,
         payload: {
@@ -2167,6 +2125,7 @@ export const streamWithOllama = async (
         },
         stream: true,
       }),
+      signal: options.abortController?.signal,
     });
 
     if (!response.ok) {
@@ -2185,42 +2144,47 @@ export const streamWithOllama = async (
     let fullContent = "";
     let buffer = "";
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
 
-      for (const line of lines) {
-        if (line.startsWith("data: ")) {
-          const jsonStr = line.slice(6).trim();
-          if (!jsonStr || jsonStr === "[DONE]") continue;
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const jsonStr = line.slice(6).trim();
+            if (!jsonStr || jsonStr === "[DONE]") continue;
 
-          try {
-            const data = JSON.parse(jsonStr);
-            
-            if (data.error) {
-              onChunk({ error: data.error });
-              return;
+            try {
+              const data = JSON.parse(jsonStr);
+              
+              if (data.error) {
+                onChunk({ error: data.error });
+                return;
+              }
+              
+              const delta = data.choices?.[0]?.delta;
+              
+              if (delta?.content) {
+                fullContent += delta.content;
+                onChunk({ content: fullContent });
+              }
+            } catch {
+              // Skip invalid JSON
             }
-            
-            const delta = data.choices?.[0]?.delta;
-            
-            if (delta?.content) {
-              fullContent += delta.content;
-              onChunk({ content: fullContent });
-            }
-          } catch {
-            // Skip invalid JSON
           }
         }
       }
+    } finally {
+      onChunk({ content: fullContent, done: true });
     }
-
-    onChunk({ content: fullContent, done: true });
   } catch (error) {
+    if (options.abortController?.signal.aborted) {
+      await cancelRequest(requestId);
+    }
     onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
   }
 };

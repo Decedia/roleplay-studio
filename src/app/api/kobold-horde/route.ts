@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractErrorMessage } from "@/lib/errorUtils";
+import { abortControllerStore } from "@/lib/abortControllerStore";
 
-// KoboldAI Horde API route - uses server-side proxy to avoid CORS
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { apiKey, model, prompt, params, stream } = body;
+    const { apiKey, model, prompt, params, stream, requestId } = body;
 
     if (!apiKey) {
       return NextResponse.json(
@@ -21,25 +21,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const controller = new AbortController();
+    if (requestId && typeof requestId === "string") {
+      abortControllerStore.set(requestId, controller);
+    }
+
     const baseUrl = "https://aihorde.net/api";
 
-    // Submit async generation request
     const submitResponse = await fetch(`${baseUrl}/v2/generate/text/async`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "apikey": apiKey,
+        apikey: apiKey,
       },
-       body: JSON.stringify({
-         prompt,
-         params: {
-           ...params,
-           max_context_length: params.max_context_length || 8192,
-         },
-         models: model ? [model] : undefined,
-         // Disable safe filters for compatibility
-         disable_badwords: true,
-       }),
+      body: JSON.stringify({
+        prompt,
+        params: {
+          ...params,
+          max_context_length: params.max_context_length || 8192,
+        },
+        models: model ? [model] : undefined,
+        disable_badwords: true,
+      }),
+      signal: controller.signal,
     });
 
     if (!submitResponse.ok) {
@@ -51,63 +55,75 @@ export async function POST(request: NextRequest) {
     }
 
     const submitData = await submitResponse.json();
-    const requestId = submitData.id;
+    const requestIdFromHorde = submitData.id;
 
-    if (!requestId) {
+    if (!requestIdFromHorde) {
       return NextResponse.json(
         { error: "Failed to get request ID from Horde API" },
         { status: 500 }
       );
     }
 
-    // Poll for completion
-    const maxPolls = 60; // Maximum 60 polls (about 2 minutes at 2 second intervals)
-    const pollInterval = 2000; // 2 seconds
+    const maxPolls = 60;
+    const pollInterval = 2000;
 
-    for (let pollCount = 0; pollCount < maxPolls; pollCount++) {
-      await new Promise(resolve => setTimeout(resolve, pollInterval));
-
-      const statusResponse = await fetch(`${baseUrl}/v2/generate/text/status/${requestId}`, {
-        method: "GET",
-      });
-
-      if (!statusResponse.ok) {
-        continue; // Keep polling even on errors
-      }
-
-      const statusData = await statusResponse.json();
-
-      if (statusData.done) {
-        // Generation completed
-        const generations = statusData.generations || [];
-        if (generations.length > 0) {
-          const content = generations[0].text || "";
-
-          if (stream) {
-            // For streaming, return the full content
-            return NextResponse.json({ content, done: true });
-          } else {
-            // For non-streaming, return the content
-            return NextResponse.json({ content });
-          }
-        } else {
+    try {
+      for (let pollCount = 0; pollCount < maxPolls; pollCount++) {
+        if (controller.signal.aborted) {
           return NextResponse.json(
-            { error: "No generations returned" },
-            { status: 500 }
+            { error: "Generation cancelled" },
+            { status: 499 }
           );
         }
-      }
 
-      // Check if request was cancelled or failed
-      if (statusData.faulted) {
-        return NextResponse.json(
-          { error: "Generation failed" },
-          { status: 500 }
-        );
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+        try {
+          const statusResponse = await fetch(
+            `${baseUrl}/v2/generate/text/status/${requestIdFromHorde}`,
+            {
+              headers: { apikey: apiKey },
+            }
+          );
+
+          if (!statusResponse.ok) continue;
+
+          const statusData = await statusResponse.json();
+
+          if (statusData.faulted) {
+            return NextResponse.json(
+              { error: "Generation failed" },
+              { status: 500 }
+            );
+          }
+
+          if (statusData.done) {
+            const generations = statusData.generations || [];
+            if (generations.length > 0) {
+              const content = generations[0].text || "";
+
+              if (stream) {
+                return NextResponse.json({ content, done: true });
+              } else {
+                return NextResponse.json({ content });
+              }
+            } else {
+              return NextResponse.json(
+                { error: "No generations returned" },
+                { status: 500 }
+              );
+            }
+          }
+        } catch {
+          continue;
+        }
+      }
+    } finally {
+      if (requestId && typeof requestId === "string") {
+        abortControllerStore.delete(requestId);
       }
     }
 
-    // Timeout
     return NextResponse.json(
       { error: "Generation timed out" },
       { status: 408 }

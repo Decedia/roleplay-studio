@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractErrorMessage } from "@/lib/errorUtils";
+import { abortControllerStore } from "@/lib/abortControllerStore";
 
-// Vertex AI proxy route to avoid CORS issues
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { endpoint, apiKey, payload, location = "global", projectId } = body;
+    const { endpoint, apiKey, payload, location = "global", projectId, requestId } = body;
 
     if (!apiKey) {
       return NextResponse.json(
@@ -21,30 +21,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Build the Vertex AI endpoint URL with actual project ID
+    const controller = new AbortController();
+    if (requestId && typeof requestId === "string") {
+      abortControllerStore.set(requestId, controller);
+    }
+
     const vertexEndpoint = location === "global"
       ? `https://aiplatform.googleapis.com/v1/projects/${projectId}/locations/global/publishers/google/models/${endpoint}`
       : `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${endpoint}`;
 
-    const response = await fetch(vertexEndpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
-      },
-      body: JSON.stringify(payload),
-    });
+    try {
+      const response = await fetch(vertexEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: extractErrorMessage(data.error) || `HTTP ${response.status}` },
-        { status: response.status }
-      );
+      if (!response.ok) {
+        return NextResponse.json(
+          { error: extractErrorMessage(data.error) || `HTTP ${response.status}` },
+          { status: response.status }
+        );
+      }
+
+      return NextResponse.json(data);
+    } finally {
+      if (requestId && typeof requestId === "string") {
+        abortControllerStore.delete(requestId);
+      }
     }
-
-    return NextResponse.json(data);
   } catch (error) {
     console.error("Vertex AI proxy error:", error);
     return NextResponse.json(
@@ -54,11 +65,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Endpoint for streaming
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { endpoint, apiKey, payload, location = "global", projectId } = body;
+    const { endpoint, apiKey, payload, location = "global", projectId, requestId } = body;
 
     if (!apiKey) {
       return NextResponse.json(
@@ -74,67 +84,76 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Build the Vertex AI endpoint URL for streaming with actual project ID
+    const controller = new AbortController();
+    if (requestId && typeof requestId === "string") {
+      abortControllerStore.set(requestId, controller);
+    }
+
     const vertexEndpoint = location === "global"
       ? `https://aiplatform.googleapis.com/v1/projects/${projectId}/locations/global/publishers/google/models/${endpoint}`
       : `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${endpoint}`;
 
-    const response = await fetch(vertexEndpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
-      },
-      body: JSON.stringify(payload),
-    });
+    try {
+      const response = await fetch(vertexEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      return NextResponse.json(
-        { error: extractErrorMessage(errorData.error) || `HTTP ${response.status}` },
-        { status: response.status }
-      );
-    }
+      if (!response.ok) {
+        const errorData = await response.json();
+        return NextResponse.json(
+          { error: extractErrorMessage(errorData.error) || `HTTP ${response.status}` },
+          { status: response.status }
+        );
+      }
 
-    // For streaming, we need to return the stream directly
-    const encoder = new TextEncoder();
-    const decoder = new TextDecoder();
-    
-    const reader = response.body?.getReader();
-    if (!reader) {
-      return NextResponse.json(
-        { error: "Failed to get response stream" },
-        { status: 500 }
-      );
-    }
+      const encoder = new TextEncoder();
+      const decoder = new TextDecoder();
 
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) {
-              controller.close();
-              break;
+      const reader = response.body?.getReader();
+      if (!reader) {
+        return NextResponse.json(
+          { error: "Failed to get response stream" },
+          { status: 500 }
+        );
+      }
+
+      const stream = new ReadableStream({
+        async start(controller) {
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) {
+                controller.close();
+                break;
+              }
+
+              const chunk = decoder.decode(value, { stream: true });
+              controller.enqueue(encoder.encode(chunk));
             }
-            
-            const chunk = decoder.decode(value, { stream: true });
-            // Pass through the SSE data
-            controller.enqueue(encoder.encode(chunk));
+          } catch (error) {
+            controller.error(error);
           }
-        } catch (error) {
-          controller.error(error);
-        }
-      },
-    });
+        },
+      });
 
-    return new Response(stream, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
-      },
-    });
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+        },
+      });
+    } finally {
+      if (requestId && typeof requestId === "string") {
+        abortControllerStore.delete(requestId);
+      }
+    }
   } catch (error) {
     console.error("Vertex AI streaming proxy error:", error);
     return NextResponse.json(

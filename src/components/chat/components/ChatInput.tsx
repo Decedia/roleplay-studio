@@ -3,7 +3,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Send } from "lucide-react";
+import { Loader2, Send, X } from "lucide-react";
 
 interface ChatInputProps {
   value: string;
@@ -14,6 +14,7 @@ interface ChatInputProps {
   disabled?: boolean;
   isLoading?: boolean;
   accentColor?: "purple" | "amber" | "blue";
+  onCancel?: () => void;
 }
 
 export function ChatInput({
@@ -25,6 +26,7 @@ export function ChatInput({
   disabled = false,
   isLoading = false,
   accentColor = "blue",
+  onCancel,
 }: ChatInputProps) {
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   
@@ -82,19 +84,31 @@ export function ChatInput({
                 disabled={disabled}
               />
             </div>
-            <Button
-              type="submit"
-              disabled={disabled || isLoading}
-              size="icon"
-              className={`h-9 w-9 sm:h-10 sm:w-10 rounded-lg transition-all shadow-lg ${disabled ? "opacity-50 cursor-not-allowed" : "hover:scale-105"}`}
-              title={value.trim() ? "Send message" : "Resend last message"}
-            >
-              {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Send className="w-5 h-5" />
-              )}
-            </Button>
+            {isLoading && onCancel ? (
+              <Button
+                type="button"
+                onClick={onCancel}
+                size="icon"
+                className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg transition-all shadow-lg bg-red-600 hover:bg-red-700"
+                title="Cancel"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            ) : (
+              <Button
+                type="submit"
+                disabled={disabled || isLoading}
+                size="icon"
+                className={`h-9 w-9 sm:h-10 sm:w-10 rounded-lg transition-all shadow-lg ${disabled ? "opacity-50 cursor-not-allowed" : "hover:scale-105"}`}
+                title={value.trim() ? "Send message" : "Resend last message"}
+              >
+                {isLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Send className="w-5 h-5" />
+                )}
+              </Button>
+            )}
           </div>
           <p className="text-xs text-muted-foreground mt-2 text-center">
             Press Enter to send, Shift+Enter for new line. Empty message resends last.
