@@ -154,6 +154,23 @@ export function ChatMessage({
             <p className="text-[11px] text-zinc-500">
               {message.role === "user" ? senderName : senderName || "AI"}
             </p>
+            {message.role === "assistant" && (modelId || provider) && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button className="text-zinc-500 hover:text-zinc-300 transition-colors">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 16v-4" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8h.01" />
+                    </svg>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  <p className="font-medium">Model: {modelId || "Unknown"}</p>
+                  <p className="text-zinc-400">Provider: {provider || "Unknown"}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
             
             {/* Action buttons for last messages */}
             {isLastAssistantMessage && (

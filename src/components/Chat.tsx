@@ -40,6 +40,7 @@ import { replaceMacros as replaceMacrosWithContext, type MacroContext } from "@/
 // Import from modular chat structure
 import { ThinkingSection, ThinkingPanel, CollapsibleTagSection, FormattedText, SettingsModal, ChatInput, ChatMessage, CharacterCardPreview } from "@/components/chat/components";
 import { useChatState } from "@/components/chat/hooks/useChatState";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Import UI styles
 import * as ui from "@/components/chat/styles";
@@ -7314,9 +7315,28 @@ if (modelsResult.models.length > 0) {
                           {message.content}
                         </div>
                       </div>
-                      <p className="text-xs text-zinc-500 mt-1">
-                        {message.role === "user" ? selectedPersona?.name || "You" : selectedCharacter?.name || "AI"}
-                      </p>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <p className="text-xs text-zinc-500">
+                          {message.role === "user" ? (selectedPersona?.name || "You") : (selectedCharacter?.name || "AI")}
+                        </p>
+                        {message.role === "assistant" && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button className="text-zinc-500 hover:text-zinc-300 transition-colors">
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 16v-4" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8h.01" />
+                                </svg>
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-xs">
+                              <p className="font-medium">Model: {message.modelName || globalSettings.modelId || "Unknown"}</p>
+                              <p className="text-zinc-400">Provider: {providerRegistry.get(activeProvider)?.name || activeProvider}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
                     </div>
                     {message.role === "user" && (
                       <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
