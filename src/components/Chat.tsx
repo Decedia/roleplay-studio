@@ -41,6 +41,7 @@ import { replaceMacros as replaceMacrosWithContext, type MacroContext } from "@/
 import { ThinkingSection, ThinkingPanel, CollapsibleTagSection, FormattedText, SettingsModal, ChatInput, ChatMessage, CharacterCardPreview } from "@/components/chat/components";
 import { useChatState } from "@/components/chat/hooks/useChatState";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Import UI styles
 import * as ui from "@/components/chat/styles";
@@ -723,6 +724,7 @@ export default function Chat() {
   const [generatorInstructions, setGeneratorInstructions] = useState<string>("");
   const [generatorStreamingContent, setGeneratorStreamingContent] = useState<string>("");
   const [detectedCharacterJson, setDetectedCharacterJson] = useState<Record<string, unknown> | null>(null);
+  const [previewCharacterData, setPreviewCharacterData] = useState<Record<string, unknown> | null>(null);
   const [editingGeneratorMessageIndex, setEditingGeneratorMessageIndex] = useState<number | null>(null);
   const [editingGeneratorMessageContent, setEditingGeneratorMessageContent] = useState<string>("");
 
@@ -4321,10 +4323,24 @@ if (modelsResult.models.length > 0) {
                                          )}
                                        </div>
                                      </div>
-                                  ) : (
-                                    <>
-                                      <FormattedText content={displayContent} />
-                                      {isLastAssistant && !isGeneratorLoading && (
+                                   ) : (
+                                     <>
+                                       <FormattedText content={displayContent} />
+                                       {extractedJson && (
+                                         <div className="mt-3">
+                                           <button
+                                              onClick={() => setPreviewCharacterData(normalizeCharacterCard(extractedJson.json))}
+                                             className="text-xs bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+                                           >
+                                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                             </svg>
+                                             View Character Card
+                                           </button>
+                                         </div>
+                                       )}
+                                       {isLastAssistant && !isGeneratorLoading && (
                                          <div className="mt-2 flex justify-end">
                                            <button
                                              onClick={handleGeneratorRetry}
@@ -4390,28 +4406,38 @@ if (modelsResult.models.length > 0) {
                              </div>
                            </div>
                          )}
-                         {currentGeneratorSession.messages.length > 0 && (() => {
-                           const lastAssistantMessage = [...currentGeneratorSession.messages].reverse().find(m => m.role === "assistant");
-                           if (!lastAssistantMessage) return null;
-                           const extracted = extractCharacterJson(lastAssistantMessage.content);
-                           if (!extracted) return null;
-                           return (
-                             <div className="mt-4">
-                               <CharacterCardPreview
-                                 data={normalizeCharacterCard(extracted.json) as any}
-                                 onSave={(cardData) => {
-                                   const char = parseSillyTavernCard(cardData as unknown as Record<string, unknown>);
-                                   if (char) {
-                                     setCharacters(prev => [...prev, char]);
-                                     setDeletedItem({ type: 'character', item: char, timestamp: Date.now() });
-                                     setShowUndoToast(true);
-                                     setTimeout(() => setShowUndoToast(false), 5000);
-                                   }
-                                 }}
-                               />
-                             </div>
-                           );
-                         })()}
+                          {currentGeneratorSession.messages.length > 0 && (() => {
+                            const lastAssistantMessage = [...currentGeneratorSession.messages].reverse().find(m => m.role === "assistant");
+                            if (!lastAssistantMessage) return null;
+                            const extracted = extractCharacterJson(lastAssistantMessage.content);
+                            if (!extracted) return null;
+                            return (
+                              <div className="mt-4">
+                                <Dialog open={!!previewCharacterData} onOpenChange={(open) => !open && setPreviewCharacterData(null)}>
+                                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-zinc-900 border-zinc-800 text-white">
+                                    <DialogHeader>
+                                      <DialogTitle>Character Preview</DialogTitle>
+                                    </DialogHeader>
+                                    {previewCharacterData && (
+                                      <CharacterCardPreview
+                                        data={normalizeCharacterCard(previewCharacterData) as any}
+                                        onSave={(cardData) => {
+                                          const char = parseSillyTavernCard(cardData as unknown as Record<string, unknown>);
+                                          if (char) {
+                                            setCharacters(prev => [...prev, char]);
+                                            setDeletedItem({ type: 'character', item: char, timestamp: Date.now() });
+                                            setShowUndoToast(true);
+                                            setTimeout(() => setShowUndoToast(false), 5000);
+                                          }
+                                          setPreviewCharacterData(null);
+                                        }}
+                                      />
+                                    )}
+                                  </DialogContent>
+                                </Dialog>
+                              </div>
+                            );
+                          })()}
                        </div>
                       )}
                     </div>
