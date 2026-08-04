@@ -37,6 +37,9 @@ Currently modularizing `src/components/Chat.tsx` (11,200 lines) into smaller fil
   - Added Generator tab content with a shared textarea bound to `globalInstructions.generatorDefaultInstructions`
   - Removed inline generator instructions textarea from the generator view
   - All generator sessions now use the same shared instructions field edited from the modal
+- [x] **Fixed generator instructions leakage into user messages**
+  - Removed `[Instructions: ...]` prefix from stored user messages in generator history
+  - Instructions are now injected only as a system message on the API side, matching chat behavior
 
 - [x] **Expanded macro system with MacroContext**
   - Added `MacroContext` type in `src/components/chat/utils/macroUtils.ts` with all available fields
@@ -629,6 +632,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 | 2026-08-04 | **Exposed character generator default instructions globally** - Added `generatorDefaultInstructions` to `GlobalInstructions`; character generator instructions textarea now defaults to global value and persists changes back to global instructions/localStorage; API calls use global instructions instead of hardcoded default. |
 | 2026-08-04 | **Moved character generator instructions into instructions modal** - Added `generator` tab to instructions modal; removed inline generator instructions textarea from generator view; all generator sessions now share one global instructions field edited from the modal. |
 | 2026-08-04 | **FIXED: Character generator broke after moving instructions to modal** - Removed stale `generatorInstructions` local state; generator input now reads `globalInstructions.generatorDefaultInstructions` directly; removed redundant sync effect; updates in modal now apply immediately to generator sessions. |
+| 2026-08-04 | **FIXED: Generator instructions no longer shown in chat UI** - Removed instruction prefix from stored user messages; instructions are now injected as system message only on the API side, matching chat instruction behavior. |
 | 2026-05-04 | **COMPLETED: Implemented instruction preset system** - Added InstructionPreset interface with id, name, instructions[], createdAt, updatedAt fields; added dropdown for selecting presets; added Save/Rename/Delete preset functionality with localStorage persistence; default name uses current date/time |
 | 2026-04-21 | **COMPLETED: Implemented backend for inline instruction positioning** - Added injectInlineInstructions function, integrated with message construction, system now fully functional |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

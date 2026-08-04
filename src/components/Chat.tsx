@@ -4729,10 +4729,9 @@ if (modelsResult.models.length > 0) {
                         }
 
                          const userMessage = generatorInput.trim();
-                         const instructionPrefix = (globalInstructions.generatorDefaultInstructions || "").trim() ? `[Instructions: ${(globalInstructions.generatorDefaultInstructions || "").trim()}]\n\n` : "";
-                        
-                        // Add user message
-                        const newMessages = [...currentGeneratorSession.messages, { role: "user" as const, content: `${instructionPrefix}${userMessage}` }];
+                         
+                         // Add user message without instruction prefix - instructions are injected as system message on API side only
+                         const newMessages = [...currentGeneratorSession.messages, { role: "user" as const, content: userMessage }];
                         setCurrentGeneratorSession({ ...currentGeneratorSession, messages: newMessages, updatedAt: Date.now() });
                          setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: newMessages, updatedAt: Date.now() } : s));
                          setGeneratorInput("");
