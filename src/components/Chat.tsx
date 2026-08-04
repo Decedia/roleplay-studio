@@ -1243,6 +1243,11 @@ export default function Chat() {
       }
     }
   }, []);
+  
+  // Save generator sessions to localStorage
+  useEffect(() => {
+    safeLocalStorageSetItem(GENERATOR_SESSIONS_KEY, JSON.stringify(generatorSessions));
+  }, [generatorSessions]);
 
   // Save last session when view or related state changes
   useEffect(() => {
