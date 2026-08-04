@@ -19,6 +19,9 @@ Currently modularizing `src/components/Chat.tsx` (11,200 lines) into smaller fil
   - Selection is enabled only on the last AI response when no user message follows
   - Selection is disabled when user sends a new message (locks selected alternative)
   - Selection is re-enabled when the last user message is deleted
+  - Deleting the last AI message disables selection
+  - Editing the last AI message locks alternatives and clears the alternatives array
+  - Saving an edited AI message removes alternatives and disables selection
   - Alternatives are persisted in conversation storage (IndexedDB/localStorage)
   - Build compiles successfully
 

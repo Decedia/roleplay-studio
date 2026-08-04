@@ -3324,6 +3324,12 @@ if (modelsResult.models.length > 0) {
         setCanSelectAlternatives(true);
       }
     }
+    
+    // If we deleted the last AI message, disable selection
+    if (wasLastMessage && deletedMessage?.role === "assistant") {
+      setCanSelectAlternatives(false);
+      setSelectedAlternativeIndex(0);
+    }
   };
 
   // Start editing a message
@@ -3331,6 +3337,23 @@ if (modelsResult.models.length > 0) {
     if (!currentConversation) return;
     
     const message = currentConversation.messages[index];
+    
+    // If editing the last AI message with alternatives, lock the selection first
+    if (message.role === "assistant" && index === currentConversation.messages.length - 1 && message.alternatives && message.alternatives.length > 0) {
+      const currentContent = message.alternatives[message.selectedAlternativeIndex ?? 0] ?? message.content;
+      const updatedMessage: Message = {
+        ...message,
+        content: currentContent,
+        alternatives: undefined,
+        selectedAlternativeIndex: undefined,
+      };
+      const updatedMessages = [...currentConversation.messages];
+      updatedMessages[index] = updatedMessage;
+      updateConversationMessages(updatedMessages);
+      setCanSelectAlternatives(false);
+      setSelectedAlternativeIndex(0);
+    }
+    
     setEditingMessageIndex(index);
     setEditingMessageContent(message.content);
     setShowMessageMenu(null);
@@ -3349,7 +3372,20 @@ if (modelsResult.models.length > 0) {
     
     const message = currentConversation.messages[index];
     const updatedMessages = [...currentConversation.messages];
-    updatedMessages[index] = { ...message, content: editingMessageContent.trim() };
+    
+    // If editing an AI message, lock alternatives and keep only the edited content
+    if (message.role === "assistant") {
+      updatedMessages[index] = {
+        ...message,
+        content: editingMessageContent.trim(),
+        alternatives: undefined,
+        selectedAlternativeIndex: undefined,
+      };
+      setCanSelectAlternatives(false);
+      setSelectedAlternativeIndex(0);
+    } else {
+      updatedMessages[index] = { ...message, content: editingMessageContent.trim() };
+    }
     
     // If editing a user message and retry is enabled, regenerate the AI response
     if (message.role === "user" && retry) {
