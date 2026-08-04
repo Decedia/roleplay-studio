@@ -40,6 +40,11 @@ Currently modularizing `src/components/Chat.tsx` (11,200 lines) into smaller fil
 - [x] **Fixed generator instructions leakage into user messages**
   - Removed `[Instructions: ...]` prefix from stored user messages in generator history
   - Instructions are now injected only as a system message on the API side, matching chat behavior
+- [x] **Added exclusive character card preview button in generator**
+  - Added `isCharacterCardJson` helper to require `name`, `description`, and `first_mes`
+  - When an assistant message contains a full character card JSON, the JSON text is hidden from the UI
+  - A preview button is shown instead: "Preview Character" for full cards, "View Character Card" for partial JSON
+  - Behavior applies after stream finishes and during message re-render
 
 - [x] **Expanded macro system with MacroContext**
   - Added `MacroContext` type in `src/components/chat/utils/macroUtils.ts` with all available fields
@@ -633,6 +638,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 | 2026-08-04 | **Moved character generator instructions into instructions modal** - Added `generator` tab to instructions modal; removed inline generator instructions textarea from generator view; all generator sessions now share one global instructions field edited from the modal. |
 | 2026-08-04 | **FIXED: Character generator broke after moving instructions to modal** - Removed stale `generatorInstructions` local state; generator input now reads `globalInstructions.generatorDefaultInstructions` directly; removed redundant sync effect; updates in modal now apply immediately to generator sessions. |
 | 2026-08-04 | **FIXED: Generator instructions no longer shown in chat UI** - Removed instruction prefix from stored user messages; instructions are now injected as system message only on the API side, matching chat instruction behavior. |
+| 2026-08-04 | **Added exclusive character card preview button in generator** - Assistant messages containing full character card JSON (`name`, `description`, `first_mes`) now hide the raw JSON and show a preview button instead; partial JSON still shows content plus a "View Character Card" button. |
 | 2026-05-04 | **COMPLETED: Implemented instruction preset system** - Added InstructionPreset interface with id, name, instructions[], createdAt, updatedAt fields; added dropdown for selecting presets; added Save/Rename/Delete preset functionality with localStorage persistence; default name uses current date/time |
 | 2026-04-21 | **COMPLETED: Implemented backend for inline instruction positioning** - Added injectInlineInstructions function, integrated with message construction, system now fully functional |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

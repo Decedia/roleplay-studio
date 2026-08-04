@@ -127,6 +127,13 @@ const extractCharacterJson = (content: string): { json: Record<string, unknown>;
   return null;
 };
 
+const isCharacterCardJson = (data: Record<string, unknown>): boolean => {
+  const hasName = typeof data.name === "string" && data.name.trim().length > 0;
+  const hasDescription = typeof data.description === "string" && data.description.trim().length > 0;
+  const hasFirstMes = typeof data.first_mes === "string" && data.first_mes.trim().length > 0;
+  return hasName && hasDescription && hasFirstMes;
+};
+
 // Normalize character card data to a consistent flat format
 const normalizeCharacterCard = (data: Record<string, unknown>): Record<string, unknown> => {
   if (data.spec === "chara_card_v2" && data.data && typeof data.data === "object") {
@@ -4532,76 +4539,81 @@ if (modelsResult.models.length > 0) {
                               const lastUserIndex = currentGeneratorSession.messages.map(m => m.role).lastIndexOf("user");
                               const isLastUserMessage = message.role === "user" && idx === lastUserIndex;
 
-                              const extractedJson = message.role === "assistant" ? extractCharacterJson(message.content) : null;
-                              const displayContent = extractedJson ? extractedJson.raw.replace(/^```\w*\n?|```$/gm, "").trim() : message.content;
+                               const extractedJson = message.role === "assistant" ? extractCharacterJson(message.content) : null;
+                               const isFullCharacterCard = extractedJson ? isCharacterCardJson(extractedJson.json) : false;
+                               const displayContent = extractedJson
+                                 ? extractedJson.raw.replace(/^```\w*\n?|```$/gm, "").trim()
+                                 : message.content;
 
-                              return (
-                             <div
-                               key={idx}
-                               className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
-                             >
-                               {message.role === "assistant" && (
-                                 <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                                   <span className="text-sm text-white font-semibold">🎭</span>
-                                 </div>
-                               )}
-                               <div className="flex flex-col">
-                                 <div
-                                   className={`w-full rounded-2xl px-4 py-3 ${
-                                     message.role === "user"
-                                       ? "bg-zinc-700 text-white"
-                                       : "bg-zinc-800 text-zinc-100 border border-zinc-700/50"
-                                   }`}
-                                 >
-                                   {isEditing ? (
-                                     <div className="space-y-2">
-                                       <textarea
-                                         value={editingGeneratorMessageContent}
-                                         onChange={(e) => setEditingGeneratorMessageContent(e.target.value)}
-                                         className="w-full bg-zinc-900 text-white rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700"
-                                         rows={3}
-                                         autoFocus
-                                       />
-                                       <div className="flex gap-2 justify-end">
-                                         <button
-                                           onClick={handleGeneratorCancelEdit}
-                                           className="px-3 py-1 text-sm bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
-                                         >
-                                           Cancel
-                                         </button>
-                                         <button
-                                           onClick={() => handleGeneratorSaveEdit(idx, false)}
-                                           className="px-3 py-1 text-sm bg-zinc-600 text-white rounded-lg hover:bg-zinc-500 transition-colors"
-                                         >
-                                           Save
-                                         </button>
-                                         {message.role === "user" && (
-                                           <button
-                                             onClick={() => handleGeneratorRetryFromIndex(idx)}
-                                             className="px-3 py-1 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                                           >
-                                             Save & Retry
-                                           </button>
-                                         )}
-                                       </div>
-                                     </div>
-                                   ) : (
-                                     <>
-                                       <FormattedText content={displayContent} />
-                                       {extractedJson && (
-                                         <div className="mt-3">
-                                           <button
-                                              onClick={() => setPreviewCharacterData(normalizeCharacterCard(extractedJson.json))}
-                                             className="text-xs bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
-                                           >
-                                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                             </svg>
-                                             View Character Card
-                                           </button>
-                                         </div>
-                                       )}
+                               return (
+                              <div
+                                key={idx}
+                                className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                              >
+                                {message.role === "assistant" && (
+                                  <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                                    <span className="text-sm text-white font-semibold">🎭</span>
+                                  </div>
+                                )}
+                                <div className="flex flex-col">
+                                  <div
+                                    className={`w-full rounded-2xl px-4 py-3 ${
+                                      message.role === "user"
+                                        ? "bg-zinc-700 text-white"
+                                        : "bg-zinc-800 text-zinc-100 border border-zinc-700/50"
+                                    }`}
+                                  >
+                                    {isEditing ? (
+                                      <div className="space-y-2">
+                                        <textarea
+                                          value={editingGeneratorMessageContent}
+                                          onChange={(e) => setEditingGeneratorMessageContent(e.target.value)}
+                                          className="w-full bg-zinc-900 text-white rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700"
+                                          rows={3}
+                                          autoFocus
+                                        />
+                                        <div className="flex gap-2 justify-end">
+                                          <button
+                                            onClick={handleGeneratorCancelEdit}
+                                            className="px-3 py-1 text-sm bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+                                          >
+                                            Cancel
+                                          </button>
+                                          <button
+                                            onClick={() => handleGeneratorSaveEdit(idx, false)}
+                                            className="px-3 py-1 text-sm bg-zinc-600 text-white rounded-lg hover:bg-zinc-500 transition-colors"
+                                          >
+                                            Save
+                                          </button>
+                                          {message.role === "user" && (
+                                            <button
+                                              onClick={() => handleGeneratorRetryFromIndex(idx)}
+                                              className="px-3 py-1 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                                            >
+                                              Save & Retry
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        {!isFullCharacterCard && (
+                                          <FormattedText content={displayContent} />
+                                        )}
+                                        {extractedJson && (
+                                          <div className="mt-3">
+                                            <button
+                                               onClick={() => setPreviewCharacterData(normalizeCharacterCard(extractedJson.json))}
+                                              className="text-xs bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+                                            >
+                                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                              </svg>
+                                              {isFullCharacterCard ? "Preview Character" : "View Character Card"}
+                                            </button>
+                                          </div>
+                                        )}
                                        {isLastAssistant && !isGeneratorLoading && (
                                          <div className="mt-2 flex justify-end">
                                            <button
