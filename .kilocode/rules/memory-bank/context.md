@@ -7,6 +7,21 @@
 Currently modularizing `src/components/Chat.tsx` (11,200 lines) into smaller files under `src/components/chat/`. Completed Steps 1-3 of the module plan. Build compiles successfully.
 
 ## Recently Completed
+- [x] **AI Response Alternatives with Pagination/Selection**
+  - Added `alternatives` and `selectedAlternativeIndex` fields to `Message` interface in `src/lib/types.ts`
+  - Added `selectedAlternativeIndex` and `canSelectAlternatives` state in `Chat.tsx`
+  - Modified `handleSubmit` to generate new alternatives when input is empty (instead of retrying)
+  - Modified `handleRetry` to support `addAlternative` parameter for adding alternatives vs replacing
+  - Added `handleGenerateAlternative` function for generating new AI response alternatives
+  - Added `lockSelectedAlternative` and `unlockAlternatives` helper functions
+  - Added UI for alternative navigation: left/right arrows, X/Y counter, and Select button
+  - Added keyboard navigation (arrow keys) for browsing alternatives while focused on input
+  - Selection is enabled only on the last AI response when no user message follows
+  - Selection is disabled when user sends a new message (locks selected alternative)
+  - Selection is re-enabled when the last user message is deleted
+  - Alternatives are persisted in conversation storage (IndexedDB/localStorage)
+  - Build compiles successfully
+
 - [x] **Expanded macro system with MacroContext**
   - Added `MacroContext` type in `src/components/chat/utils/macroUtils.ts` with all available fields
   - Added 14 new macros: `{{user_description}}`, `{{char_description}}`, `{{scenario}}`, `{{first_message}}`, `{{mes_example}}`, `{{creator_notes}}`, `{{tags}}`, `{{model}}`, `{{max_tokens}}`, `{{temperature}}`, `{{context_window}}`, `{{provider}}`, `{{datetime}}`, `{{date}}`, `{{time}}`, `{{message_count}}`
@@ -593,6 +608,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date       | Changes                                                                                                                                                                                                                                                                                                                                               |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-04 | **COMPLETED: Implemented AI Response Alternatives with Pagination/Selection** - Users can now generate multiple AI responses per message by pressing send with empty input; alternatives are browsable with arrow keys and UI buttons; selection is enabled only on last AI response and disabled after user sends a new message; re-enabled when last user message is deleted; alternatives persist in conversation storage. |
 | 2026-05-04 | **COMPLETED: Implemented instruction preset system** - Added InstructionPreset interface with id, name, instructions[], createdAt, updatedAt fields; added dropdown for selecting presets; added Save/Rename/Delete preset functionality with localStorage persistence; default name uses current date/time |
 | 2026-04-21 | **COMPLETED: Implemented backend for inline instruction positioning** - Added injectInlineInstructions function, integrated with message construction, system now fully functional |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

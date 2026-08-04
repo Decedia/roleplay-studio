@@ -108,6 +108,8 @@ export interface Message {
   signature?: string; // Model signature (e.g., "Gemini Flash")
   modelName?: string; // Full model name for display
   timestamp?: number; // Message timestamp
+  alternatives?: string[]; // Alternative AI responses for selection
+  selectedAlternativeIndex?: number; // Currently selected alternative index
 }
 
 // Conversation between a persona and character

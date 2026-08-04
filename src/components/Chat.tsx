@@ -669,6 +669,10 @@ export default function Chat() {
   const [error, setError] = useState<string | null>(null);
   const errorTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isErrorVisible, setIsErrorVisible] = useState(false);
+  
+  // Alternative AI response selection state
+  const [selectedAlternativeIndex, setSelectedAlternativeIndex] = useState<number>(0);
+  const [canSelectAlternatives, setCanSelectAlternatives] = useState<boolean>(false);
 
   useEffect(() => {
     if (error) {
@@ -923,6 +927,27 @@ export default function Chat() {
   useEffect(() => {
     setVisibleMessageCount(20);
   }, [currentConversation?.id]);
+  
+  // Update alternative selection state when conversation messages change
+  useEffect(() => {
+    if (!currentConversation || currentConversation.messages.length === 0) {
+      setCanSelectAlternatives(false);
+      setSelectedAlternativeIndex(0);
+      return;
+    }
+    
+    const lastMessage = currentConversation.messages[currentConversation.messages.length - 1];
+    if (lastMessage.role === "assistant" && lastMessage.alternatives && lastMessage.alternatives.length > 0) {
+      setCanSelectAlternatives(true);
+      setSelectedAlternativeIndex(lastMessage.selectedAlternativeIndex ?? 0);
+    } else if (lastMessage.role === "assistant") {
+      setCanSelectAlternatives(true);
+      setSelectedAlternativeIndex(0);
+    } else {
+      setCanSelectAlternatives(false);
+      setSelectedAlternativeIndex(0);
+    }
+  }, [currentConversation, currentConversation?.messages, currentConversation?.id]);
 
   // Track scroll position to show/hide scroll-to-bottom button
   useEffect(() => {
@@ -2293,8 +2318,16 @@ if (modelsResult.models.length > 0) {
     e.preventDefault();
     if (isLoading || !currentConversation || !selectedPersona || !selectedCharacter) return;
 
-    // If input is empty, resend the last user message
+    // If input is empty, generate alternative or resend last user message
     if (!input.trim()) {
+      const lastMessage = currentConversation.messages[currentConversation.messages.length - 1];
+      
+      // If last message is assistant and we can select alternatives, generate new alternative
+      if (lastMessage?.role === "assistant" && canSelectAlternatives) {
+        await handleGenerateAlternative();
+        return;
+      }
+      
       // Find the last user message
       const lastUserMessageIndex = currentConversation.messages.findLastIndex(m => m.role === "user");
       if (lastUserMessageIndex === -1) return; // No user message to resend
@@ -2307,6 +2340,9 @@ if (modelsResult.models.length > 0) {
     const userMessage = input.trim();
     setInput("");
     setError(null);
+
+    // Lock the current AI alternative before sending new user message
+    lockSelectedAlternative();
 
     // Add user message to conversation
     const updatedMessages: Message[] = [
@@ -2517,6 +2553,58 @@ if (modelsResult.models.length > 0) {
       prev.map((c) => (c.id === currentConversation.id ? updated : c))
     );
   };
+  
+  // Lock the currently selected alternative as the main content
+  const lockSelectedAlternative = () => {
+    if (!currentConversation || !canSelectAlternatives) return;
+    
+    const messages = currentConversation.messages;
+    if (messages.length === 0) return;
+    
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage.role !== "assistant" || !lastMessage.alternatives || lastMessage.alternatives.length <= 1) return;
+    
+    const idx = lastMessage.selectedAlternativeIndex ?? 0;
+    const lockedMessage: Message = {
+      ...lastMessage,
+      content: lastMessage.alternatives[idx] ?? lastMessage.content,
+      alternatives: undefined,
+      selectedAlternativeIndex: undefined,
+    };
+    
+    const updatedMessages = [...messages];
+    updatedMessages[updatedMessages.length - 1] = lockedMessage;
+    updateConversationMessages(updatedMessages);
+    setCanSelectAlternatives(false);
+    setSelectedAlternativeIndex(0);
+  };
+  
+  // Unlock alternatives on the last AI message (restore from locked state)
+  const unlockAlternatives = () => {
+    if (!currentConversation) return;
+    
+    const messages = currentConversation.messages;
+    if (messages.length === 0) return;
+    
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage.role !== "assistant") return;
+    
+    // If the message has alternatives stored, restore them
+    if (lastMessage.alternatives && lastMessage.alternatives.length > 0) {
+      const unlockedMessage: Message = {
+        ...lastMessage,
+        content: lastMessage.alternatives[lastMessage.selectedAlternativeIndex ?? 0] ?? lastMessage.content,
+        selectedAlternativeIndex: lastMessage.selectedAlternativeIndex ?? 0,
+      };
+      
+      const updatedMessages = [...messages];
+      updatedMessages[updatedMessages.length - 1] = unlockedMessage;
+      updateConversationMessages(updatedMessages);
+      setSelectedAlternativeIndex(lastMessage.selectedAlternativeIndex ?? 0);
+    }
+    
+    setCanSelectAlternatives(true);
+  };
 
   // Helper function to capture debug payload for utility panel
   const captureDebugPayload = (
@@ -2669,11 +2757,56 @@ if (modelsResult.models.length > 0) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
+      return;
     }
+    
+    // Arrow key navigation for AI alternatives
+    if (canSelectAlternatives && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault();
+        navigateAlternative(-1);
+        return;
+      }
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault();
+        navigateAlternative(1);
+        return;
+      }
+    }
+  };
+  
+  // Navigate to previous/next alternative
+  const navigateAlternative = (direction: number) => {
+    if (!currentConversation || !canSelectAlternatives) return;
+    
+    const messages = currentConversation.messages;
+    if (messages.length === 0) return;
+    
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage.role !== "assistant") return;
+    
+    const alternatives = lastMessage.alternatives && lastMessage.alternatives.length > 0
+      ? lastMessage.alternatives
+      : [lastMessage.content];
+    const currentIndex = selectedAlternativeIndex || 0;
+    const newIndex = Math.max(0, Math.min(alternatives.length - 1, currentIndex + direction));
+    
+    if (newIndex === currentIndex) return;
+    
+    setSelectedAlternativeIndex(newIndex);
+    const updatedMessage: Message = {
+      ...lastMessage,
+      content: alternatives[newIndex] ?? lastMessage.content,
+      alternatives: alternatives.length > 1 ? alternatives : undefined,
+      selectedAlternativeIndex: alternatives.length > 1 ? newIndex : undefined,
+    };
+    const updatedMessages = [...messages];
+    updatedMessages[updatedMessages.length - 1] = updatedMessage;
+    updateConversationMessages(updatedMessages);
   };
 
   // Retry the last message (resend to AI)
-  const handleRetry = async () => {
+  const handleRetry = async (addAlternative: boolean = false) => {
     if (isLoading || !currentConversation || !selectedPersona || !selectedCharacter) return;
     
     // Find the last user message
@@ -2682,8 +2815,15 @@ if (modelsResult.models.length > 0) {
     
     const lastUserMessage = currentConversation.messages[lastUserMessageIndex];
     
-    // Remove all messages after the last user message (including any failed AI response)
-    const messagesBeforeRetry = currentConversation.messages.slice(0, lastUserMessageIndex + 1);
+    let messagesBeforeRetry: Message[];
+    
+    if (addAlternative) {
+      // Keep all messages including existing AI responses to preserve alternatives
+      messagesBeforeRetry = [...currentConversation.messages];
+    } else {
+      // Remove all messages after the last user message (including any failed AI response)
+      messagesBeforeRetry = currentConversation.messages.slice(0, lastUserMessageIndex + 1);
+    }
     
     setError(null);
     setIsLoading(true);
@@ -2692,8 +2832,10 @@ if (modelsResult.models.length > 0) {
     abortControllerRef.current = new AbortController();
     chatRequestIdRef.current = `chat_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     
-    // Update conversation to show only messages up to last user message
-    updateConversationMessages(messagesBeforeRetry);
+    if (!addAlternative) {
+      // Update conversation to show only messages up to last user message
+      updateConversationMessages(messagesBeforeRetry);
+    }
 
     try {
       // Get current provider config
@@ -2739,18 +2881,18 @@ if (modelsResult.models.length > 0) {
         systemPromptTokens
        );
 
-       // Inject inline instructions into the conversation
-       const messagesWithInline = injectInlineInstructions(truncatedMessages, inlineInstructions);
+        // Inject inline instructions into the conversation
+        const messagesWithInline = injectInlineInstructions(truncatedMessages, inlineInstructions);
 
-       // Combine messages with correct position: [character context] -> [before instructions] -> [conversation with inline] -> [after instructions]
-       const messagesWithInstructions = [
-         characterContext,
-         ...beforeContextInstructions,
-         ...messagesWithInline,
-         ...afterContextInstructions
-       ];
+        // Combine messages with correct position: [character context] -> [before instructions] -> [conversation with inline] -> [after instructions]
+        const messagesWithInstructions = [
+          characterContext,
+          ...beforeContextInstructions,
+          ...messagesWithInline,
+          ...afterContextInstructions
+        ];
 
-       // Capture debug payload for utility panel (handleRetry)
+        // Capture debug payload for utility panel (handleRetry)
       captureDebugPayload(
         profileConfig.selectedModel || globalSettings.modelId,
         characterContext.content,
@@ -2808,16 +2950,42 @@ if (modelsResult.models.length > 0) {
               const contentWithThinking = chunk.thinking
                 ? `<think>${chunk.thinking}</think>\n\n${formattedContent}`
                 : formattedContent;
-              const finalMessages: Message[] = [
-                ...messagesBeforeRetry,
-                {
-                  role: "assistant",
-                  content: contentWithThinking,
-                  signature: thoughtSig?.signature,
-                  modelName: thoughtSig?.modelName,
-                },
-              ];
-              updateConversationMessages(finalMessages);
+              
+              if (addAlternative) {
+                // Add new response to alternatives array
+                const lastMsg = messagesBeforeRetry[messagesBeforeRetry.length - 1];
+                if (lastMsg.role === "assistant") {
+                  const existingAlternatives = lastMsg.alternatives && lastMsg.alternatives.length > 0
+                    ? lastMsg.alternatives
+                    : [lastMsg.content];
+                  const newAlternatives = [...existingAlternatives, contentWithThinking];
+                  const newIndex = newAlternatives.length - 1;
+                  const updatedMessage: Message = {
+                    ...lastMsg,
+                    content: contentWithThinking,
+                    alternatives: newAlternatives,
+                    selectedAlternativeIndex: newIndex,
+                  };
+                  const updatedMessages = [...messagesBeforeRetry];
+                  updatedMessages[updatedMessages.length - 1] = updatedMessage;
+                  updateConversationMessages(updatedMessages);
+                  setSelectedAlternativeIndex(newIndex);
+                  setCanSelectAlternatives(true);
+                }
+              } else {
+                const finalMessages: Message[] = [
+                  ...messagesBeforeRetry,
+                  {
+                    role: "assistant",
+                    content: contentWithThinking,
+                    signature: thoughtSig?.signature,
+                    modelName: thoughtSig?.modelName,
+                  },
+                ];
+                updateConversationMessages(finalMessages);
+                setCanSelectAlternatives(true);
+                setSelectedAlternativeIndex(0);
+              }
               setStreamingContent("");
               setStreamingThinking("");
             }
@@ -2851,11 +3019,37 @@ if (modelsResult.models.length > 0) {
           const contentWithThinking = response.thinking
             ? `<think>${response.thinking}</think>\n\n${formattedContent}`
             : formattedContent;
-          const finalMessages: Message[] = [
-            ...messagesBeforeRetry,
-            { role: "assistant", content: contentWithThinking },
-          ];
-          updateConversationMessages(finalMessages);
+          
+          if (addAlternative) {
+            // Add new response to alternatives array
+            const lastMsg = messagesBeforeRetry[messagesBeforeRetry.length - 1];
+            if (lastMsg.role === "assistant") {
+              const existingAlternatives = lastMsg.alternatives && lastMsg.alternatives.length > 0
+                ? lastMsg.alternatives
+                : [lastMsg.content];
+              const newAlternatives = [...existingAlternatives, contentWithThinking];
+              const newIndex = newAlternatives.length - 1;
+              const updatedMessage: Message = {
+                ...lastMsg,
+                content: contentWithThinking,
+                alternatives: newAlternatives,
+                selectedAlternativeIndex: newIndex,
+              };
+              const updatedMessages = [...messagesBeforeRetry];
+              updatedMessages[updatedMessages.length - 1] = updatedMessage;
+              updateConversationMessages(updatedMessages);
+              setSelectedAlternativeIndex(newIndex);
+              setCanSelectAlternatives(true);
+            }
+          } else {
+            const finalMessages: Message[] = [
+              ...messagesBeforeRetry,
+              { role: "assistant", content: contentWithThinking },
+            ];
+            updateConversationMessages(finalMessages);
+            setCanSelectAlternatives(true);
+            setSelectedAlternativeIndex(0);
+          }
         }
       }
     } catch (err) {
@@ -2868,6 +3062,16 @@ if (modelsResult.models.length > 0) {
       playNotificationSound();
       inputRef.current?.focus();
     }
+  };
+  
+  // Generate a new alternative AI response (adds to alternatives array instead of replacing)
+  const handleGenerateAlternative = async () => {
+    if (isLoading || !currentConversation || !selectedPersona || !selectedCharacter) return;
+    
+    const lastMessage = currentConversation.messages[currentConversation.messages.length - 1];
+    if (lastMessage?.role !== "assistant") return;
+    
+    await handleRetry(true);
   };
 
   // Continue the last AI response (for incomplete responses)
@@ -3105,9 +3309,21 @@ if (modelsResult.models.length > 0) {
   const handleDeleteMessage = (index: number) => {
     if (!currentConversation) return;
     
+    const wasLastMessage = index === currentConversation.messages.length - 1;
+    const deletedMessage = currentConversation.messages[index];
     const updatedMessages = currentConversation.messages.filter((_, i) => i !== index);
+    
     updateConversationMessages(updatedMessages);
     setShowMessageMenu(null);
+    
+    // If we deleted the last user message, unlock alternatives on the new last message
+    if (wasLastMessage && deletedMessage?.role === "user" && updatedMessages.length > 0) {
+      const newLastMessage = updatedMessages[updatedMessages.length - 1];
+      if (newLastMessage.role === "assistant" && newLastMessage.alternatives && newLastMessage.alternatives.length > 0) {
+        setSelectedAlternativeIndex(newLastMessage.selectedAlternativeIndex ?? 0);
+        setCanSelectAlternatives(true);
+      }
+    }
   };
 
   // Start editing a message
@@ -3603,10 +3819,10 @@ if (modelsResult.models.length > 0) {
               </div>
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 {!isLoading && currentConversation && selectedPersona && selectedCharacter && (
-                  <button
-                    onClick={handleRetry}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 rounded-lg transition-colors disabled:opacity-50 text-xs font-medium"
-                  >
+                   <button
+                     onClick={() => handleRetry()}
+                     className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 rounded-lg transition-colors disabled:opacity-50 text-xs font-medium"
+                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
@@ -4879,7 +5095,7 @@ if (modelsResult.models.length > 0) {
                                 )}
                                 <FormattedText content={displayContent} />
                                 
-                                {/* Inline Tags Display */}
+                                 {/* Inline Tags Display */}
                                 {(() => {
                                   const tags = extractAllTags(message.content);
                                   if (tags.length === 0) return null;
@@ -4896,6 +5112,76 @@ if (modelsResult.models.length > 0) {
                                           </div>
                                         </div>
                                       ))}
+                                    </div>
+                                  );
+                                })()}
+                                
+                                {/* Alternative selection navigation */}
+                                {isLastAssistantMessage && canSelectAlternatives && (() => {
+                                  const alternatives = message.alternatives && message.alternatives.length > 0
+                                    ? message.alternatives
+                                    : [message.content];
+                                  const currentIndex = selectedAlternativeIndex || 0;
+                                  const totalCount = alternatives.length;
+                                  const hasMultiple = totalCount > 1;
+                                  
+                                  return (
+                                    <div className="flex items-center gap-2 mt-2">
+                                      <button
+                                        onClick={() => {
+                                          const newIndex = Math.max(0, currentIndex - 1);
+                                          setSelectedAlternativeIndex(newIndex);
+                                          const updatedMessage: Message = {
+                                            ...message,
+                                            content: alternatives[newIndex] ?? message.content,
+                                            alternatives: alternatives.length > 1 ? alternatives : undefined,
+                                            selectedAlternativeIndex: alternatives.length > 1 ? newIndex : undefined,
+                                          };
+                                          const updatedMessages = [...currentConversation.messages];
+                                          updatedMessages[originalIndex] = updatedMessage;
+                                          updateConversationMessages(updatedMessages);
+                                        }}
+                                        disabled={currentIndex === 0 || isLoading}
+                                        className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors disabled:opacity-50"
+                                        title="Previous alternative"
+                                      >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                        </svg>
+                                      </button>
+                                      <span className="text-xs text-zinc-500 min-w-[3rem] text-center">
+                                        {currentIndex + 1} / {totalCount}
+                                      </span>
+                                      <button
+                                        onClick={() => {
+                                          const newIndex = Math.min(totalCount - 1, currentIndex + 1);
+                                          setSelectedAlternativeIndex(newIndex);
+                                          const updatedMessage: Message = {
+                                            ...message,
+                                            content: alternatives[newIndex] ?? message.content,
+                                            alternatives: alternatives.length > 1 ? alternatives : undefined,
+                                            selectedAlternativeIndex: alternatives.length > 1 ? newIndex : undefined,
+                                          };
+                                          const updatedMessages = [...currentConversation.messages];
+                                          updatedMessages[originalIndex] = updatedMessage;
+                                          updateConversationMessages(updatedMessages);
+                                        }}
+                                        disabled={currentIndex >= totalCount - 1 || isLoading}
+                                        className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors disabled:opacity-50"
+                                        title="Next alternative"
+                                      >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                        </svg>
+                                      </button>
+                                      <button
+                                        onClick={() => lockSelectedAlternative()}
+                                        disabled={isLoading}
+                                        className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                        title="Select this response"
+                                      >
+                                        Select
+                                      </button>
                                     </div>
                                   );
                                 })()}
@@ -4928,7 +5214,7 @@ if (modelsResult.models.length > 0) {
                               {/* Retry button - only for last assistant message */}
                               {isLastAssistantMessage && (
                                 <button
-                                  onClick={handleRetry}
+                    onClick={() => handleRetry()}
                                   disabled={isLoading}
                                   className="p-1 text-zinc-500 hover:text-blue-400 hover:bg-zinc-800 rounded transition-colors disabled:opacity-50"
                                   title="Regenerate response"
