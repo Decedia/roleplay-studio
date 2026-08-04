@@ -565,7 +565,7 @@ export default function Chat() {
   const [showModelsModal, setShowModelsModal] = useState(false);
   const [showInstructionsModal, setShowInstructionsModal] = useState(false);
   const [showInstructionModal, setShowInstructionModal] = useState(false);
-  const [activeInstructionTab, setActiveInstructionTab] = useState<'chat'>('chat');
+  const [activeInstructionTab, setActiveInstructionTab] = useState<'chat' | 'generator'>('chat');
   const [chatInstructions, setChatInstructions] = useState<string>('');
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showHeaderActions, setShowHeaderActions] = useState(false);
@@ -4535,25 +4535,8 @@ if (modelsResult.models.length > 0) {
                       Back to Sessions
                     </button>
                   </div>
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-4 pb-32">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium text-zinc-300">Generator Instructions</label>
-                        <button
-                          onClick={() => setGeneratorInstructions("")}
-                          className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
-                        >
-                          Clear
-                        </button>
-                      </div>
-                      <textarea
-                        value={generatorInstructions}
-                        onChange={(e) => setGeneratorInstructions(e.target.value)}
-                        placeholder="Enter instructions for the character generator..."
-                        className="w-full bg-zinc-800 text-zinc-100 border border-zinc-700 rounded-lg px-3 py-2 text-sm min-h-[80px] resize-y focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      />
-                    </div>
-                    {currentGeneratorSession.messages.length === 0 && !generatorStreamingContent ? (
+                   <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-4 pb-32">
+                     {currentGeneratorSession.messages.length === 0 && !generatorStreamingContent ? (
                       <div className="text-center py-8">
                         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mx-auto mb-3">
                           <span className="text-xl text-white font-semibold">🎭</span>
@@ -6846,8 +6829,18 @@ if (modelsResult.models.length > 0) {
                   >
                     Chat
                   </button>
+                  <button
+                    onClick={() => setActiveInstructionTab('generator')}
+                    className={`px-6 py-3 text-sm font-medium transition-all ${
+                      activeInstructionTab === 'generator'
+                        ? 'text-blue-400 border-b-2 border-blue-500'
+                        : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                    }`}
+                  >
+                    Generator
+                  </button>
+                </div>
               </div>
-            </div>
 
 
 
@@ -7308,8 +7301,32 @@ if (modelsResult.models.length > 0) {
                      </div>
                     </div>
                    )}
+                   
+                  {/* Generator Instructions Tab */}
+                  {activeInstructionTab === 'generator' && (
+                    <div className="space-y-6">
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-300 mb-2">
+                          Generator Default Instructions
+                        </label>
+                        <textarea
+                          value={globalInstructions.generatorDefaultInstructions || DEFAULT_GENERATOR_SYSTEM_PROMPT}
+                          onChange={(e) => setGlobalInstructions({
+                            ...globalInstructions,
+                            generatorDefaultInstructions: e.target.value
+                          })}
+                          placeholder="Default instructions used by the character generator..."
+                          rows={10}
+                          className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none"
+                        />
+                        <p className="text-xs text-zinc-500 mt-1">
+                          Shared across all generator sessions. Used as the system prompt when creating characters.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   
-              </div>
+               </div>
 
               {/* Modal Footer */}
               <div className="flex-shrink-0 p-4 border-t border-zinc-800 flex gap-3">

@@ -32,6 +32,11 @@ Currently modularizing `src/components/Chat.tsx` (11,200 lines) into smaller fil
   - Added effect to sync `generatorInstructions` changes back to `globalInstructions.generatorDefaultInstructions`
   - Replaced hardcoded `DEFAULT_GENERATOR_SYSTEM_PROMPT` in generator API calls with `globalInstructions.generatorDefaultInstructions || DEFAULT_GENERATOR_SYSTEM_PROMPT`
   - Generator instructions are now persisted globally and shared across sessions
+- [x] **Moved character generator instructions into instructions modal**
+  - Added `generator` tab to the instructions modal alongside the existing `chat` tab in `src/components/Chat.tsx`
+  - Added Generator tab content with a shared textarea bound to `globalInstructions.generatorDefaultInstructions`
+  - Removed inline generator instructions textarea from the generator view
+  - All generator sessions now use the same shared instructions field edited from the modal
 
 - [x] **Expanded macro system with MacroContext**
   - Added `MacroContext` type in `src/components/chat/utils/macroUtils.ts` with all available fields
@@ -622,6 +627,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 | 2026-08-04 | **COMPLETED: Implemented AI Response Alternatives with Pagination/Selection** - Users can now generate multiple AI responses per message by pressing send with empty input; alternatives are browsable with arrow keys and UI buttons; selection is enabled only on last AI response and disabled after user sends a new message; re-enabled when last user message is deleted; alternatives persist in conversation storage. |
 | 2026-08-04 | **FIXED: Edit/delete behavior for messages with alternatives** - Deleting last AI message with multiple alternatives removes only selected alternative; editing last AI message locks alternatives first; editing non-last AI message no longer incorrectly disables last message's alternative selection UI. |
 | 2026-08-04 | **Exposed character generator default instructions globally** - Added `generatorDefaultInstructions` to `GlobalInstructions`; character generator instructions textarea now defaults to global value and persists changes back to global instructions/localStorage; API calls use global instructions instead of hardcoded default. |
+| 2026-08-04 | **Moved character generator instructions into instructions modal** - Added `generator` tab to instructions modal; removed inline generator instructions textarea from generator view; all generator sessions now share one global instructions field edited from the modal. |
 | 2026-05-04 | **COMPLETED: Implemented instruction preset system** - Added InstructionPreset interface with id, name, instructions[], createdAt, updatedAt fields; added dropdown for selecting presets; added Save/Rename/Delete preset functionality with localStorage persistence; default name uses current date/time |
 | 2026-04-21 | **COMPLETED: Implemented backend for inline instruction positioning** - Added injectInlineInstructions function, integrated with message construction, system now fully functional |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
