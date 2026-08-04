@@ -22,6 +22,7 @@ Currently modularizing `src/components/Chat.tsx` (11,200 lines) into smaller fil
   - Deleting the last AI message with multiple alternatives removes only the selected alternative, not the whole message
   - If only 1 alternative remains after deletion, the whole message is removed
   - Editing the last AI message locks alternatives and clears the alternatives array
+  - Editing a non-last AI message with alternatives clears that message's alternatives without affecting the last message's selection UI
   - Saving an edited AI message removes alternatives and disables selection
   - Alternatives are persisted in conversation storage (IndexedDB/localStorage)
   - Build compiles successfully
@@ -613,6 +614,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 | Date       | Changes                                                                                                                                                                                                                                                                                                                                               |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-08-04 | **COMPLETED: Implemented AI Response Alternatives with Pagination/Selection** - Users can now generate multiple AI responses per message by pressing send with empty input; alternatives are browsable with arrow keys and UI buttons; selection is enabled only on last AI response and disabled after user sends a new message; re-enabled when last user message is deleted; alternatives persist in conversation storage. |
+| 2026-08-04 | **FIXED: Edit/delete behavior for messages with alternatives** - Deleting last AI message with multiple alternatives removes only selected alternative; editing last AI message locks alternatives first; editing non-last AI message no longer incorrectly disables last message's alternative selection UI. |
 | 2026-05-04 | **COMPLETED: Implemented instruction preset system** - Added InstructionPreset interface with id, name, instructions[], createdAt, updatedAt fields; added dropdown for selecting presets; added Save/Rename/Delete preset functionality with localStorage persistence; default name uses current date/time |
 | 2026-04-21 | **COMPLETED: Implemented backend for inline instruction positioning** - Added injectInlineInstructions function, integrated with message construction, system now fully functional |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

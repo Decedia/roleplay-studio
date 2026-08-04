@@ -928,7 +928,7 @@ export default function Chat() {
     setVisibleMessageCount(20);
   }, [currentConversation?.id]);
   
-  // Update alternative selection state when conversation messages change
+   // Update alternative selection state when conversation messages change
   useEffect(() => {
     if (!currentConversation || currentConversation.messages.length === 0) {
       setCanSelectAlternatives(false);
@@ -3404,8 +3404,10 @@ if (modelsResult.models.length > 0) {
         alternatives: undefined,
         selectedAlternativeIndex: undefined,
       };
-      setCanSelectAlternatives(false);
-      setSelectedAlternativeIndex(0);
+      if (index === currentConversation.messages.length - 1) {
+        setCanSelectAlternatives(false);
+        setSelectedAlternativeIndex(0);
+      }
     } else {
       updatedMessages[index] = { ...message, content: editingMessageContent.trim() };
     }
