@@ -3313,6 +3313,29 @@ if (modelsResult.models.length > 0) {
     const deletedMessage = currentConversation.messages[index];
     const updatedMessages = currentConversation.messages.filter((_, i) => i !== index);
     
+    // Special case: if deleting the last AI message with alternatives, delete only the selected alternative
+    if (wasLastMessage && deletedMessage?.role === "assistant" && deletedMessage.alternatives && deletedMessage.alternatives.length > 1) {
+      const currentIdx = deletedMessage.selectedAlternativeIndex ?? 0;
+      const remainingAlternatives = deletedMessage.alternatives.filter((_, i) => i !== currentIdx);
+      
+      if (remainingAlternatives.length > 0) {
+        const newIndex = Math.min(currentIdx, remainingAlternatives.length - 1);
+        const updatedMessage: Message = {
+          ...deletedMessage,
+          content: remainingAlternatives[newIndex],
+          alternatives: remainingAlternatives,
+          selectedAlternativeIndex: newIndex,
+        };
+        const newMessages = [...currentConversation.messages];
+        newMessages[index] = updatedMessage;
+        updateConversationMessages(newMessages);
+        setSelectedAlternativeIndex(newIndex);
+        setCanSelectAlternatives(true);
+        setShowMessageMenu(null);
+        return;
+      }
+    }
+    
     updateConversationMessages(updatedMessages);
     setShowMessageMenu(null);
     
