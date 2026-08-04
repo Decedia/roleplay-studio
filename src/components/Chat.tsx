@@ -124,6 +124,30 @@ const extractCharacterJson = (content: string): { json: Record<string, unknown>;
     }
   }
 
+  for (let i = 0; i < content.length; i++) {
+    const char = content[i];
+    if (char !== "{") continue;
+    const candidate = content.slice(i);
+    try {
+      const parsed = JSON.parse(candidate);
+      if (parsed && typeof parsed === "object" && (parsed as Record<string, unknown>).name) {
+        return { json: parsed as Record<string, unknown>, raw: candidate };
+      }
+    } catch {
+      for (let j = candidate.length - 1; j > 20; j--) {
+        try {
+          const trimmed = candidate.slice(0, j);
+          const parsed = JSON.parse(trimmed);
+          if (parsed && typeof parsed === "object" && (parsed as Record<string, unknown>).name) {
+            return { json: parsed as Record<string, unknown>, raw: trimmed };
+          }
+        } catch {
+          // continue
+        }
+      }
+    }
+  }
+
   return null;
 };
 
