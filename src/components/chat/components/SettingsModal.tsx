@@ -104,6 +104,7 @@ interface GlobalInstructions {
   imageGenerationInstructions?: string;
   formattingPrompt?: string;
   instructions: Instruction[];
+  generatorDefaultInstructions?: string;
 }
 
 interface AutoExportSettings {

@@ -262,6 +262,8 @@ export interface GlobalInstructions {
   enableJailbreak?: boolean;
   jailbreakInstructions?: string;
   continueInstruction?: string;
+  // Character generator default instructions
+  generatorDefaultInstructions?: string;
 }
 
 // Model cost structure

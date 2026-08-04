@@ -240,6 +240,8 @@ interface GlobalInstructions {
   formattingPrompt?: string;
   // Instruction list (SillyTavern-style)
   instructions: Instruction[];
+  // Character generator default instructions
+  generatorDefaultInstructions?: string;
 }
 
 // Auto-export settings
@@ -278,6 +280,7 @@ const DEFAULT_GLOBAL_INSTRUCTIONS: GlobalInstructions = {
   continueInstruction: DEFAULT_CONTINUE_INSTRUCTION,
   imageGenerationInstructions: DEFAULT_IMAGE_GENERATION_INSTRUCTIONS,
   formattingPrompt: DEFAULT_FORMATTING_PROMPT,
+  generatorDefaultInstructions: DEFAULT_GENERATOR_SYSTEM_PROMPT,
   instructions: [],
 };
 
@@ -725,7 +728,18 @@ export default function Chat() {
   const [showGeneratorSessions, setShowGeneratorSessions] = useState(false);
   const [generatorInput, setGeneratorInput] = useState("");
   const [isGeneratorLoading, setIsGeneratorLoading] = useState(false);
-  const [generatorInstructions, setGeneratorInstructions] = useState<string>("");
+  const [generatorInstructions, setGeneratorInstructions] = useState<string>(() => {
+    try {
+      const stored = localStorage.getItem(GLOBAL_INSTRUCTIONS_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return parsed.generatorDefaultInstructions || DEFAULT_GENERATOR_SYSTEM_PROMPT;
+      }
+    } catch {
+      // ignore
+    }
+    return DEFAULT_GENERATOR_SYSTEM_PROMPT;
+  });
   const [generatorStreamingContent, setGeneratorStreamingContent] = useState<string>("");
   const [detectedCharacterJson, setDetectedCharacterJson] = useState<Record<string, unknown> | null>(null);
   const [previewCharacterData, setPreviewCharacterData] = useState<Record<string, unknown> | null>(null);
@@ -835,7 +849,7 @@ export default function Chat() {
       };
 
       const apiMessages: Message[] = [
-        { role: "system", content: DEFAULT_GENERATOR_SYSTEM_PROMPT },
+        { role: "system", content: globalInstructions.generatorDefaultInstructions || DEFAULT_GENERATOR_SYSTEM_PROMPT },
         ...retryMessages.map(m => ({ role: m.role as "user" | "assistant", content: m.content })),
       ];
 
@@ -1255,6 +1269,14 @@ export default function Chat() {
   useEffect(() => {
     safeLocalStorageSetItem(GLOBAL_INSTRUCTIONS_KEY, JSON.stringify(globalInstructions));
   }, [globalInstructions]);
+  
+  // Sync generator instructions back to global instructions
+  useEffect(() => {
+    setGlobalInstructions(prev => ({
+      ...prev,
+      generatorDefaultInstructions: generatorInstructions,
+    }));
+  }, [generatorInstructions]);
 
   // Save instruction presets to localStorage
   useEffect(() => {
@@ -4776,10 +4798,10 @@ if (modelsResult.models.length > 0) {
                          };
                          
                          // Build messages for API - convert generator messages to Message format
-                         const apiMessages: Message[] = [
-                           { role: "system", content: DEFAULT_GENERATOR_SYSTEM_PROMPT },
-                           ...newMessages.map(m => ({ role: m.role as "user" | "assistant", content: m.content }))
-                         ];
+                          const apiMessages: Message[] = [
+                            { role: "system", content: globalInstructions.generatorDefaultInstructions || DEFAULT_GENERATOR_SYSTEM_PROMPT },
+                            ...newMessages.map(m => ({ role: m.role as "user" | "assistant", content: m.content }))
+                          ];
                          
                          // Use streaming
                          await streamChatMessage(

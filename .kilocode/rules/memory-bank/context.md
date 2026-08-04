@@ -24,8 +24,14 @@ Currently modularizing `src/components/Chat.tsx` (11,200 lines) into smaller fil
   - Editing the last AI message locks alternatives and clears the alternatives array
   - Editing a non-last AI message with alternatives clears that message's alternatives without affecting the last message's selection UI
   - Saving an edited AI message removes alternatives and disables selection
-  - Alternatives are persisted in conversation storage (IndexedDB/localStorage)
-  - Build compiles successfully
+- [x] **Exposed character generator default instructions globally**
+  - Added `generatorDefaultInstructions` field to `GlobalInstructions` interface in `src/lib/types.ts`
+  - Added `generatorDefaultInstructions` to local `GlobalInstructions` interface in `src/components/Chat.tsx` and `src/components/chat/components/SettingsModal.tsx`
+  - Updated `DEFAULT_GLOBAL_INSTRUCTIONS` in `src/components/Chat.tsx` to include `generatorDefaultInstructions: DEFAULT_GENERATOR_SYSTEM_PROMPT`
+  - Initialized `generatorInstructions` state from localStorage `generatorDefaultInstructions` value, falling back to `DEFAULT_GENERATOR_SYSTEM_PROMPT`
+  - Added effect to sync `generatorInstructions` changes back to `globalInstructions.generatorDefaultInstructions`
+  - Replaced hardcoded `DEFAULT_GENERATOR_SYSTEM_PROMPT` in generator API calls with `globalInstructions.generatorDefaultInstructions || DEFAULT_GENERATOR_SYSTEM_PROMPT`
+  - Generator instructions are now persisted globally and shared across sessions
 
 - [x] **Expanded macro system with MacroContext**
   - Added `MacroContext` type in `src/components/chat/utils/macroUtils.ts` with all available fields
@@ -615,6 +621,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-08-04 | **COMPLETED: Implemented AI Response Alternatives with Pagination/Selection** - Users can now generate multiple AI responses per message by pressing send with empty input; alternatives are browsable with arrow keys and UI buttons; selection is enabled only on last AI response and disabled after user sends a new message; re-enabled when last user message is deleted; alternatives persist in conversation storage. |
 | 2026-08-04 | **FIXED: Edit/delete behavior for messages with alternatives** - Deleting last AI message with multiple alternatives removes only selected alternative; editing last AI message locks alternatives first; editing non-last AI message no longer incorrectly disables last message's alternative selection UI. |
+| 2026-08-04 | **Exposed character generator default instructions globally** - Added `generatorDefaultInstructions` to `GlobalInstructions`; character generator instructions textarea now defaults to global value and persists changes back to global instructions/localStorage; API calls use global instructions instead of hardcoded default. |
 | 2026-05-04 | **COMPLETED: Implemented instruction preset system** - Added InstructionPreset interface with id, name, instructions[], createdAt, updatedAt fields; added dropdown for selecting presets; added Save/Rename/Delete preset functionality with localStorage persistence; default name uses current date/time |
 | 2026-04-21 | **COMPLETED: Implemented backend for inline instruction positioning** - Added injectInlineInstructions function, integrated with message construction, system now fully functional |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
