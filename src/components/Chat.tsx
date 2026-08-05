@@ -88,76 +88,6 @@ When the user asks you to create or generate a character, respond with a brief i
 - Otherwise, chat normally and ask follow-up questions to refine the character`;
 
 // Extract character JSON from AI response
-const extractCharacterJson = (content: string): { json: Record<string, unknown>; raw: string } | null => {
-  const codeBlockMatches = [...content.matchAll(/```(\w*)\n?([\s\S]*?)```/g)].reverse();
-  for (const match of codeBlockMatches) {
-    try {
-      const parsed = JSON.parse(match[2].trim());
-      if (parsed && typeof parsed === "object" && (parsed as Record<string, unknown>).name) {
-        return { json: parsed as Record<string, unknown>, raw: match[0] };
-      }
-    } catch {
-      // continue searching
-    }
-  }
-
-  const lastBraceIndex = content.lastIndexOf("{");
-  if (lastBraceIndex !== -1) {
-    const jsonCandidate = content.slice(lastBraceIndex);
-    try {
-      const parsed = JSON.parse(jsonCandidate);
-      if (parsed && typeof parsed === "object" && (parsed as Record<string, unknown>).name) {
-        return { json: parsed as Record<string, unknown>, raw: jsonCandidate };
-      }
-    } catch {
-      for (let i = jsonCandidate.length - 1; i > 20; i--) {
-        try {
-          const trimmed = jsonCandidate.slice(0, i);
-          const parsed = JSON.parse(trimmed);
-          if (parsed && typeof parsed === "object" && (parsed as Record<string, unknown>).name) {
-            return { json: parsed as Record<string, unknown>, raw: trimmed };
-          }
-        } catch {
-          // continue
-        }
-      }
-    }
-  }
-
-  for (let i = 0; i < content.length; i++) {
-    const char = content[i];
-    if (char !== "{") continue;
-    const candidate = content.slice(i);
-    try {
-      const parsed = JSON.parse(candidate);
-      if (parsed && typeof parsed === "object" && (parsed as Record<string, unknown>).name) {
-        return { json: parsed as Record<string, unknown>, raw: candidate };
-      }
-    } catch {
-      for (let j = candidate.length - 1; j > 20; j--) {
-        try {
-          const trimmed = candidate.slice(0, j);
-          const parsed = JSON.parse(trimmed);
-          if (parsed && typeof parsed === "object" && (parsed as Record<string, unknown>).name) {
-            return { json: parsed as Record<string, unknown>, raw: trimmed };
-          }
-        } catch {
-          // continue
-        }
-      }
-    }
-  }
-
-  return null;
-};
-
-const isCharacterCardJson = (data: Record<string, unknown>): boolean => {
-  const hasName = typeof data.name === "string" && data.name.trim().length > 0;
-  const hasDescription = typeof data.description === "string" && data.description.trim().length > 0;
-  const hasFirstMes = typeof data.first_mes === "string" && data.first_mes.trim().length > 0;
-  return hasName && hasDescription && hasFirstMes;
-};
-
 // Normalize character card data to a consistent flat format
 const normalizeCharacterCard = (data: Record<string, unknown>): Record<string, unknown> => {
   if (data.spec === "chara_card_v2" && data.data && typeof data.data === "object") {
@@ -760,8 +690,6 @@ export default function Chat() {
   const [generatorInput, setGeneratorInput] = useState("");
   const [isGeneratorLoading, setIsGeneratorLoading] = useState(false);
   const [generatorStreamingContent, setGeneratorStreamingContent] = useState<string>("");
-  const [detectedCharacterJson, setDetectedCharacterJson] = useState<Record<string, unknown> | null>(null);
-  const [previewCharacterData, setPreviewCharacterData] = useState<Record<string, unknown> | null>(null);
   const [editingGeneratorMessageIndex, setEditingGeneratorMessageIndex] = useState<number | null>(null);
   const [editingGeneratorMessageContent, setEditingGeneratorMessageContent] = useState<string>("");
 
@@ -841,6 +769,36 @@ export default function Chat() {
     setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: updatedMessages, updatedAt: Date.now() } : s));
     setEditingGeneratorMessageIndex(null);
     setEditingGeneratorMessageContent("");
+  };
+
+  const handleSaveCharacterFromGenerator = (messageContent: string) => {
+    // Open character modal with message content pre-filled
+    setCharacterName("");
+    setCharacterDescription("");
+    setCharacterFirstMessage("");
+    setCharacterScenario("");
+    setCharacterSystemPrompt("");
+    setCharacterPostHistoryInstructions("");
+    setCharacterMesExample("");
+    setCharacterAvatar("");
+    setCharacterAlternateGreetings([]);
+    setEditingCharacter(null);
+    
+    // Pre-fill form fields with the assistant message content
+    // Try to extract structured data from the message
+    const lines = messageContent.split('\n').filter(line => line.trim());
+    if (lines.length > 0) {
+      setCharacterName(lines[0].replace(/^#+\s*/, '').trim() || 'New Character');
+      if (lines.length > 1) {
+        setCharacterDescription(lines.slice(1).join('\n').trim());
+      }
+    } else {
+      setCharacterName('New Character');
+      setCharacterDescription(messageContent.trim());
+    }
+    setCharacterFirstMessage('Hello!');
+    
+    setShowCharacterModal(true);
   };
 
   const handleGeneratorRetryFromIndex = async (userMessageIndex: number) => {
@@ -4562,17 +4520,11 @@ if (modelsResult.models.length > 0) {
                       </div>
                       ) : (
                         <div className="space-y-4">
-                           {currentGeneratorSession.messages.map((message, idx) => {
-                              const isLastAssistant = message.role === "assistant" && idx === currentGeneratorSession.messages.length - 1;
-                              const isEditing = editingGeneratorMessageIndex === idx;
-                              const lastUserIndex = currentGeneratorSession.messages.map(m => m.role).lastIndexOf("user");
-                              const isLastUserMessage = message.role === "user" && idx === lastUserIndex;
-
-                               const extractedJson = message.role === "assistant" ? extractCharacterJson(message.content) : null;
-                               const isFullCharacterCard = extractedJson ? isCharacterCardJson(extractedJson.json) : false;
-                               const displayContent = extractedJson
-                                 ? extractedJson.raw.replace(/^```\w*\n?|```$/gm, "").trim()
-                                 : message.content;
+                            {currentGeneratorSession.messages.map((message, idx) => {
+                               const isLastAssistant = message.role === "assistant" && idx === currentGeneratorSession.messages.length - 1;
+                               const isEditing = editingGeneratorMessageIndex === idx;
+                               const lastUserIndex = currentGeneratorSession.messages.map(m => m.role).lastIndexOf("user");
+                               const isLastUserMessage = message.role === "user" && idx === lastUserIndex;
 
                                return (
                               <div
@@ -4626,79 +4578,76 @@ if (modelsResult.models.length > 0) {
                                       </div>
                                     ) : (
                                       <>
-                                        {!isFullCharacterCard && (
-                                          <FormattedText content={displayContent} />
-                                        )}
-                                        {extractedJson && (
+                                        <FormattedText content={message.content} />
+                                        {message.role === "assistant" && (
                                           <div className="mt-3">
                                             <button
-                                               onClick={() => setPreviewCharacterData(normalizeCharacterCard(extractedJson.json))}
+                                              onClick={() => handleSaveCharacterFromGenerator(message.content)}
                                               className="text-xs bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
                                             >
                                               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                                               </svg>
-                                              {isFullCharacterCard ? "Preview Character" : "View Character Card"}
+                                              Save as Character
                                             </button>
                                           </div>
                                         )}
-                                       {isLastAssistant && !isGeneratorLoading && (
-                                         <div className="mt-2 flex justify-end">
-                                           <button
-                                             onClick={handleGeneratorRetry}
-                                             className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
-                                             title="Regenerate response"
-                                           >
-                                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                             </svg>
-                                             Regenerate
-                                           </button>
-                                         </div>
-                                       )}
-                                     </>
+                                        {isLastAssistant && !isGeneratorLoading && (
+                                          <div className="mt-2 flex justify-end">
+                                            <button
+                                              onClick={handleGeneratorRetry}
+                                              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
+                                              title="Regenerate response"
+                                            >
+                                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                              </svg>
+                                              Regenerate
+                                            </button>
+                                          </div>
+                                        )}
+                                      </>
+                                    )}
+                                  </div>
+                                   {!isEditing && (
+                                     <div className="flex justify-start mt-1">
+                                       <div className="flex gap-1">
+                                        <button
+                                          onClick={() => handleGeneratorStartEdit(idx)}
+                                          className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors"
+                                          title="Edit message"
+                                        >
+                                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                          </svg>
+                                        </button>
+                                        {isLastUserMessage && idx < currentGeneratorSession.messages.length - 1 && (
+                                          <button
+                                            onClick={() => handleGeneratorRetryFromIndex(idx)}
+                                            className="p-1 text-zinc-500 hover:text-purple-400 hover:bg-zinc-800 rounded transition-colors"
+                                            title="Retry from this message"
+                                          >
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                            </svg>
+                                          </button>
+                                        )}
+                                        <button
+                                          onClick={() => handleGeneratorDeleteMessage(idx)}
+                                          className="p-1 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded transition-colors"
+                                          title="Delete message"
+                                        >
+                                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                          </svg>
+                                        </button>
+                                      </div>
+                                    </div>
                                    )}
-                                 </div>
-                                  {!isEditing && (
-                                    <div className="flex justify-start mt-1">
-                                      <div className="flex gap-1">
-                                       <button
-                                         onClick={() => handleGeneratorStartEdit(idx)}
-                                         className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors"
-                                         title="Edit message"
-                                       >
-                                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                         </svg>
-                                       </button>
-                                       {isLastUserMessage && idx < currentGeneratorSession.messages.length - 1 && (
-                                         <button
-                                           onClick={() => handleGeneratorRetryFromIndex(idx)}
-                                           className="p-1 text-zinc-500 hover:text-purple-400 hover:bg-zinc-800 rounded transition-colors"
-                                           title="Retry from this message"
-                                         >
-                                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                           </svg>
-                                         </button>
-                                       )}
-                                       <button
-                                         onClick={() => handleGeneratorDeleteMessage(idx)}
-                                         className="p-1 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded transition-colors"
-                                         title="Delete message"
-                                       >
-                                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                         </svg>
-                                       </button>
-                                     </div>
-                                   </div>
-                                  )}
-                                 </div>
-                               </div>
-                             );
-                           })}
+                                  </div>
+                                </div>
+                              );
+                            })}
                          {generatorStreamingContent && (
                            <div className="flex gap-3 justify-start">
                              <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
@@ -4706,51 +4655,11 @@ if (modelsResult.models.length > 0) {
                              </div>
                              <div className="w-full rounded-2xl px-4 py-3 bg-zinc-800 text-zinc-100 border border-zinc-700/50">
                                <FormattedText content={generatorStreamingContent} />
-                             </div>
-                           </div>
-                         )}
-                          {currentGeneratorSession.messages.length > 0 && (() => {
-                            const lastAssistantMessage = [...currentGeneratorSession.messages].reverse().find(m => m.role === "assistant");
-                            if (!lastAssistantMessage) return null;
-                            const extracted = extractCharacterJson(lastAssistantMessage.content);
-                            if (!extracted) return null;
-                            return (
-                              <div className="mt-4">
-                                <Dialog open={!!previewCharacterData} onOpenChange={(open) => !open && setPreviewCharacterData(null)}>
-                                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-zinc-900 border-zinc-800 text-white">
-                                    <DialogHeader>
-                                      <DialogTitle>Character Preview</DialogTitle>
-                                    </DialogHeader>
-                                    {previewCharacterData && (
-                                       <CharacterCardPreview
-                                         data={normalizeCharacterCard(previewCharacterData) as any}
-                                         onSave={(cardData) => {
-                                           const char = parseSillyTavernCard(cardData as unknown as Record<string, unknown>);
-                                           if (char) {
-                                             setCharacters(prev => {
-                                               const existingIndex = prev.findIndex(c => c.name === char.name);
-                                               if (existingIndex >= 0) {
-                                                 const updated = [...prev];
-                                                 updated[existingIndex] = { ...updated[existingIndex], ...char, id: updated[existingIndex].id };
-                                                 return updated;
-                                               }
-                                               return [...prev, char];
-                                             });
-                                             setDeletedItem({ type: 'character', item: char, timestamp: Date.now() });
-                                             setShowUndoToast(true);
-                                             setTimeout(() => setShowUndoToast(false), 5000);
-                                           }
-                                           setPreviewCharacterData(null);
-                                         }}
-                                       />
-                                    )}
-                                  </DialogContent>
-                                </Dialog>
                               </div>
-                            );
-                          })()}
-                       </div>
-                      )}
+                            </div>
+                          )}
+                        </div>
+                       )}
                     </div>
                      <ChatInput
                       value={generatorInput}
