@@ -4722,19 +4722,27 @@ if (modelsResult.models.length > 0) {
                                       <DialogTitle>Character Preview</DialogTitle>
                                     </DialogHeader>
                                     {previewCharacterData && (
-                                      <CharacterCardPreview
-                                        data={normalizeCharacterCard(previewCharacterData) as any}
-                                        onSave={(cardData) => {
-                                          const char = parseSillyTavernCard(cardData as unknown as Record<string, unknown>);
-                                          if (char) {
-                                            setCharacters(prev => [...prev, char]);
-                                            setDeletedItem({ type: 'character', item: char, timestamp: Date.now() });
-                                            setShowUndoToast(true);
-                                            setTimeout(() => setShowUndoToast(false), 5000);
-                                          }
-                                          setPreviewCharacterData(null);
-                                        }}
-                                      />
+                                       <CharacterCardPreview
+                                         data={normalizeCharacterCard(previewCharacterData) as any}
+                                         onSave={(cardData) => {
+                                           const char = parseSillyTavernCard(cardData as unknown as Record<string, unknown>);
+                                           if (char) {
+                                             setCharacters(prev => {
+                                               const existingIndex = prev.findIndex(c => c.name === char.name);
+                                               if (existingIndex >= 0) {
+                                                 const updated = [...prev];
+                                                 updated[existingIndex] = { ...updated[existingIndex], ...char, id: updated[existingIndex].id };
+                                                 return updated;
+                                               }
+                                               return [...prev, char];
+                                             });
+                                             setDeletedItem({ type: 'character', item: char, timestamp: Date.now() });
+                                             setShowUndoToast(true);
+                                             setTimeout(() => setShowUndoToast(false), 5000);
+                                           }
+                                           setPreviewCharacterData(null);
+                                         }}
+                                       />
                                     )}
                                   </DialogContent>
                                 </Dialog>
