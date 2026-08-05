@@ -389,7 +389,6 @@ const extractCharacterFieldsFromContent = (content: string): {
   };
 
   const parsed = tryParseJson(content);
-  console.log("[Generator] tryParseJson", { parsed: parsed ? Object.keys(parsed) : null });
   if (parsed) {
     const data = parsed.spec === "chara_card_v2" && parsed.data && typeof parsed.data === "object"
       ? (parsed.data as Record<string, unknown>)
@@ -404,22 +403,21 @@ const extractCharacterFieldsFromContent = (content: string): {
     setString(data.mes_example, "mesExample");
     setString(data.creator_notes, "creatorNotes");
 
-    console.log("[Generator] parsed json result", result);
     if (Object.keys(result).length > 0) return result;
   }
 
-  const labelMap: Array<{ key: keyof ReturnType<typeof extractCharacterFieldsFromContent>; patterns: RegExp[] }> = [
-    { key: "name", patterns: [/(?:^|\n)\s*name\s*[:：]\s*(.+)/i, /(?:^|\n)\s*#+\s*(.+)/] },
-    { key: "description", patterns: [/(?:^|\n)\s*description\s*[:：]\s*([\s\S]*?)(?=\n\s*(?:first message|first_mes|scenario|system prompt|creator notes|tags|$))/i] },
-    { key: "firstMessage", patterns: [/(?:^|\n)\s*(?:first message|first_mes)\s*[:：]\s*([\s\S]*?)(?=\n\s*(?:scenario|system prompt|creator notes|tags|$))/i] },
-    { key: "scenario", patterns: [/(?:^|\n)\s*scenario\s*[:：]\s*([\s\S]*?)(?=\n\s*(?:system prompt|creator notes|tags|$))/i] },
-    { key: "systemPrompt", patterns: [/(?:^|\n)\s*system prompt\s*[:：]\s*([\s\S]*?)(?=\n\s*(?:creator notes|tags|$))/i] },
-    { key: "postHistoryInstructions", patterns: [/(?:^|\n)\s*post.history instructions\s*[:：]\s*([\s\S]*?)(?=\n\s*(?:creator notes|tags|$))/i] },
-    { key: "mesExample", patterns: [/(?:^|\n)\s*(?:mes example|example messages)\s*[:：]\s*([\s\S]*?)(?=\n\s*(?:creator notes|tags|$))/i] },
-    { key: "creatorNotes", patterns: [/(?:^|\n)\s*creator notes\s*[:：]\s*([\s\S]*?)(?=\n\s*tags|$)/i] },
+  const fieldKeys: Array<{ key: keyof ReturnType<typeof extractCharacterFieldsFromContent>; patterns: RegExp[] }> = [
+    { key: "name", patterns: [/"name"\s*:\s*"([^"]+)"/i, /name\s*[:：]\s*(.+)/i] },
+    { key: "description", patterns: [/"description"\s*:\s*"([^"]+)"/i, /description\s*[:：]\s*(.+)/i] },
+    { key: "firstMessage", patterns: [/"first_mes"\s*:\s*"([^"]+)"/i, /first message\s*[:：]\s*(.+)/i, /first_mes\s*[:：]\s*(.+)/i] },
+    { key: "scenario", patterns: [/"scenario"\s*:\s*"([^"]+)"/i, /scenario\s*[:：]\s*(.+)/i] },
+    { key: "systemPrompt", patterns: [/"system_prompt"\s*:\s*"([^"]+)"/i, /system prompt\s*[:：]\s*(.+)/i] },
+    { key: "postHistoryInstructions", patterns: [/"post_history_instructions"\s*:\s*"([^"]+)"/i, /post.history instructions\s*[:：]\s*(.+)/i] },
+    { key: "mesExample", patterns: [/"mes_example"\s*:\s*"([^"]+)"/i, /mes example\s*[:：]\s*(.+)/i, /example messages\s*[:：]\s*(.+)/i] },
+    { key: "creatorNotes", patterns: [/"creator_notes"\s*:\s*"([^"]+)"/i, /creator notes\s*[:：]\s*(.+)/i] },
   ];
 
-  for (const { key, patterns } of labelMap) {
+  for (const { key, patterns } of fieldKeys) {
     for (const pattern of patterns) {
       const match = content.match(pattern);
       if (match && match[1] && match[1].trim().length > 0) {
@@ -439,7 +437,6 @@ const extractCharacterFieldsFromContent = (content: string): {
     }
   }
 
-  console.log("[Generator] text parsed result", result);
   return result;
 };
 // Index 0 = after last user message, 1 = before that, etc.
@@ -888,7 +885,6 @@ export default function Chat() {
     setEditingCharacter(null);
 
     const fields = extractCharacterFieldsFromContent(messageContent);
-    console.log("[Generator] extractCharacterFieldsFromContent", { content: messageContent.slice(0, 300), fields });
     setCharacterName(fields.name || "New Character");
     setCharacterDescription(fields.description || "");
     setCharacterFirstMessage(fields.firstMessage || "Hello!");
