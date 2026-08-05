@@ -3782,6 +3782,22 @@ if (modelsResult.models.length > 0) {
     return systemTokens + messageTokens;
   }, [view, currentConversation, selectedCharacter, selectedPersona, globalInstructions]);
 
+  const generatorContextTokens = useMemo(() => {
+    if (view !== "generator" || !currentGeneratorSession) {
+      return 0;
+    }
+
+    const systemPrompt = globalInstructions.generatorDefaultInstructions || DEFAULT_GENERATOR_SYSTEM_PROMPT;
+    const systemTokens = estimateTokens(systemPrompt);
+
+    const messageTokens = currentGeneratorSession.messages.reduce((total, msg) => {
+      const thinkContent = extractThinkContent(msg.content);
+      return total + estimateTokens(msg.content) + (thinkContent ? estimateTokens(thinkContent) : 0);
+    }, 0);
+
+    return systemTokens + messageTokens;
+  }, [view, currentGeneratorSession, globalInstructions]);
+
   return (
     <div className={ui.layout.main}>
       {/* Header - Fixed on top for all views on mobile */}
@@ -3845,6 +3861,8 @@ if (modelsResult.models.length > 0) {
                     ? "Select AI character"
                     : view === "conversations"
                     ? "Select or start a conversation"
+                    : view === "generator"
+                    ? `~${generatorContextTokens.toLocaleString()} context tokens • ${AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || 'AI'}`
                     : `~${contextTokens.toLocaleString()} context tokens • ${AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || 'AI'}`}
                 </p>
               </div>
@@ -4812,11 +4830,18 @@ if (modelsResult.models.length > 0) {
                            selectedModel: globalSettings.modelId || activeProfile?.selectedModel
                          };
                          
-                         // Build messages for API - convert generator messages to Message format
-                          const apiMessages: Message[] = [
-                            { role: "system", content: globalInstructions.generatorDefaultInstructions || DEFAULT_GENERATOR_SYSTEM_PROMPT },
-                            ...newMessages.map(m => ({ role: m.role as "user" | "assistant", content: m.content }))
-                          ];
+                          // Build messages for API - convert generator messages to Message format
+                           const generatorSystemPrompt = globalInstructions.generatorDefaultInstructions || DEFAULT_GENERATOR_SYSTEM_PROMPT;
+                           const generatorSystemTokens = estimateTokens(generatorSystemPrompt);
+                           const truncatedGeneratorMessages = truncateMessagesToContext(
+                             newMessages,
+                             globalSettings.maxContextTokens,
+                             generatorSystemTokens
+                           );
+                           const apiMessages: Message[] = [
+                             { role: "system", content: generatorSystemPrompt },
+                             ...truncatedGeneratorMessages.map(m => ({ role: m.role as "user" | "assistant", content: m.content }))
+                           ];
                          
                          // Use streaming
                          await streamChatMessage(
