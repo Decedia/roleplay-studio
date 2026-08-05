@@ -347,6 +347,7 @@ const extractCharacterFieldsFromContent = (content: string): {
   postHistoryInstructions?: string;
   mesExample?: string;
   creatorNotes?: string;
+  alternateGreetings?: string[];
 } => {
   const result: ReturnType<typeof extractCharacterFieldsFromContent> = {};
 
@@ -382,9 +383,18 @@ const extractCharacterFieldsFromContent = (content: string): {
     return null;
   };
 
-  const setString = (value: unknown, key: keyof ReturnType<typeof extractCharacterFieldsFromContent>) => {
+  const setString = (value: unknown, key: keyof Omit<ReturnType<typeof extractCharacterFieldsFromContent>, "alternateGreetings">) => {
     if (typeof value === "string" && value.trim().length > 0) {
       result[key] = value.trim();
+    }
+  };
+
+  const setStringArray = (value: unknown, key: "alternateGreetings") => {
+    if (Array.isArray(value)) {
+      const strings = value.filter((item): item is string => typeof item === "string" && item.trim().length > 0).map(item => item.trim());
+      if (strings.length > 0) {
+        result[key] = strings;
+      }
     }
   };
 
@@ -402,11 +412,13 @@ const extractCharacterFieldsFromContent = (content: string): {
     setString(data.post_history_instructions, "postHistoryInstructions");
     setString(data.mes_example, "mesExample");
     setString(data.creator_notes, "creatorNotes");
+    setStringArray(data.alternate_greetings, "alternateGreetings");
+    setStringArray(data.alternateGreetings, "alternateGreetings");
 
     if (Object.keys(result).length > 0) return result;
   }
 
-  const fieldKeys: Array<{ key: keyof ReturnType<typeof extractCharacterFieldsFromContent>; patterns: RegExp[] }> = [
+  const fieldKeys: Array<{ key: keyof Omit<ReturnType<typeof extractCharacterFieldsFromContent>, "alternateGreetings">; patterns: RegExp[] }> = [
     { key: "name", patterns: [/"name"\s*:\s*"([^"]+)"/i, /name\s*[:：]\s*(.+)/i] },
     { key: "description", patterns: [/"description"\s*:\s*"([^"]+)"/i, /description\s*[:：]\s*(.+)/i] },
     { key: "firstMessage", patterns: [/"first_mes"\s*:\s*"([^"]+)"/i, /first message\s*[:：]\s*(.+)/i, /first_mes\s*[:：]\s*(.+)/i] },
@@ -424,6 +436,14 @@ const extractCharacterFieldsFromContent = (content: string): {
         result[key] = match[1].trim();
         break;
       }
+    }
+  }
+
+  const altGreetingsMatch = content.match(/"alternate_greetings"\s*:\s*\[([\s\S]*?)\]/i) || content.match(/"alternateGreetings"\s*:\s*\[([\s\S]*?)\]/i);
+  if (altGreetingsMatch) {
+    const items = altGreetingsMatch[1].match(/"([^"]+)"/g);
+    if (items) {
+      result.alternateGreetings = items.map(item => item.slice(1, -1).trim()).filter(g => g.length > 0);
     }
   }
 
@@ -892,6 +912,7 @@ export default function Chat() {
     setCharacterSystemPrompt(fields.systemPrompt || "");
     setCharacterPostHistoryInstructions(fields.postHistoryInstructions || "");
     setCharacterMesExample(fields.mesExample || "");
+    setCharacterAlternateGreetings(fields.alternateGreetings || []);
 
     setShowCharacterModal(true);
   };
@@ -4270,11 +4291,11 @@ if (modelsResult.models.length > 0) {
                     <span>Roleplay with AI</span>
                   </button>
 
-                   <button
-                     onClick={() => {
-                       setShowCharacterModal(true);
-                       setShowMobileMenu(false);
-                     }}
+                    <button
+                      onClick={() => {
+                        setShowCharacterModal(true);
+                        setShowMobileMenu(false);
+                      }}
                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
                    >
                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
