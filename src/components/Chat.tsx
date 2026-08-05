@@ -337,7 +337,98 @@ const providerSupportsImageGeneration = (provider: LLMProviderType): boolean => 
   return ["google-ai-studio", "google-vertex"].includes(provider);
 };
 
-// Inject inline instructions into message history
+// Extract character fields from AI generator text or JSON
+const extractCharacterFieldsFromContent = (content: string): {
+  name?: string;
+  description?: string;
+  firstMessage?: string;
+  scenario?: string;
+  systemPrompt?: string;
+  postHistoryInstructions?: string;
+  mesExample?: string;
+  creatorNotes?: string;
+} => {
+  const result: ReturnType<typeof extractCharacterFieldsFromContent> = {};
+
+  const tryParseJson = (text: string): Record<string, unknown> | null => {
+    const codeBlockMatches = [...text.matchAll(/```(\w*)\n?([\s\S]*?)```/g)].reverse();
+    for (const match of codeBlockMatches) {
+      try {
+        const parsed = JSON.parse(match[2].trim());
+        if (parsed && typeof parsed === "object") return parsed as Record<string, unknown>;
+      } catch {
+        // continue searching
+      }
+    }
+
+    const lastBraceIndex = text.lastIndexOf("{");
+    if (lastBraceIndex !== -1) {
+      const candidate = text.slice(lastBraceIndex);
+      try {
+        const parsed = JSON.parse(candidate);
+        if (parsed && typeof parsed === "object") return parsed as Record<string, unknown>;
+      } catch {
+        for (let i = candidate.length - 1; i > 20; i--) {
+          try {
+            const parsed = JSON.parse(candidate.slice(0, i));
+            if (parsed && typeof parsed === "object") return parsed as Record<string, unknown>;
+          } catch {
+            // continue
+          }
+        }
+      }
+    }
+
+    return null;
+  };
+
+  const setString = (value: unknown, key: keyof ReturnType<typeof extractCharacterFieldsFromContent>) => {
+    if (typeof value === "string" && value.trim().length > 0) {
+      result[key] = value.trim();
+    }
+  };
+
+  const parsed = tryParseJson(content);
+  if (parsed) {
+    const data = parsed.spec === "chara_card_v2" && parsed.data && typeof parsed.data === "object"
+      ? (parsed.data as Record<string, unknown>)
+      : parsed;
+
+    setString(data.name, "name");
+    setString(data.description, "description");
+    setString(data.first_mes, "firstMessage");
+    setString(data.scenario, "scenario");
+    setString(data.system_prompt, "systemPrompt");
+    setString(data.post_history_instructions, "postHistoryInstructions");
+    setString(data.mes_example, "mesExample");
+    setString(data.creator_notes, "creatorNotes");
+
+    if (Object.keys(result).length > 0) return result;
+  }
+
+  const labelMap: Array<{ key: keyof ReturnType<typeof extractCharacterFieldsFromContent>; patterns: RegExp[] }> = [
+    { key: "name", patterns: [/(?:^|\n)\s*name\s*[:：]\s*(.+)/i, /(?:^|\n)\s*#+\s*(.+)/] },
+    { key: "description", patterns: [/(?:^|\n)\s*description\s*[:：]\s*([\s\S]*?)(?=\n\s*(?:first message|first_mes|scenario|system prompt|creator notes|tags|$))/i] },
+    { key: "firstMessage", patterns: [/(?:^|\n)\s*(?:first message|first_mes)\s*[:：]\s*([\s\S]*?)(?=\n\s*(?:scenario|system prompt|creator notes|tags|$))/i] },
+    { key: "scenario", patterns: [/(?:^|\n)\s*scenario\s*[:：]\s*([\s\S]*?)(?=\n\s*(?:system prompt|creator notes|tags|$))/i] },
+    { key: "systemPrompt", patterns: [/(?:^|\n)\s*system prompt\s*[:：]\s*([\s\S]*?)(?=\n\s*(?:creator notes|tags|$))/i] },
+    { key: "postHistoryInstructions", patterns: [/(?:^|\n)\s*post.history instructions\s*[:：]\s*([\s\S]*?)(?=\n\s*(?:creator notes|tags|$))/i] },
+    { key: "mesExample", patterns: [/(?:^|\n)\s*(?:mes example|example messages)\s*[:：]\s*([\s\S]*?)(?=\n\s*(?:creator notes|tags|$))/i] },
+    { key: "creatorNotes", patterns: [/(?:^|\n)\s*creator notes\s*[:：]\s*([\s\S]*?)(?=\n\s*tags|$)/i] },
+  ];
+
+  for (const { key, patterns } of labelMap) {
+    for (const pattern of patterns) {
+      const match = content.match(pattern);
+      if (match && match[1] && match[1].trim().length > 0) {
+        result[key] = match[1].trim();
+        break;
+      }
+    }
+  }
+
+  return result;
+};
 // Index 0 = after last user message, 1 = before that, etc.
 // If index is too big, put at the very end
 const injectInlineInstructions = (
@@ -772,7 +863,6 @@ export default function Chat() {
   };
 
   const handleSaveCharacterFromGenerator = (messageContent: string) => {
-    // Open character modal with message content pre-filled
     setCharacterName("");
     setCharacterDescription("");
     setCharacterFirstMessage("");
@@ -783,21 +873,16 @@ export default function Chat() {
     setCharacterAvatar("");
     setCharacterAlternateGreetings([]);
     setEditingCharacter(null);
-    
-    // Pre-fill form fields with the assistant message content
-    // Try to extract structured data from the message
-    const lines = messageContent.split('\n').filter(line => line.trim());
-    if (lines.length > 0) {
-      setCharacterName(lines[0].replace(/^#+\s*/, '').trim() || 'New Character');
-      if (lines.length > 1) {
-        setCharacterDescription(lines.slice(1).join('\n').trim());
-      }
-    } else {
-      setCharacterName('New Character');
-      setCharacterDescription(messageContent.trim());
-    }
-    setCharacterFirstMessage('Hello!');
-    
+
+    const fields = extractCharacterFieldsFromContent(messageContent);
+    setCharacterName(fields.name || "New Character");
+    setCharacterDescription(fields.description || "");
+    setCharacterFirstMessage(fields.firstMessage || "Hello!");
+    setCharacterScenario(fields.scenario || "");
+    setCharacterSystemPrompt(fields.systemPrompt || "");
+    setCharacterPostHistoryInstructions(fields.postHistoryInstructions || "");
+    setCharacterMesExample(fields.mesExample || "");
+
     setShowCharacterModal(true);
   };
 
