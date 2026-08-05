@@ -419,21 +419,21 @@ const extractCharacterFieldsFromContent = (content: string): {
   }
 
   const fieldKeys: Array<{ key: keyof Omit<ReturnType<typeof extractCharacterFieldsFromContent>, "alternateGreetings">; patterns: RegExp[] }> = [
-    { key: "name", patterns: [/"name"\s*:\s*"([^"]+)"/i, /name\s*[:：]\s*(.+)/i] },
-    { key: "description", patterns: [/"description"\s*:\s*"([^"]+)"/i, /description\s*[:：]\s*(.+)/i] },
-    { key: "firstMessage", patterns: [/"first_mes"\s*:\s*"([^"]+)"/i, /first message\s*[:：]\s*(.+)/i, /first_mes\s*[:：]\s*(.+)/i] },
-    { key: "scenario", patterns: [/"scenario"\s*:\s*"([^"]+)"/i, /scenario\s*[:：]\s*(.+)/i] },
-    { key: "systemPrompt", patterns: [/"system_prompt"\s*:\s*"([^"]+)"/i, /system prompt\s*[:：]\s*(.+)/i] },
-    { key: "postHistoryInstructions", patterns: [/"post_history_instructions"\s*:\s*"([^"]+)"/i, /post.history instructions\s*[:：]\s*(.+)/i] },
-    { key: "mesExample", patterns: [/"mes_example"\s*:\s*"([^"]+)"/i, /mes example\s*[:：]\s*(.+)/i, /example messages\s*[:：]\s*(.+)/i] },
-    { key: "creatorNotes", patterns: [/"creator_notes"\s*:\s*"([^"]+)"/i, /creator notes\s*[:：]\s*(.+)/i] },
+    { key: "name", patterns: [/"name"\s*:\s*"((?:[^"\\]|\\.)*)"/i, /name\s*[:：]\s*(.+)/i] },
+    { key: "description", patterns: [/"description"\s*:\s*"((?:[^"\\]|\\.)*)"/i, /description\s*[:：]\s*(.+)/i] },
+    { key: "firstMessage", patterns: [/"first_mes"\s*:\s*"((?:[^"\\]|\\.)*)"/i, /first message\s*[:：]\s*(.+)/i, /first_mes\s*[:：]\s*(.+)/i] },
+    { key: "scenario", patterns: [/"scenario"\s*:\s*"((?:[^"\\]|\\.)*)"/i, /scenario\s*[:：]\s*(.+)/i] },
+    { key: "systemPrompt", patterns: [/"system_prompt"\s*:\s*"((?:[^"\\]|\\.)*)"/i, /system prompt\s*[:：]\s*(.+)/i] },
+    { key: "postHistoryInstructions", patterns: [/"post_history_instructions"\s*:\s*"((?:[^"\\]|\\.)*)"/i, /post.history instructions\s*[:：]\s*(.+)/i] },
+    { key: "mesExample", patterns: [/"mes_example"\s*:\s*"((?:[^"\\]|\\.)*)"/i, /mes example\s*[:：]\s*(.+)/i, /example messages\s*[:：]\s*(.+)/i] },
+    { key: "creatorNotes", patterns: [/"creator_notes"\s*:\s*"((?:[^"\\]|\\.)*)"/i, /creator notes\s*[:：]\s*(.+)/i] },
   ];
 
   for (const { key, patterns } of fieldKeys) {
     for (const pattern of patterns) {
       const match = content.match(pattern);
       if (match && match[1] && match[1].trim().length > 0) {
-        result[key] = match[1].trim();
+        result[key] = match[1].replace(/\\(.)/g, "$1").trim();
         break;
       }
     }
@@ -441,9 +441,16 @@ const extractCharacterFieldsFromContent = (content: string): {
 
   const altGreetingsMatch = content.match(/"alternate_greetings"\s*:\s*\[([\s\S]*?)\]/i) || content.match(/"alternateGreetings"\s*:\s*\[([\s\S]*?)\]/i);
   if (altGreetingsMatch) {
-    const items = altGreetingsMatch[1].match(/"([^"]+)"/g);
-    if (items) {
-      result.alternateGreetings = items.map(item => item.slice(1, -1).trim()).filter(g => g.length > 0);
+    const regex = /"((?:[^"\\]|\\.)*)"/g;
+    regex.lastIndex = 0;
+    const items: string[] = [];
+    let m;
+    while ((m = regex.exec(altGreetingsMatch[1])) !== null) {
+      const value = m[1].replace(/\\(.)/g, "$1").trim();
+      if (value.length > 0) items.push(value);
+    }
+    if (items.length > 0) {
+      result.alternateGreetings = items;
     }
   }
 
