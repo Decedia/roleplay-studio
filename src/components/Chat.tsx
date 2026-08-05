@@ -389,6 +389,7 @@ const extractCharacterFieldsFromContent = (content: string): {
   };
 
   const parsed = tryParseJson(content);
+  console.log("[Generator] tryParseJson", { parsed: parsed ? Object.keys(parsed) : null });
   if (parsed) {
     const data = parsed.spec === "chara_card_v2" && parsed.data && typeof parsed.data === "object"
       ? (parsed.data as Record<string, unknown>)
@@ -403,6 +404,7 @@ const extractCharacterFieldsFromContent = (content: string): {
     setString(data.mes_example, "mesExample");
     setString(data.creator_notes, "creatorNotes");
 
+    console.log("[Generator] parsed json result", result);
     if (Object.keys(result).length > 0) return result;
   }
 
@@ -427,6 +429,17 @@ const extractCharacterFieldsFromContent = (content: string): {
     }
   }
 
+  if (!result.name && !result.description && !result.firstMessage) {
+    const lines = content.split('\n').filter(line => line.trim());
+    if (lines.length > 0) {
+      result.name = lines[0].replace(/^#+\s*/, '').trim();
+      if (lines.length > 1) {
+        result.description = lines.slice(1).join('\n').trim();
+      }
+    }
+  }
+
+  console.log("[Generator] text parsed result", result);
   return result;
 };
 // Index 0 = after last user message, 1 = before that, etc.
@@ -875,6 +888,7 @@ export default function Chat() {
     setEditingCharacter(null);
 
     const fields = extractCharacterFieldsFromContent(messageContent);
+    console.log("[Generator] extractCharacterFieldsFromContent", { content: messageContent.slice(0, 300), fields });
     setCharacterName(fields.name || "New Character");
     setCharacterDescription(fields.description || "");
     setCharacterFirstMessage(fields.firstMessage || "Hello!");
