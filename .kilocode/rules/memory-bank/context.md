@@ -329,6 +329,14 @@ Currently modularizing `src/components/Chat.tsx` (11,200 lines) into smaller fil
 - [x] **Added "Ding when unfocused" global setting** - plays notification sound when AI finishes generating
 - [x] **Fixed notification sound logic** - removed window focus check (browsers throttle background tabs anyway)
 - [x] **Enable send button in brainstorm when last message is from user** - allows resending last message
+- [x] **Add modular Utilities Menu with theme configuration**
+  - Created `src/components/utilities-menu.tsx` as a reusable dropdown menu component
+  - Integrated light/dark/system theme toggle into the Utilities Menu
+  - Refactored `ChatHeader.tsx` to use `UtilitiesMenu` instead of standalone `ThemeToggle`
+  - UtilitiesMenu accepts optional `themeConfig` prop for custom theme state management
+  - Menu supports additional items via `children` prop for future extensibility (color pickers, presets, etc.)
+  - Theme mode options: Light, Dark, System with active state indicators
+  - Typecheck and lint pass successfully
 - [x] **Fixed OpenRouter provider to properly handle system messages** - Ensured system messages from input and options.systemPrompt are preserved and sent with correct role "system" to prevent 'provider return error' from some models.
 
 ## Current Structure
@@ -633,6 +641,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 | Date       | Changes                                                                                                                                                                                                                                                                                                                                               |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-08-04 | **COMPLETED: Implemented AI Response Alternatives with Pagination/Selection** - Users can now generate multiple AI responses per message by pressing send with empty input; alternatives are browsable with arrow keys and UI buttons; selection is enabled only on last AI response and disabled after user sends a new message; re-enabled when last user message is deleted; alternatives persist in conversation storage. |
+| 2026-08-07 | **Added modular Utilities Menu with theme configuration** - Created `src/components/utilities-menu.tsx` with integrated light/dark/system theme toggle; refactored `ChatHeader.tsx` to use `UtilitiesMenu`; menu accepts optional `themeConfig` prop and `children` for future extensibility (custom colors, theme presets). |
 | 2026-08-04 | **FIXED: Edit/delete behavior for messages with alternatives** - Deleting last AI message with multiple alternatives removes only selected alternative; editing last AI message locks alternatives first; editing non-last AI message no longer incorrectly disables last message's alternative selection UI. |
 | 2026-08-04 | **Exposed character generator default instructions globally** - Added `generatorDefaultInstructions` to `GlobalInstructions`; character generator instructions textarea now defaults to global value and persists changes back to global instructions/localStorage; API calls use global instructions instead of hardcoded default. |
 | 2026-08-04 | **Moved character generator instructions into instructions modal** - Added `generator` tab to instructions modal; removed inline generator instructions textarea from generator view; all generator sessions now share one global instructions field edited from the modal. |

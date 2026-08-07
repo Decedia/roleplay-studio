@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ArrowLeft, List, Plus } from "lucide-react";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { UtilitiesMenu } from "@/components/utilities-menu";
 
 interface ChatHeaderProps {
   title: string;
@@ -52,7 +52,7 @@ export function ChatHeader({
       
       <div className="flex items-center gap-1">
         {children}
-        <ThemeToggle />
+        <UtilitiesMenu />
       </div>
     </div>
   );
