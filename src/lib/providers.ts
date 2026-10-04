@@ -405,31 +405,55 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
     requiresApiKey: false, // API key is optional for remote setups
     models: [], // Models are fetched dynamically from the Ollama server
   },
-  {
-    id: "cohere",
-    name: "Cohere",
-    description: "Cohere free tier models via OpenAI-compatible API",
-    requiresApiKey: true,
-    models: [
-      {
-        id: "command-r7b-12-2025",
-        name: "Command R7B",
-        provider: "cohere",
-        contextWindow: 128000,
-        maxTokens: 4096,
-        supportsThinking: false,
-      },
-      {
-        id: "command-r-08-2025",
-        name: "Command R",
-        provider: "cohere",
-        contextWindow: 128000,
-        maxTokens: 4096,
-        supportsThinking: false,
-      },
-    ],
-  },
- ];
+   {
+     id: "cohere",
+     name: "Cohere",
+     description: "Cohere free tier models via OpenAI-compatible API",
+     requiresApiKey: true,
+     models: [
+       {
+         id: "command-r7b-12-2025",
+         name: "Command R7B",
+         provider: "cohere",
+         contextWindow: 128000,
+         maxTokens: 4096,
+         supportsThinking: false,
+       },
+       {
+         id: "command-r-08-2025",
+         name: "Command R",
+         provider: "cohere",
+         contextWindow: 128000,
+         maxTokens: 4096,
+         supportsThinking: false,
+       },
+     ],
+   },
+   {
+     id: "custom-openai",
+     name: "Custom OpenAI",
+     description: "Any OpenAI-compatible API endpoint with custom base URL and API key",
+     requiresApiKey: true,
+     models: [
+       {
+         id: "gpt-4o",
+         name: "GPT-4o",
+         provider: "custom-openai",
+         contextWindow: 128000,
+         maxTokens: 16384,
+         supportsThinking: false,
+       },
+       {
+         id: "gpt-4o-mini",
+         name: "GPT-4o Mini",
+         provider: "custom-openai",
+         contextWindow: 128000,
+         maxTokens: 16384,
+         supportsThinking: false,
+       },
+     ],
+   },
+  ];
 
 // Chat response interface - now imported from types.ts
 // Streaming callback type - now imported from types.ts
@@ -1908,6 +1932,210 @@ export const streamWithCohere = async (
   }
 };
 
+// Custom OpenAI-compatible API chat implementation - uses server-side proxy to avoid CORS
+export const chatWithCustomOpenAI: ChatFunction = async (
+  messages,
+  config,
+  options
+) => {
+  if (!config.apiKey) {
+    return { error: "Custom OpenAI API key is required" };
+  }
+
+  const activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
+  const baseUrl = activeProfile?.baseUrl?.trim();
+
+  if (!baseUrl) {
+    return { error: "Custom OpenAI base URL is required" };
+  }
+
+  const requestId = options.requestId || generateRequestId();
+  try {
+    const systemMessages = messages.filter(m => m.role === "system");
+    const nonSystemMessages = messages.filter(m => m.role !== "system");
+
+    const formattedMessages = nonSystemMessages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    const systemContent = systemMessages.map(m => m.content).join("\n\n");
+    const messagesWithSystem = systemContent || options.systemPrompt
+      ? [{ role: "system", content: systemContent || options.systemPrompt || "" }, ...formattedMessages]
+      : formattedMessages;
+
+    const response = await fetch("/api/custom-openai", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        requestId,
+        endpoint: "chat/completions",
+        apiKey: config.apiKey,
+        baseUrl,
+        payload: {
+          model: config.selectedModel,
+          messages: messagesWithSystem,
+          temperature: options.temperature,
+          max_tokens: options.maxTokens,
+          top_p: options.topP,
+          top_k: options.topK,
+        },
+      }),
+      signal: options.abortController?.signal,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        error: data.error || `HTTP ${response.status}`,
+      };
+    }
+
+    const content = data.choices?.[0]?.message?.content || "";
+
+    return { content };
+  } catch (error) {
+    if (options.abortController?.signal.aborted) {
+      await cancelRequest(requestId);
+    }
+    return {
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+};
+
+// Custom OpenAI-compatible API streaming implementation
+export const streamWithCustomOpenAI = async (
+  messages: Message[],
+  config: ProviderConfig,
+  options: {
+    temperature: number;
+    maxTokens: number;
+    topP: number;
+    topK: number;
+    systemPrompt?: string;
+    enableThinking?: boolean;
+    abortController?: AbortController;
+    requestId?: string;
+  },
+  onChunk: StreamCallback
+): Promise<void> => {
+  if (!config.apiKey) {
+    onChunk({ error: "Custom OpenAI API key is required" });
+    return;
+  }
+
+  const activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
+  const baseUrl = activeProfile?.baseUrl?.trim();
+
+  if (!baseUrl) {
+    onChunk({ error: "Custom OpenAI base URL is required" });
+    return;
+  }
+
+  const requestId = options.requestId || generateRequestId();
+  try {
+    const systemMessages = messages.filter(m => m.role === "system");
+    const nonSystemMessages = messages.filter(m => m.role !== "system");
+
+    const formattedMessages = nonSystemMessages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    const systemContent = systemMessages.map(m => m.content).join("\n\n");
+    const messagesWithSystem = systemContent || options.systemPrompt
+      ? [{ role: "system", content: systemContent || options.systemPrompt || "" }, ...formattedMessages]
+      : formattedMessages;
+
+    const response = await fetch("/api/custom-openai", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        requestId,
+        endpoint: "chat/completions",
+        apiKey: config.apiKey,
+        baseUrl,
+        payload: {
+          model: config.selectedModel,
+          messages: messagesWithSystem,
+          temperature: options.temperature,
+          max_tokens: options.maxTokens,
+          top_p: options.topP,
+          top_k: options.topK,
+          stream: true,
+        },
+        stream: true,
+      }),
+      signal: options.abortController?.signal,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      onChunk({ error: extractErrorMessage(errorData.error) });
+      return;
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      onChunk({ error: "Failed to get response stream" });
+      return;
+    }
+
+    const decoder = new TextDecoder();
+    let fullContent = "";
+    let buffer = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const jsonStr = line.slice(6).trim();
+            if (!jsonStr || jsonStr === "[DONE]") continue;
+
+            try {
+              const data = JSON.parse(jsonStr);
+
+              if (data.error) {
+                onChunk({ error: data.error });
+                return;
+              }
+
+              const delta = data.choices?.[0]?.delta;
+
+              if (delta?.content) {
+                fullContent += delta.content;
+                onChunk({ content: fullContent });
+              }
+            } catch {
+              // Skip invalid JSON
+            }
+          }
+        }
+      }
+    } finally {
+      onChunk({ content: fullContent, done: true });
+    }
+  } catch (error) {
+    if (options.abortController?.signal.aborted) {
+      await cancelRequest(requestId);
+    }
+    onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
+  }
+};
+
 // Main chat function that routes to the correct provider
 export const sendChatMessage = async (
   messages: Message[],
@@ -2376,6 +2604,46 @@ const fetchOllamaModels = async (config: ProviderConfig): Promise<{ models: Fetc
   }
 };
 
+const fetchCustomOpenAIModels = async (config: ProviderConfig): Promise<{ models: FetchedModel[]; error?: string }> => {
+  if (!config.apiKey) {
+    return { models: [], error: "API key is required" };
+  }
+  const activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
+  const baseUrl = activeProfile?.baseUrl?.trim();
+
+  if (!baseUrl) {
+    return { models: [], error: "Base URL is required" };
+  }
+
+  try {
+    const response = await fetch("/api/custom-openai", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        endpoint: "models",
+        apiKey: config.apiKey,
+        baseUrl,
+      }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      return { models: [], error: extractErrorMessage(errorData.error) || `HTTP ${response.status}` };
+    }
+    const data = await response.json();
+    const models: FetchedModel[] = (data.data || []).map((model: any) => ({
+      id: model.id,
+      provider: "custom-openai",
+      name: model.name || model.id,
+      context: model.context_window || model.context,
+    }));
+    return { models };
+  } catch (error) {
+    return { models: [], error: error instanceof Error ? error.message : "Unknown error" };
+  }
+};
+
 // Register all providers in the registry
 import { providerRegistry } from "./providers/registry";
 
@@ -2497,6 +2765,21 @@ providerRegistry.register({
   stream: streamWithOllama,
   connectionTest: testProviderConnection.bind(null, "ollama"),
   modelFetch: fetchOllamaModels,
+});
+
+providerRegistry.register({
+  id: "custom-openai",
+  name: "Custom OpenAI",
+  description: "Any OpenAI-compatible API endpoint with custom base URL and API key",
+  requiresApiKey: true,
+  supportsProfiles: true,
+  supportsModelFetch: true,
+  defaultModel: "gpt-4o",
+  models: AVAILABLE_PROVIDERS.find((p) => p.id === "custom-openai")?.models || [],
+  chat: chatWithCustomOpenAI,
+  stream: streamWithCustomOpenAI,
+  connectionTest: testProviderConnection.bind(null, "custom-openai"),
+  modelFetch: fetchCustomOpenAIModels,
 });
 
 export { providerRegistry };

@@ -768,44 +768,106 @@ export function SettingsModal({
                     </>
                   )}
 
-                  {/* Cohere */}
-                  {editingProvider === 'cohere' && providerConfigs["cohere"]?.activeProfileId && (
-                    <>
-                      <div>
-                        <label className="block text-xs text-zinc-400 mb-1">API Key</label>
-                        <input
-                          type="password"
-                          value={getActiveProfile("cohere")?.apiKey || ""}
-                          onChange={(e) => {
-                            const profileId = providerConfigs["cohere"].activeProfileId;
-                            if (!profileId) return;
-                            setProviderConfigs(prev => ({
-                              ...prev,
-                              "cohere": {
-                                ...prev["cohere"],
-                                profiles: prev["cohere"].profiles.map(p =>
-                                  p.id === profileId ? { ...p, apiKey: e.target.value } : p
-                                )
-                              }
-                            }));
-                          }}
-                          placeholder="Enter your Cohere API key"
-                          className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleConnectProvider("cohere")}
-                          className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                        >
-                          Connect
-                        </button>
-                      </div>
-                    </>
-                  )}
+                   {/* Cohere */}
+                   {editingProvider === 'cohere' && providerConfigs["cohere"]?.activeProfileId && (
+                     <>
+                       <div>
+                         <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                         <input
+                           type="password"
+                           value={getActiveProfile("cohere")?.apiKey || ""}
+                           onChange={(e) => {
+                             const profileId = providerConfigs["cohere"].activeProfileId;
+                             if (!profileId) return;
+                             setProviderConfigs(prev => ({
+                               ...prev,
+                               "cohere": {
+                                 ...prev["cohere"],
+                                 profiles: prev["cohere"].profiles.map(p =>
+                                   p.id === profileId ? { ...p, apiKey: e.target.value } : p
+                                 )
+                               }
+                             }));
+                           }}
+                           placeholder="Enter your Cohere API key"
+                           className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                         />
+                       </div>
+                       <div className="flex gap-2">
+                         <button
+                           type="button"
+                           onClick={() => handleConnectProvider("cohere")}
+                           className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                         >
+                           Connect
+                         </button>
+                       </div>
+                     </>
+                   )}
 
-                  {/* KoboldAI Horde */}
+                   {/* Custom OpenAI */}
+                   {editingProvider === 'custom-openai' && providerConfigs["custom-openai"]?.activeProfileId && (
+                     <>
+                       <div>
+                         <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                         <input
+                           type="password"
+                           value={getActiveProfile("custom-openai")?.apiKey || ""}
+                           onChange={(e) => {
+                             const profileId = providerConfigs["custom-openai"].activeProfileId;
+                             if (!profileId) return;
+                             setProviderConfigs(prev => ({
+                               ...prev,
+                               "custom-openai": {
+                                 ...prev["custom-openai"],
+                                 profiles: prev["custom-openai"].profiles.map(p =>
+                                   p.id === profileId ? { ...p, apiKey: e.target.value } : p
+                                 )
+                               }
+                             }));
+                           }}
+                           placeholder="Enter your API key"
+                           className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                         />
+                       </div>
+                       <div>
+                         <label className="block text-xs text-zinc-400 mb-1">Base URL</label>
+                         <input
+                           type="text"
+                           value={getActiveProfile("custom-openai")?.baseUrl || ""}
+                           onChange={(e) => {
+                             const profileId = providerConfigs["custom-openai"].activeProfileId;
+                             if (!profileId) return;
+                             setProviderConfigs(prev => ({
+                               ...prev,
+                               "custom-openai": {
+                                 ...prev["custom-openai"],
+                                 profiles: prev["custom-openai"].profiles.map(p =>
+                                   p.id === profileId ? { ...p, baseUrl: e.target.value } : p
+                                 )
+                               }
+                             }));
+                           }}
+                           placeholder="https://api.example.com/v1"
+                           className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                         />
+                         <p className="text-xs text-zinc-500 mt-1">
+                           The base URL of your OpenAI-compatible API (e.g., https://integrate.api.nvidia.com/v1)
+                         </p>
+                       </div>
+                       <div className="flex gap-2">
+                         <button
+                           type="button"
+                           onClick={() => handleConnectProvider("custom-openai")}
+                           className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                         >
+                           Connect
+                         </button>
+                       </div>
+                     </>
+                   )}
+
+                   {/* KoboldAI Horde */}
                   {editingProvider === 'kobold-horde' && (
                     <>
                       <div>

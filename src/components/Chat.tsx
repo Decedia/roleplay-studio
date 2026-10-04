@@ -1434,7 +1434,7 @@ export default function Chat() {
           }
           
           // Ensure all providers exist in loaded configs
-          const allProviders: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim", "groq", "open-router", "kobold-horde", "cohere", "ollama"];
+          const allProviders: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim", "groq", "open-router", "kobold-horde", "cohere", "ollama", "custom-openai"];
           allProviders.forEach(key => {
             if (!configs[key]) {
               configs[key] = { type: key, isEnabled: false, profiles: [], activeProfileId: null };
@@ -1447,7 +1447,7 @@ export default function Chat() {
         }
       } else {
         // Check for old per-provider storage (for users upgrading from older versions)
-        const providers: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim", "groq", "open-router", "kobold-horde", "cohere", "ollama"];
+        const providers: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim", "groq", "open-router", "kobold-horde", "cohere", "ollama", "custom-openai"];
         const migratedConfigs: Record<LLMProviderType, ProviderConfig> = {
           "google-ai-studio": { type: "google-ai-studio", isEnabled: false, profiles: [], activeProfileId: null },
           "google-vertex": { type: "google-vertex", isEnabled: false, profiles: [], activeProfileId: null },
@@ -1457,6 +1457,7 @@ export default function Chat() {
           "kobold-horde": { type: "kobold-horde", isEnabled: false, profiles: [], activeProfileId: null },
           "cohere": { type: "cohere", isEnabled: false, profiles: [], activeProfileId: null },
           "ollama": { type: "ollama", isEnabled: false, profiles: [], activeProfileId: null },
+          "custom-openai": { type: "custom-openai", isEnabled: false, profiles: [], activeProfileId: null },
         };
         
         providers.forEach(providerType => {
@@ -1886,10 +1887,10 @@ const handleConnectProvider = async (providerType: LLMProviderType) => {
        }
        
 // Fetch models for providers that support dynamic model fetching
-         if ((providerType === "google-ai-studio" || providerType === "google-vertex" || providerType === "open-router" || providerType === "groq" || providerType === "nvidia-nim" || providerType === "kobold-horde") && models.length === 0 && (activeProfile?.apiKey || providerType === "kobold-horde")) {
-         setModelsFetching(prev => ({ ...prev, [providerType]: true }));
-         const modelsResult = await fetchModelsFromProvider(providerType, profileConfig);
-         setModelsFetching(prev => ({ ...prev, [providerType]: false }));
+          if ((providerType === "google-ai-studio" || providerType === "google-vertex" || providerType === "open-router" || providerType === "groq" || providerType === "nvidia-nim" || providerType === "kobold-horde" || providerType === "custom-openai") && models.length === 0 && (activeProfile?.apiKey || providerType === "kobold-horde")) {
+          setModelsFetching(prev => ({ ...prev, [providerType]: true }));
+          const modelsResult = await fetchModelsFromProvider(providerType, profileConfig);
+          setModelsFetching(prev => ({ ...prev, [providerType]: false }));
          
 if (modelsResult.models.length > 0) {
             // Sort models based on provider type
