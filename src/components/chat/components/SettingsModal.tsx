@@ -171,6 +171,7 @@ export function SettingsModal({
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [modelSearchQuery, setModelSearchQuery] = useState("");
   const [customModels, setCustomModels] = useState<Array<{id: string; name?: string; provider?: string; context?: number; max_tokens?: number; cost?: Model['cost']}>>([]);
+  const [customOpenAIModelInput, setCustomOpenAIModelInput] = useState("");
 
   const modelSearchInputRef = useRef<HTMLInputElement>(null);
   const [editingProvider, setEditingProvider] = useState<LLMProviderType | null>(activeProvider);
@@ -209,6 +210,7 @@ export function SettingsModal({
       if (!show) {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setCustomModels([]);
+        setCustomOpenAIModelInput("");
       }
     }, [show]);
 
@@ -998,17 +1000,50 @@ export function SettingsModal({
              <label className="block text-sm font-medium text-zinc-400 mb-2">
                Model ({AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || activeProvider})
              </label>
-            {isLoadingModels ? (
-              <div className="w-full bg-zinc-800 text-zinc-400 rounded-lg px-4 py-2 border border-zinc-700">
-                Loading models...
-              </div>
+             {isLoadingModels ? (
+               <div className="w-full bg-zinc-800 text-zinc-400 rounded-lg px-4 py-2 border border-zinc-700">
+                 Loading models...
+               </div>
+             ) : activeProvider === "custom-openai" ? (
+               <div className="space-y-2">
+                 <label className="block text-xs text-zinc-400 mb-1">Model ID</label>
+                 <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={customOpenAIModelInput || (activeProvider === "custom-openai" ? globalSettings.modelId || "" : "")}
+                      onChange={(e) => setCustomOpenAIModelInput(e.target.value)}
+                      placeholder="Enter model ID, e.g. gpt-4o or z-ai/glm-5.3"
+                      className="flex-1 bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && (customOpenAIModelInput || (activeProvider === "custom-openai" ? globalSettings.modelId || "" : "")).trim()) {
+                          selectModel((customOpenAIModelInput || (activeProvider === "custom-openai" ? globalSettings.modelId || "" : "")).trim());
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const modelValue = customOpenAIModelInput || (activeProvider === "custom-openai" ? globalSettings.modelId || "" : "");
+                        if (modelValue.trim()) {
+                          selectModel(modelValue.trim());
+                        }
+                      }}
+                      className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
+                    >
+                      Set
+                    </button>
+                 </div>
+                 <p className="text-xs text-zinc-500">
+                   Type any model ID supported by your endpoint. No list is fetched.
+                 </p>
+               </div>
              ) : activeProviderModels.length === 0 ? (
                <div className="w-full bg-zinc-800/50 text-zinc-400 rounded-lg px-4 py-2 border border-zinc-700">
                  No models available. Connect to load models.
                </div>
-            ) : (
-              <>
-                {/* Custom Dropdown */}
+             ) : (
+               <>
+                 {/* Custom Dropdown */}
                 <div className="relative" ref={dropdownRef}>
                   <button
                     type="button"

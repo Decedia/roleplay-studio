@@ -2604,46 +2604,6 @@ const fetchOllamaModels = async (config: ProviderConfig): Promise<{ models: Fetc
   }
 };
 
-const fetchCustomOpenAIModels = async (config: ProviderConfig): Promise<{ models: FetchedModel[]; error?: string }> => {
-  if (!config.apiKey) {
-    return { models: [], error: "API key is required" };
-  }
-  const activeProfile = config.profiles.find(p => p.id === config.activeProfileId);
-  const baseUrl = activeProfile?.baseUrl?.trim();
-
-  if (!baseUrl) {
-    return { models: [], error: "Base URL is required" };
-  }
-
-  try {
-    const response = await fetch("/api/custom-openai", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        endpoint: "models",
-        apiKey: config.apiKey,
-        baseUrl,
-      }),
-    });
-    if (!response.ok) {
-      const errorData = await response.json();
-      return { models: [], error: extractErrorMessage(errorData.error) || `HTTP ${response.status}` };
-    }
-    const data = await response.json();
-    const models: FetchedModel[] = (data.data || []).map((model: any) => ({
-      id: model.id,
-      provider: "custom-openai",
-      name: model.name || model.id,
-      context: model.context_window || model.context,
-    }));
-    return { models };
-  } catch (error) {
-    return { models: [], error: error instanceof Error ? error.message : "Unknown error" };
-  }
-};
-
 // Register all providers in the registry
 import { providerRegistry } from "./providers/registry";
 
@@ -2773,13 +2733,12 @@ providerRegistry.register({
   description: "Any OpenAI-compatible API endpoint with custom base URL and API key",
   requiresApiKey: true,
   supportsProfiles: true,
-  supportsModelFetch: true,
+  supportsModelFetch: false,
   defaultModel: "gpt-4o",
   models: AVAILABLE_PROVIDERS.find((p) => p.id === "custom-openai")?.models || [],
   chat: chatWithCustomOpenAI,
   stream: streamWithCustomOpenAI,
   connectionTest: testProviderConnection.bind(null, "custom-openai"),
-  modelFetch: fetchCustomOpenAIModels,
 });
 
 export { providerRegistry };
