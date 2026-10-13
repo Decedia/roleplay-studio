@@ -8,6 +8,17 @@ A chat application for roleplay conversations with multiple LLM provider support
 
 ## Recently Completed
 
+- [x] Add StepFun as new AI provider - implemented full StepFun support including:
+  - Added "stepfun" to LLMProviderType in types.ts
+  - Added StepFun to AVAILABLE_PROVIDERS with Step 5 Preview, Step 3.7 Flash, and Step 3.5 Flash models
+  - Implemented chatWithStepFun function for non-streaming chat
+  - Implemented streamWithStepFun function for streaming chat
+  - Added StepFun to testConnection function
+  - Added StepFun to fetchModels function with static model fallback
+  - Created /api/stepfun/route.ts server-side proxy for CORS avoidance
+  - Updated Chat.tsx state to include stepfun provider
+  - Added StepFun to data import active provider validation
+  - Added StepFun to provider migration code for localStorage upgrades
 - [x] Add Groq as new AI provider - implemented full Groq support including:
   - Added "groq" to LLMProviderType in types.ts
   - Added Groq to AVAILABLE_PROVIDERS with Llama 3.3, Llama 3.1, Mixtral, and Gemma models
@@ -333,6 +344,8 @@ A chat application for roleplay conversations with multiple LLM provider support
   - **Google AI Studio** (Gemini models, default)
   - **Google Vertex AI** (enterprise Gemini)
   - **NVIDIA NIM** (DeepSeek R1, Llama, Mistral, Codestral)
+  - **Groq** (Llama, Mixtral, Gemma - fast inference, free tier)
+  - **StepFun** (Step 5 Preview, Step 3.7 Flash, Step 3.5 Flash - OpenAI-compatible API)
 - System prompt follows SillyTavern hierarchy:
   1. Main system prompt (custom or default)
   2. Character description
@@ -468,6 +481,7 @@ The `buildFullSystemPrompt` function creates prompts following SillyTavern's hie
 
 | Date       | Changes                                                                                                                                                                                                                                                               |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-13 | Add StepFun as new AI provider - Step 5 Preview, Step 3.7 Flash, Step 3.5 Flash models via OpenAI-compatible API at api.stepfun.ai/v1, server-side proxy route, streaming support, UI settings section                                                            |
 | 2026-03-04 | Wrap all thinking/reasoning content in `<think>` tags - removed `thinking` property from Message type, now thinking content is wrapped in `<think> tags</think>` and stored in message content for consistent format across all providers                             |
 | 2026-03-04 | Remove includeThoughts from Gemini 3 models - removed the `includeThoughts` parameter from all Gemini 3 model configurations in providers.ts (4 locations: chatWithGoogleAIStudio, streamChatWithGoogleAIStudio, chatWithVertexAI, streamChatWithVertexAI)            |
 | 2026-03-03 | Fix delete button bug in chat views - Fixed issue where delete button was deleting wrong message due to index mismatch when filtering out continue messages. Applied fix to main chat, generator, and brainstorm views by preserving original index before filtering. |

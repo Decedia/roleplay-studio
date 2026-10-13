@@ -1923,6 +1923,130 @@ function SettingsModal({
                 )}
               </div>
 
+              {/* StepFun */}
+              <div className="p-3 bg-zinc-800/50 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${
+                      connectionStatus["stepfun"]?.status === "connected" ? "bg-green-500" :
+                      connectionStatus["stepfun"]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
+                      connectionStatus["stepfun"]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
+                    }`} />
+                    <span className="text-sm font-medium text-white">StepFun</span>
+                    {activeProvider === "stepfun" && (
+                      <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingProvider(editingProvider === 'stepfun' ? null : 'stepfun')}
+                    className="text-xs text-blue-400 hover:text-blue-300"
+                  >
+                    {editingProvider === 'stepfun' ? 'Hide' : 'Configure'}
+                  </button>
+                </div>
+                {connectionStatus["stepfun"]?.message && (
+                  <p className={`text-xs mb-2 ${
+                    connectionStatus["stepfun"]?.status === "connected" ? "text-green-400" :
+                    connectionStatus["stepfun"]?.status === "error" ? "text-red-400" : "text-zinc-400"
+                  }`}>
+                    {connectionStatus["stepfun"].message}
+                  </p>
+                )}
+                {editingProvider === 'stepfun' && (
+                  <div className="mt-3 space-y-3">
+                    {/* Profile Selection */}
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-1">Profile</label>
+                      <div className="flex gap-2">
+                        <select
+                          value={providerConfigs["stepfun"]?.activeProfileId || ""}
+                          onChange={(e) => {
+                            if (e.target.value === "__new__") {
+                              const name = prompt("Enter profile name (or leave empty for date/time):");
+                              if (name !== null) {
+                                createProfile("stepfun", {
+                                  name: name.trim() || new Date().toLocaleString(),
+                                  apiKey: ""
+                                });
+                              }
+                            } else {
+                              selectProfile("stepfun", e.target.value);
+                            }
+                          }}
+                          className="flex-1 bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                          <option value="">Select a profile...</option>
+                          {providerConfigs["stepfun"]?.profiles.map(profile => (
+                            <option key={profile.id} value={profile.id}>{profile.name}</option>
+                          ))}
+                          <option value="__new__">+ Add New Profile</option>
+                        </select>
+                        {providerConfigs["stepfun"]?.activeProfileId && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm("Delete this profile?")) {
+                                deleteProfile("stepfun", providerConfigs["stepfun"].activeProfileId!);
+                              }
+                            }}
+                            className="px-3 py-2 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* API Key - only show if profile is selected */}
+                    {providerConfigs["stepfun"]?.activeProfileId && (
+                      <>
+                        <div>
+                          <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                          <input
+                            type="password"
+                            value={getActiveProfile("stepfun")?.apiKey || ""}
+                            onChange={(e) => {
+                              const profileId = providerConfigs["stepfun"].activeProfileId;
+                              if (!profileId) return;
+                              setProviderConfigs(prev => ({
+                                ...prev,
+                                "stepfun": {
+                                  ...prev["stepfun"],
+                                  profiles: prev["stepfun"].profiles.map(p =>
+                                    p.id === profileId ? { ...p, apiKey: e.target.value } : p
+                                  )
+                                }
+                              }));
+                            }}
+                            placeholder="Enter your StepFun API key"
+                            className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onTestConnection("stepfun")}
+                            disabled={connectionStatus["stepfun"]?.status === "testing" || !getActiveProfile("stepfun")?.apiKey}
+                            className="flex-1 py-1.5 text-xs bg-zinc-700 text-white rounded hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {connectionStatus["stepfun"]?.status === "testing" ? "Testing..." : "Test Connection"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onConnect("stepfun")}
+                            disabled={connectionStatus["stepfun"]?.status !== "connected"}
+                            className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Connect
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
 
             </div>
           </div>
@@ -2108,6 +2232,7 @@ export default function Chat() {
     "google-vertex": { type: "google-vertex", isEnabled: false, profiles: [], activeProfileId: null },
     "nvidia-nim": { type: "nvidia-nim", isEnabled: false, profiles: [], activeProfileId: null },
     "groq": { type: "groq", isEnabled: false, profiles: [], activeProfileId: null },
+    "stepfun": { type: "stepfun", isEnabled: false, profiles: [], activeProfileId: null },
   });
   
   // Provider-specific models (fetched from API after connection)
@@ -2116,12 +2241,14 @@ export default function Chat() {
     "google-vertex": [],
     "nvidia-nim": [],
     "groq": [],
+    "stepfun": [],
   });
   const [modelsFetching, setModelsFetching] = useState<Record<LLMProviderType, boolean>>({
     "google-ai-studio": false,
     "google-vertex": false,
     "nvidia-nim": false,
     "groq": false,
+    "stepfun": false,
   });
   
   // Active provider state - default to Google AI Studio (not Puter)
@@ -2155,6 +2282,7 @@ export default function Chat() {
     "google-vertex": { status: "disconnected" },
     "nvidia-nim": { status: "disconnected" },
     "groq": { status: "disconnected" },
+    "stepfun": { status: "disconnected" },
   });
 
   // Profile management functions - defined early so they're available throughout the component
@@ -2580,7 +2708,7 @@ export default function Chat() {
           }
           
           // Ensure all providers exist in loaded configs
-          const allProviders: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim", "groq"];
+          const allProviders: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim", "groq", "stepfun"];
           allProviders.forEach(key => {
             if (!configs[key]) {
               configs[key] = { type: key, isEnabled: false, profiles: [], activeProfileId: null };
@@ -2593,12 +2721,13 @@ export default function Chat() {
         }
       } else {
         // Check for old per-provider storage (for users upgrading from older versions)
-        const providers: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim", "groq"];
+        const providers: LLMProviderType[] = ["google-ai-studio", "google-vertex", "nvidia-nim", "groq", "stepfun"];
         const migratedConfigs: Record<LLMProviderType, ProviderConfig> = {
           "google-ai-studio": { type: "google-ai-studio", isEnabled: false, profiles: [], activeProfileId: null },
           "google-vertex": { type: "google-vertex", isEnabled: false, profiles: [], activeProfileId: null },
           "nvidia-nim": { type: "nvidia-nim", isEnabled: false, profiles: [], activeProfileId: null },
           "groq": { type: "groq", isEnabled: false, profiles: [], activeProfileId: null },
+          "stepfun": { type: "stepfun", isEnabled: false, profiles: [], activeProfileId: null },
         };
         
         providers.forEach(providerType => {
@@ -2914,7 +3043,7 @@ export default function Chat() {
       }
 
       // Import active provider
-      if (json.activeProvider && ["google-ai-studio", "google-vertex", "nvidia-nim"].includes(json.activeProvider)) {
+      if (json.activeProvider && ["google-ai-studio", "google-vertex", "nvidia-nim", "groq", "stepfun"].includes(json.activeProvider)) {
         setActiveProvider(json.activeProvider);
       }
 
