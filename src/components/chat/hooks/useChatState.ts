@@ -184,6 +184,8 @@ export const useChatState = () => {
     "open-router": { type: "open-router" },
     "kobold-horde": { type: "kobold-horde" },
     "ollama": { type: "ollama" },
+    "cohere": { type: "cohere" },
+    "stepfun": { type: "stepfun" },
   });
   
   const [providerModels, setProviderModels] = useState<Record<string, any>>({
@@ -194,6 +196,8 @@ export const useChatState = () => {
     "open-router": [],
     "kobold-horde": [],
     "ollama": [],
+    "cohere": [],
+    "stepfun": [],
   });
   
   const [modelsFetching, setModelsFetching] = useState<Record<string, boolean>>({
@@ -205,6 +209,7 @@ export const useChatState = () => {
     "kobold-horde": false,
     "cohere": false,
     "ollama": false,
+    "stepfun": false,
   });
   
   const [activeProvider, setActiveProvider] = useState<string>("google-ai-studio");
@@ -218,6 +223,7 @@ export const useChatState = () => {
     "kobold-horde": { status: "disconnected" },
     "cohere": { status: "disconnected" },
     "ollama": { status: "disconnected" },
+    "stepfun": { status: "disconnected" },
   });
   
   // Ref states

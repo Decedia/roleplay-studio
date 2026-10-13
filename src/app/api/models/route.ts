@@ -356,6 +356,58 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ models });
       }
 
+      case "stepfun": {
+        if (!apiKey) {
+          return NextResponse.json(
+            { error: "API key is required for StepFun" },
+            { status: 400 }
+          );
+        }
+
+        // Fetch models from StepFun API
+        const response = await fetch("https://api.stepfun.ai/v1/models", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Accept": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          return NextResponse.json(
+            { error: extractErrorMessage(errorData.error) || `HTTP ${response.status}` },
+            { status: response.status }
+          );
+        }
+
+        const data = await response.json();
+
+        // Known model capabilities for StepFun
+        const modelCapabilities: Record<string, { context: number; max_tokens: number; supportsThinking?: boolean }> = {
+          "step-5-preview": { context: 131072, max_tokens: 8192, supportsThinking: true },
+          "step-3.7-flash": { context: 131072, max_tokens: 8192, supportsThinking: true },
+          "step-3.5-flash": { context: 131072, max_tokens: 8192, supportsThinking: false },
+        };
+
+        // Transform StepFun models to our format
+        const models = (data.data || [])
+          .map((model: { id: string; owned_by?: string }) => {
+            const capabilities = modelCapabilities[model.id] || { context: 131072, max_tokens: 8192, supportsThinking: false };
+
+            return {
+              id: model.id,
+              provider: "stepfun",
+              name: model.id,
+              context: capabilities.context,
+              max_tokens: capabilities.max_tokens,
+              supportsThinking: capabilities.supportsThinking,
+            };
+          });
+
+        return NextResponse.json({ models });
+      }
+
       default:
         return NextResponse.json(
           { error: `Unknown provider: ${provider}` },

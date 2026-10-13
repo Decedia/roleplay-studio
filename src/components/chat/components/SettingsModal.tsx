@@ -807,6 +807,46 @@ export function SettingsModal({
                      </>
                    )}
 
+                   {/* StepFun */}
+                   {editingProvider === 'stepfun' && providerConfigs["stepfun"]?.activeProfileId && (
+                     <>
+                       <div>
+                         <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                         <input
+                           type="password"
+                           value={getActiveProfile("stepfun")?.apiKey || ""}
+                           onChange={(e) => {
+                             const profileId = providerConfigs["stepfun"].activeProfileId;
+                             if (!profileId) return;
+                             setProviderConfigs(prev => ({
+                               ...prev,
+                               "stepfun": {
+                                 ...prev["stepfun"],
+                                 profiles: prev["stepfun"].profiles.map(p =>
+                                   p.id === profileId ? { ...p, apiKey: e.target.value } : p
+                                 )
+                               }
+                             }));
+                           }}
+                           placeholder="Enter your StepFun API key"
+                           className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                         />
+                         <p className="text-xs text-zinc-500 mt-1">
+                           Get your API key from platform.stepfun.ai/interface-key
+                         </p>
+                       </div>
+                       <div className="flex gap-2">
+                         <button
+                           type="button"
+                           onClick={() => handleConnectProvider("stepfun")}
+                           className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                         >
+                           Connect
+                         </button>
+                       </div>
+                     </>
+                   )}
+
                    {/* Custom OpenAI */}
                    {editingProvider === 'custom-openai' && providerConfigs["custom-openai"]?.activeProfileId && (
                      <>

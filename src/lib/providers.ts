@@ -419,18 +419,50 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
          maxTokens: 4096,
          supportsThinking: false,
        },
-       {
-         id: "command-r-08-2025",
-         name: "Command R",
-         provider: "cohere",
-         contextWindow: 128000,
-         maxTokens: 4096,
-         supportsThinking: false,
-       },
-     ],
-   },
-   {
-     id: "custom-openai",
+    {
+      id: "command-r-08-2025",
+      name: "Command R",
+      provider: "cohere",
+      contextWindow: 128000,
+      maxTokens: 4096,
+      supportsThinking: false,
+    },
+  ],
+    },
+  {
+    id: "stepfun",
+    name: "StepFun",
+    description: "StepFun AI models via OpenAI-compatible API - Step 5 Preview, Step 3.7 Flash, and Step 3.5 Flash",
+    requiresApiKey: true,
+    models: [
+      {
+        id: "step-5-preview",
+        name: "Step 5 Preview",
+        provider: "stepfun",
+        contextWindow: 131072,
+        maxTokens: 8192,
+        supportsThinking: false,
+      },
+      {
+        id: "step-3.7-flash",
+        name: "Step 3.7 Flash",
+        provider: "stepfun",
+        contextWindow: 131072,
+        maxTokens: 8192,
+        supportsThinking: false,
+      },
+      {
+        id: "step-3.5-flash",
+        name: "Step 3.5 Flash",
+        provider: "stepfun",
+        contextWindow: 131072,
+        maxTokens: 8192,
+        supportsThinking: false,
+      },
+    ],
+  },
+  {
+    id: "custom-openai",
      name: "Custom OpenAI",
      description: "Any OpenAI-compatible API endpoint with custom base URL and API key",
      requiresApiKey: true,
@@ -1932,6 +1964,228 @@ export const streamWithCohere = async (
   }
 };
 
+// StepFun chat implementation - uses OpenAI-compatible API via server proxy
+export const chatWithStepFun: ChatFunction = async (
+  messages,
+  config,
+  options
+) => {
+  if (!config.apiKey) {
+    return { error: "StepFun API key is required" };
+  }
+
+  const requestId = options.requestId || generateRequestId();
+  try {
+    const systemMessages = messages.filter(m => m.role === "system");
+    const nonSystemMessages = messages.filter(m => m.role !== "system");
+
+    const formattedMessages = nonSystemMessages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    const systemContent = systemMessages.map(m => m.content).join("\n\n");
+    const messagesWithSystem = systemContent || options.systemPrompt
+      ? [{ role: "system", content: systemContent || options.systemPrompt || "" }, ...formattedMessages]
+      : formattedMessages;
+
+    const response = await fetch("/api/stepfun", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        requestId,
+        endpoint: "chat/completions",
+        apiKey: config.apiKey,
+        payload: {
+          model: config.selectedModel,
+          messages: messagesWithSystem,
+          temperature: options.temperature,
+          max_tokens: options.maxTokens,
+          top_p: options.topP,
+        },
+      }),
+      signal: options.abortController?.signal,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        error: extractErrorMessage(data.error) || `HTTP ${response.status}`,
+      };
+    }
+
+    const content = data.choices?.[0]?.message?.content || "";
+
+    return { content };
+  } catch (error) {
+    if (options.abortController?.signal.aborted) {
+      await cancelRequest(requestId);
+    }
+    return {
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
+  }
+};
+
+// StepFun streaming implementation - uses server-side proxy
+export const streamWithStepFun = async (
+  messages: Message[],
+  config: ProviderConfig,
+  options: {
+    temperature: number;
+    maxTokens: number;
+    topP: number;
+    topK: number;
+    systemPrompt?: string;
+    enableThinking?: boolean;
+    thinkingLevel?: ThinkingLevel;
+    thinkingBudget?: ThinkingBudget;
+    abortController?: AbortController;
+    requestId?: string;
+  },
+  onChunk: StreamCallback
+): Promise<void> => {
+  if (!config.apiKey) {
+    onChunk({ error: "StepFun API key is required" });
+    return;
+  }
+
+  const requestId = options.requestId || generateRequestId();
+  try {
+    const systemMessages = messages.filter(m => m.role === "system");
+    const nonSystemMessages = messages.filter(m => m.role !== "system");
+
+    const formattedMessages = nonSystemMessages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    const systemContent = systemMessages.map(m => m.content).join("\n\n");
+    const messagesWithSystem = systemContent || options.systemPrompt
+      ? [{ role: "system", content: systemContent || options.systemPrompt || "" }, ...formattedMessages]
+      : formattedMessages;
+
+    const response = await fetch("/api/stepfun", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        requestId,
+        endpoint: "chat/completions",
+        apiKey: config.apiKey,
+        payload: {
+          model: config.selectedModel,
+          messages: messagesWithSystem,
+          temperature: options.temperature,
+          max_tokens: options.maxTokens,
+          top_p: options.topP,
+          stream: true,
+        },
+        stream: true,
+      }),
+      signal: options.abortController?.signal,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      onChunk({ error: extractErrorMessage(errorData.error) || `HTTP ${response.status}` });
+      return;
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      onChunk({ error: "Failed to get response stream" });
+      return;
+    }
+
+    const decoder = new TextDecoder();
+    let fullContent = "";
+    let buffer = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const jsonStr = line.slice(6).trim();
+            if (!jsonStr || jsonStr === "[DONE]") continue;
+
+            try {
+              const data = JSON.parse(jsonStr);
+
+              if (data.error) {
+                onChunk({ error: extractErrorMessage(data.error) });
+                return;
+              }
+
+              const delta = data.choices?.[0]?.delta;
+
+              if (delta?.content) {
+                fullContent += delta.content;
+                onChunk({ content: fullContent });
+              }
+            } catch {
+              // Skip invalid JSON
+            }
+          }
+        }
+      }
+    } finally {
+      onChunk({ content: fullContent, done: true });
+    }
+  } catch (error) {
+    if (options.abortController?.signal.aborted) {
+      await cancelRequest(requestId);
+    }
+    onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
+  }
+};
+
+// StepFun connection test - verifies the API key with a minimal chat request
+export const testStepFunConnection = async (
+  config: ProviderConfig
+): Promise<TestConnectionResult> => {
+  if (!config.apiKey) {
+    return { success: false, message: "StepFun API key is required" };
+  }
+  try {
+    const response = await fetch("/api/stepfun", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        endpoint: "chat/completions",
+        apiKey: config.apiKey,
+        payload: {
+          model: config.selectedModel || "step-3.5-flash",
+          messages: [{ role: "user", content: "Hi" }],
+          max_tokens: 5,
+        },
+      }),
+    });
+
+    if (response.ok) {
+      return { success: true, message: "StepFun connection successful!" };
+    }
+
+    const errorData = await response.json();
+    return { success: false, message: extractErrorMessage(errorData.error) || `HTTP ${response.status}` };
+  } catch (error) {
+    return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
+  }
+};
+
 // Custom OpenAI-compatible API chat implementation - uses server-side proxy to avoid CORS
 export const chatWithCustomOpenAI: ChatFunction = async (
   messages,
@@ -2449,6 +2703,22 @@ export const fetchModelsFromProvider = async (
   }
 };
 
+const fetchStepFunModels = async (config: ProviderConfig): Promise<{ models: FetchedModel[]; error?: string }> => {
+  if (!config.apiKey) {
+    return { models: [], error: "API key is required" };
+  }
+  try {
+    const response = await fetch(`/api/models?provider=stepfun&apiKey=${encodeURIComponent(config.apiKey)}`);
+    const data = await response.json();
+    if (!response.ok) {
+      return { models: [], error: extractErrorMessage(data.error) || `HTTP ${response.status}` };
+    }
+    return { models: data.models || [] };
+  } catch (error) {
+    return { models: getModelsForProvider("stepfun") };
+  }
+};
+
 // Model fetch implementations for each provider
 const fetchGoogleAIStudioModels = async (config: ProviderConfig): Promise<{ models: FetchedModel[]; error?: string }> => {
   if (!config.apiKey) {
@@ -2739,6 +3009,21 @@ providerRegistry.register({
   chat: chatWithCustomOpenAI,
   stream: streamWithCustomOpenAI,
   connectionTest: testProviderConnection.bind(null, "custom-openai"),
+});
+
+providerRegistry.register({
+  id: "stepfun",
+  name: "StepFun",
+  description: "StepFun AI models via OpenAI-compatible API",
+  requiresApiKey: true,
+  supportsProfiles: false,
+  supportsModelFetch: true,
+  defaultModel: "step-3.5-flash",
+  models: AVAILABLE_PROVIDERS.find((p) => p.id === "stepfun")?.models || [],
+  chat: chatWithStepFun,
+  stream: streamWithStepFun,
+  connectionTest: testStepFunConnection,
+  modelFetch: fetchStepFunModels,
 });
 
 export { providerRegistry };
