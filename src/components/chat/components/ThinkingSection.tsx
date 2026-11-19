@@ -15,12 +15,12 @@ export function ThinkingSection({ content, signature, modelName }: ThinkingSecti
     <div className="mb-3">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-300 transition-colors flex-wrap max-w-full"
+        className="flex items-center gap-2 text-sm text-parchment-muted hover:text-parchment-soft transition-colors flex-wrap max-w-full"
       >
         <span className="text-base">💭</span>
         <span>Thinking...</span>
         {signature && (
-          <span className="px-2 py-0.5 bg-blue-900/50 text-blue-300 text-xs rounded-full border border-blue-800 whitespace-nowrap">
+          <span className="px-2 py-0.5 bg-ember/10 text-ember text-xs rounded-full border border-ember/40 whitespace-nowrap">
             {signature}
           </span>
         )}
@@ -34,9 +34,9 @@ export function ThinkingSection({ content, signature, modelName }: ThinkingSecti
         </svg>
       </button>
       {isExpanded && (
-        <div className="mt-2 p-3 bg-zinc-900/50 rounded-lg border border-zinc-700 text-sm text-zinc-400 italic whitespace-pre-wrap break-words overflow-hidden">
+        <div className="mt-2 p-3 bg-ink-raised/50 rounded-lg border border-line-strong text-sm text-parchment-muted italic whitespace-pre-wrap break-words overflow-hidden">
           {modelName && (
-            <div className="text-xs text-blue-400 mb-2 pb-2 border-b border-zinc-700">
+            <div className="text-xs text-ember mb-2 pb-2 border-b border-line-strong">
               Thought process from {modelName}
             </div>
           )}

@@ -27,9 +27,9 @@ export function ToggleSwitch({
       onClick={() => onCheckedChange(!checked)}
       className={[
         "relative inline-flex shrink-0 cursor-pointer items-center rounded-full border-0 transition-colors duration-200",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember focus-visible:ring-offset-2 focus-visible:ring-offset-ink",
         disabled ? "cursor-not-allowed opacity-50" : "",
-        checked ? "bg-blue-600" : "bg-zinc-700",
+        checked ? "bg-ember" : "bg-line-strong",
         "w-11 h-6 sm:w-12 sm:h-7",
         className,
       ]

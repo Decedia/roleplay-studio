@@ -77,25 +77,25 @@ export function FormattedText({ content, variant = "default" }: FormattedTextPro
           case "action":
             return (
               <span key={key} className={classes}>
-                <span className="text-zinc-500">*</span>
+                <span className="text-parchment-muted">*</span>
                 {segment.content}
-                <span className="text-zinc-500">*</span>
+                <span className="text-parchment-muted">*</span>
               </span>
             );
           case "dialogue":
             return (
               <span key={key} className={classes}>
-                <span className="text-zinc-400">&ldquo;</span>
+                <span className="text-parchment-muted">&ldquo;</span>
                 {segment.content}
-                <span className="text-zinc-400">&rdquo;</span>
+                <span className="text-parchment-muted">&rdquo;</span>
               </span>
             );
           case "thought":
             return (
               <span key={key} className={classes}>
-                <span className="text-zinc-500">(</span>
+                <span className="text-parchment-muted">(</span>
                 {segment.content}
-                <span className="text-zinc-500">)</span>
+                <span className="text-parchment-muted">)</span>
               </span>
             );
           case "ooc":
