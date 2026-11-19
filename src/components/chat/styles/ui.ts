@@ -9,7 +9,7 @@
 
 export const layout = {
   /** Main container - full screen flex column with black background */
-  main: "flex flex-col h-screen bg-black",
+  main: "flex flex-col h-screen bg-ink",
   
   /** Main content area - with top padding for fixed header */
   content: "flex-1 overflow-y-auto pt-20",
