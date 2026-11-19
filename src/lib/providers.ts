@@ -18,23 +18,26 @@ import {
 
 import { extractErrorMessage } from "./errorUtils";
 
-let requestIdCounter = 0;
-function generateRequestId() {
-  requestIdCounter += 1;
-  return `req_${Date.now()}_${requestIdCounter}`;
-}
-
-async function cancelRequest(requestId: string) {
+/**
+ * Reads a JSON body without throwing. A body that is not JSON (often an HTML
+ * error page from a gateway or a platform timeout) becomes { error }.
+ */
+async function readJson(response: Response): Promise<any> {
+  const fallback = `HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ""}`;
+  let text = "";
   try {
-    await fetch("/api/cancel", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ requestId }),
-    });
+    text = await response.text();
   } catch {
-    // ignore cancel errors
+    return { error: fallback };
+  }
+  try {
+    return text ? JSON.parse(text) : {};
+  } catch {
+    const plain = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+    return { error: plain ? `${fallback}: ${plain.slice(0, 300)}` : fallback };
   }
 }
+
 
 // Re-export types for convenience
 export type { LLMProviderType, ProviderConfig, Message, LLMModel, LLMProvider, VertexMode, VertexLocation, ThinkingLevel, ThinkingBudget, FetchedModel, ChatResponse, StreamCallback, TestConnectionResult };
@@ -504,7 +507,6 @@ type ChatFunction = (
     thinkingLevel?: ThinkingLevel;
     thinkingBudget?: ThinkingBudget;
     abortController?: AbortController;
-    requestId?: string;
   }
 ) => Promise<ChatResponse>;
 
@@ -560,11 +562,12 @@ export const chatWithGoogleAIStudio: ChatFunction = async (
     }
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${config.selectedModel}:generateContent?key=${config.apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${config.selectedModel}:generateContent`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-goog-api-key": config.apiKey,
         },
         body: JSON.stringify({
           contents: formattedMessages,
@@ -576,13 +579,13 @@ export const chatWithGoogleAIStudio: ChatFunction = async (
     );
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await readJson(response);
       return {
-        error: errorData.error?.message || `HTTP ${response.status}`,
+        error: extractErrorMessage(errorData.error),
       };
     }
 
-    const data = await response.json();
+    const data = await readJson(response);
     const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
     return { content };
@@ -607,7 +610,6 @@ export const streamWithGoogleAIStudio = async (
     thinkingLevel?: ThinkingLevel;
     thinkingBudget?: ThinkingBudget;
     abortController?: AbortController;
-    requestId?: string;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -666,11 +668,12 @@ export const streamWithGoogleAIStudio = async (
     }
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${config.selectedModel}:streamGenerateContent?key=${config.apiKey}&alt=sse`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${config.selectedModel}:streamGenerateContent?alt=sse`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-goog-api-key": config.apiKey,
         },
         body: JSON.stringify({
           contents: formattedMessages,
@@ -682,8 +685,8 @@ export const streamWithGoogleAIStudio = async (
     );
 
     if (!response.ok) {
-      const errorData = await response.json();
-      onChunk({ error: errorData.error?.message || `HTTP ${response.status}` });
+      const errorData = await readJson(response);
+      onChunk({ error: extractErrorMessage(errorData.error) });
       return;
     }
 
@@ -755,7 +758,6 @@ export const chatWithVertexAI: ChatFunction = async (
     return { error: "Vertex AI requires a Google Cloud Project ID. Please enter your project ID in the provider settings." };
   }
   
-  const requestId = options.requestId || generateRequestId();
   try {
     const systemMessages = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -805,7 +807,6 @@ export const chatWithVertexAI: ChatFunction = async (
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        requestId,
         endpoint: `${config.selectedModel}:generateContent`,
         apiKey: config.apiKey,
         projectId: config.projectId,
@@ -819,9 +820,9 @@ export const chatWithVertexAI: ChatFunction = async (
       signal: options.abortController?.signal,
     });
 
-    const data = await response.json();
+    const data = await readJson(response);
 
-    if (!response.ok) {
+    if (!response.ok || data.error) {
       return {
         error: data.error || `HTTP ${response.status}`,
       };
@@ -831,9 +832,6 @@ export const chatWithVertexAI: ChatFunction = async (
 
     return { content };
   } catch (error) {
-    if (options.abortController?.signal.aborted) {
-      await cancelRequest(requestId);
-    }
     return {
       error: error instanceof Error ? error.message : "Unknown error occurred",
     };
@@ -851,7 +849,6 @@ export const chatWithNvidiaNIM: ChatFunction = async (
     return { error: "NVIDIA NIM API key is required" };
   }
 
-  const requestId = options.requestId || generateRequestId();
   try {
     const systemMessages = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -872,7 +869,6 @@ export const chatWithNvidiaNIM: ChatFunction = async (
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        requestId,
         endpoint: "chat/completions",
         apiKey: config.apiKey,
         payload: {
@@ -887,9 +883,9 @@ export const chatWithNvidiaNIM: ChatFunction = async (
       signal: options.abortController?.signal,
     });
 
-    const data = await response.json();
+    const data = await readJson(response);
 
-    if (!response.ok) {
+    if (!response.ok || data.error) {
       return {
         error: data.error || `HTTP ${response.status}`,
       };
@@ -900,9 +896,6 @@ export const chatWithNvidiaNIM: ChatFunction = async (
 
     return { content, thinking };
   } catch (error) {
-    if (options.abortController?.signal.aborted) {
-      await cancelRequest(requestId);
-    }
     return {
       error: error instanceof Error ? error.message : "Unknown error occurred",
     };
@@ -922,7 +915,6 @@ export const streamWithNvidiaNIM = async (
     systemPrompt?: string;
     enableThinking?: boolean;
     abortController?: AbortController;
-    requestId?: string;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -931,7 +923,6 @@ export const streamWithNvidiaNIM = async (
     return;
   }
 
-  const requestId = options.requestId || generateRequestId();
   try {
     const systemMessages = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -952,7 +943,6 @@ export const streamWithNvidiaNIM = async (
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        requestId,
         endpoint: "chat/completions",
         apiKey: config.apiKey,
         payload: {
@@ -970,7 +960,7 @@ export const streamWithNvidiaNIM = async (
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await readJson(response);
       onChunk({ error: extractErrorMessage(errorData.error) });
       return;
     }
@@ -1037,9 +1027,6 @@ export const streamWithNvidiaNIM = async (
       onChunk({ content: fullContent, thinking: fullThinking, done: true });
     }
   } catch (error) {
-    if (options.abortController?.signal.aborted) {
-      await cancelRequest(requestId);
-    }
     onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
   }
 };
@@ -1054,7 +1041,6 @@ export const chatWithGroq: ChatFunction = async (
     return { error: "Groq API key is required" };
   }
 
-  const requestId = options.requestId || generateRequestId();
   try {
     const systemMessages = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -1075,7 +1061,6 @@ export const chatWithGroq: ChatFunction = async (
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        requestId,
         endpoint: "chat/completions",
         apiKey: config.apiKey,
         payload: {
@@ -1089,9 +1074,9 @@ export const chatWithGroq: ChatFunction = async (
       signal: options.abortController?.signal,
     });
 
-    const data = await response.json();
+    const data = await readJson(response);
 
-    if (!response.ok) {
+    if (!response.ok || data.error) {
       return {
         error: data.error || `HTTP ${response.status}`,
       };
@@ -1101,9 +1086,6 @@ export const chatWithGroq: ChatFunction = async (
 
     return { content };
   } catch (error) {
-    if (options.abortController?.signal.aborted) {
-      await cancelRequest(requestId);
-    }
     return {
       error: error instanceof Error ? error.message : "Unknown error occurred",
     };
@@ -1122,7 +1104,6 @@ export const streamWithGroq = async (
     systemPrompt?: string;
     enableThinking?: boolean;
     abortController?: AbortController;
-    requestId?: string;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -1131,7 +1112,6 @@ export const streamWithGroq = async (
     return;
   }
 
-  const requestId = options.requestId || generateRequestId();
   try {
     const systemMessages = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -1152,7 +1132,6 @@ export const streamWithGroq = async (
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        requestId,
         endpoint: "chat/completions",
         apiKey: config.apiKey,
         payload: {
@@ -1169,7 +1148,7 @@ export const streamWithGroq = async (
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await readJson(response);
       onChunk({ error: extractErrorMessage(errorData.error) });
       return;
     }
@@ -1223,9 +1202,6 @@ export const streamWithGroq = async (
       onChunk({ content: fullContent, done: true });
     }
   } catch (error) {
-    if (options.abortController?.signal.aborted) {
-      await cancelRequest(requestId);
-    }
     onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
   }
 };
@@ -1240,7 +1216,6 @@ export const chatWithOpenRouter: ChatFunction = async (
     return { error: "Open Router API key is required" };
   }
 
-  const requestId = options.requestId || generateRequestId();
   try {
     const systemMessagesFromInput = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -1259,7 +1234,6 @@ export const chatWithOpenRouter: ChatFunction = async (
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        requestId,
         endpoint: "chat/completions",
         apiKey: config.apiKey,
         payload: {
@@ -1274,9 +1248,9 @@ export const chatWithOpenRouter: ChatFunction = async (
       signal: options.abortController?.signal,
     });
 
-    const data = await response.json();
+    const data = await readJson(response);
 
-    if (!response.ok) {
+    if (!response.ok || data.error) {
       return {
         error: data.error || `HTTP ${response.status}`,
       };
@@ -1287,9 +1261,6 @@ export const chatWithOpenRouter: ChatFunction = async (
 
     return { content, thinking };
   } catch (error) {
-    if (options.abortController?.signal.aborted) {
-      await cancelRequest(requestId);
-    }
     return {
       error: error instanceof Error ? error.message : "Unknown error occurred",
     };
@@ -1308,7 +1279,6 @@ export const streamWithOpenRouter = async (
     systemPrompt?: string;
     enableThinking?: boolean;
     abortController?: AbortController;
-    requestId?: string;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -1317,7 +1287,6 @@ export const streamWithOpenRouter = async (
     return;
   }
 
-  const requestId = options.requestId || generateRequestId();
   try {
     const systemMessagesFromInput = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -1336,7 +1305,6 @@ export const streamWithOpenRouter = async (
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        requestId,
         endpoint: "chat/completions",
         apiKey: config.apiKey,
         payload: {
@@ -1354,7 +1322,7 @@ export const streamWithOpenRouter = async (
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await readJson(response);
       onChunk({ error: extractErrorMessage(errorData.error) });
       return;
     }
@@ -1413,9 +1381,6 @@ export const streamWithOpenRouter = async (
       onChunk({ content: fullContent, thinking: fullThinking, done: true });
     }
   } catch (error) {
-    if (options.abortController?.signal.aborted) {
-      await cancelRequest(requestId);
-    }
     onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
   }
 };
@@ -1434,7 +1399,6 @@ export const streamWithVertexAI = async (
     thinkingLevel?: ThinkingLevel;
     thinkingBudget?: ThinkingBudget;
     abortController?: AbortController;
-    requestId?: string;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -1450,7 +1414,6 @@ export const streamWithVertexAI = async (
     return;
   }
 
-  const requestId = options.requestId || generateRequestId();
   try {
     const systemMessages = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -1498,7 +1461,6 @@ export const streamWithVertexAI = async (
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        requestId,
         endpoint: `${config.selectedModel}:streamGenerateContent?alt=sse`,
         apiKey: config.apiKey,
         projectId: config.projectId,
@@ -1513,7 +1475,7 @@ export const streamWithVertexAI = async (
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await readJson(response);
       onChunk({ error: extractErrorMessage(errorData.error) });
       return;
     }
@@ -1567,9 +1529,6 @@ export const streamWithVertexAI = async (
       onChunk({ content: fullContent, thinking: fullThinking, done: true });
     }
   } catch (error) {
-    if (options.abortController?.signal.aborted) {
-      await cancelRequest(requestId);
-    }
     onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
   }
 };
@@ -1588,7 +1547,6 @@ export const chatWithKoboldHorde: ChatFunction = async (
     const selectedModel = availableModels.find(m => m.id === (config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL));
     const maxContextLength = selectedModel?.contextWindow || 8192;
 
-    const requestId = generateRequestId();
     try {
       const systemMessages = messages.filter(m => m.role === "system");
       const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -1616,7 +1574,6 @@ export const chatWithKoboldHorde: ChatFunction = async (
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          requestId,
           apiKey: config.apiKey,
           model: config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL,
           prompt,
@@ -1648,9 +1605,9 @@ export const chatWithKoboldHorde: ChatFunction = async (
         signal: options.abortController?.signal,
       });
 
-      const data = await response.json();
+      const data = await readJson(response);
 
-      if (!response.ok) {
+      if (!response.ok || data.error) {
         return {
           error: data.error || `HTTP ${response.status}`,
         };
@@ -1658,9 +1615,6 @@ export const chatWithKoboldHorde: ChatFunction = async (
 
       return { content: data.content || "" };
     } catch (error) {
-      if (options.abortController?.signal.aborted) {
-        await cancelRequest(requestId);
-      }
       return {
         error: error instanceof Error ? error.message : "Unknown error occurred",
       };
@@ -1682,7 +1636,6 @@ export const streamWithKoboldHorde = async (
      thinkingLevel?: ThinkingLevel;
      thinkingBudget?: ThinkingBudget;
      abortController?: AbortController;
-    requestId?: string;
    },
    onChunk: StreamCallback
  ) => {
@@ -1695,7 +1648,6 @@ export const streamWithKoboldHorde = async (
    const selectedModel = availableModels.find(m => m.id === (config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL));
    const maxContextLength = selectedModel?.contextWindow || 8192;
 
-   const requestId = generateRequestId();
    try {
      const systemMessages = messages.filter(m => m.role === "system");
      const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -1722,7 +1674,6 @@ export const streamWithKoboldHorde = async (
          "Content-Type": "application/json",
        },
        body: JSON.stringify({
-         requestId,
          apiKey: config.apiKey,
          model: config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL,
          prompt,
@@ -1755,12 +1706,12 @@ export const streamWithKoboldHorde = async (
      });
 
      if (!response.ok) {
-       const errorData = await response.json();
+       const errorData = await readJson(response);
        onChunk({ error: extractErrorMessage(errorData.error) });
        return;
      }
 
-     const data = await response.json();
+     const data = await readJson(response);
      const content = data.content || "";
      const done = data.done ?? true;
 
@@ -1770,9 +1721,6 @@ export const streamWithKoboldHorde = async (
        onChunk({ error: data.error });
      }
    } catch (error) {
-     if (options.abortController?.signal.aborted) {
-       await cancelRequest(requestId);
-     }
      onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
    }
  };
@@ -1787,7 +1735,6 @@ export const chatWithCohere: ChatFunction = async (
     return { error: "Cohere API key is required" };
   }
 
-  const requestId = options.requestId || generateRequestId();
   try {
     const systemMessages = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -1808,7 +1755,6 @@ export const chatWithCohere: ChatFunction = async (
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        requestId,
         endpoint: "chat/completions",
         apiKey: config.apiKey,
         payload: {
@@ -1822,9 +1768,9 @@ export const chatWithCohere: ChatFunction = async (
       signal: options.abortController?.signal,
     });
 
-    const data = await response.json();
+    const data = await readJson(response);
 
-    if (!response.ok) {
+    if (!response.ok || data.error) {
       return {
         error: data.error || `HTTP ${response.status}`,
       };
@@ -1834,9 +1780,6 @@ export const chatWithCohere: ChatFunction = async (
 
     return { content };
   } catch (error) {
-    if (options.abortController?.signal.aborted) {
-      await cancelRequest(requestId);
-    }
     return {
       error: error instanceof Error ? error.message : "Unknown error occurred",
     };
@@ -1857,7 +1800,6 @@ export const streamWithCohere = async (
     thinkingLevel?: ThinkingLevel;
     thinkingBudget?: ThinkingBudget;
     abortController?: AbortController;
-    requestId?: string;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -1866,7 +1808,6 @@ export const streamWithCohere = async (
     return;
   }
 
-  const requestId = options.requestId || generateRequestId();
   try {
     const systemMessages = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -1887,7 +1828,6 @@ export const streamWithCohere = async (
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        requestId,
         endpoint: "chat/completions",
         apiKey: config.apiKey,
         payload: {
@@ -1904,7 +1844,7 @@ export const streamWithCohere = async (
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await readJson(response);
       onChunk({ error: extractErrorMessage(errorData.error) });
       return;
     }
@@ -1957,9 +1897,6 @@ export const streamWithCohere = async (
       onChunk({ content: fullContent, done: true });
     }
   } catch (error) {
-    if (options.abortController?.signal.aborted) {
-      await cancelRequest(requestId);
-    }
     onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
   }
 };
@@ -1974,7 +1911,6 @@ export const chatWithStepFun: ChatFunction = async (
     return { error: "StepFun API key is required" };
   }
 
-  const requestId = options.requestId || generateRequestId();
   try {
     const systemMessages = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -1995,7 +1931,6 @@ export const chatWithStepFun: ChatFunction = async (
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        requestId,
         endpoint: "chat/completions",
         apiKey: config.apiKey,
         payload: {
@@ -2009,9 +1944,9 @@ export const chatWithStepFun: ChatFunction = async (
       signal: options.abortController?.signal,
     });
 
-    const data = await response.json();
+    const data = await readJson(response);
 
-    if (!response.ok) {
+    if (!response.ok || data.error) {
       return {
         error: extractErrorMessage(data.error) || `HTTP ${response.status}`,
       };
@@ -2021,9 +1956,6 @@ export const chatWithStepFun: ChatFunction = async (
 
     return { content };
   } catch (error) {
-    if (options.abortController?.signal.aborted) {
-      await cancelRequest(requestId);
-    }
     return {
       error: error instanceof Error ? error.message : "Unknown error occurred",
     };
@@ -2044,7 +1976,6 @@ export const streamWithStepFun = async (
     thinkingLevel?: ThinkingLevel;
     thinkingBudget?: ThinkingBudget;
     abortController?: AbortController;
-    requestId?: string;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -2053,7 +1984,6 @@ export const streamWithStepFun = async (
     return;
   }
 
-  const requestId = options.requestId || generateRequestId();
   try {
     const systemMessages = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -2074,7 +2004,6 @@ export const streamWithStepFun = async (
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        requestId,
         endpoint: "chat/completions",
         apiKey: config.apiKey,
         payload: {
@@ -2091,7 +2020,7 @@ export const streamWithStepFun = async (
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await readJson(response);
       onChunk({ error: extractErrorMessage(errorData.error) || `HTTP ${response.status}` });
       return;
     }
@@ -2144,9 +2073,6 @@ export const streamWithStepFun = async (
       onChunk({ content: fullContent, done: true });
     }
   } catch (error) {
-    if (options.abortController?.signal.aborted) {
-      await cancelRequest(requestId);
-    }
     onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
   }
 };
@@ -2179,7 +2105,7 @@ export const testStepFunConnection = async (
       return { success: true, message: "StepFun connection successful!" };
     }
 
-    const errorData = await response.json();
+    const errorData = await readJson(response);
     return { success: false, message: extractErrorMessage(errorData.error) || `HTTP ${response.status}` };
   } catch (error) {
     return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
@@ -2203,7 +2129,6 @@ export const chatWithCustomOpenAI: ChatFunction = async (
     return { error: "Custom OpenAI base URL is required" };
   }
 
-  const requestId = options.requestId || generateRequestId();
   try {
     const systemMessages = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -2224,7 +2149,6 @@ export const chatWithCustomOpenAI: ChatFunction = async (
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        requestId,
         endpoint: "chat/completions",
         apiKey: config.apiKey,
         baseUrl,
@@ -2240,9 +2164,9 @@ export const chatWithCustomOpenAI: ChatFunction = async (
       signal: options.abortController?.signal,
     });
 
-    const data = await response.json();
+    const data = await readJson(response);
 
-    if (!response.ok) {
+    if (!response.ok || data.error) {
       return {
         error: data.error || `HTTP ${response.status}`,
       };
@@ -2252,9 +2176,6 @@ export const chatWithCustomOpenAI: ChatFunction = async (
 
     return { content };
   } catch (error) {
-    if (options.abortController?.signal.aborted) {
-      await cancelRequest(requestId);
-    }
     return {
       error: error instanceof Error ? error.message : "Unknown error occurred",
     };
@@ -2273,7 +2194,6 @@ export const streamWithCustomOpenAI = async (
     systemPrompt?: string;
     enableThinking?: boolean;
     abortController?: AbortController;
-    requestId?: string;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -2290,7 +2210,6 @@ export const streamWithCustomOpenAI = async (
     return;
   }
 
-  const requestId = options.requestId || generateRequestId();
   try {
     const systemMessages = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -2311,7 +2230,6 @@ export const streamWithCustomOpenAI = async (
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        requestId,
         endpoint: "chat/completions",
         apiKey: config.apiKey,
         baseUrl,
@@ -2330,7 +2248,7 @@ export const streamWithCustomOpenAI = async (
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await readJson(response);
       onChunk({ error: extractErrorMessage(errorData.error) });
       return;
     }
@@ -2383,9 +2301,6 @@ export const streamWithCustomOpenAI = async (
       onChunk({ content: fullContent, done: true });
     }
   } catch (error) {
-    if (options.abortController?.signal.aborted) {
-      await cancelRequest(requestId);
-    }
     onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
   }
 };
@@ -2404,7 +2319,6 @@ export const sendChatMessage = async (
     thinkingLevel?: ThinkingLevel;
     thinkingBudget?: ThinkingBudget;
     abortController?: AbortController;
-    requestId?: string;
   }
 ): Promise<ChatResponse> => {
   const provider = providerRegistry.get(config.type);
@@ -2428,7 +2342,6 @@ export const streamChatMessage = async (
     thinkingLevel?: ThinkingLevel;
     thinkingBudget?: ThinkingBudget;
     abortController?: AbortController;
-    requestId?: string;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -2460,7 +2373,86 @@ export const testProviderConnection = async (
   return provider.connectionTest(config);
 };
 
+/** Sends a tiny chat request to check the key, model and address together. */
+const pingProvider = async (
+  providerType: LLMProviderType,
+  config: ProviderConfig
+): Promise<TestConnectionResult> => {
+  const provider = providerRegistry.get(providerType);
+  if (!provider) {
+    return { success: false, message: `Unknown provider: ${providerType}` };
+  }
+  const result = await provider.chat([{ role: "user", content: "Hi" }], config, {
+    temperature: 0,
+    maxTokens: 5,
+    topP: 1,
+    topK: 1,
+  });
+  return result.error
+    ? { success: false, message: extractErrorMessage(result.error) }
+    : { success: true, message: `${provider.name} connection successful!` };
+};
+
 // Ollama chat implementation - uses server-side proxy to avoid CORS
+/** True for Ollama on the user's own computer or home network. */
+function isLocalOllamaUrl(baseUrl: string): boolean {
+  try {
+    const host = new URL(baseUrl).hostname.replace(/^\[|\]$/g, "");
+    return (
+      host === "localhost" ||
+      host.endsWith(".localhost") ||
+      host.endsWith(".local") ||
+      host === "::1" ||
+      /^127\./.test(host) ||
+      /^10\./.test(host) ||
+      /^192\.168\./.test(host) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(host)
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Calls an Ollama server. Local servers are called straight from the browser,
+ * because the website's server can't reach the user's computer. Public URLs go
+ * through /api/ollama.
+ */
+async function ollamaFetch(
+  baseUrl: string,
+  path: "chat/completions" | "models",
+  apiKey: string,
+  options: { payload?: unknown; stream?: boolean; signal?: AbortSignal } = {}
+): Promise<Response> {
+  if (!isLocalOllamaUrl(baseUrl)) {
+    return fetch("/api/ollama", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ baseUrl, path, apiKey, payload: options.payload, stream: options.stream }),
+      signal: options.signal,
+    });
+  }
+  const isPost = path === "chat/completions";
+  try {
+    return await fetch(`${baseUrl}/${path}`, {
+      method: isPost ? "POST" : "GET",
+      headers: {
+        ...(isPost ? { "Content-Type": "application/json" } : {}),
+        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+      },
+      body: isPost ? JSON.stringify(options.payload ?? {}) : undefined,
+      signal: options.signal,
+    });
+  } catch (error) {
+    if (options.signal?.aborted) throw error;
+    const origin = typeof window !== "undefined" ? window.location.origin : "this website";
+    throw new Error(
+      `Could not reach Ollama at ${baseUrl}. Check that Ollama is running and allows this website: ` +
+        `start it with OLLAMA_ORIGINS=${origin} (or OLLAMA_ORIGINS=*), then try again.`
+    );
+  }
+}
+
 export const chatWithOllama: ChatFunction = async (
   messages,
   config,
@@ -2483,7 +2475,6 @@ export const chatWithOllama: ChatFunction = async (
   }
   const baseUrl = (activeProfile.baseUrl?.endsWith('/') ? activeProfile.baseUrl.slice(0, -1) : activeProfile.baseUrl) || "http://localhost:11434/v1";
 
-  const requestId = options.requestId || generateRequestId();
   try {
     const systemMessages = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -2498,30 +2489,21 @@ export const chatWithOllama: ChatFunction = async (
       ? [{ role: "system", content: systemContent || options.systemPrompt || "" }, ...formattedMessages]
       : formattedMessages;
 
-    const response = await fetch("/api/ollama", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    const response = await ollamaFetch(baseUrl, "chat/completions", apiKey, {
+      payload: {
+        model: config.selectedModel,
+        messages: messagesWithSystem,
+        temperature: options.temperature,
+        max_tokens: options.maxTokens,
+        top_p: options.topP,
+        stream: false,
       },
-      body: JSON.stringify({
-        requestId,
-        endpoint: `${baseUrl}/chat/completions`,
-        apiKey: apiKey,
-        payload: {
-          model: config.selectedModel,
-          messages: messagesWithSystem,
-          temperature: options.temperature,
-          max_tokens: options.maxTokens,
-          top_p: options.topP,
-          stream: false,
-        },
-      }),
       signal: options.abortController?.signal,
     });
 
-    const data = await response.json();
+    const data = await readJson(response);
 
-    if (!response.ok) {
+    if (!response.ok || data.error) {
       return {
         error: data.error || `HTTP ${response.status}`,
       };
@@ -2531,9 +2513,6 @@ export const chatWithOllama: ChatFunction = async (
 
     return { content };
   } catch (error) {
-    if (options.abortController?.signal.aborted) {
-      await cancelRequest(requestId);
-    }
     return {
       error: error instanceof Error ? error.message : "Unknown error occurred",
     };
@@ -2552,7 +2531,6 @@ export const streamWithOllama = async (
     systemPrompt?: string;
     enableThinking?: boolean;
     abortController?: AbortController;
-    requestId?: string;
   },
   onChunk: StreamCallback
 ): Promise<void> => {
@@ -2573,7 +2551,6 @@ export const streamWithOllama = async (
   }
   const baseUrl = (activeProfile.baseUrl?.endsWith('/') ? activeProfile.baseUrl.slice(0, -1) : activeProfile.baseUrl) || "http://localhost:11434/v1";
 
-  const requestId = options.requestId || generateRequestId();
   try {
     const systemMessages = messages.filter(m => m.role === "system");
     const nonSystemMessages = messages.filter(m => m.role !== "system");
@@ -2588,30 +2565,20 @@ export const streamWithOllama = async (
       ? [{ role: "system", content: systemContent || options.systemPrompt || "" }, ...formattedMessages]
       : formattedMessages;
 
-    const response = await fetch("/api/ollama", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        requestId,
-        endpoint: `${baseUrl}/chat/completions`,
-        apiKey: apiKey,
-        payload: {
-          model: config.selectedModel,
-          messages: messagesWithSystem,
-          temperature: options.temperature,
-          max_tokens: options.maxTokens,
-          top_p: options.topP,
-          stream: true,
-        },
+    const response = await ollamaFetch(baseUrl, "chat/completions", apiKey, {
+      payload: {
+        model: config.selectedModel,
+        messages: messagesWithSystem,
+        temperature: options.temperature,
+        max_tokens: options.maxTokens,
+        top_p: options.topP,
         stream: true,
-      }),
-      signal: options.abortController?.signal,
+      },
+      signal: options.abortController?.signal, stream: true,
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await readJson(response);
       onChunk({ error: extractErrorMessage(errorData.error) });
       return;
     }
@@ -2664,9 +2631,6 @@ export const streamWithOllama = async (
       onChunk({ content: fullContent, done: true });
     }
   } catch (error) {
-    if (options.abortController?.signal.aborted) {
-      await cancelRequest(requestId);
-    }
     onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
   }
 };
@@ -2703,14 +2667,23 @@ export const fetchModelsFromProvider = async (
   }
 };
 
+/** Asks the server for a provider's model list. The key goes in the body, never the URL. */
+function postModelsRequest(provider: string, apiKey: string) {
+  return fetch("/api/models", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ provider, apiKey }),
+  });
+}
+
 const fetchStepFunModels = async (config: ProviderConfig): Promise<{ models: FetchedModel[]; error?: string }> => {
   if (!config.apiKey) {
     return { models: [], error: "API key is required" };
   }
   try {
-    const response = await fetch(`/api/models?provider=stepfun&apiKey=${encodeURIComponent(config.apiKey)}`);
-    const data = await response.json();
-    if (!response.ok) {
+    const response = await postModelsRequest("stepfun", config.apiKey);
+    const data = await readJson(response);
+    if (!response.ok || data.error) {
       return { models: [], error: extractErrorMessage(data.error) || `HTTP ${response.status}` };
     }
     return { models: data.models || [] };
@@ -2725,9 +2698,9 @@ const fetchGoogleAIStudioModels = async (config: ProviderConfig): Promise<{ mode
     return { models: [], error: "API key is required" };
   }
   try {
-    const response = await fetch(`/api/models?provider=google-ai-studio&apiKey=${encodeURIComponent(config.apiKey)}`);
-    const data = await response.json();
-    if (!response.ok) {
+    const response = await postModelsRequest("google-ai-studio", config.apiKey);
+    const data = await readJson(response);
+    if (!response.ok || data.error) {
       return { models: [], error: data.error || `HTTP ${response.status}` };
     }
     return { models: data.models || [] };
@@ -2745,9 +2718,9 @@ const fetchNvidiaNimModels = async (config: ProviderConfig): Promise<{ models: F
     return { models: [], error: "API key is required" };
   }
   try {
-    const response = await fetch(`/api/models?provider=nvidia-nim&apiKey=${encodeURIComponent(config.apiKey)}`);
-    const data = await response.json();
-    if (!response.ok) {
+    const response = await postModelsRequest("nvidia-nim", config.apiKey);
+    const data = await readJson(response);
+    if (!response.ok || data.error) {
       return { models: [], error: data.error || `HTTP ${response.status}` };
     }
     return { models: data.models || [] };
@@ -2761,9 +2734,9 @@ const fetchGroqModels = async (config: ProviderConfig): Promise<{ models: Fetche
     return { models: [], error: "API key is required" };
   }
   try {
-    const groqResponse = await fetch(`/api/models?provider=groq&apiKey=${encodeURIComponent(config.apiKey)}`);
-    const groqData = await groqResponse.json();
-    if (!groqResponse.ok) {
+    const groqResponse = await postModelsRequest("groq", config.apiKey);
+    const groqData = await readJson(groqResponse);
+    if (!groqResponse.ok || groqData.error) {
       return { models: [], error: groqData.error || `HTTP ${groqResponse.status}` };
     }
     return { models: groqData.models || [] };
@@ -2777,9 +2750,9 @@ const fetchOpenRouterModels = async (config: ProviderConfig): Promise<{ models: 
     return { models: [], error: "API key is required" };
   }
   try {
-    const response = await fetch(`/api/models?provider=open-router&apiKey=${encodeURIComponent(config.apiKey)}`);
-    const data = await response.json();
-    if (!response.ok) {
+    const response = await postModelsRequest("open-router", config.apiKey);
+    const data = await readJson(response);
+    if (!response.ok || data.error) {
       return { models: [], error: data.error || `HTTP ${response.status}` };
     }
     return { models: data.models || [] };
@@ -2791,8 +2764,8 @@ const fetchOpenRouterModels = async (config: ProviderConfig): Promise<{ models: 
 const fetchKoboldHordeModels = async (config: ProviderConfig): Promise<{ models: FetchedModel[]; error?: string }> => {
   try {
     const response = await fetch("https://aihorde.net/api/v2/status/models?type=text");
-    const data = await response.json();
-    if (!response.ok) {
+    const data = await readJson(response);
+    if (!response.ok || data.error) {
       return { models: [], error: `HTTP ${response.status}` };
     }
     const models: FetchedModel[] = data
@@ -2826,16 +2799,17 @@ const fetchCohereModels = async (config: ProviderConfig): Promise<{ models: Fetc
       }),
     });
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await readJson(response);
       return { models: [], error: extractErrorMessage(errorData.error) || `HTTP ${response.status}` };
     }
-    const data = await response.json();
+    const data = await readJson(response);
+    // Cohere lists models by name (no id field).
     const models: FetchedModel[] = (data.models || [])
-      .filter((model: any) => model.id && !model.id.includes("embed"))
-      .map((model: any) => ({
-        id: model.id,
+      .filter((model: { name?: string }) => model.name && !model.name.includes("embed"))
+      .map((model: { name: string }) => ({
+        id: model.name,
         provider: "cohere",
-        name: model.name || model.id,
+        name: model.name,
       }));
     return { models };
   } catch (error) {
@@ -2848,29 +2822,20 @@ const fetchOllamaModels = async (config: ProviderConfig): Promise<{ models: Fetc
     const apiKey = config.apiKey || "";
     const activeProfile = config.profiles.find(p => p.id === config.activeProfileId) || config.profiles[0];
     const baseUrl = (activeProfile?.baseUrl?.endsWith('/') ? activeProfile.baseUrl.slice(0, -1) : activeProfile?.baseUrl) || "http://localhost:11434/v1";
-    const response = await fetch(`/api/ollama`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        endpoint: `${baseUrl}/api/tags`,
-        apiKey: apiKey,
-      }),
-    });
-    if (!response.ok) {
-      const errorData = await response.json();
-      return { models: [], error: extractErrorMessage(errorData.error) || `HTTP ${response.status}` };
+    const response = await ollamaFetch(baseUrl, "models", apiKey);
+    const data = await readJson(response);
+    if (!response.ok || data.error) {
+      return { models: [], error: extractErrorMessage(data.error) || `HTTP ${response.status}` };
     }
-    const data = await response.json();
-    const models: FetchedModel[] = data.models?.map((model: any) => ({
-      id: model.name,
+    // OpenAI-style list: { data: [{ id }] }
+    const models: FetchedModel[] = (data.data || []).map((model: { id: string }) => ({
+      id: model.id,
       provider: "ollama",
-      name: model.name,
-    })) || [];
+      name: model.id,
+    }));
     return { models };
   } catch (error) {
-    return { models: [] };
+    return { models: [], error: error instanceof Error ? error.message : "Unknown error" };
   }
 };
 
@@ -2888,7 +2853,7 @@ providerRegistry.register({
   models: AVAILABLE_PROVIDERS.find((p) => p.id === "google-ai-studio")?.models || [],
   chat: chatWithGoogleAIStudio,
   stream: streamWithGoogleAIStudio,
-  connectionTest: testProviderConnection.bind(null, "google-ai-studio"),
+  connectionTest: (config) => pingProvider("google-ai-studio", config),
   modelFetch: fetchGoogleAIStudioModels,
 });
 
@@ -2905,7 +2870,7 @@ providerRegistry.register({
   models: AVAILABLE_PROVIDERS.find((p) => p.id === "google-vertex")?.models || [],
   chat: chatWithVertexAI,
   stream: streamWithVertexAI,
-  connectionTest: testProviderConnection.bind(null, "google-vertex"),
+  connectionTest: (config) => pingProvider("google-vertex", config),
 });
 
 providerRegistry.register({
@@ -2919,7 +2884,7 @@ providerRegistry.register({
   models: AVAILABLE_PROVIDERS.find((p) => p.id === "nvidia-nim")?.models || [],
   chat: chatWithNvidiaNIM,
   stream: streamWithNvidiaNIM,
-  connectionTest: testProviderConnection.bind(null, "nvidia-nim"),
+  connectionTest: (config) => pingProvider("nvidia-nim", config),
   modelFetch: fetchNvidiaNimModels,
 });
 
@@ -2934,7 +2899,7 @@ providerRegistry.register({
   models: AVAILABLE_PROVIDERS.find((p) => p.id === "groq")?.models || [],
   chat: chatWithGroq,
   stream: streamWithGroq,
-  connectionTest: testProviderConnection.bind(null, "groq"),
+  connectionTest: (config) => pingProvider("groq", config),
   modelFetch: fetchGroqModels,
 });
 
@@ -2949,7 +2914,7 @@ providerRegistry.register({
   models: AVAILABLE_PROVIDERS.find((p) => p.id === "open-router")?.models || [],
   chat: chatWithOpenRouter,
   stream: streamWithOpenRouter,
-  connectionTest: testProviderConnection.bind(null, "open-router"),
+  connectionTest: (config) => pingProvider("open-router", config),
   modelFetch: fetchOpenRouterModels,
 });
 
@@ -2964,7 +2929,7 @@ providerRegistry.register({
   models: AVAILABLE_PROVIDERS.find((p) => p.id === "kobold-horde")?.models || [],
   chat: chatWithKoboldHorde,
   stream: streamWithKoboldHorde,
-  connectionTest: testProviderConnection.bind(null, "kobold-horde"),
+  connectionTest: (config) => pingProvider("kobold-horde", config),
   modelFetch: fetchKoboldHordeModels,
 });
 
@@ -2979,7 +2944,7 @@ providerRegistry.register({
   models: AVAILABLE_PROVIDERS.find((p) => p.id === "cohere")?.models || [],
   chat: chatWithCohere,
   stream: streamWithCohere,
-  connectionTest: testProviderConnection.bind(null, "cohere"),
+  connectionTest: (config) => pingProvider("cohere", config),
   modelFetch: fetchCohereModels,
 });
 
@@ -2993,7 +2958,7 @@ providerRegistry.register({
   models: AVAILABLE_PROVIDERS.find((p) => p.id === "ollama")?.models || [],
   chat: chatWithOllama,
   stream: streamWithOllama,
-  connectionTest: testProviderConnection.bind(null, "ollama"),
+  connectionTest: (config) => pingProvider("ollama", config),
   modelFetch: fetchOllamaModels,
 });
 
@@ -3008,7 +2973,7 @@ providerRegistry.register({
   models: AVAILABLE_PROVIDERS.find((p) => p.id === "custom-openai")?.models || [],
   chat: chatWithCustomOpenAI,
   stream: streamWithCustomOpenAI,
-  connectionTest: testProviderConnection.bind(null, "custom-openai"),
+  connectionTest: (config) => pingProvider("custom-openai", config),
 });
 
 providerRegistry.register({

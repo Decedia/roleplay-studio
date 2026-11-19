@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractErrorMessage } from "@/lib/errorUtils";
+import { readJsonBody, readUpstreamError } from "@/lib/server/proxy";
 
-// Models API route - fetches available models from different providers
-export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams;
-  const provider = searchParams.get("provider");
-  const apiKey = searchParams.get("apiKey");
+const VERTEX_LOCATION = /^(global|[a-z]+-[a-z]+\d+)$/;
+const VERTEX_PROJECT_ID = /^[a-z][a-z0-9-]{4,61}[a-z0-9]$/;
+
+// Models API route - fetches available models from different providers.
+// POST so API keys travel in the body, not in the URL (URLs end up in logs).
+export async function POST(request: NextRequest) {
+  const body = await readJsonBody<Record<string, unknown>>(request);
+  const text = (key: string) => (typeof body?.[key] === "string" ? (body[key] as string) : null);
+  const provider = text("provider");
+  const apiKey = text("apiKey");
 
   if (!provider) {
     return NextResponse.json(
@@ -33,9 +39,8 @@ export async function GET(request: NextRequest) {
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
           return NextResponse.json(
-            { error: extractErrorMessage(errorData.error) || `HTTP ${response.status}` },
+            { error: await readUpstreamError(response) },
             { status: response.status }
           );
         }
@@ -60,15 +65,14 @@ export async function GET(request: NextRequest) {
           );
         }
 
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
-          { method: "GET" }
-        );
+        const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models", {
+          method: "GET",
+          headers: { "x-goog-api-key": apiKey },
+        });
 
         if (!response.ok) {
-          const errorData = await response.json();
           return NextResponse.json(
-            { error: extractErrorMessage(errorData.error) || `HTTP ${response.status}` },
+            { error: await readUpstreamError(response) },
             { status: response.status }
           );
         }
@@ -122,11 +126,11 @@ export async function GET(request: NextRequest) {
       }
 
       case "google-vertex": {
-        const projectId = searchParams.get("projectId");
-        const location = searchParams.get("location") || "global";
-        const accessToken = searchParams.get("accessToken");
+        const projectId = text("projectId");
+        const location = text("location") || "global";
+        const accessToken = text("accessToken");
 
-        if (!projectId || !accessToken) {
+        if (!projectId || !accessToken || !VERTEX_PROJECT_ID.test(projectId) || !VERTEX_LOCATION.test(location)) {
           // Fallback to static models if no credentials provided
           const vertexModels = [
             { id: "gemini-3.1-flash-lite-preview", name: "Gemini 3.1 Flash-Lite Preview", context: 1048576, max_tokens: 65536, supportsThinking: false },
@@ -254,9 +258,8 @@ export async function GET(request: NextRequest) {
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
           return NextResponse.json(
-            { error: extractErrorMessage(errorData.error) || `HTTP ${response.status}` },
+            { error: await readUpstreamError(response) },
             { status: response.status }
           );
         }
@@ -299,9 +302,8 @@ export async function GET(request: NextRequest) {
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
           return NextResponse.json(
-            { error: extractErrorMessage(errorData.error) || `HTTP ${response.status}` },
+            { error: await readUpstreamError(response) },
             { status: response.status }
           );
         }
@@ -374,9 +376,8 @@ export async function GET(request: NextRequest) {
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
           return NextResponse.json(
-            { error: extractErrorMessage(errorData.error) || `HTTP ${response.status}` },
+            { error: await readUpstreamError(response) },
             { status: response.status }
           );
         }

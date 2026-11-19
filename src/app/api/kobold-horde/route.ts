@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractErrorMessage } from "@/lib/errorUtils";
-import { abortControllerStore } from "@/lib/abortControllerStore";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { apiKey, model, prompt, params, stream, requestId } = body;
+    const { apiKey, model, prompt, params, stream } = body;
 
     if (!apiKey) {
       return NextResponse.json(
@@ -21,10 +20,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const controller = new AbortController();
-    if (requestId && typeof requestId === "string") {
-      abortControllerStore.set(requestId, controller);
-    }
+    // Aborted when the browser disconnects (Stop button).
+    const signal = request.signal;
 
     const baseUrl = "https://aihorde.net/api";
 
@@ -38,12 +35,12 @@ export async function POST(request: NextRequest) {
         prompt,
         params: {
           ...params,
-          max_context_length: params.max_context_length || 8192,
+          max_context_length: params?.max_context_length || 8192,
         },
         models: model ? [model] : undefined,
         disable_badwords: true,
       }),
-      signal: controller.signal,
+      signal,
     });
 
     if (!submitResponse.ok) {
@@ -67,60 +64,59 @@ export async function POST(request: NextRequest) {
     const maxPolls = 60;
     const pollInterval = 2000;
 
-    try {
-      for (let pollCount = 0; pollCount < maxPolls; pollCount++) {
-        if (controller.signal.aborted) {
+    for (let pollCount = 0; pollCount < maxPolls; pollCount++) {
+      if (signal.aborted) {
+        // Free our place in the Horde queue.
+        await fetch(`${baseUrl}/v2/generate/text/status/${requestIdFromHorde}`, {
+          method: "DELETE",
+          headers: { apikey: apiKey },
+        }).catch(() => {});
+        return NextResponse.json(
+          { error: "Generation cancelled" },
+          { status: 499 }
+        );
+      }
+
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+      try {
+        const statusResponse = await fetch(
+          `${baseUrl}/v2/generate/text/status/${requestIdFromHorde}`,
+          {
+            headers: { apikey: apiKey },
+          }
+        );
+
+        if (!statusResponse.ok) continue;
+
+        const statusData = await statusResponse.json();
+
+        if (statusData.faulted) {
           return NextResponse.json(
-            { error: "Generation cancelled" },
-            { status: 499 }
+            { error: "Generation failed" },
+            { status: 500 }
           );
         }
 
-        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        if (statusData.done) {
+          const generations = statusData.generations || [];
+          if (generations.length > 0) {
+            const content = generations[0].text || "";
 
-        try {
-          const statusResponse = await fetch(
-            `${baseUrl}/v2/generate/text/status/${requestIdFromHorde}`,
-            {
-              headers: { apikey: apiKey },
+            if (stream) {
+              return NextResponse.json({ content, done: true });
+            } else {
+              return NextResponse.json({ content });
             }
-          );
-
-          if (!statusResponse.ok) continue;
-
-          const statusData = await statusResponse.json();
-
-          if (statusData.faulted) {
+          } else {
             return NextResponse.json(
-              { error: "Generation failed" },
+              { error: "No generations returned" },
               { status: 500 }
             );
           }
-
-          if (statusData.done) {
-            const generations = statusData.generations || [];
-            if (generations.length > 0) {
-              const content = generations[0].text || "";
-
-              if (stream) {
-                return NextResponse.json({ content, done: true });
-              } else {
-                return NextResponse.json({ content });
-              }
-            } else {
-              return NextResponse.json(
-                { error: "No generations returned" },
-                { status: 500 }
-              );
-            }
-          }
-        } catch {
-          continue;
         }
-      }
-    } finally {
-      if (requestId && typeof requestId === "string") {
-        abortControllerStore.delete(requestId);
+      } catch {
+        continue;
       }
     }
 
