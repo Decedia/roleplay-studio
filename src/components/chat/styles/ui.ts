@@ -12,10 +12,10 @@ export const layout = {
   main: "flex flex-col h-screen bg-ink",
   
   /** Main content area - with top padding for fixed header */
-  content: "flex-1 overflow-y-auto pt-20",
+  content: "flex-1 overflow-y-auto pt-20 lg:pl-[264px]",
   
   /** Content container with max-width and padding */
-  contentContainer: "max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6",
+  contentContainer: "max-w-4xl mx-auto px-3 sm:px-4 pt-4 sm:pt-6 pb-24 lg:pb-6",
   
   /** Content container with more bottom padding for input views */
   contentContainerWithInput: "max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-28 sm:pb-32",
@@ -403,14 +403,14 @@ export const loading = {
 
 export const notifications = {
   /** Error banner */
-  error: "fixed top-[73px] left-0 right-0 z-40 px-4 py-3",
+  error: "fixed top-[73px] left-0 lg:left-[264px] right-0 z-40 px-4 py-3",
   errorInner: "bg-zinc-800/95 border border-zinc-700 rounded-lg px-4 py-3 text-zinc-200 shadow-xl backdrop-blur-sm border-l-4 border-l-red-500 flex items-start gap-3",
   errorContent: "flex-1 overflow-y-auto whitespace-pre-wrap",
   errorActions: "flex items-center gap-1.5 flex-shrink-0",
   
   /** Toast notification */
-toast: "fixed bottom-32 left-0 right-0 z-[5000] px-4 py-3",
-toastInner: "bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white shadow-xl backdrop-blur-sm flex items-center justify-between",
+toast: "fixed bottom-32 left-0 lg:left-[264px] right-0 z-[5000] px-4 py-3 pointer-events-none",
+toastInner: "pointer-events-auto bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white shadow-xl backdrop-blur-sm flex items-center justify-between",
 toastContent: "flex items-center gap-3",
   
   /** Info notification */
