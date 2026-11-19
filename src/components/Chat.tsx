@@ -632,6 +632,32 @@ function getThoughtSignature(modelId: string, provider: LLMProviderType): { sign
 
 // Settings Modal Component with collapsible model dropdown
 
+type InputMode = "say" | "do" | "narrate";
+
+const INPUT_MODES: { id: InputMode; label: string; hint: string }[] = [
+  { id: "say", label: "Say", hint: "Send as written" },
+  { id: "do", label: "Do", hint: "Send as an action: *like this*" },
+  { id: "narrate", label: "Narrate", hint: "Send as a scene note: [Narration: …]" },
+];
+
+/** Wraps the typed text for the chosen message type. Text already wrapped is left alone. */
+function applyInputMode(text: string, mode: InputMode): string {
+  if (mode === "do") {
+    return text
+      .split("\n")
+      .map((line) => {
+        const t = line.trim();
+        if (!t || (t.startsWith("*") && t.endsWith("*"))) return line;
+        return `*${t}*`;
+      })
+      .join("\n");
+  }
+  if (mode === "narrate") {
+    return /^\[Narration:/i.test(text) ? text : `[Narration: ${text}]`;
+  }
+  return text;
+}
+
 export default function Chat() {
   // State
   const [personas, setPersonas] = useState<Persona[]>([]);
@@ -659,6 +685,8 @@ export default function Chat() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showHeaderActions, setShowHeaderActions] = useState(false);
   const [showUtilityPanel, setShowUtilityPanel] = useState(false);
+  const [inputMode, setInputMode] = useState<InputMode>("say");
+  const [showScenePanel, setShowScenePanel] = useState(false);
   const [showUtilitiesModal, setShowUtilitiesModal] = useState(false);
   const [utilityPanelTab, setUtilityPanelTab] = useState<'tags' | 'summarization' | 'debug' | 'logs'>('tags');
   const [apiDebugPayload, setApiDebugPayload] = useState<string | null>(null);
@@ -2458,8 +2486,9 @@ if (modelsResult.models.length > 0) {
       return;
     }
 
-    const userMessage = input.trim();
+    const userMessage = applyInputMode(input.trim(), inputMode);
     setInput("");
+    setInputMode("say");
     setError(null);
 
     // Lock the current AI alternative before sending new user message
@@ -3831,7 +3860,7 @@ if (modelsResult.models.length > 0) {
   return (
     <div className={ui.layout.main}>
       {/* Header - Fixed on top for all views on mobile */}
-      <header className={`flex-shrink-0 z-50 fixed top-0 left-0 right-0 bg-black/80 backdrop-blur-xl border-b border-zinc-800/50`}>
+      <header className={`flex-shrink-0 z-50 fixed top-0 left-0 right-0 bg-ink/90 backdrop-blur-xl border-b border-line`}>
         <div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 overflow-hidden">
@@ -3855,9 +3884,9 @@ if (modelsResult.models.length > 0) {
                     </svg>
                   </button>
               )}
-              <div className="w-8 sm:w-10 h-8 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+              <div className="w-8 sm:w-10 h-8 sm:h-10 rounded-lg sm:rounded-xl bg-ember text-ink flex items-center justify-center flex-shrink-0">
                 <svg
-                  className="w-5 sm:w-6 h-5 sm:h-6 text-white"
+                  className="w-5 sm:w-6 h-5 sm:h-6 text-ink"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -3871,18 +3900,18 @@ if (modelsResult.models.length > 0) {
                 </svg>
               </div>
               <div className="min-w-0 flex-1 overflow-hidden">
-                <h1 className="text-lg sm:text-xl font-semibold text-white truncate">
+                <h1 className={`text-lg sm:text-xl font-semibold text-parchment truncate ${view === "chat" ? "font-story" : ""}`}>
                   {view === "home"
                     ? "Roleplay Studio"
                     : view === "chat" && selectedPersona && selectedCharacter
-                    ? `${selectedPersona.name} × ${selectedCharacter.name}`
+                    ? selectedCharacter.name
                     : view === "conversations" && selectedPersona && selectedCharacter
                     ? `${selectedPersona.name} × ${selectedCharacter.name}`
                     : view === "characters" && selectedPersona
                     ? `${selectedPersona.name} - Select Character"`
                     : "Roleplay Studio"}
                 </h1>
-                <p className="text-sm text-zinc-500 truncate">
+                <p className="text-sm text-parchment-muted truncate">
                   {view === "home"
                     ? "Choose what you want to do"
                     : view === "personas"
@@ -3893,13 +3922,21 @@ if (modelsResult.models.length > 0) {
                     ? "Select or start a conversation"
                     : view === "generator"
                     ? `~${generatorContextTokens.toLocaleString()} context tokens • ${AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || 'AI'}`
-                    : `~${contextTokens.toLocaleString()} context tokens • ${AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || 'AI'}`}
+                    : `as ${selectedPersona?.name ?? "you"} · ~${contextTokens.toLocaleString()} tokens`}
                 </p>
               </div>
             </div>
             
             {/* Header Actions Burger Menu - Settings, Character Card, Utility */}
-            <div className="relative">
+            <div className="relative flex items-center gap-1">
+              {view === "chat" && currentConversation && (
+                <button
+                  onClick={() => setShowScenePanel(true)}
+                  className="xl:hidden h-9 px-3 rounded-lg border border-line-strong text-sm text-parchment hover:bg-ink-hover transition-colors"
+                >
+                  Scene
+                </button>
+              )}
               <button
                 onClick={() => setShowHeaderActions(!showHeaderActions)}
                 className="p-1.5 sm:p-2 hover:bg-zinc-800 rounded-lg transition-colors"
@@ -5124,31 +5161,35 @@ if (modelsResult.models.length > 0) {
 
           {/* Chat View */}
           {view === "chat" && currentConversation && (
-            <div className="pb-32">
-              {currentConversation.messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mb-6">
-                    <span className="text-2xl text-white font-semibold">
-                      {selectedCharacter?.name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <h2 className="text-2xl font-semibold text-white mb-2">
-                    Chat with {selectedCharacter?.name}
-                  </h2>
-                  <p className="text-zinc-500 max-w-md">
-                    {selectedCharacter?.description}
+            <div className="pb-48 xl:pr-[320px]">
+              <div className="mx-auto max-w-[680px] px-1 sm:px-4">
+              {selectedCharacter?.scenario?.trim() && (
+                <div className="mb-8 rounded-2xl border border-line bg-ink-raised px-5 py-4">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ember">Scene</div>
+                  <p className="mt-1.5 font-story text-[15px] italic leading-relaxed text-parchment-soft whitespace-pre-wrap line-clamp-4">
+                    {selectedPersona ? replaceMacros(selectedCharacter.scenario, selectedPersona.name, selectedCharacter.name) : selectedCharacter.scenario}
                   </p>
                 </div>
+              )}
+              {currentConversation.messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center min-h-[360px] text-center">
+                  <h2 className="font-story text-3xl font-semibold text-parchment mb-2">
+                    {selectedCharacter?.name}
+                  </h2>
+                  <p className="text-parchment-muted max-w-md">
+                    {selectedCharacter?.description}
+                  </p>
+                  <p className="mt-6 text-sm text-parchment-muted">Write the first line below.</p>
+                </div>
               ) : (
-                <div className="space-y-6">
-                  {/* Load More button when there are hidden messages */}
+                <div className="space-y-8">
                   {currentConversation.messages.filter(m => !m.isContinue).length > visibleMessageCount && (
                     <div className="flex justify-center">
                       <button
                         onClick={() => setVisibleMessageCount(prev => prev + 20)}
-                        className="px-4 py-2 bg-zinc-800 text-zinc-400 rounded-lg hover:bg-zinc-700 transition-colors text-sm"
+                        className="px-4 py-2 rounded-full border border-line-strong text-parchment-muted hover:text-parchment hover:bg-ink-hover transition-colors text-sm"
                       >
-                        Load More ({currentConversation.messages.filter(m => !m.isContinue).length - visibleMessageCount} hidden)
+                        Show earlier ({currentConversation.messages.filter(m => !m.isContinue).length - visibleMessageCount} hidden)
                       </button>
                     </div>
                   )}
@@ -5157,285 +5198,203 @@ if (modelsResult.models.length > 0) {
                     .filter(({ message }) => !message.isContinue)
                     .slice(-visibleMessageCount)
                     .map(({ message, originalIndex }) => {
-                    // Get thinking content from content (wrapped in <think> tags)
                     const thinkContent = message.role === "assistant"
                       ? extractThinkContent(message.content)
                       : null;
-                    // Apply macro replacement for {{user}} -> persona name
                     const rawContent = message.role === "assistant"
                       ? removeThinkTags(message.content)
                       : message.content;
                     const displayContent = selectedPersona && selectedCharacter
                       ? replaceMacros(rawContent, selectedPersona.name, selectedCharacter.name)
                       : rawContent;
-                    
+                    const narration = /^\[Narration:\s*([\s\S]*)\]$/i.exec(displayContent.trim());
+
+                    const isUser = message.role === "user";
                     const isEditing = editingMessageIndex === originalIndex;
                     const isLastMessage = originalIndex === currentConversation.messages.length - 1;
                     const isLastAssistantMessage = message.role === "assistant" && isLastMessage;
 
+                    const alternatives = message.alternatives && message.alternatives.length > 0
+                      ? message.alternatives
+                      : [message.content];
+                    const altIndex = selectedAlternativeIndex || 0;
+                    const showAlternatives = isLastAssistantMessage && canSelectAlternatives && alternatives.length > 1;
+                    const pickAlternative = (newIndex: number) => {
+                      setSelectedAlternativeIndex(newIndex);
+                      const updatedMessage: Message = {
+                        ...message,
+                        content: alternatives[newIndex] ?? message.content,
+                        alternatives: alternatives.length > 1 ? alternatives : undefined,
+                        selectedAlternativeIndex: alternatives.length > 1 ? newIndex : undefined,
+                      };
+                      const updatedMessages = [...currentConversation.messages];
+                      updatedMessages[originalIndex] = updatedMessage;
+                      updateConversationMessages(updatedMessages);
+                    };
+                    const linkClass = "py-1.5 text-parchment-muted hover:text-parchment transition-colors disabled:opacity-40";
+
                     return (
-                      <div
+                      <section
                         key={originalIndex}
-                        className={`flex gap-4 ${
-                          message.role === "user" ? "justify-end" : "justify-start"
-                        }`}
+                        className={`group flex flex-col gap-1.5 ${isUser && !narration ? "pl-4 sm:pl-5 border-l-2 border-line-strong" : ""}`}
                       >
-                        {message.role === "assistant" && (
-                          selectedCharacter?.avatar ? (
-                            <img 
-                              src={selectedCharacter.avatar} 
-                              alt={selectedCharacter.name} 
-                              className="w-8 h-8 rounded-lg object-cover"
+                        {narration && !isEditing ? (
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-parchment-muted">Narration</div>
+                        ) : (
+                          <div className={`text-xs font-semibold uppercase tracking-[0.1em] ${isUser ? "text-speaker-user" : "text-speaker-char"}`}>
+                            {isUser ? `${selectedPersona?.name ?? "You"} · you` : selectedCharacter?.name}
+                          </div>
+                        )}
+
+                        {isEditing ? (
+                          <div className="space-y-2">
+                            <textarea
+                              value={editingMessageContent}
+                              onChange={(e) => setEditingMessageContent(e.target.value)}
+                              className="w-full bg-ink-raised text-parchment font-story text-[17px] leading-relaxed rounded-xl px-4 py-3 resize-y focus:outline-none focus:ring-2 focus:ring-ember border border-line-strong"
+                              rows={4}
+                              autoFocus
                             />
-                          ) : (
-                            <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                              <span className="text-sm text-white font-semibold">
-                                {selectedCharacter?.name.charAt(0).toUpperCase()}
-                              </span>
+                            <div className="flex gap-2 justify-end">
+                              <button onClick={handleCancelEdit} className="px-3 py-1.5 text-sm rounded-full border border-line-strong text-parchment hover:bg-ink-hover transition-colors">
+                                Cancel
+                              </button>
+                              <button onClick={() => handleSaveEdit(originalIndex, false)} className="px-3 py-1.5 text-sm rounded-full bg-ink-hover text-parchment hover:bg-line-strong transition-colors">
+                                Save
+                              </button>
+                              {isUser && (
+                                <button onClick={() => handleRetry()} className="px-3 py-1.5 text-sm rounded-full bg-ember text-ink font-semibold hover:bg-ember-soft transition-colors">
+                                  Save & retry
+                                </button>
+                              )}
                             </div>
-                          )
-                        )}
-                        <div className={`max-w-[80%] ${message.role === "user" ? "order-first" : ""}`}>
-                          <div
-                            className={`rounded-2xl px-4 py-3 ${
-                              message.role === "user"
-                                ? "bg-zinc-700 text-white"
-                                : "bg-zinc-800 text-zinc-100"
-                            }`}
-                          >
-                            {isEditing ? (
-                              <div className="space-y-2">
-                                <textarea
-                                  value={editingMessageContent}
-                                  onChange={(e) => setEditingMessageContent(e.target.value)}
-                                  className="w-full bg-zinc-900 text-white rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700"
-                                  rows={3}
-                                  autoFocus
-                                />
-                                <div className="flex gap-2 justify-end">
-                                  <button
-                                    onClick={handleCancelEdit}
-                                    className="px-3 py-1 text-sm bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
-                                  >
-                                    Cancel
-                                  </button>
-                                  <button
-                                    onClick={() => handleSaveEdit(originalIndex, false)}
-                                    className="px-3 py-1 text-sm bg-zinc-600 text-white rounded-lg hover:bg-zinc-500 transition-colors"
-                                  >
-                                    Save
-                                  </button>
-                                  {message.role === "user" && (
-                                    <button
-                                      onClick={() => handleRetry()}
-                                      className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                                    >
-                                      Save & Retry
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            ) : (
-                              <>
-                                {thinkContent && (
-                                  <ThinkingSection 
-                                    content={selectedPersona && selectedCharacter 
-                                      ? replaceMacros(thinkContent, selectedPersona.name, selectedCharacter.name)
-                                      : thinkContent}
-                                    signature={message.signature}
-                                    modelName={message.modelName}
-                                  />
-                                )}
-                                <FormattedText content={displayContent} />
-                                
-                                 {/* Inline Tags Display */}
-                                {(() => {
-                                  const tags = extractAllTags(message.content);
-                                  if (tags.length === 0) return null;
-                                  
-                                  return (
-                                    <div className="mt-3 pt-3 border-t border-zinc-700/50 space-y-2">
-                                      {tags.map((tag, idx) => (
-                                        <div key={idx} className="text-xs">
-                                          <div className="inline-block px-2 py-1 bg-purple-900/50 text-purple-300 rounded-md mb-1 border border-purple-800">
-                                            &lt;{tag.tagName}&gt;
-                                          </div>
-                                          <div className="text-zinc-300 ml-2 whitespace-pre-wrap text-xs">
-                                            {tag.content}
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  );
-                                })()}
-                                
-                                {/* Alternative selection navigation */}
-                                {isLastAssistantMessage && canSelectAlternatives && (() => {
-                                  const alternatives = message.alternatives && message.alternatives.length > 0
-                                    ? message.alternatives
-                                    : [message.content];
-                                  const currentIndex = selectedAlternativeIndex || 0;
-                                  const totalCount = alternatives.length;
-                                  const hasMultiple = totalCount > 1;
-                                  
-                                  return (
-                                    <div className="flex items-center gap-2 mt-2">
-                                      <button
-                                        onClick={() => {
-                                          const newIndex = Math.max(0, currentIndex - 1);
-                                          setSelectedAlternativeIndex(newIndex);
-                                          const updatedMessage: Message = {
-                                            ...message,
-                                            content: alternatives[newIndex] ?? message.content,
-                                            alternatives: alternatives.length > 1 ? alternatives : undefined,
-                                            selectedAlternativeIndex: alternatives.length > 1 ? newIndex : undefined,
-                                          };
-                                          const updatedMessages = [...currentConversation.messages];
-                                          updatedMessages[originalIndex] = updatedMessage;
-                                          updateConversationMessages(updatedMessages);
-                                        }}
-                                        disabled={currentIndex === 0 || isLoading}
-                                        className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors disabled:opacity-50"
-                                        title="Previous alternative"
-                                      >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                        </svg>
-                                      </button>
-                                      <span className="text-xs text-zinc-500 min-w-[3rem] text-center">
-                                        {currentIndex + 1} / {totalCount}
-                                      </span>
-                                      <button
-                                        onClick={() => {
-                                          const newIndex = Math.min(totalCount - 1, currentIndex + 1);
-                                          setSelectedAlternativeIndex(newIndex);
-                                          const updatedMessage: Message = {
-                                            ...message,
-                                            content: alternatives[newIndex] ?? message.content,
-                                            alternatives: alternatives.length > 1 ? alternatives : undefined,
-                                            selectedAlternativeIndex: alternatives.length > 1 ? newIndex : undefined,
-                                          };
-                                          const updatedMessages = [...currentConversation.messages];
-                                          updatedMessages[originalIndex] = updatedMessage;
-                                          updateConversationMessages(updatedMessages);
-                                        }}
-                                        disabled={currentIndex >= totalCount - 1 || isLoading}
-                                        className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors disabled:opacity-50"
-                                        title="Next alternative"
-                                      >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                        </svg>
-                                      </button>
-                                      <button
-                                        onClick={() => lockSelectedAlternative()}
-                                        disabled={isLoading}
-                                        className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
-                                        title="Select this response"
-                                      >
-                                        Select
-                                      </button>
-                                    </div>
-                                  );
-                                })()}
-                              </>
+                          </div>
+                        ) : (
+                          <>
+                            {thinkContent && (
+                              <ThinkingSection
+                                content={selectedPersona && selectedCharacter
+                                  ? replaceMacros(thinkContent, selectedPersona.name, selectedCharacter.name)
+                                  : thinkContent}
+                                signature={message.signature}
+                                modelName={message.modelName}
+                              />
                             )}
-                          </div>
-                          {/* Message actions - edit, delete for all messages, retry/continue only on last assistant message */}
-                          {!isEditing && (message.role === "user" || isLastMessage || (message.role === "assistant")) && (
-                            <div className={`flex gap-1 mt-1 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-                              {/* Edit button */}
-                              <button
-                                onClick={() => handleStartEditMessage(originalIndex)}
-                                className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors"
-                                title="Edit message"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                              </button>
-                              {/* Delete button */}
-                              <button
-                                onClick={() => handleDeleteMessage(originalIndex)}
-                                className="p-1 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded transition-colors"
-                                title="Delete message"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
-                              {/* Retry button - only for last assistant message */}
-                              {isLastAssistantMessage && (
-                                <button
-                    onClick={() => handleRetry()}
-                                  disabled={isLoading}
-                                  className="p-1 text-zinc-500 hover:text-blue-400 hover:bg-zinc-800 rounded transition-colors disabled:opacity-50"
-                                  title="Regenerate response"
-                                >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                  </svg>
-                                </button>
-                              )}
-                              {/* Continue button - for continuing incomplete responses */}
-                              {isLastAssistantMessage && (
-                                <button
-                                  onClick={handleContinue}
-                                  disabled={isLoading}
-                                  className="p-1 text-zinc-500 hover:text-green-400 hover:bg-zinc-800 rounded transition-colors disabled:opacity-50"
-                                  title="Continue response"
-                                >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                                  </svg>
-                                </button>
+                            <div className={`font-story leading-[1.75] ${narration ? "text-[16px] italic text-parchment-soft" : "text-[17px] sm:text-[18px]"}`}>
+                              {narration ? (
+                                <span className="whitespace-pre-wrap">{narration[1]}</span>
+                              ) : (
+                                <FormattedText content={displayContent} variant="story" />
                               )}
                             </div>
-                          )}
-                        </div>
-                        {message.role === "user" && (
-                          <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-                            <span className="text-sm text-white font-semibold">
-                              {selectedPersona?.name.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
+
+                            {(() => {
+                              const tags = extractAllTags(message.content);
+                              if (tags.length === 0) return null;
+                              return (
+                                <div className="mt-2 pt-3 border-t border-line space-y-2">
+                                  {tags.map((tag, tagIdx) => (
+                                    <div key={tagIdx} className="text-xs">
+                                      <div className="inline-block px-2 py-0.5 rounded-md mb-1 border border-line-strong text-parchment-muted">
+                                        &lt;{tag.tagName}&gt;
+                                      </div>
+                                      <div className="text-parchment-soft ml-2 whitespace-pre-wrap">{tag.content}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            })()}
+
+                            <div
+                              className={`flex flex-wrap items-center gap-x-4 gap-y-1 text-xs ${
+                                isLastMessage ? "" : "[@media(hover:hover)]:opacity-0 group-hover:opacity-100 focus-within:opacity-100"
+                              } transition-opacity`}
+                            >
+                              {showAlternatives && (
+                                <span className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => pickAlternative(Math.max(0, altIndex - 1))}
+                                    disabled={altIndex === 0 || isLoading}
+                                    className={`${linkClass} px-1.5`}
+                                    aria-label="Previous reply"
+                                  >
+                                    ‹
+                                  </button>
+                                  <span className="text-parchment-muted tabular-nums">{altIndex + 1} of {alternatives.length}</span>
+                                  <button
+                                    onClick={() => pickAlternative(Math.min(alternatives.length - 1, altIndex + 1))}
+                                    disabled={altIndex >= alternatives.length - 1 || isLoading}
+                                    className={`${linkClass} px-1.5`}
+                                    aria-label="Next reply"
+                                  >
+                                    ›
+                                  </button>
+                                  <button
+                                    onClick={() => lockSelectedAlternative()}
+                                    disabled={isLoading}
+                                    className="ml-1 py-1.5 text-ember hover:text-ember-soft transition-colors disabled:opacity-40"
+                                    title="Keep this reply and drop the others"
+                                  >
+                                    Keep
+                                  </button>
+                                </span>
+                              )}
+                              {isLastAssistantMessage && (
+                                <button onClick={() => handleRetry()} disabled={isLoading} className={linkClass}>
+                                  Rewrite
+                                </button>
+                              )}
+                              {isLastAssistantMessage && (
+                                <button onClick={handleContinue} disabled={isLoading} className={linkClass}>
+                                  Continue
+                                </button>
+                              )}
+                              <button onClick={() => handleStartEditMessage(originalIndex)} className={linkClass}>
+                                Edit
+                              </button>
+                              <button onClick={() => handleDeleteMessage(originalIndex)} className="py-1.5 text-parchment-muted hover:text-red-400 transition-colors">
+                                Delete
+                              </button>
+                            </div>
+                          </>
                         )}
-                      </div>
+                      </section>
                     );
                   })}
-                  {isLoading && !streamingContent && (
-                    <div className="flex gap-4 justify-start">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                        <span className="text-sm text-white font-semibold">
-                          {selectedCharacter?.name.charAt(0).toUpperCase()}
-                        </span>
+                  {isLoading && (
+                    <section className="flex flex-col gap-1.5">
+                      <div className="text-xs font-semibold uppercase tracking-[0.1em] text-speaker-char">
+                        {selectedCharacter?.name}
                       </div>
-                      <div className="bg-zinc-800 rounded-2xl px-4 py-3">
-                        <div className="flex gap-1">
-                          <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                          <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                          <div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                      {streamingContent ? (
+                        <div className="font-story text-[17px] sm:text-[18px] leading-[1.75]">
+                          {streamingThinking && (
+                            <div className="mb-2 text-sm italic text-parchment-muted whitespace-pre-wrap line-clamp-3">
+                              {selectedPersona && selectedCharacter ? replaceMacros(streamingThinking, selectedPersona.name, selectedCharacter.name) : streamingThinking}
+                            </div>
+                          )}
+                          <FormattedText
+                            content={selectedPersona && selectedCharacter ? replaceMacros(streamingContent, selectedPersona.name, selectedCharacter.name) : streamingContent}
+                            variant="story"
+                          />
+                          <span className="inline-block w-1.5 h-4 ml-1 align-middle bg-ember animate-pulse" />
                         </div>
-                      </div>
-                    </div>
-                  )}
-                  {/* Streaming message */}
-                  {isLoading && streamingContent && (
-                    <div className="flex gap-4 justify-start">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                        <span className="text-sm text-white font-semibold">
-                          {selectedCharacter?.name.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                      <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-zinc-800 text-zinc-100">
-                        <FormattedText content={streamingThinking && selectedPersona && selectedCharacter ? `[Thinking: ${replaceMacros(streamingThinking, selectedPersona.name, selectedCharacter.name)}]\n\n${selectedPersona && selectedCharacter ? replaceMacros(streamingContent, selectedPersona.name, selectedCharacter.name) : streamingContent}` : (selectedPersona && selectedCharacter ? replaceMacros(streamingContent, selectedPersona.name, selectedCharacter.name) : streamingContent)} />
-                        <span className="inline-block w-2 h-4 ml-1 bg-zinc-400 animate-pulse" />
-                      </div>
-                    </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-sm italic text-parchment-muted font-story">
+                          {streamingThinking ? "thinking" : "writing"}
+                          <span className="flex gap-1">
+                            <span className="w-1.5 h-1.5 bg-parchment-muted rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                            <span className="w-1.5 h-1.5 bg-parchment-muted rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                            <span className="w-1.5 h-1.5 bg-parchment-muted rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                          </span>
+                        </div>
+                      )}
+                    </section>
                   )}
                   <div ref={messagesEndRef} />
                 </div>
               )}
+              </div>
             </div>
           )}
         </div>
@@ -6121,7 +6080,7 @@ if (modelsResult.models.length > 0) {
       {view === "chat" && currentConversation && showScrollToBottom && (
         <button
           onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })}
-          className="fixed bottom-36 sm:bottom-40 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2 px-4 py-2 bg-zinc-800 text-white rounded-full shadow-lg hover:bg-zinc-700 transition-all opacity-90 hover:opacity-100"
+          className="fixed bottom-40 sm:bottom-44 left-1/2 xl:left-[calc(50%-160px)] -translate-x-1/2 z-[60] flex items-center gap-2 px-4 py-2 bg-ink-hover border border-line-strong text-parchment rounded-full shadow-lg hover:bg-line-strong transition-all"
           title="Scroll to bottom"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -6132,80 +6091,165 @@ if (modelsResult.models.length > 0) {
       )}
 
 
-      {view === "chat" && currentConversation && (
-        <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-800 bg-black/80 backdrop-blur-xl z-50">
-          <div className="max-w-4xl mx-auto px-4 py-4">
-            <form onSubmit={handleSubmit}>
-              <div className="flex items-center gap-3 bg-zinc-900 rounded-2xl border border-zinc-800 p-2">
-                <div className="flex-1 relative">
-                  <textarea
-                    ref={inputRef}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={`Message as ${selectedPersona?.name}...`}
-                    rows={1}
-                    className="w-full bg-transparent text-white placeholder-zinc-500 px-3 py-2 resize-none focus:outline-none"
-                    style={{ minHeight: "40px", maxHeight: "60px" }}
-                    disabled={isLoading}
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl hover:from-blue-500 hover:to-cyan-500 transition-all shadow-lg shadow-blue-600/20"
-                  title={input.trim() ? "Send message" : "Resend last message"}
-                >
-                  {isLoading ? (
-                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                  ) : (
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+      {view === "chat" && currentConversation && selectedCharacter && (() => {
+        const modelId = globalSettings.modelId || getActiveProfile(activeProvider)?.selectedModel || "";
+        const providerName = AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || "AI";
+        const panelBody = (
+          <div className="flex flex-col gap-5 h-full overflow-y-auto px-5 pb-6">
+            <div className="aspect-[4/5] max-h-[240px] w-full rounded-2xl border border-line bg-ink-raised overflow-hidden flex items-center justify-center">
+              {selectedCharacter.avatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={selectedCharacter.avatar} alt={selectedCharacter.name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="font-story text-6xl text-parchment-muted">{selectedCharacter.name.charAt(0).toUpperCase()}</span>
+              )}
+            </div>
+            <div>
+              <h2 className="font-story text-2xl font-semibold text-parchment">{selectedCharacter.name}</h2>
+              {selectedCharacter.description && (
+                <p className="mt-1 text-[13px] leading-relaxed text-parchment-muted line-clamp-4 whitespace-pre-wrap">{selectedCharacter.description}</p>
+              )}
+              <button
+                onClick={() => { setShowCharacterCardModal(true); setShowScenePanel(false); }}
+                className="mt-2 py-1.5 text-xs text-ember hover:text-ember-soft transition-colors"
+              >
+                Open character card
+              </button>
+            </div>
+            <div className="flex flex-col gap-2">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-parchment-muted">Story so far</div>
+              {currentConversation.summaryMemory?.trim() ? (
+                <p className="text-[13px] leading-relaxed text-parchment-soft whitespace-pre-wrap line-clamp-[10]">{currentConversation.summaryMemory}</p>
+              ) : (
+                <p className="text-[13px] leading-relaxed text-parchment-muted">No summary yet. Make one from Utilities, Summarize.</p>
+              )}
+              <button
+                onClick={() => { setShowUtilityPanel(true); setShowScenePanel(false); }}
+                className="self-start py-1.5 text-xs text-ember hover:text-ember-soft transition-colors"
+              >
+                Utilities
+              </button>
+            </div>
+            <dl className="mt-auto flex flex-col gap-2 text-[13px] border-t border-line pt-4">
+              <div className="flex justify-between gap-3"><dt className="text-parchment-muted">Playing as</dt><dd className="text-parchment truncate">{selectedPersona?.name}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-parchment-muted">Provider</dt><dd className="text-parchment truncate">{providerName}</dd></div>
+              {modelId && (
+                <div className="flex justify-between gap-3"><dt className="text-parchment-muted">Model</dt><dd className="text-parchment truncate" title={modelId}>{modelId.split("/").pop()}</dd></div>
+              )}
+              <div className="flex justify-between gap-3"><dt className="text-parchment-muted">Context</dt><dd className="text-parchment tabular-nums">~{contextTokens.toLocaleString()} tokens</dd></div>
+            </dl>
+          </div>
+        );
+        return (
+          <>
+            <aside className="hidden xl:flex flex-col fixed top-0 right-0 bottom-0 w-[320px] pt-[96px] border-l border-line bg-ink z-40">
+              {panelBody}
+            </aside>
+            {showScenePanel && (
+              <div className="xl:hidden fixed inset-0 z-[70]">
+                <button className="absolute inset-0 bg-black/60" aria-label="Close scene panel" onClick={() => setShowScenePanel(false)} />
+                <aside className="absolute top-0 right-0 bottom-0 w-[min(340px,88vw)] bg-ink border-l border-line flex flex-col pt-4">
+                  <div className="flex justify-end px-3 pb-2">
+                    <button
+                      onClick={() => setShowScenePanel(false)}
+                      className="w-11 h-11 flex items-center justify-center rounded-xl text-parchment-muted hover:text-parchment hover:bg-ink-hover"
+                      aria-label="Close"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                      />
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" d="M6 6l12 12M18 6L6 18" /></svg>
+                    </button>
+                  </div>
+                  {panelBody}
+                </aside>
+              </div>
+            )}
+          </>
+        );
+      })()}
+
+      {view === "chat" && currentConversation && (
+        <div className="fixed bottom-0 left-0 right-0 xl:right-[320px] border-t border-line bg-ink/95 backdrop-blur-xl z-50">
+          <div className="max-w-[680px] mx-auto px-3 sm:px-4 pt-3 pb-3 sm:pb-4">
+            <form onSubmit={handleSubmit} className="rounded-2xl border border-line-strong focus-within:border-ember/60 bg-ink-raised px-3 pt-2.5 pb-2 flex flex-col gap-2">
+              <div className="flex items-center gap-1.5" role="group" aria-label="Message type">
+                <span className="hidden sm:inline text-xs text-parchment-muted mr-1.5">
+                  Your turn{selectedPersona ? `, ${selectedPersona.name}` : ""}
+                </span>
+                {INPUT_MODES.map((mode) => (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    onClick={() => { setInputMode(mode.id); inputRef.current?.focus(); }}
+                    aria-pressed={inputMode === mode.id}
+                    title={mode.hint}
+                    className={`h-8 px-3.5 rounded-full text-xs transition-colors ${
+                      inputMode === mode.id
+                        ? "bg-ember text-ink font-semibold"
+                        : "border border-line-strong text-parchment hover:bg-ink-hover"
+                    }`}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-end gap-2">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={
+                    inputMode === "do"
+                      ? `What does ${selectedPersona?.name ?? "your character"} do?`
+                      : inputMode === "narrate"
+                      ? "Describe the scene or what happens next…"
+                      : `What does ${selectedPersona?.name ?? "your character"} say?`
+                  }
+                  rows={1}
+                  aria-label="Your message"
+                  className="flex-1 bg-transparent text-parchment placeholder-parchment-muted font-story text-[16px] sm:text-[17px] px-1 py-2 resize-none focus:outline-none focus-visible:outline-none"
+                  style={{ minHeight: "44px", maxHeight: "140px" }}
+                  disabled={isLoading}
+                />
+                {isLoading ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const requestId = chatRequestIdRef.current;
+                      abortControllerRef.current?.abort();
+                      if (requestId) {
+                        fetch("/api/cancel", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ requestId }),
+                        }).catch(() => {});
+                      }
+                      setIsLoading(false);
+                      setIsSending(false);
+                      setStreamingContent("");
+                      setStreamingThinking("");
+                    }}
+                    className="flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-xl border border-line-strong text-parchment hover:text-red-400 hover:bg-ink-hover transition-colors"
+                    title="Stop"
+                    aria-label="Stop"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" /></svg>
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    className="flex-shrink-0 w-11 h-11 flex items-center justify-center bg-ember text-ink rounded-xl hover:bg-ember-soft transition-colors"
+                    title={input.trim() ? "Send" : "Empty: new reply or resend last"}
+                    aria-label="Send"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M13 6l6 6-6 6" />
                     </svg>
-                  )}
-                </button>
-                 {isLoading && (
-                   <button
-                     type="button"
-                     onClick={() => {
-                       const requestId = chatRequestIdRef.current;
-                       abortControllerRef.current?.abort();
-                       if (requestId) {
-                         fetch("/api/cancel", {
-                           method: "POST",
-                           headers: { "Content-Type": "application/json" },
-                           body: JSON.stringify({ requestId }),
-                         }).catch(() => {});
-                       }
-                       setIsLoading(false);
-                       setIsSending(false);
-                       setStreamingContent("");
-                       setStreamingThinking("");
-                     }}
-                     className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all"
-                     title="Cancel"
-                   >
-                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                     </svg>
-                   </button>
-                 )}
+                  </button>
+                )}
               </div>
             </form>
-            <p className="text-xs text-zinc-600 mt-2 text-center">
-              Press Enter to send, Shift+Enter for new line. Empty message resends last.
+            <p className="hidden sm:block text-[11px] text-parchment-muted mt-2 text-center">
+              Enter sends, Shift+Enter adds a line. Send empty for a new reply.
             </p>
           </div>
         </div>
