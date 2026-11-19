@@ -452,6 +452,26 @@ const providerSupportsImageGeneration = (provider: LLMProviderType): boolean => 
   return ["google-ai-studio", "google-vertex"].includes(provider);
 };
 
+// Splits a generator reply into its text and the character card code block.
+// `hasCard` is true when a code block parses as a character (has a name).
+const splitGeneratorReply = (content: string): { text: string; hasCard: boolean } => {
+  const blocks = [...content.matchAll(/```(\w*)\n?([\s\S]*?)```/g)].reverse();
+  for (const block of blocks) {
+    try {
+      const parsed = JSON.parse(block[2].trim());
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const data = normalizeCharacterCard(parsed as Record<string, unknown>);
+        if (typeof data.name === "string" && data.name.trim()) {
+          return { text: content.replace(block[0], "").trim(), hasCard: true };
+        }
+      }
+    } catch {
+      // not JSON, keep looking
+    }
+  }
+  return { text: content, hasCard: false };
+};
+
 // Extract character fields from AI generator text or JSON
 const extractCharacterFieldsFromContent = (content: string): {
   name?: string;
@@ -5005,6 +5025,7 @@ if (modelsResult.models.length > 0) {
                                const isEditing = editingGeneratorMessageIndex === idx;
                                const lastUserIndex = currentGeneratorSession.messages.map(m => m.role).lastIndexOf("user");
                                const isLastUserMessage = message.role === "user" && idx === lastUserIndex;
+                               const generatorReply = message.role === "assistant" ? splitGeneratorReply(message.content) : null;
 
                                return (
                               <div
@@ -5016,7 +5037,7 @@ if (modelsResult.models.length > 0) {
                                     <span className="text-sm text-parchment font-semibold">🎭</span>
                                   </div>
                                 )}
-                                <div className="flex flex-col">
+                                <div className={`flex flex-col min-w-0 ${generatorReply?.hasCard ? "flex-1" : ""}`}>
                                   <div
                                     className={`w-full rounded-2xl px-4 py-3 ${
                                       message.role === "user"
@@ -5058,8 +5079,20 @@ if (modelsResult.models.length > 0) {
                                       </div>
                                     ) : (
                                       <>
-                                        <FormattedText content={message.content} />
-                                        {message.role === "assistant" && (
+                                        {generatorReply?.hasCard ? (
+                                          <>
+                                            {generatorReply.text && <FormattedText content={generatorReply.text} />}
+                                            <div className={generatorReply.text ? "mt-3" : ""}>
+                                              <CharacterCardPreview
+                                                data={extractCharacterFieldsFromContent(message.content)}
+                                                onSave={() => handleSaveCharacterFromGenerator(message.content)}
+                                              />
+                                            </div>
+                                          </>
+                                        ) : (
+                                          <FormattedText content={message.content} />
+                                        )}
+                                        {message.role === "assistant" && !generatorReply?.hasCard && (
                                           <div className="mt-3">
                                             <button
                                               onClick={() => handleSaveCharacterFromGenerator(message.content)}
@@ -5134,7 +5167,16 @@ if (modelsResult.models.length > 0) {
                                <span className="text-sm text-parchment font-semibold">🎭</span>
                              </div>
                              <div className="w-full rounded-2xl px-4 py-3 bg-ink-hover text-parchment border border-line-strong/50">
-                               <FormattedText content={generatorStreamingContent} />
+                               {generatorStreamingContent.includes("```") ? (
+                                 <>
+                                   {generatorStreamingContent.slice(0, generatorStreamingContent.indexOf("```")).trim() && (
+                                     <FormattedText content={generatorStreamingContent.slice(0, generatorStreamingContent.indexOf("```")).trim()} />
+                                   )}
+                                   <p className="mt-2 text-sm text-parchment-muted animate-pulse">Writing the character card…</p>
+                                 </>
+                               ) : (
+                                 <FormattedText content={generatorStreamingContent} />
+                               )}
                               </div>
                             </div>
                           )}
