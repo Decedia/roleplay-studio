@@ -23,28 +23,28 @@ export const layout = {
 
 export const containers = {
   /** Card-like container with dark background and border */
-  card: "bg-zinc-900 border border-zinc-800 rounded-xl p-4",
+  card: "bg-ink-raised border border-line rounded-xl p-4",
   
   /** Card with lighter background */
-  cardLight: "bg-zinc-900/50 border border-zinc-800 rounded-xl p-4",
+  cardLight: "bg-ink-raised/50 border border-line rounded-xl p-4",
   
   /** Modal overlay - fixed fullscreen with backdrop */
   modalOverlay: "fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50",
   
   /** Modal content - dark theme with border */
-  modal: "bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-md",
+  modal: "bg-ink-raised border border-line rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-md",
   
   /** Modal content - wider variant */
-  modalWide: "bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-lg",
+  modalWide: "bg-ink-raised border border-line rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-lg",
   
   /** Modal content - extra wide variant */
-  modalExtraWide: "bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm sm:max-w-2xl md:max-w-3xl max-h-[90vh] flex flex-col",
+  modalExtraWide: "bg-ink-raised border border-line rounded-2xl w-full max-w-sm sm:max-w-2xl md:max-w-3xl max-h-[90vh] flex flex-col",
   
   /** Settings modal with scrolling */
-  modalScroll: "bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-md md:max-w-lg max-h-[90vh] overflow-y-auto",
+  modalScroll: "bg-ink-raised border border-line rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-md md:max-w-lg max-h-[90vh] overflow-y-auto",
   
   /** Section with top border */
-  section: "border-t border-zinc-700 pt-6",
+  section: "border-t border-line-strong pt-6",
   
   /** Form section with label */
   formSection: "space-y-4",
@@ -62,7 +62,7 @@ export const containers = {
   buttonGroup: "flex gap-3 mt-6",
   
   /** Mobile menu dropdown */
-  mobileMenu: "md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2 absolute left-0 right-0 top-full mt-2 z-[49]",
+  mobileMenu: "md:hidden bg-ink-raised border border-line rounded-xl p-3 space-y-2 absolute left-0 right-0 top-full mt-2 z-[49]",
 };
 
 // ============================================================================
@@ -71,7 +71,7 @@ export const containers = {
 
 export const header = {
   /** Fixed header with blur and border */
-  main: "flex-shrink-0 z-50 fixed top-0 left-0 right-0 bg-black/80 backdrop-blur-xl border-b border-zinc-800/50",
+  main: "flex-shrink-0 z-50 fixed top-0 left-0 right-0 bg-black/80 backdrop-blur-xl border-b border-line/50",
   
   /** Header container */
   container: "max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-4",
@@ -86,19 +86,19 @@ export const header = {
   right: "flex items-center gap-1 sm:gap-2",
   
   /** Logo/app icon container */
-  logo: "w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0",
+  logo: "w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-ink-hover border border-line-strong text-parchment-soft   flex items-center justify-center flex-shrink-0",
   
   /** Title container with overflow */
   titleContainer: "min-w-0 flex-1 overflow-hidden",
   
   /** Title text */
-  title: "text-lg sm:text-xl font-semibold text-white truncate",
+  title: "text-lg sm:text-xl font-semibold text-parchment truncate",
   
   /** Back button */
-  backButton: "p-1.5 sm:p-2 hover:bg-zinc-800 rounded-lg transition-colors",
+  backButton: "p-1.5 sm:p-2 hover:bg-ink-hover rounded-lg transition-colors",
   
   /** Back button icon */
-  backIcon: "w-4 h-4 sm:w-5 sm:h-5 text-zinc-400",
+  backIcon: "w-4 h-4 sm:w-5 sm:h-5 text-parchment-muted",
 };
 
 // ============================================================================
@@ -107,32 +107,32 @@ export const header = {
 
 export const buttons = {
   /** Primary button - gradient background */
-  primary: "px-3 sm:px-4 py-2 text-sm sm:text-base text-white rounded-lg transition-colors bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700",
+  primary: "px-3 sm:px-4 py-2 text-sm sm:text-base text-ink rounded-lg transition-colors bg-ember    ",
   
   /** Secondary button - dark background */
-  secondary: "px-3 sm:px-4 py-2 text-sm sm:text-base bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors",
+  secondary: "px-3 sm:px-4 py-2 text-sm sm:text-base bg-line-strong text-parchment rounded-lg hover:bg-line-strong transition-colors",
   
   /** Ghost button - transparent with hover */
-  ghost: "p-1.5 sm:p-2 hover:bg-zinc-800 rounded-lg transition-colors text-zinc-400 hover:text-white",
+  ghost: "p-1.5 sm:p-2 hover:bg-ink-hover rounded-lg transition-colors text-parchment-muted hover:text-parchment",
   
   /** Icon button - square with icon */
-  icon: "p-1.5 sm:p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors",
+  icon: "p-1.5 sm:p-2 text-parchment-muted hover:text-parchment hover:bg-ink-hover rounded-lg transition-colors",
   
   /** Small button */
   small: "px-2 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg",
   
   /** Danger button - red */
-  danger: "px-2 sm:px-3 py-1 text-xs sm:text-sm bg-red-600 text-white rounded-lg hover:bg-red-700",
+  danger: "px-2 sm:px-3 py-1 text-xs sm:text-sm bg-red-600 text-parchment rounded-lg hover:bg-red-700",
   
   /** Success button - green */
-  success: "px-2 sm:px-3 py-1 text-xs sm:text-sm bg-green-600 text-white rounded-lg hover:bg-green-700",
+  success: "px-2 sm:px-3 py-1 text-xs sm:text-sm bg-green-600 text-parchment rounded-lg hover:bg-green-700",
   
   /** Loading spinner button */
   spinner: "w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin",
   
   /** Bounce animation dots for loading */
   bounceDots: "flex gap-1",
-  bounceDot: "w-2 h-2 bg-zinc-500 rounded-full animate-bounce",
+  bounceDot: "w-2 h-2 bg-parchment-muted rounded-full animate-bounce",
 };
 
 // ============================================================================
@@ -141,34 +141,34 @@ export const buttons = {
 
 export const inputs = {
   /** Text input base */
-  text: "w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 border border-zinc-700 focus:outline-none focus:ring-2",
+  text: "w-full bg-ink-hover text-parchment placeholder-parchment-muted rounded-lg px-4 py-2 border border-line-strong focus:outline-none focus:ring-2",
   
   /** Textarea base */
-  textarea: "w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 border border-zinc-700 resize-none",
+  textarea: "w-full bg-ink-hover text-parchment placeholder-parchment-muted rounded-lg px-4 py-3 focus:outline-none focus:ring-2 border border-line-strong resize-none",
   
   /** Chat input - transparent background */
-  chat: "w-full bg-transparent text-white placeholder-zinc-500 px-3 py-2 resize-none focus:outline-none",
+  chat: "w-full bg-transparent text-parchment placeholder-parchment-muted px-3 py-2 resize-none focus:outline-none",
   
   /** Input with custom height for chat */
-  chatTextarea: "w-full bg-transparent text-white placeholder-zinc-500 px-3 py-2 resize-none focus:outline-none",
+  chatTextarea: "w-full bg-transparent text-parchment placeholder-parchment-muted px-3 py-2 resize-none focus:outline-none",
   
   /** Label */
-  label: "block text-sm font-medium text-zinc-400 mb-2",
+  label: "block text-sm font-medium text-parchment-muted mb-2",
   
   /** Small label */
-  labelSmall: "block text-xs text-zinc-400 mb-1",
+  labelSmall: "block text-xs text-parchment-muted mb-1",
   
   /** Select dropdown */
-  select: "w-full bg-zinc-800 text-white rounded-lg px-4 py-2 border border-zinc-700 focus:outline-none focus:ring-2",
+  select: "w-full bg-ink-hover text-parchment rounded-lg px-4 py-2 border border-line-strong focus:outline-none focus:ring-2",
   
   /** Checkbox */
-  checkbox: "w-4 h-4 rounded border-zinc-600 bg-zinc-700 text-blue-500 focus:ring-blue-500",
+  checkbox: "w-4 h-4 rounded border-line-strong bg-line-strong text-ember focus:ring-ember",
   
   /** Range slider */
-  range: "w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer",
+  range: "w-full h-2 bg-line-strong rounded-lg appearance-none cursor-pointer",
   
   /** File input */
-  file: "w-full text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700",
+  file: "w-full text-sm text-parchment-muted file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-ember file:text-parchment hover:file:bg-ember-soft",
 };
 
 // ============================================================================
@@ -180,7 +180,7 @@ export const forms = {
   container: "space-y-6",
   
   /** Section header */
-  sectionHeader: "text-sm font-medium text-white",
+  sectionHeader: "text-sm font-medium text-parchment",
   
   /** Toggle row */
   toggleRow: "flex items-center gap-3 mb-4",
@@ -189,16 +189,16 @@ export const forms = {
   slider: "flex items-center gap-3",
   
   /** Info box */
-  info: "mt-2 p-3 bg-zinc-800/50 rounded-lg text-xs text-zinc-400 space-y-1",
+  info: "mt-2 p-3 bg-ink-hover/50 rounded-lg text-xs text-parchment-muted space-y-1",
   
   /** Info row */
   infoRow: "flex justify-between",
   
   /** Toggle description */
-  toggleDescription: "text-xs text-zinc-500 mt-1",
+  toggleDescription: "text-xs text-parchment-muted mt-1",
   
   /** Advanced section with left border */
-  advancedSection: "space-y-4 pl-4 border-l-2 border-zinc-700",
+  advancedSection: "space-y-4 pl-4 border-l-2 border-line-strong",
   
   /** Inline error */
   error: "text-red-400 text-sm mt-1",
@@ -219,16 +219,16 @@ export const cards = {
   gridResponsive: "grid gap-4 sm:grid-cols-2 lg:grid-cols-3",
   
   /** Card item */
-  item: "bg-zinc-800 rounded-xl p-4 hover:bg-zinc-750 transition-colors",
+  item: "bg-ink-hover rounded-xl p-4 hover:bg-ink-hover transition-colors",
   
   /** Card header */
   header: "flex justify-between items-start mb-3",
   
   /** Card title */
-  title: "text-lg font-semibold text-white truncate",
+  title: "text-lg font-semibold text-parchment truncate",
   
   /** Card description */
-  description: "text-sm text-zinc-400",
+  description: "text-sm text-parchment-muted",
   
   /** Card actions */
   actions: "flex gap-1",
@@ -240,16 +240,16 @@ export const cards = {
   avatarSmall: "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
   
   /** List item */
-  listItem: "flex justify-between items-center px-3 py-2 cursor-pointer hover:bg-zinc-800 transition-colors",
+  listItem: "flex justify-between items-center px-3 py-2 cursor-pointer hover:bg-ink-hover transition-colors",
   
   /** List item active */
-  listItemActive: "bg-zinc-800",
+  listItemActive: "bg-ink-hover",
   
   /** Empty state */
   empty: "text-center py-16",
   
   /** Empty state icon */
-  emptyIcon: "w-16 h-16 rounded-2xl bg-zinc-800 flex items-center justify-center mx-auto mb-4",
+  emptyIcon: "w-16 h-16 rounded-2xl bg-ink-hover flex items-center justify-center mx-auto mb-4",
 };
 
 // ============================================================================
@@ -270,10 +270,10 @@ export const messages = {
   bubble: "rounded-2xl px-4 py-3",
   
   /** Message bubble - assistant (dark) */
-  bubbleAssistant: "bg-zinc-800 text-white",
+  bubbleAssistant: "bg-ink-hover text-parchment",
   
   /** Message bubble - user (grey) */
-  bubbleUser: "bg-zinc-700 text-white",
+  bubbleUser: "bg-line-strong text-parchment",
   
   /** Message content max width */
   contentMaxWidth: "max-w-[80%]",
@@ -285,10 +285,10 @@ export const messages = {
   text: "whitespace-pre-wrap text-sm",
   
   /** Message meta info */
-  meta: "text-xs text-zinc-500 mt-1",
+  meta: "text-xs text-parchment-muted mt-1",
   
   /** Message meta - user aligned */
-  metaUser: "text-xs text-zinc-500 mt-1 flex gap-1 ml-2",
+  metaUser: "text-xs text-parchment-muted mt-1 flex gap-1 ml-2",
   
   /** Message actions */
   actions: "flex gap-1 mt-1",
@@ -300,7 +300,7 @@ export const messages = {
   editContainer: "space-y-2",
   
   /** Message edit textarea */
-  editTextarea: "w-full bg-transparent text-white resize-none focus:outline-none",
+  editTextarea: "w-full bg-transparent text-parchment resize-none focus:outline-none",
 };
 
 // ============================================================================
@@ -309,7 +309,7 @@ export const messages = {
 
 export const avatars = {
   /** Avatar container */
-  container: "flex-shrink-0 rounded-lg bg-gradient-to-br flex items-center justify-center",
+  container: "flex-shrink-0 rounded-lg bg-ink-hover border border-line-strong flex items-center justify-center",
   
   /** Avatar sizes */
   small: "w-8 h-8",
@@ -318,16 +318,16 @@ export const avatars = {
   xlarge: "w-16 h-16",
   
   /** Avatar text */
-  text: "text-sm text-white font-semibold",
-  textLarge: "text-xl text-white font-semibold",
-  textXlarge: "text-2xl text-white font-semibold",
+  text: "text-sm text-parchment font-semibold",
+  textLarge: "text-xl text-parchment font-semibold",
+  textXlarge: "text-2xl text-parchment font-semibold",
   
   /** Avatar gradients */
   gradient: {
-    blue: "from-blue-500 to-cyan-500",
-    purple: "from-purple-500 to-pink-500",
-    amber: "from-amber-500 to-orange-500",
-    white: "from-white/20 to-white/10",
+    blue: "",
+    purple: "",
+    amber: "",
+    white: "",
   },
   
   /** Image avatar */
@@ -345,32 +345,32 @@ export const dropdowns = {
   container: "relative",
   
   /** Dropdown menu */
-  menu: "absolute z-50 w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-lg max-h-80 overflow-y-auto shadow-xl",
+  menu: "absolute z-50 w-full mt-1 bg-ink-hover border border-line-strong rounded-lg max-h-80 overflow-y-auto shadow-xl",
   
   /** Dropdown menu - right aligned */
-  menuRight: "absolute right-0 top-full mt-2 w-72 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50 max-h-80 overflow-y-auto",
+  menuRight: "absolute right-0 top-full mt-2 w-72 bg-ink-raised border border-line rounded-xl shadow-xl z-50 max-h-80 overflow-y-auto",
   
   /** Dropdown item */
-  item: "w-full flex items-center gap-2 px-3 py-2 text-white rounded-lg transition-colors",
+  item: "w-full flex items-center gap-2 px-3 py-2 text-parchment rounded-lg transition-colors",
   
   /** Dropdown item - hover */
-  itemHover: "hover:bg-zinc-700",
+  itemHover: "hover:bg-line-strong",
   
   /** Dropdown item - active/selected */
-  itemActive: "bg-zinc-700",
+  itemActive: "bg-line-strong",
   
   /** Dropdown section */
-  section: "border-t border-zinc-800",
+  section: "border-t border-line",
   
   /** Dropdown label */
-  label: "px-3 py-2 text-xs text-zinc-500",
+  label: "px-3 py-2 text-xs text-parchment-muted",
   
   /** Connection status dot */
   statusDot: "w-2 h-2 rounded-full",
   statusConnected: "bg-green-500",
   statusTesting: "bg-yellow-500",
   statusError: "bg-red-500",
-  statusDisconnected: "bg-zinc-500",
+  statusDisconnected: "bg-parchment-muted",
 };
 
 // ============================================================================
@@ -388,13 +388,13 @@ export const loading = {
   dots: "flex gap-1",
   
   /** Loading dot */
-  dot: "w-2 h-2 bg-zinc-500 rounded-full",
+  dot: "w-2 h-2 bg-parchment-muted rounded-full",
   
   /** Loading text */
-  text: "text-sm text-zinc-500",
+  text: "text-sm text-parchment-muted",
   
   /** Loading with text */
-  withText: "flex items-center gap-2 text-zinc-500",
+  withText: "flex items-center gap-2 text-parchment-muted",
 };
 
 // ============================================================================
@@ -404,17 +404,17 @@ export const loading = {
 export const notifications = {
   /** Error banner */
   error: "fixed top-[73px] left-0 lg:left-[264px] right-0 z-40 px-4 py-3",
-  errorInner: "bg-zinc-800/95 border border-zinc-700 rounded-lg px-4 py-3 text-zinc-200 shadow-xl backdrop-blur-sm border-l-4 border-l-red-500 flex items-start gap-3",
+  errorInner: "max-w-3xl mx-auto bg-ink-hover/95 border border-line-strong rounded-lg px-4 py-3 text-parchment shadow-xl backdrop-blur-sm border-l-4 border-l-red-500 flex items-start gap-3",
   errorContent: "flex-1 overflow-y-auto whitespace-pre-wrap",
   errorActions: "flex items-center gap-1.5 flex-shrink-0",
   
   /** Toast notification */
-toast: "fixed bottom-32 left-0 lg:left-[264px] right-0 z-[5000] px-4 py-3 pointer-events-none",
-toastInner: "pointer-events-auto bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white shadow-xl backdrop-blur-sm flex items-center justify-between",
+toast: "fixed bottom-32 left-0 lg:left-[264px] right-0 z-[5000] px-4 py-3 pointer-events-none flex flex-col items-center gap-2",
+toastInner: "pointer-events-auto w-full max-w-md bg-ink-hover border border-line-strong rounded-lg px-4 py-3 text-parchment shadow-xl backdrop-blur-sm flex items-center justify-between",
 toastContent: "flex items-center gap-3",
   
   /** Info notification */
-  info: "bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3 text-sm text-zinc-400",
+  info: "bg-ink-hover/50 border border-line-strong rounded-lg px-4 py-3 text-sm text-parchment-muted",
   
   /** Success notification */
   success: "bg-green-900/50 border border-green-800 rounded-lg px-4 py-3 text-green-200 text-sm",
@@ -436,17 +436,17 @@ export const steps = {
   
   /** Step circle */
   circle: "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium",
-  circleActive: "bg-blue-500 text-white",
-  circleInactive: "bg-zinc-700 text-zinc-400",
-  circleCompleted: "bg-green-500 text-white",
+  circleActive: "bg-ember text-ink",
+  circleInactive: "bg-line-strong text-parchment-muted",
+  circleCompleted: "bg-green-500 text-parchment",
   
   /** Step connector */
   connector: "w-8 h-0.5",
-  connectorActive: "bg-blue-500",
-  connectorInactive: "bg-zinc-700",
+  connectorActive: "bg-ember",
+  connectorInactive: "bg-line-strong",
   
   /** Step label */
-  label: "text-xs text-zinc-500",
+  label: "text-xs text-parchment-muted",
 };
 
 // ============================================================================
@@ -488,10 +488,10 @@ export const utils = {
   visible: "visible",
   
   /** Text colors */
-  textMuted: "text-zinc-400",
-  textDim: "text-zinc-500",
-  textLight: "text-zinc-300",
-  textWhite: "text-white",
+  textMuted: "text-parchment-muted",
+  textDim: "text-parchment-muted",
+  textLight: "text-parchment-soft",
+  textWhite: "text-parchment",
   
   /** Text sizes */
   textXs: "text-xs",
@@ -539,19 +539,19 @@ export const utils = {
 export const patterns = {
   /** Form field with label */
   formField: `
-    <label className="block text-sm font-medium text-zinc-400 mb-2">{label}</label>
-    <input className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 border border-zinc-700 focus:outline-none focus:ring-2" />
+    <label className="block text-sm font-medium text-parchment-muted mb-2">{label}</label>
+    <input className="w-full bg-ink-hover text-parchment placeholder-parchment-muted rounded-lg px-4 py-2 border border-line-strong focus:outline-none focus:ring-2" />
   `,
   
   /** Modal with header and footer */
   modal: `
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-md">
-        <h2 className="text-xl font-semibold text-white mb-4">{title}</h2>
+      <div className="bg-ink-raised border border-line rounded-2xl p-6 w-full max-w-md">
+        <h2 className="text-xl font-semibold text-parchment mb-4">{title}</h2>
         {children}
         <div className="flex gap-3 mt-6">
-          <button className="px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600">Cancel</button>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Confirm</button>
+          <button className="px-4 py-2 bg-line-strong text-parchment rounded-lg hover:bg-line-strong">Cancel</button>
+          <button className="px-4 py-2 bg-ember text-ink rounded-lg hover:bg-ember-soft">Confirm</button>
         </div>
       </div>
     </div>
@@ -560,12 +560,12 @@ export const patterns = {
   /** Card with avatar and content */
   cardWithAvatar: `
     <div className="flex items-start gap-4">
-      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
-        <span className="text-xl text-white font-semibold">{initial}</span>
+      <div className="w-12 h-12 rounded-xl bg-ink-hover border border-line-strong text-parchment-soft flex items-center justify-center flex-shrink-0">
+        <span className="text-xl text-parchment font-semibold">{initial}</span>
       </div>
       <div className="min-w-0 flex-1">
-        <h3 className="text-lg font-semibold text-white truncate">{name}</h3>
-        <p className="text-sm text-zinc-400">{description}</p>
+        <h3 className="text-lg font-semibold text-parchment truncate">{name}</h3>
+        <p className="text-sm text-parchment-muted">{description}</p>
       </div>
     </div>
   `,

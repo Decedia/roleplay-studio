@@ -79,17 +79,17 @@ export function ChatMessage({
         {message.role === "assistant" && (
           <Avatar className="h-8 w-8 flex-shrink-0">
             <AvatarImage src={avatarUrl} alt={senderName} className="object-cover" />
-            <AvatarFallback className={`bg-gradient-to-br ${gradientClass} text-white text-sm font-semibold`}>
+            <AvatarFallback className={`bg-gradient-to-br ${gradientClass} text-parchment text-sm font-semibold`}>
               {senderInitial?.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
         )}
         <div className={`max-w-[85%] sm:max-w-[75%] ${message.role === "user" ? "order-first" : ""}`}>
-          <div className="rounded-xl px-3 py-3 bg-zinc-800 border border-zinc-700">
+          <div className="rounded-xl px-3 py-3 bg-ink-hover border border-line-strong">
             <Textarea
               value={editingMessageContent}
               onChange={(e) => onEditMessage?.(e.target.value)}
-              className="w-full bg-transparent border-none resize-none focus-visible:ring-0 focus-visible:ring-offset-0 min-h-[80px] text-sm text-white"
+              className="w-full bg-transparent border-none resize-none focus-visible:ring-0 focus-visible:ring-offset-0 min-h-[80px] text-sm text-parchment"
               autoFocus
             />
             <div className="flex gap-2 mt-2">
@@ -106,7 +106,7 @@ export function ChatMessage({
         </div>
         {message.role === "user" && (
           <Avatar className="h-8 w-8 flex-shrink-0">
-            <AvatarFallback className={`bg-gradient-to-br ${gradientClass} text-white text-sm font-semibold`}>
+            <AvatarFallback className={`bg-gradient-to-br ${gradientClass} text-parchment text-sm font-semibold`}>
               {senderInitial?.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
@@ -125,7 +125,7 @@ export function ChatMessage({
         {message.role === "assistant" && (
           <Avatar className="h-8 w-8 flex-shrink-0 mt-1">
             <AvatarImage src={avatarUrl} alt={senderName} className="object-cover" />
-            <AvatarFallback className={`bg-gradient-to-br ${gradientClass} text-white text-sm font-semibold`}>
+            <AvatarFallback className={`bg-gradient-to-br ${gradientClass} text-parchment text-sm font-semibold`}>
               {senderInitial?.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
@@ -144,20 +144,20 @@ export function ChatMessage({
             className={`rounded-xl px-3 py-2.5 transition-all duration-200 ${
               message.role === "user"
                 ? "bg-primary/90 text-primary-foreground"
-                : "bg-zinc-800 text-zinc-100 border border-zinc-700/50"
+                : "bg-ink-hover text-parchment border border-line-strong/50"
             }`}
           >
             <FormattedText content={rawContent} />
           </div>
           
           <div className="flex items-center gap-2 mt-1 pl-1">
-            <p className="text-[11px] text-zinc-500">
+            <p className="text-[11px] text-parchment-muted">
               {message.role === "user" ? senderName : senderName || "AI"}
             </p>
             {message.role === "assistant" && (modelId || provider) && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button className="text-zinc-500 hover:text-zinc-300 transition-colors">
+                  <button className="text-parchment-muted hover:text-parchment-soft transition-colors">
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 16v-4" />
@@ -167,7 +167,7 @@ export function ChatMessage({
                 </TooltipTrigger>
                 <TooltipContent side="top" className="text-xs">
                   <p className="font-medium">Model: {modelId || "Unknown"}</p>
-                  <p className="text-zinc-400">Provider: {provider || "Unknown"}</p>
+                  <p className="text-parchment-muted">Provider: {provider || "Unknown"}</p>
                 </TooltipContent>
               </Tooltip>
             )}
@@ -181,10 +181,10 @@ export function ChatMessage({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 hover:bg-zinc-700/50"
+                        className="h-6 w-6 hover:bg-line-strong/50"
                         onClick={onRegenerate}
                       >
-                        <RefreshCw className="h-3.5 w-3.5 text-zinc-400 hover:text-zinc-200" />
+                        <RefreshCw className="h-3.5 w-3.5 text-parchment-muted hover:text-parchment" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="text-xs">
@@ -198,10 +198,10 @@ export function ChatMessage({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 hover:bg-zinc-700/50"
+                        className="h-6 w-6 hover:bg-line-strong/50"
                         onClick={onContinue}
                       >
-                        <ChevronRight className="h-3.5 w-3.5 text-zinc-400 hover:text-zinc-200" />
+                        <ChevronRight className="h-3.5 w-3.5 text-parchment-muted hover:text-parchment" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="text-xs">
@@ -218,7 +218,7 @@ export function ChatMessage({
                         className="h-6 w-6 hover:bg-red-900/30"
                         onClick={onDeleteMessage}
                       >
-                        <Trash2 className="h-3.5 w-3.5 text-zinc-400 hover:text-red-400" />
+                        <Trash2 className="h-3.5 w-3.5 text-parchment-muted hover:text-red-400" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="text-xs">
@@ -232,7 +232,7 @@ export function ChatMessage({
         </div>
         {message.role === "user" && (
           <Avatar className="h-8 w-8 flex-shrink-0 mt-1">
-            <AvatarFallback className={`bg-gradient-to-br ${gradientClass} text-white text-sm font-semibold`}>
+            <AvatarFallback className={`bg-gradient-to-br ${gradientClass} text-parchment text-sm font-semibold`}>
               {senderInitial?.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>

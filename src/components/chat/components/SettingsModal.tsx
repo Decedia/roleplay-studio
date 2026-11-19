@@ -364,18 +364,18 @@ export function SettingsModal({
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+      <div className="bg-ink-raised border border-line rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
         {/* Modal Header */}
-        <div className="flex items-center justify-between p-4 border-b border-zinc-800">
+        <div className="flex items-center justify-between p-4 border-b border-line">
           <div>
-            <h2 className="text-lg font-semibold text-white">Models & Settings</h2>
-            <p className="text-sm text-zinc-500">Configure AI providers, models, and global settings</p>
+            <h2 className="text-lg font-semibold text-parchment">Models & Settings</h2>
+            <p className="text-sm text-parchment-muted">Configure AI providers, models, and global settings</p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-zinc-800 rounded transition-colors"
+            className="p-2 hover:bg-ink-hover rounded transition-colors"
           >
-            <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -386,15 +386,15 @@ export function SettingsModal({
           <div className="space-y-6">
             {/* Provider Connections */}
             <div className="pt-6">
-              <h3 className="text-sm font-medium text-white mb-4">Provider Connections</h3>
+              <h3 className="text-sm font-medium text-parchment mb-4">Provider Connections</h3>
 
               {/* Provider Selector Dropdown */}
               <div className="mb-4">
-                <label className="block text-xs text-zinc-400 mb-1">Select Provider</label>
+                <label className="block text-xs text-parchment-muted mb-1">Select Provider</label>
                 <select
                   value={editingProvider || ""}
                   onChange={(e) => setEditingProvider(e.target.value as LLMProviderType | null)}
-                  className="w-full bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full bg-ink-raised text-parchment rounded px-3 py-2 text-sm border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                 >
                   <option value="">Select a provider...</option>
                   {AVAILABLE_PROVIDERS.map(provider => (
@@ -405,20 +405,20 @@ export function SettingsModal({
 
               {/* Selected Provider Config Panel */}
               {editingProvider && (
-                <div className="p-3 bg-zinc-800/50 rounded-lg space-y-3">
+                <div className="p-3 bg-ink-hover/50 rounded-lg space-y-3">
                   {/* Status Indicator and Active Badge */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className={`w-2 h-2 rounded-full ${
                         connectionStatus[editingProvider]?.status === "connected" ? "bg-green-500" :
                         connectionStatus[editingProvider]?.status === "testing" ? "bg-yellow-500 animate-pulse" :
-                        connectionStatus[editingProvider]?.status === "error" ? "bg-red-500" : "bg-zinc-500"
+                        connectionStatus[editingProvider]?.status === "error" ? "bg-red-500" : "bg-parchment-muted"
                       }`} />
-                      <span className="text-sm font-medium text-white">
+                      <span className="text-sm font-medium text-parchment">
                         {AVAILABLE_PROVIDERS.find(p => p.id === editingProvider)?.name || editingProvider}
                       </span>
                       {activeProvider === editingProvider && (
-                        <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded">Active</span>
+                        <span className="text-xs bg-ember text-ink px-2 py-0.5 rounded">Active</span>
                       )}
                     </div>
                   </div>
@@ -427,7 +427,7 @@ export function SettingsModal({
                   {connectionStatus[editingProvider]?.message && (
                     <p className={`text-xs ${
                       connectionStatus[editingProvider]?.status === "connected" ? "text-green-400" :
-                      connectionStatus[editingProvider]?.status === "error" ? "text-red-400" : "text-zinc-400"
+                      connectionStatus[editingProvider]?.status === "error" ? "text-red-400" : "text-parchment-muted"
                     }`}>
                       {connectionStatus[editingProvider].message}
                     </p>
@@ -435,7 +435,7 @@ export function SettingsModal({
 
                   {/* Profile Selection */}
                   <div>
-                    <label className="block text-xs text-zinc-400 mb-1">Profile</label>
+                    <label className="block text-xs text-parchment-muted mb-1">Profile</label>
                     <div className="flex gap-2">
                       <select
                         value={providerConfigs[editingProvider]?.activeProfileId || ""}
@@ -452,7 +452,7 @@ export function SettingsModal({
                             selectProfile(editingProvider, e.target.value);
                           }
                         }}
-                        className="flex-1 bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="flex-1 bg-ink-raised text-parchment rounded px-3 py-2 text-sm border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                       >
                         <option value="">Select a profile...</option>
                         {providerConfigs[editingProvider]?.profiles.map(profile => (
@@ -468,7 +468,7 @@ export function SettingsModal({
                               deleteProfile(editingProvider, providerConfigs[editingProvider].activeProfileId!);
                             }
                           }}
-                          className="px-3 py-2 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                          className="px-3 py-2 text-xs bg-red-600 text-parchment rounded hover:bg-red-700 transition-colors"
                         >
                           Delete
                         </button>
@@ -479,7 +479,7 @@ export function SettingsModal({
                   {/* Google AI Studio */}
                   {editingProvider === 'google-ai-studio' && providerConfigs["google-ai-studio"]?.activeProfileId && (
                     <div>
-                      <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                      <label className="block text-xs text-parchment-muted mb-1">API Key</label>
                       <input
                         type="password"
                         value={getActiveProfile("google-ai-studio")?.apiKey || ""}
@@ -497,13 +497,13 @@ export function SettingsModal({
                           }));
                         }}
                         placeholder="Enter your Google AI Studio API key"
-                        className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full bg-ink-raised text-parchment placeholder-parchment-muted rounded px-3 py-2 text-sm border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                       />
                       <div className="flex gap-2 mt-3">
                         <button
                           type="button"
                           onClick={() => handleConnectProvider("google-ai-studio")}
-                          className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                          className="flex-1 py-1.5 text-xs bg-ember text-ink rounded hover:bg-ember-soft transition-colors"
                         >
                           Connect
                         </button>
@@ -515,7 +515,7 @@ export function SettingsModal({
                   {editingProvider === 'google-vertex' && providerConfigs["google-vertex"]?.activeProfileId && (
                     <>
                       <div>
-                        <label className="block text-xs text-zinc-400 mb-1">Mode</label>
+                        <label className="block text-xs text-parchment-muted mb-1">Mode</label>
                         <select
                           value={getActiveProfile("google-vertex")?.vertexMode || "express"}
                           onChange={(e) => {
@@ -531,18 +531,18 @@ export function SettingsModal({
                               }
                             }));
                           }}
-                          className="w-full bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="w-full bg-ink-raised text-parchment rounded px-3 py-2 text-sm border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                         >
                           <option value="express">Express (API Key + Project ID)</option>
                           <option value="full">Full (Service Account)</option>
                         </select>
-                        <p className="text-xs text-zinc-500 mt-1">
+                        <p className="text-xs text-parchment-muted mt-1">
                           Express mode uses API key authentication. Full mode requires a Google Cloud Service Account JSON.
                         </p>
                       </div>
                       {getActiveProfile("google-vertex")?.vertexMode === "full" && (
                         <div>
-                          <label className="block text-xs text-zinc-400 mb-1">Service Account JSON <span className="text-red-400">*</span></label>
+                          <label className="block text-xs text-parchment-muted mb-1">Service Account JSON <span className="text-red-400">*</span></label>
                           <textarea
                             value={getActiveProfile("google-vertex")?.serviceAccountJson || ""}
                             onChange={(e) => {
@@ -560,15 +560,15 @@ export function SettingsModal({
                             }}
                             placeholder='{"type": "service_account", "project_id": "..."}'
                             rows={4}
-                            className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono text-xs"
+                            className="w-full bg-ink-raised text-parchment placeholder-parchment-muted rounded px-3 py-2 text-sm border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember font-mono text-xs"
                           />
-                          <p className="text-xs text-zinc-500 mt-1">
+                          <p className="text-xs text-parchment-muted mt-1">
                             Paste your service account JSON key from the Google Cloud Console
                           </p>
                         </div>
                       )}
                       <div>
-                        <label className="block text-xs text-zinc-400 mb-1">Google Cloud Project ID <span className="text-red-400">*</span></label>
+                        <label className="block text-xs text-parchment-muted mb-1">Google Cloud Project ID <span className="text-red-400">*</span></label>
                         <input
                           type="text"
                           value={getActiveProfile("google-vertex")?.projectId || ""}
@@ -586,14 +586,14 @@ export function SettingsModal({
                             }));
                           }}
                           placeholder="your-project-id"
-                          className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="w-full bg-ink-raised text-parchment placeholder-parchment-muted rounded px-3 py-2 text-sm border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                         />
-                        <p className="text-xs text-zinc-500 mt-1">
-                          Find your Project ID in the <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Google Cloud Console</a>
+                        <p className="text-xs text-parchment-muted mt-1">
+                          Find your Project ID in the <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="text-ember hover:underline">Google Cloud Console</a>
                         </p>
                       </div>
                       <div>
-                        <label className="block text-xs text-zinc-400 mb-1">Server Location</label>
+                        <label className="block text-xs text-parchment-muted mb-1">Server Location</label>
                         <select
                           value={getActiveProfile("google-vertex")?.vertexLocation || "global"}
                           onChange={(e) => {
@@ -609,7 +609,7 @@ export function SettingsModal({
                               }
                             }));
                           }}
-                          className="w-full bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="w-full bg-ink-raised text-parchment rounded px-3 py-2 text-sm border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                         >
                           <option value="global">Global (Auto-routing)</option>
                           <option value="us-central1">US Central (Iowa)</option>
@@ -621,12 +621,12 @@ export function SettingsModal({
                           <option value="asia-northeast1">Asia Northeast (Tokyo)</option>
                           <option value="asia-southeast1">Asia Southeast (Singapore)</option>
                         </select>
-                        <p className="text-xs text-zinc-500 mt-1">
+                        <p className="text-xs text-parchment-muted mt-1">
                           Choose the closest region for lower latency
                         </p>
                       </div>
                       <div>
-                        <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                        <label className="block text-xs text-parchment-muted mb-1">API Key</label>
                         <input
                           type="password"
                           value={getActiveProfile("google-vertex")?.apiKey || ""}
@@ -644,14 +644,14 @@ export function SettingsModal({
                             }));
                           }}
                           placeholder="Enter your Google API key"
-                          className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="w-full bg-ink-raised text-parchment placeholder-parchment-muted rounded px-3 py-2 text-sm border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                         />
                       </div>
                       <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => handleConnectProvider("google-vertex")}
-                          className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                          className="flex-1 py-1.5 text-xs bg-ember text-ink rounded hover:bg-ember-soft transition-colors"
                         >
                           Connect
                         </button>
@@ -663,7 +663,7 @@ export function SettingsModal({
                   {editingProvider === 'nvidia-nim' && providerConfigs["nvidia-nim"]?.activeProfileId && (
                     <>
                       <div>
-                        <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                        <label className="block text-xs text-parchment-muted mb-1">API Key</label>
                         <input
                           type="password"
                           value={getActiveProfile("nvidia-nim")?.apiKey || ""}
@@ -681,14 +681,14 @@ export function SettingsModal({
                             }));
                           }}
                           placeholder="Enter your NVIDIA NIM API key"
-                          className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="w-full bg-ink-raised text-parchment placeholder-parchment-muted rounded px-3 py-2 text-sm border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                         />
                       </div>
                       <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => handleConnectProvider("nvidia-nim")}
-                          className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                          className="flex-1 py-1.5 text-xs bg-ember text-ink rounded hover:bg-ember-soft transition-colors"
                         >
                           Connect
                         </button>
@@ -700,7 +700,7 @@ export function SettingsModal({
                   {editingProvider === 'groq' && providerConfigs["groq"]?.activeProfileId && (
                     <>
                       <div>
-                        <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                        <label className="block text-xs text-parchment-muted mb-1">API Key</label>
                         <input
                           type="password"
                           value={getActiveProfile("groq")?.apiKey || ""}
@@ -718,14 +718,14 @@ export function SettingsModal({
                             }));
                           }}
                           placeholder="Enter your Groq API key"
-                          className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="w-full bg-ink-raised text-parchment placeholder-parchment-muted rounded px-3 py-2 text-sm border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                         />
                       </div>
                       <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => handleConnectProvider("groq")}
-                          className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                          className="flex-1 py-1.5 text-xs bg-ember text-ink rounded hover:bg-ember-soft transition-colors"
                         >
                           Connect
                         </button>
@@ -737,7 +737,7 @@ export function SettingsModal({
                   {editingProvider === 'open-router' && providerConfigs["open-router"]?.activeProfileId && (
                     <>
                       <div>
-                        <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                        <label className="block text-xs text-parchment-muted mb-1">API Key</label>
                         <input
                           type="password"
                           value={getActiveProfile("open-router")?.apiKey || ""}
@@ -755,14 +755,14 @@ export function SettingsModal({
                             }));
                           }}
                           placeholder="Enter your Open Router API key"
-                          className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="w-full bg-ink-raised text-parchment placeholder-parchment-muted rounded px-3 py-2 text-sm border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                         />
                       </div>
                       <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => handleConnectProvider("open-router")}
-                          className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                          className="flex-1 py-1.5 text-xs bg-ember text-ink rounded hover:bg-ember-soft transition-colors"
                         >
                           Connect
                         </button>
@@ -774,7 +774,7 @@ export function SettingsModal({
                    {editingProvider === 'cohere' && providerConfigs["cohere"]?.activeProfileId && (
                      <>
                        <div>
-                         <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                         <label className="block text-xs text-parchment-muted mb-1">API Key</label>
                          <input
                            type="password"
                            value={getActiveProfile("cohere")?.apiKey || ""}
@@ -792,14 +792,14 @@ export function SettingsModal({
                              }));
                            }}
                            placeholder="Enter your Cohere API key"
-                           className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                           className="w-full bg-ink-raised text-parchment placeholder-parchment-muted rounded px-3 py-2 text-sm border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                          />
                        </div>
                        <div className="flex gap-2">
                          <button
                            type="button"
                            onClick={() => handleConnectProvider("cohere")}
-                           className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                           className="flex-1 py-1.5 text-xs bg-ember text-ink rounded hover:bg-ember-soft transition-colors"
                          >
                            Connect
                          </button>
@@ -811,7 +811,7 @@ export function SettingsModal({
                    {editingProvider === 'stepfun' && providerConfigs["stepfun"]?.activeProfileId && (
                      <>
                        <div>
-                         <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                         <label className="block text-xs text-parchment-muted mb-1">API Key</label>
                          <input
                            type="password"
                            value={getActiveProfile("stepfun")?.apiKey || ""}
@@ -829,9 +829,9 @@ export function SettingsModal({
                              }));
                            }}
                            placeholder="Enter your StepFun API key"
-                           className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                           className="w-full bg-ink-raised text-parchment placeholder-parchment-muted rounded px-3 py-2 text-sm border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                          />
-                         <p className="text-xs text-zinc-500 mt-1">
+                         <p className="text-xs text-parchment-muted mt-1">
                            Get your API key from platform.stepfun.ai/interface-key
                          </p>
                        </div>
@@ -839,7 +839,7 @@ export function SettingsModal({
                          <button
                            type="button"
                            onClick={() => handleConnectProvider("stepfun")}
-                           className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                           className="flex-1 py-1.5 text-xs bg-ember text-ink rounded hover:bg-ember-soft transition-colors"
                          >
                            Connect
                          </button>
@@ -851,7 +851,7 @@ export function SettingsModal({
                    {editingProvider === 'custom-openai' && providerConfigs["custom-openai"]?.activeProfileId && (
                      <>
                        <div>
-                         <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                         <label className="block text-xs text-parchment-muted mb-1">API Key</label>
                          <input
                            type="password"
                            value={getActiveProfile("custom-openai")?.apiKey || ""}
@@ -869,11 +869,11 @@ export function SettingsModal({
                              }));
                            }}
                            placeholder="Enter your API key"
-                           className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                           className="w-full bg-ink-raised text-parchment placeholder-parchment-muted rounded px-3 py-2 text-sm border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                          />
                        </div>
                        <div>
-                         <label className="block text-xs text-zinc-400 mb-1">Base URL</label>
+                         <label className="block text-xs text-parchment-muted mb-1">Base URL</label>
                          <input
                            type="text"
                            value={getActiveProfile("custom-openai")?.baseUrl || ""}
@@ -891,9 +891,9 @@ export function SettingsModal({
                              }));
                            }}
                            placeholder="https://api.example.com/v1"
-                           className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                           className="w-full bg-ink-raised text-parchment placeholder-parchment-muted rounded px-3 py-2 text-sm border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                          />
-                         <p className="text-xs text-zinc-500 mt-1">
+                         <p className="text-xs text-parchment-muted mt-1">
                            The base URL of your OpenAI-compatible API (e.g., https://integrate.api.nvidia.com/v1)
                          </p>
                        </div>
@@ -901,7 +901,7 @@ export function SettingsModal({
                          <button
                            type="button"
                            onClick={() => handleConnectProvider("custom-openai")}
-                           className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                           className="flex-1 py-1.5 text-xs bg-ember text-ink rounded hover:bg-ember-soft transition-colors"
                          >
                            Connect
                          </button>
@@ -913,7 +913,7 @@ export function SettingsModal({
                   {editingProvider === 'kobold-horde' && (
                     <>
                       <div>
-                        <label className="block text-xs text-zinc-400 mb-1">API Key</label>
+                        <label className="block text-xs text-parchment-muted mb-1">API Key</label>
                         <input
                           type="password"
                           value={providerConfigs["kobold-horde"]?.profiles?.[0]?.apiKey || ""}
@@ -934,15 +934,15 @@ export function SettingsModal({
                             }));
                           }}
                           placeholder="Enter your KoboldAI Horde API key"
-                          className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="w-full bg-ink-raised text-parchment placeholder-parchment-muted rounded px-3 py-2 text-sm border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                         />
-                        <p className="text-xs text-zinc-500 mt-2">
+                        <p className="text-xs text-parchment-muted mt-2">
                           Get your API key at{" "}
                           <a
                             href="https://aihorde.net/register"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-400 hover:text-blue-300 underline"
+                            className="text-ember hover:text-ember underline"
                           >
                             aihorde.net/register
                           </a>
@@ -952,7 +952,7 @@ export function SettingsModal({
                          <button
                            type="button"
                            onClick={() => handleConnectProvider("kobold-horde")}
-                           className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                           className="flex-1 py-1.5 text-xs bg-ember text-ink rounded hover:bg-ember-soft transition-colors"
                          >
                            Connect
                          </button>
@@ -964,7 +964,7 @@ export function SettingsModal({
                   {editingProvider === 'ollama' && (
                     <>
                       <div>
-                        <label className="block text-xs text-zinc-400 mb-1">Endpoint Preset</label>
+                        <label className="block text-xs text-parchment-muted mb-1">Endpoint Preset</label>
                         <select
                           value={providerConfigs["ollama"]?.profiles?.[0]?.lastUsedPreset || ""}
                           onChange={(e) => {
@@ -986,7 +986,7 @@ export function SettingsModal({
                               }
                             }
                           }}
-                          className="w-full bg-zinc-900 text-white rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="w-full bg-ink-raised text-parchment rounded px-3 py-2 text-sm border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                         >
                           <option value="">Select a preset...</option>
                           {ollamaPresets.map(preset => (
@@ -995,7 +995,7 @@ export function SettingsModal({
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs text-zinc-400 mb-1">Base URL</label>
+                        <label className="block text-xs text-parchment-muted mb-1">Base URL</label>
                         <input
                           type="text"
                           value={providerConfigs["ollama"]?.profiles?.[0]?.baseUrl || ""}
@@ -1016,14 +1016,14 @@ export function SettingsModal({
                             }));
                           }}
                           placeholder="http://localhost:11434/api/chat"
-                          className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="w-full bg-ink-raised text-parchment placeholder-parchment-muted rounded px-3 py-2 text-sm border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                         />
                       </div>
                       <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => handleConnectProvider("ollama")}
-                          className="flex-1 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                          className="flex-1 py-1.5 text-xs bg-ember text-ink rounded hover:bg-ember-soft transition-colors"
                         >
                           Connect
                         </button>
@@ -1037,23 +1037,23 @@ export function SettingsModal({
              {/* Models and Providers */}
              {showModelsSection && (
                <div>
-             <label className="block text-sm font-medium text-zinc-400 mb-2">
+             <label className="block text-sm font-medium text-parchment-muted mb-2">
                Model ({AVAILABLE_PROVIDERS.find(p => p.id === activeProvider)?.name || activeProvider})
              </label>
              {isLoadingModels ? (
-               <div className="w-full bg-zinc-800 text-zinc-400 rounded-lg px-4 py-2 border border-zinc-700">
+               <div className="w-full bg-ink-hover text-parchment-muted rounded-lg px-4 py-2 border border-line-strong">
                  Loading models...
                </div>
              ) : activeProvider === "custom-openai" ? (
                <div className="space-y-2">
-                 <label className="block text-xs text-zinc-400 mb-1">Model ID</label>
+                 <label className="block text-xs text-parchment-muted mb-1">Model ID</label>
                  <div className="flex gap-2">
                     <input
                       type="text"
                       value={customOpenAIModelInput || (activeProvider === "custom-openai" ? globalSettings.modelId || "" : "")}
                       onChange={(e) => setCustomOpenAIModelInput(e.target.value)}
                       placeholder="Enter model ID, e.g. gpt-4o or z-ai/glm-5.3"
-                      className="flex-1 bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="flex-1 bg-ink-raised text-parchment placeholder-parchment-muted rounded px-3 py-2 text-sm border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && (customOpenAIModelInput || (activeProvider === "custom-openai" ? globalSettings.modelId || "" : "")).trim()) {
                           selectModel((customOpenAIModelInput || (activeProvider === "custom-openai" ? globalSettings.modelId || "" : "")).trim());
@@ -1068,17 +1068,17 @@ export function SettingsModal({
                           selectModel(modelValue.trim());
                         }
                       }}
-                      className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
+                      className="px-4 py-2 bg-ember text-ink rounded text-sm hover:bg-ember-soft transition-colors"
                     >
                       Set
                     </button>
                  </div>
-                 <p className="text-xs text-zinc-500">
+                 <p className="text-xs text-parchment-muted">
                    Type any model ID supported by your endpoint. No list is fetched.
                  </p>
                </div>
              ) : activeProviderModels.length === 0 ? (
-               <div className="w-full bg-zinc-800/50 text-zinc-400 rounded-lg px-4 py-2 border border-zinc-700">
+               <div className="w-full bg-ink-hover/50 text-parchment-muted rounded-lg px-4 py-2 border border-line-strong">
                  No models available. Connect to load models.
                </div>
              ) : (
@@ -1088,14 +1088,14 @@ export function SettingsModal({
                   <button
                     type="button"
                     onClick={() => setShowModelDropdown(!showModelDropdown)}
-                    className="w-full bg-zinc-800 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 text-left flex items-center justify-between"
+                    className="w-full bg-ink-hover text-parchment rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-ember border border-line-strong text-left flex items-center justify-between"
                   >
                     <span className="truncate">
                       {selectedModel ? (
                         <>
                           {selectedModel.name || selectedModel.id}
                           {'context' in selectedModel && selectedModel.context && (
-                            <span className="text-zinc-400 ml-2">
+                            <span className="text-parchment-muted ml-2">
                               ({selectedModel.context?.toLocaleString() || "?"} ctx)
                             </span>
                           )}
@@ -1104,21 +1104,21 @@ export function SettingsModal({
                         "Select a model"
                       )}
                     </span>
-                    <svg className={`w-5 h-5 text-zinc-400 transition-transform ${showModelDropdown ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className={`w-5 h-5 text-parchment-muted transition-transform ${showModelDropdown ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
 
                   {showModelDropdown && (
-                    <div className="absolute z-50 w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-lg max-h-80 overflow-y-auto shadow-xl">
-                      <div className="p-2 border-b border-zinc-700">
+                    <div className="absolute z-50 w-full mt-1 bg-ink-hover border border-line-strong rounded-lg max-h-80 overflow-y-auto shadow-xl">
+                      <div className="p-2 border-b border-line-strong">
                         <input
                           ref={modelSearchInputRef}
                           type="text"
                           placeholder="Search models or enter custom model ID..."
                           value={modelSearchQuery}
                           onChange={(e) => setModelSearchQuery(e.target.value)}
-                          className="w-full bg-zinc-900 text-white px-3 py-2 rounded-lg border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          className="w-full bg-ink-raised text-parchment px-3 py-2 rounded-lg border border-line-strong focus:outline-none focus:ring-2 focus:ring-ember text-sm"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' && modelSearchQuery.trim()) {
                               selectModel(modelSearchQuery.trim());
@@ -1149,7 +1149,7 @@ export function SettingsModal({
                               <button
                                 type="button"
                                 onClick={() => selectModel(modelSearchQuery.trim())}
-                                className="w-full px-4 py-2 text-left text-sm hover:bg-zinc-700 transition-colors text-amber-400 border-b border-zinc-700"
+                                className="w-full px-4 py-2 text-left text-sm hover:bg-line-strong transition-colors text-amber-400 border-b border-line-strong"
                               >
                                 <div className="flex items-center gap-2">
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1157,14 +1157,14 @@ export function SettingsModal({
                                   </svg>
                                    <span className="font-medium">Use custom model: &quot;{modelSearchQuery.trim()}&quot;</span>
                                 </div>
-                                <div className="text-xs text-zinc-500 mt-0.5">
+                                <div className="text-xs text-parchment-muted mt-0.5">
                                   Press Enter or click to use this model
                                 </div>
                               </button>
                             )}
                             {customFiltered.length > 0 && (
                               <>
-                                <div className="px-4 py-1.5 text-xs font-semibold text-amber-400 bg-amber-900/20 border-b border-zinc-700">
+                                <div className="px-4 py-1.5 text-xs font-semibold text-amber-400 bg-amber-900/20 border-b border-line-strong">
                                   CUSTOM
                                 </div>
                                 {customFiltered.map((model) => {
@@ -1174,19 +1174,19 @@ export function SettingsModal({
                                       key={model.id}
                                       type="button"
                                       onClick={() => selectModel(model.id)}
-                                      className={`w-full px-4 py-2 text-left text-sm hover:bg-zinc-700 transition-colors ${
-                                        isSelected ? "bg-blue-900/30 text-blue-300" : "text-zinc-300"
+                                      className={`w-full px-4 py-2 text-left text-sm hover:bg-line-strong transition-colors ${
+                                        isSelected ? "bg-ember/10 text-ember" : "text-parchment-soft"
                                       }`}
                                     >
                                       <div className="flex items-center justify-between">
                                         <span className="font-medium">{model.name || model.id}</span>
                                         {isSelected && (
-                                          <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                          <svg className="w-4 h-4 text-ember" fill="currentColor" viewBox="0 0 20 20">
                                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                           </svg>
                                         )}
                                       </div>
-                                      <div className="text-xs text-zinc-500 mt-0.5">
+                                      <div className="text-xs text-parchment-muted mt-0.5">
                                         Custom model
                                       </div>
                                     </button>
@@ -1196,7 +1196,7 @@ export function SettingsModal({
                             )}
                             {freeModels.length > 0 && (
                               <>
-                                <div className="px-4 py-1.5 text-xs font-semibold text-green-400 bg-green-900/20 border-b border-zinc-700">
+                                <div className="px-4 py-1.5 text-xs font-semibold text-green-400 bg-green-900/20 border-b border-line-strong">
                                   FREE
                                 </div>
                                 {freeModels.map((model) => {
@@ -1206,20 +1206,20 @@ export function SettingsModal({
                                       key={model.id}
                                       type="button"
                                       onClick={() => selectModel(model.id)}
-                                      className={`w-full px-4 py-2 text-left text-sm hover:bg-zinc-700 transition-colors ${
-                                        isSelected ? "bg-blue-900/30 text-blue-300" : "text-zinc-300"
+                                      className={`w-full px-4 py-2 text-left text-sm hover:bg-line-strong transition-colors ${
+                                        isSelected ? "bg-ember/10 text-ember" : "text-parchment-soft"
                                       }`}
                                     >
                                       <div className="flex items-center justify-between">
                                         <span className="font-medium">{model.name || model.id}</span>
                                         {isSelected && (
-                                          <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                          <svg className="w-4 h-4 text-ember" fill="currentColor" viewBox="0 0 20 20">
                                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                           </svg>
                                         )}
                                       </div>
                                       {'context' in model && model.context && (
-                                        <div className="text-xs text-zinc-500 mt-0.5">
+                                        <div className="text-xs text-parchment-muted mt-0.5">
                                           {model.context?.toLocaleString() || "?"} ctx | {getModelCostInfo(model)}
                                         </div>
                                       )}
@@ -1230,7 +1230,7 @@ export function SettingsModal({
                             )}
                             {paidModels.length > 0 && (
                               <>
-                                <div className="px-4 py-1.5 text-xs font-semibold text-yellow-400 bg-yellow-900/20 border-b border-zinc-700">
+                                <div className="px-4 py-1.5 text-xs font-semibold text-yellow-400 bg-yellow-900/20 border-b border-line-strong">
                                   PAID
                                 </div>
                                 {paidModels.map((model) => {
@@ -1240,20 +1240,20 @@ export function SettingsModal({
                                       key={model.id}
                                       type="button"
                                       onClick={() => selectModel(model.id)}
-                                      className={`w-full px-4 py-2 text-left text-sm hover:bg-zinc-700 transition-colors ${
-                                        isSelected ? "bg-blue-900/30 text-blue-300" : "text-zinc-300"
+                                      className={`w-full px-4 py-2 text-left text-sm hover:bg-line-strong transition-colors ${
+                                        isSelected ? "bg-ember/10 text-ember" : "text-parchment-soft"
                                       }`}
                                     >
                                       <div className="flex items-center justify-between">
                                         <span className="font-medium">{model.name || model.id}</span>
                                         {isSelected && (
-                                          <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                          <svg className="w-4 h-4 text-ember" fill="currentColor" viewBox="0 0 20 20">
                                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                           </svg>
                                         )}
                                       </div>
                                       {'context' in model && model.context && (
-                                        <div className="text-xs text-zinc-500 mt-0.5">
+                                        <div className="text-xs text-parchment-muted mt-0.5">
                                           {model.context?.toLocaleString() || "?"} ctx | {getModelCostInfo(model)}
                                         </div>
                                       )}
@@ -1263,7 +1263,7 @@ export function SettingsModal({
                               </>
                             )}
                             {filteredModels.length === 0 && customFiltered.length === 0 && !hasCustomMatch && modelSearchQuery && (
-                               <div className="px-4 py-3 text-center text-zinc-500 text-sm">
+                               <div className="px-4 py-3 text-center text-parchment-muted text-sm">
                                  No models found. Press Enter to use &quot;{modelSearchQuery}&quot; as custom model.
                                </div>
                              )}
@@ -1276,18 +1276,18 @@ export function SettingsModal({
 
                 {/* Selected Model Info */}
                 {selectedModel && 'context' in selectedModel && selectedModel.context && (
-                  <div className="mt-2 p-3 bg-zinc-800/50 rounded-lg text-xs text-zinc-400 space-y-1">
+                  <div className="mt-2 p-3 bg-ink-hover/50 rounded-lg text-xs text-parchment-muted space-y-1">
                     <div className="flex justify-between">
                       <span>Provider:</span>
-                      <span className="text-zinc-300">{selectedModel.provider || activeProvider}</span>
+                      <span className="text-parchment-soft">{selectedModel.provider || activeProvider}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Context Window:</span>
-                      <span className="text-zinc-300">{selectedModel.context?.toLocaleString() || "Unknown"} tokens</span>
+                      <span className="text-parchment-soft">{selectedModel.context?.toLocaleString() || "Unknown"} tokens</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Max Output:</span>
-                      <span className="text-zinc-300">{selectedModel.max_tokens?.toLocaleString() || "Unknown"} tokens</span>
+                      <span className="text-parchment-soft">{selectedModel.max_tokens?.toLocaleString() || "Unknown"} tokens</span>
                     </div>
                   </div>
                 )}
@@ -1297,12 +1297,12 @@ export function SettingsModal({
            )}
 
            {/* Global Settings */}
-           <div className="border-t border-zinc-700 pt-6">
-             <h3 className="text-sm font-medium text-white mb-4">Global Settings</h3>
+           <div className="border-t border-line-strong pt-6">
+             <h3 className="text-sm font-medium text-parchment mb-4">Global Settings</h3>
              <div className="space-y-4">
                {/* Temperature */}
                <div>
-                 <label className="block text-sm font-medium text-zinc-300 mb-2">
+                 <label className="block text-sm font-medium text-parchment-soft mb-2">
                    Temperature: {globalSettings.temperature.toFixed(2)}
                  </label>
                  <input
@@ -1314,7 +1314,7 @@ export function SettingsModal({
                    onChange={(e) => setGlobalSettings({ ...globalSettings, temperature: parseFloat(e.target.value) })}
                    className="w-full"
                  />
-                 <p className="text-xs text-zinc-500 mt-1">
+                 <p className="text-xs text-parchment-muted mt-1">
                    Lower = more focused, Higher = more creative
                  </p>
                </div>
@@ -1337,14 +1337,14 @@ export function SettingsModal({
                       }
                     }}
                   />
-                  <label htmlFor="useCustomSize" className="text-sm text-zinc-300 cursor-pointer">
+                  <label htmlFor="useCustomSize" className="text-sm text-parchment-soft cursor-pointer">
                     Use custom output/context sizes
                   </label>
                 </div>
 
                {/* Max Output Tokens */}
                <div className={globalSettings.useCustomSize ? "" : "opacity-50 pointer-events-none"}>
-                 <label className="block text-sm font-medium text-zinc-300 mb-2">
+                 <label className="block text-sm font-medium text-parchment-soft mb-2">
                    Max Output Tokens
                  </label>
                  <div className="flex items-center gap-3">
@@ -1368,26 +1368,26 @@ export function SettingsModal({
                          setGlobalSettings({ ...globalSettings, maxTokens: value });
                        }
                      }}
-                     className="w-24 px-2 py-1 bg-zinc-800 border border-zinc-700 rounded text-white text-center text-sm focus:outline-none focus:border-purple-500"
+                     className="w-24 px-2 py-1 bg-ink-hover border border-line-strong rounded text-parchment text-center text-sm focus:outline-none focus:border-ember"
                      disabled={!globalSettings.useCustomSize}
                    />
                    <button
                      onClick={() => setGlobalSettings({ ...globalSettings, maxTokens: selectedModel?.max_tokens || 4000 })}
-                     className="px-2 py-1 bg-purple-600 hover:bg-purple-700 rounded text-xs text-white transition-colors"
+                     className="px-2 py-1 bg-ember hover:bg-ember-soft rounded text-xs text-ink transition-colors"
                      title="Set to model maximum"
                      disabled={!globalSettings.useCustomSize}
                    >
                      Max
                    </button>
                  </div>
-                 <p className="text-xs text-zinc-500 mt-1">
-                   Maximum length of AI responses • Model max: <span className="text-purple-400">{(selectedModel?.max_tokens || 4000).toLocaleString()}</span> tokens
+                 <p className="text-xs text-parchment-muted mt-1">
+                   Maximum length of AI responses • Model max: <span className="text-ember-soft">{(selectedModel?.max_tokens || 4000).toLocaleString()}</span> tokens
                  </p>
                </div>
 
                {/* Max Context Tokens */}
                <div className={globalSettings.useCustomSize ? "" : "opacity-50 pointer-events-none"}>
-                 <label className="block text-sm font-medium text-zinc-300 mb-2">
+                 <label className="block text-sm font-medium text-parchment-soft mb-2">
                    Max Context Tokens
                  </label>
                  <div className="flex items-center gap-3">
@@ -1411,26 +1411,26 @@ export function SettingsModal({
                          setGlobalSettings({ ...globalSettings, maxContextTokens: value });
                        }
                      }}
-                     className="w-24 px-2 py-1 bg-zinc-800 border border-zinc-700 rounded text-white text-center text-sm focus:outline-none focus:border-purple-500"
+                     className="w-24 px-2 py-1 bg-ink-hover border border-line-strong rounded text-parchment text-center text-sm focus:outline-none focus:border-ember"
                      disabled={!globalSettings.useCustomSize}
                    />
                    <button
                      onClick={() => setGlobalSettings({ ...globalSettings, maxContextTokens: selectedModel?.context || 128000 })}
-                     className="px-2 py-1 bg-purple-600 hover:bg-purple-700 rounded text-xs text-white transition-colors"
+                     className="px-2 py-1 bg-ember hover:bg-ember-soft rounded text-xs text-ink transition-colors"
                      title="Set to model maximum"
                      disabled={!globalSettings.useCustomSize}
                    >
                      Max
                    </button>
                  </div>
-                 <p className="text-xs text-zinc-500 mt-1">
-                   Maximum conversation history sent to AI • Model max: <span className="text-purple-400">{((selectedModel?.context || 128000)).toLocaleString()}</span> tokens
+                 <p className="text-xs text-parchment-muted mt-1">
+                   Maximum conversation history sent to AI • Model max: <span className="text-ember-soft">{((selectedModel?.context || 128000)).toLocaleString()}</span> tokens
                  </p>
                </div>
 
                {/* Top P */}
                <div>
-                 <label className="block text-sm font-medium text-zinc-300 mb-2">
+                 <label className="block text-sm font-medium text-parchment-soft mb-2">
                    Top P: {globalSettings.topP.toFixed(2)}
                  </label>
                  <input
@@ -1442,14 +1442,14 @@ export function SettingsModal({
                    onChange={(e) => setGlobalSettings({ ...globalSettings, topP: parseFloat(e.target.value) })}
                    className="w-full"
                  />
-                 <p className="text-xs text-zinc-500 mt-1">
+                 <p className="text-xs text-parchment-muted mt-1">
                    Nucleus sampling - controls response diversity
                  </p>
                </div>
 
                {/* Top K */}
                <div>
-                 <label className="block text-sm font-medium text-zinc-300 mb-2">
+                 <label className="block text-sm font-medium text-parchment-soft mb-2">
                    Top K: {globalSettings.topK}
                  </label>
                  <input
@@ -1461,49 +1461,49 @@ export function SettingsModal({
                    onChange={(e) => setGlobalSettings({ ...globalSettings, topK: parseInt(e.target.value) })}
                    className="w-full"
                  />
-                 <p className="text-xs text-zinc-500 mt-1">
+                 <p className="text-xs text-parchment-muted mt-1">
                    Limits token selection to top K choices
                  </p>
                </div>
 
                 {/* Enable Thinking */}
                 <div>
-                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  <label className="block text-sm font-medium text-parchment-soft mb-2">
                     Enable Thinking
                   </label>
                   <ToggleSwitch
                     checked={globalSettings.enableThinking}
                     onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, enableThinking: checked })}
                   />
-                  <p className="text-xs text-zinc-500 mt-1">
+                  <p className="text-xs text-parchment-muted mt-1">
                     Show AI reasoning process (Gemini models only)
                   </p>
                 </div>
 
                 {/* Enable Streaming */}
                 <div>
-                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  <label className="block text-sm font-medium text-parchment-soft mb-2">
                     Enable Streaming
                   </label>
                   <ToggleSwitch
                     checked={globalSettings.enableStreaming}
                     onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, enableStreaming: checked })}
                   />
-                  <p className="text-xs text-zinc-500 mt-1">
+                  <p className="text-xs text-parchment-muted mt-1">
                     Stream AI responses in real-time
                   </p>
                 </div>
 
                 {/* Ding When Unfocused */}
                 <div>
-                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  <label className="block text-sm font-medium text-parchment-soft mb-2">
                     Ding When Unfocused
                   </label>
                   <ToggleSwitch
                     checked={globalSettings.dingWhenUnfocused}
                     onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, dingWhenUnfocused: checked })}
                   />
-                  <p className="text-xs text-zinc-500 mt-1">
+                  <p className="text-xs text-parchment-muted mt-1">
                     Play a notification sound when AI finishes and window is not focused
                   </p>
                 </div>
@@ -1513,7 +1513,7 @@ export function SettingsModal({
            {/* Instruction Injection Position */}
           {showInstructionsSection && (
           <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-2">
+            <label className="block text-sm font-medium text-parchment-muted mb-2">
               Instruction Injection Position
             </label>
             <select
@@ -1522,7 +1522,7 @@ export function SettingsModal({
                 ...globalSettings, 
                 instructionInjectionPosition: e.target.value as any 
               })}
-              className="w-full bg-zinc-800 text-white px-4 py-2 rounded-lg border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-ink-hover text-parchment px-4 py-2 rounded-lg border border-line-strong focus:outline-none focus:ring-2 focus:ring-ember"
             >
               <option value="start">At start (default)</option>
               <option value="before-last">Before last message</option>
@@ -1531,7 +1531,7 @@ export function SettingsModal({
             
             {globalSettings.instructionInjectionPosition === "custom-index" && (
               <div className="mt-3">
-                <label className="block text-xs text-zinc-500 mb-1">
+                <label className="block text-xs text-parchment-muted mb-1">
                   Inject instructions before message index (0 = first message)
                 </label>
                 <input
@@ -1542,12 +1542,12 @@ export function SettingsModal({
                     ...globalSettings, 
                     instructionCustomInjectionIndex: Math.max(0, parseInt(e.target.value) || 0)
                   })}
-                  className="w-full bg-zinc-800 text-white px-4 py-2 rounded-lg border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-ink-hover text-parchment px-4 py-2 rounded-lg border border-line-strong focus:outline-none focus:ring-2 focus:ring-ember"
                 />
               </div>
             )}
             
-            <div className="mt-2 text-xs text-zinc-500">
+            <div className="mt-2 text-xs text-parchment-muted">
               Controls where system instructions are placed in the chat history sent to AI
             </div>
            </div>
@@ -1561,38 +1561,38 @@ export function SettingsModal({
               {/* Check if model is Gemini 2.5 */}
               {globalSettings.modelId?.startsWith("gemini-2.5") ? (
                 <>
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">
+                  <label className="block text-sm font-medium text-parchment-muted mb-2">
                     Thinking Budget
                   </label>
                   <select
                     value={globalSettings.thinkingBudget}
                     onChange={(e) => setGlobalSettings({ ...globalSettings, thinkingBudget: e.target.value as "NONE" | "LOW" | "MEDIUM" | "HIGH" })}
-                    className="w-full bg-zinc-800 text-white rounded-lg px-4 py-2 border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full bg-ink-hover text-parchment rounded-lg px-4 py-2 border border-line-strong focus:outline-none focus:ring-2 focus:ring-ember"
                   >
                     <option value="NONE">None - No thinking budget</option>
                     <option value="LOW">Low - Minimal thinking (fastest)</option>
                     <option value="MEDIUM">Medium - Balanced thinking</option>
                     <option value="HIGH">High - Maximum thinking (slowest)</option>
                   </select>
-                  <p className="text-xs text-zinc-500 mt-1">
+                  <p className="text-xs text-parchment-muted mt-1">
                     Controls the thinking budget for Gemini 2.5 models (affects response quality and speed)
                   </p>
                 </>
               ) : (
                 <>
-                  <label className="block text-sm font-medium text-zinc-400 mb-2">
+                  <label className="block text-sm font-medium text-parchment-muted mb-2">
                     Thinking Level
                   </label>
                   <select
                     value={globalSettings.thinkingLevel}
                     onChange={(e) => setGlobalSettings({ ...globalSettings, thinkingLevel: e.target.value as "LOW" | "MEDIUM" | "HIGH" })}
-                    className="w-full bg-zinc-800 text-white rounded-lg px-4 py-2 border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full bg-ink-hover text-parchment rounded-lg px-4 py-2 border border-line-strong focus:outline-none focus:ring-2 focus:ring-ember"
                   >
                     <option value="LOW">Low - Quick responses with minimal thinking</option>
                     <option value="MEDIUM">Medium - Balanced thinking and speed</option>
                     <option value="HIGH">High - Deep thinking for complex responses</option>
                   </select>
-                  <p className="text-xs text-zinc-500 mt-1">
+                  <p className="text-xs text-parchment-muted mt-1">
                     Controls how deeply the AI thinks before responding (affects response quality and speed)
                   </p>
                 </>
@@ -1603,9 +1603,9 @@ export function SettingsModal({
 
 
             {/* Data Export/Import */}
-          <div className="border-t border-zinc-700 pt-6">
-            <h3 className="text-sm font-medium text-white mb-4">Data Backup</h3>
-            <p className="text-xs text-zinc-400 mb-4">
+          <div className="border-t border-line-strong pt-6">
+            <h3 className="text-sm font-medium text-parchment mb-4">Data Backup</h3>
+            <p className="text-xs text-parchment-muted mb-4">
               Export your personas, characters, conversations, and settings to a JSON file. 
               Import to restore your data on any device.
             </p>
@@ -1613,7 +1613,7 @@ export function SettingsModal({
               <button
                 type="button"
                 onClick={onExportData}
-                className="flex-1 py-2 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                className="flex-1 py-2 px-4 bg-green-600 text-parchment rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
               >
                 📥 Export Data
               </button>
@@ -1633,21 +1633,21 @@ export function SettingsModal({
               <button
                 type="button"
                 onClick={() => dataImportInputRef.current?.click()}
-                className="flex-1 py-2 px-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+                className="flex-1 py-2 px-4 bg-ember text-ink rounded-lg hover:bg-ember-soft transition-colors text-sm font-medium"
               >
                 📤 Import Data
               </button>
             </div>
             
             {/* Auto-export settings */}
-            <div className="mt-4 p-3 bg-zinc-800 rounded-lg">
+            <div className="mt-4 p-3 bg-ink-hover rounded-lg">
               <div className="flex items-center gap-3 mb-3">
                 <ToggleSwitch
                   id="autoExport"
                   checked={autoExport.enabled}
                   onCheckedChange={(checked) => setAutoExport(prev => ({ ...prev, enabled: checked }))}
                 />
-                <label htmlFor="autoExport" className="text-sm text-white cursor-pointer">
+                <label htmlFor="autoExport" className="text-sm text-parchment cursor-pointer">
                   Auto-export every
                 </label>
                 <input
@@ -1657,11 +1657,11 @@ export function SettingsModal({
                   value={autoExport.intervalMinutes}
                   onChange={(e) => setAutoExport(prev => ({ ...prev, intervalMinutes: Math.max(1, Math.min(60, parseInt(e.target.value) || 1)) }))}
                   disabled={!autoExport.enabled}
-                  className="w-16 px-2 py-1 bg-zinc-700 border border-zinc-600 rounded text-white text-sm text-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-16 px-2 py-1 bg-line-strong border border-line-strong rounded text-parchment text-sm text-center disabled:opacity-50 disabled:cursor-not-allowed"
                 />
-                <span className="text-sm text-zinc-400">minutes</span>
+                <span className="text-sm text-parchment-muted">minutes</span>
               </div>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-parchment-muted">
                 {autoExport.enabled 
                   ? `✓ Auto-export enabled - will export every ${autoExport.intervalMinutes} minute${autoExport.intervalMinutes !== 1 ? 's' : ''}`
                   : "Enable to automatically backup your data at regular intervals"
@@ -1675,7 +1675,7 @@ export function SettingsModal({
        <div className="flex gap-3 mt-6">
           <button
             onClick={onClose}
-            className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex-1 py-2 bg-ember text-ink rounded-lg hover:bg-ember-soft transition-colors"
           >
             Done
           </button>

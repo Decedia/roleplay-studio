@@ -99,34 +99,34 @@
 }
 
 .dark {
-  /* Dark theme colors */
-  --background: 240 10% 3.9%;
-  --foreground: 0 0% 98%;
+  /* Dark theme colors (Storybook warm palette) */
+  --background: 36 20% 7%;
+  --foreground: 37 35% 89%;
 
-  --card: 240 10% 3.9%;
-  --card-foreground: 0 0% 98%;
+  --card: 36 17% 9%;
+  --card-foreground: 37 35% 89%;
 
-  --popover: 240 10% 3.9%;
-  --popover-foreground: 0 0% 98%;
+  --popover: 36 17% 9%;
+  --popover-foreground: 37 35% 89%;
 
-  --primary: 0 0% 98%;
-  --primary-foreground: 240 5.9% 10%;
+  --primary: 33 68% 61%;
+  --primary-foreground: 36 20% 7%;
 
-  --secondary: 240 3.7% 15.9%;
-  --secondary-foreground: 0 0% 98%;
+  --secondary: 33 22% 12%;
+  --secondary-foreground: 37 35% 89%;
 
-  --muted: 240 3.7% 15.9%;
-  --muted-foreground: 240 5% 64.9%;
+  --muted: 33 22% 12%;
+  --muted-foreground: 35 11% 62%;
 
-  --accent: 240 3.7% 15.9%;
-  --accent-foreground: 0 0% 98%;
+  --accent: 33 22% 12%;
+  --accent-foreground: 37 35% 89%;
 
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 40%;
+  --destructive-foreground: 37 35% 89%;
 
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
-  --ring: 240 4.9% 83.9%;
+  --border: 31 20% 19%;
+  --input: 31 20% 19%;
+  --ring: 33 68% 61%;
   
   color-scheme: dark;
 }

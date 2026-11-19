@@ -3973,7 +3973,7 @@ if (modelsResult.models.length > 0) {
   return (
     <div className={ui.layout.main}>
       {/* Left rail: recent chats + library (desktop) */}
-      <aside className="hidden lg:flex flex-col fixed left-0 top-0 bottom-0 w-[264px] z-[55] bg-ink-raised border-r border-line">
+      <aside className="hidden lg:flex flex-col fixed left-0 top-0 bottom-0 w-[264px] z-40 bg-ink-raised border-r border-line">
         <div className="flex items-center gap-2.5 px-4 h-[72px] flex-shrink-0">
           <button onClick={() => setView("home")} className="flex items-center gap-2.5 min-w-0 flex-1 text-left" aria-label="Home">
             <span className="w-8 h-8 rounded-lg bg-ember text-ink font-story font-semibold flex items-center justify-center flex-shrink-0">R</span>
@@ -4055,10 +4055,10 @@ if (modelsResult.models.length > 0) {
               {view !== "home" && (
           <button
                     onClick={() => goBack()}
-                    className="p-1.5 sm:p-2 hover:bg-zinc-800 rounded-lg transition-colors flex-shrink-0"
+                    className="p-1.5 sm:p-2 hover:bg-ink-hover rounded-lg transition-colors flex-shrink-0"
                   >
                     <svg
-                      className="w-4 sm:w-5 h-4 sm:h-5 text-zinc-400"
+                      className="w-4 sm:w-5 h-4 sm:h-5 text-parchment-muted"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -4127,31 +4127,31 @@ if (modelsResult.models.length > 0) {
               )}
               <button
                 onClick={() => setShowHeaderActions(!showHeaderActions)}
-                className="p-1.5 sm:p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                className="p-1.5 sm:p-2 hover:bg-ink-hover rounded-lg transition-colors"
                 title="More options"
               >
-                <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
               
               {/* Dropdown Menu */}
               {showHeaderActions && (
-                <div className="absolute right-0 top-full mt-0 w-56 bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl z-50 overflow-hidden">
+                <div className="absolute right-0 top-full mt-0 w-56 bg-ink-raised border border-line rounded-xl shadow-xl z-50 overflow-hidden">
                   {/* Models */}
                   <button
                     onClick={() => {
                       setShowModelsModal(true);
                       setShowHeaderActions(false);
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800 transition-colors text-left"
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-ink-hover transition-colors text-left"
                   >
-                    <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                     <div>
-                      <div className="text-sm text-white">Models</div>
-                      <div className="text-xs text-zinc-500">Select AI model and providers</div>
+                      <div className="text-sm text-parchment">Models</div>
+                      <div className="text-xs text-parchment-muted">Select AI model and providers</div>
                     </div>
                     </button>
 
@@ -4161,29 +4161,29 @@ if (modelsResult.models.length > 0) {
                        setShowUtilitiesModal(true);
                        setShowHeaderActions(false);
                      }}
-                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800 transition-colors text-left"
+                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-ink-hover transition-colors text-left"
                    >
-                    <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                     <div>
-                     <div className="text-sm text-white">Utilities</div>
-                        <div className="text-xs text-zinc-500">Tags, summarize, debug, logs</div>
+                     <div className="text-sm text-parchment">Utilities</div>
+                        <div className="text-xs text-parchment-muted">Tags, summarize, debug, logs</div>
                      </div>
                    </button>
 
                    {/* Dedicated Instructions Button */}
                    <button
                      onClick={() => setShowInstructionModal(true)}
-                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800 transition-colors text-left"
+                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-ink-hover transition-colors text-left"
                    >
-                     <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <svg className="w-5 h-5 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.333.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.333.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.333.477-4.5 1.253" />
                      </svg>
                       <div>
-                        <div className="text-sm text-white">Instructions</div>
-                        <div className="text-xs text-zinc-500">Chat</div>
+                        <div className="text-sm text-parchment">Instructions</div>
+                        <div className="text-xs text-parchment-muted">Chat</div>
                       </div>
                     </button>
 
@@ -4198,16 +4198,16 @@ if (modelsResult.models.length > 0) {
                     disabled={view !== "chat" || !selectedCharacter}
                     className={`w-full flex items-center gap-3 px-4 py-3 transition-colors text-left ${
                       view === "chat" && selectedCharacter
-                        ? "hover:bg-zinc-800 text-white"
+                        ? "hover:bg-ink-hover text-parchment"
                         : "opacity-50 cursor-not-allowed"
                     }`}
                   >
-                    <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                     <div>
-                      <div className="text-sm text-white">Character Card</div>
-                      <div className="text-xs text-zinc-500">
+                      <div className="text-sm text-parchment">Character Card</div>
+                      <div className="text-xs text-parchment-muted">
                         {view === "chat" && selectedCharacter ? "View & edit info" : "Only available in chat"}
                       </div>
                     </div>
@@ -4235,7 +4235,7 @@ if (modelsResult.models.length > 0) {
       {error && isErrorVisible && (
         <div className="fixed top-[73px] left-0 right-0 z-40 px-4 py-3">
           <div className="max-w-4xl mx-auto">
-            <div className="bg-zinc-800/95 border border-zinc-700 rounded-lg px-4 py-3 text-zinc-200 shadow-xl backdrop-blur-sm border-l-4 border-l-red-500 flex items-start gap-3">
+            <div className="bg-ink-hover/95 border border-line-strong rounded-lg px-4 py-3 text-parchment shadow-xl backdrop-blur-sm border-l-4 border-l-red-500 flex items-start gap-3">
               <svg className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
               </svg>
@@ -4246,7 +4246,7 @@ if (modelsResult.models.length > 0) {
                 {!isLoading && currentConversation && selectedPersona && selectedCharacter && (
                    <button
                      onClick={() => handleRetry()}
-                     className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 rounded-lg transition-colors disabled:opacity-50 text-xs font-medium"
+                     className="flex items-center gap-1.5 px-3 py-1.5 bg-line-strong hover:bg-line-strong text-parchment rounded-lg transition-colors disabled:opacity-50 text-xs font-medium"
                    >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -4256,7 +4256,7 @@ if (modelsResult.models.length > 0) {
                 )}
                 <button
                   onClick={dismissError}
-                  className="p-1.5 hover:bg-zinc-700 rounded-lg transition-colors text-zinc-400 hover:text-zinc-200"
+                  className="p-1.5 hover:bg-line-strong rounded-lg transition-colors text-parchment-muted hover:text-parchment"
                   title="Close"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -4273,7 +4273,7 @@ if (modelsResult.models.length > 0) {
       {showUndoToast && deletedItem && (
         <div className="fixed bottom-32 left-0 lg:left-[264px] right-0 z-[1000] px-4 py-3">
           <div className="max-w-4xl mx-auto">
-            <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white shadow-xl backdrop-blur-sm flex items-center justify-between">
+            <div className="bg-ink-hover border border-line-strong rounded-lg px-4 py-3 text-parchment shadow-xl backdrop-blur-sm flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -4356,23 +4356,23 @@ if (modelsResult.models.length > 0) {
           {view === "personas" && (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <h2 className="text-lg font-medium text-white">Roleplay with AI</h2>
+                <h2 className="text-lg font-medium text-parchment">Roleplay with AI</h2>
               </div>
               
               {personas.length === 0 ? (
                 <div className="text-center py-16">
-                  <div className="w-16 h-16 rounded-2xl bg-zinc-800 flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-16 h-16 rounded-2xl bg-ink-hover flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                   </div>
-                  <h3 className="text-xl font-medium text-white mb-2">No personas yet</h3>
-                  <p className="text-zinc-500 mb-6 max-w-md mx-auto">
+                  <h3 className="text-xl font-medium text-parchment mb-2">No personas yet</h3>
+                  <p className="text-parchment-muted mb-6 max-w-md mx-auto">
                     Create a persona to represent yourself in conversations. This is who YOU are in the roleplay.
                   </p>
                   <button
                     onClick={() => setShowPersonaModal(true)}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="px-6 py-3 bg-ember text-ink rounded-lg hover:bg-ember-soft transition-colors"
                   >
                     Create Your First Persona
                   </button>
@@ -4382,7 +4382,7 @@ if (modelsResult.models.length > 0) {
                   {/* Create button - same level as personas */}
                   <button
                     onClick={() => setShowPersonaModal(true)}
-                    className="flex items-center justify-center gap-2 p-4 bg-zinc-900 border-2 border-dashed border-zinc-700 text-zinc-400 rounded-xl hover:border-zinc-600 hover:text-zinc-300 transition-colors"
+                    className="flex items-center justify-center gap-2 p-4 bg-ink-raised border-2 border-dashed border-line-strong text-parchment-muted rounded-xl hover:border-line-strong hover:text-parchment-soft transition-colors"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -4395,26 +4395,26 @@ if (modelsResult.models.length > 0) {
                     {personas.map((persona) => (
                       <div
                         key={persona.id}
-                        className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition-colors"
+                        className="bg-ink-raised border border-line rounded-xl p-4 hover:border-line-strong transition-colors"
                       >
                         <div className="flex justify-between items-start mb-3">
-                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-                            <span className="text-xl text-white font-semibold">
+                          <div className="w-12 h-12 rounded-xl bg-ink-hover border border-line-strong text-parchment-soft flex items-center justify-center">
+                            <span className="text-xl text-parchment font-semibold">
                               {persona.name.charAt(0).toUpperCase()}
                             </span>
                           </div>
                           <div className="flex gap-1">
                             <button
                               onClick={() => openEditPersona(persona)}
-                              className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                              className="p-2 hover:bg-ink-hover rounded-lg transition-colors"
                             >
-                              <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-4 h-4 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                               </svg>
                             </button>
                             <button
                               onClick={() => deletePersona(persona.id)}
-                              className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                              className="p-2 hover:bg-ink-hover rounded-lg transition-colors"
                             >
                               <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -4422,11 +4422,11 @@ if (modelsResult.models.length > 0) {
                             </button>
                           </div>
                         </div>
-                        <h3 className="text-lg font-medium text-white mb-1 truncate">{persona.name}</h3>
-                        <p className="text-sm text-zinc-400 line-clamp-2 mb-4">{persona.description}</p>
+                        <h3 className="text-lg font-medium text-parchment mb-1 truncate">{persona.name}</h3>
+                        <p className="text-sm text-parchment-muted line-clamp-2 mb-4">{persona.description}</p>
                         <button
                           onClick={() => selectPersona(persona)}
-                          className="w-full py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
+                          className="w-full py-2 bg-ink-hover text-parchment rounded-lg hover:bg-line-strong transition-colors"
                         >
                           Select Persona
                         </button>
@@ -4443,7 +4443,7 @@ if (modelsResult.models.length > 0) {
           {view === "characters" && selectedPersona && (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <h2 className="text-lg font-medium text-white">AI Characters</h2>
+                <h2 className="text-lg font-medium text-parchment">AI Characters</h2>
                 
                 {/* Desktop buttons - hidden on mobile */}
                 <div className="hidden md:flex gap-2">
@@ -4457,7 +4457,7 @@ if (modelsResult.models.length > 0) {
                   />
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-2 px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors text-sm"
+                    className="flex items-center gap-2 px-4 py-2 bg-line-strong text-parchment rounded-lg hover:bg-line-strong transition-colors text-sm"
                     title="Import SillyTavern Character"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -4473,7 +4473,7 @@ if (modelsResult.models.length > 0) {
                       setCharacterFirstMessage("");
                       setShowCharacterModal(true);
                     }}
-                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                    className="flex items-center gap-2 px-4 py-2 bg-ember text-ink rounded-lg hover:bg-ember-soft transition-colors text-sm"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -4485,9 +4485,9 @@ if (modelsResult.models.length > 0) {
                 {/* Mobile hamburger menu button */}
                 <button
                   onClick={() => setShowMobileMenu(!showMobileMenu)}
-                  className="md:hidden p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                  className="md:hidden p-2 hover:bg-ink-hover rounded-lg transition-colors"
                 >
-                  <svg className="w-6 h-6 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     {showMobileMenu ? (
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     ) : (
@@ -4499,13 +4499,13 @@ if (modelsResult.models.length > 0) {
               
               {/* Mobile menu dropdown for characters */}
               {showMobileMenu && view === "characters" && (
-                <div className="md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2">
+                <div className="md:hidden bg-ink-raised border border-line rounded-xl p-3 space-y-2">
                   <button
                     onClick={() => {
                       setView("personas");
                       setShowMobileMenu(false);
                     }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-ember text-ink rounded-lg hover:bg-ember-soft transition-colors"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -4518,7 +4518,7 @@ if (modelsResult.models.length > 0) {
                         setShowCharacterModal(true);
                         setShowMobileMenu(false);
                       }}
-                     className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+                     className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-line-strong text-parchment rounded-lg hover:bg-line-strong transition-colors"
                    >
                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -4538,7 +4538,7 @@ if (modelsResult.models.length > 0) {
                       fileInputRef.current?.click();
                       setShowMobileMenu(false);
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-3 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-line-strong text-parchment rounded-lg hover:bg-line-strong transition-colors"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -4554,7 +4554,7 @@ if (modelsResult.models.length > 0) {
                       setShowCharacterModal(true);
                       setShowMobileMenu(false);
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-ember text-ink rounded-lg hover:bg-ember-soft transition-colors"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -4579,13 +4579,13 @@ if (modelsResult.models.length > 0) {
               {/* Sort Controls */}
               {characters.length > 0 && (
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm text-zinc-400">{characters.length} characters</span>
+                  <span className="text-sm text-parchment-muted">{characters.length} characters</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-zinc-500">Sort by:</span>
+                    <span className="text-xs text-parchment-muted">Sort by:</span>
                     <select
                       value={characterSortOrder}
                       onChange={(e) => setCharacterSortOrder(e.target.value as 'added' | 'lastChat' | 'name')}
-                      className="bg-zinc-800 text-white text-xs rounded px-2 py-1 border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                      className="bg-ink-hover text-parchment text-xs rounded px-2 py-1 border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                     >
                       <option value="added">Date Added</option>
                       <option value="lastChat">Last Chat</option>
@@ -4597,18 +4597,18 @@ if (modelsResult.models.length > 0) {
 
               {characters.length === 0 ? (
                 <div className="text-center py-16">
-                  <div className="w-16 h-16 rounded-2xl bg-zinc-800 flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-16 h-16 rounded-2xl bg-ink-hover flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                     </svg>
                   </div>
-                  <h3 className="text-xl font-medium text-white mb-2">No characters yet</h3>
-                  <p className="text-zinc-500 mb-6 max-w-md mx-auto">
+                  <h3 className="text-xl font-medium text-parchment mb-2">No characters yet</h3>
+                  <p className="text-parchment-muted mb-6 max-w-md mx-auto">
                     Create an AI character to chat with. This is who the AI will roleplay as.
                   </p>
                   <button
                     onClick={() => setShowCharacterModal(true)}
-                    className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                    className="px-6 py-3 bg-ember text-ink rounded-lg hover:bg-ember-soft transition-colors"
                   >
                     Create Your First Character
                   </button>
@@ -4632,7 +4632,7 @@ if (modelsResult.models.length > 0) {
                     return sortedCharacters.map((character) => (
                     <div
                       key={character.id}
-                      className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition-colors"
+                      className="bg-ink-raised border border-line rounded-xl p-4 hover:border-line-strong transition-colors"
                     >
                       <div className="flex justify-between items-start mb-3">
                         {character.avatar ? (
@@ -4642,8 +4642,8 @@ if (modelsResult.models.length > 0) {
                             className="w-12 h-12 rounded-xl object-cover"
                           />
                         ) : (
-                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                            <span className="text-xl text-white font-semibold">
+                          <div className="w-12 h-12 rounded-xl bg-ink-hover border border-line-strong text-parchment-soft flex items-center justify-center">
+                            <span className="text-xl text-parchment font-semibold">
                               {character.name.charAt(0).toUpperCase()}
                             </span>
                           </div>
@@ -4651,15 +4651,15 @@ if (modelsResult.models.length > 0) {
                         <div className="flex gap-1">
                           <button
                             onClick={() => openEditCharacter(character)}
-                            className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                            className="p-2 hover:bg-ink-hover rounded-lg transition-colors"
                           >
-                            <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                           </button>
                           <button
                             onClick={() => deleteCharacter(character.id)}
-                            className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                            className="p-2 hover:bg-ink-hover rounded-lg transition-colors"
                           >
                             <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -4667,15 +4667,15 @@ if (modelsResult.models.length > 0) {
                           </button>
                         </div>
                       </div>
-                      <h3 className="text-lg font-medium text-white mb-1 truncate">{character.name}</h3>
-                      <p className="text-sm text-zinc-400 line-clamp-2 mb-2">{character.description}</p>
-                      <p className="text-xs text-zinc-500 italic line-clamp-2 mb-2">&ldquo;{character.firstMessage}&rdquo;</p>
+                      <h3 className="text-lg font-medium text-parchment mb-1 truncate">{character.name}</h3>
+                      <p className="text-sm text-parchment-muted line-clamp-2 mb-2">{character.description}</p>
+                      <p className="text-xs text-parchment-muted italic line-clamp-2 mb-2">&ldquo;{character.firstMessage}&rdquo;</p>
                       {character.alternateGreetings && character.alternateGreetings.length > 0 && (
-                        <p className="text-xs text-purple-400 mb-4">+ {character.alternateGreetings.length} alternate greeting(s)</p>
+                        <p className="text-xs text-ember-soft mb-4">+ {character.alternateGreetings.length} alternate greeting(s)</p>
                       )}
                       <button
                         onClick={() => selectCharacter(character)}
-                        className="w-full py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
+                        className="w-full py-2 bg-ink-hover text-parchment rounded-lg hover:bg-line-strong transition-colors"
                       >
                         Select Character
                       </button>
@@ -4693,7 +4693,7 @@ if (modelsResult.models.length > 0) {
               {!currentGeneratorSession ? (
                 <>
                   <div className="flex justify-between items-center">
-                    <h2 className="text-lg font-medium text-white">Character Generator</h2>
+                    <h2 className="text-lg font-medium text-parchment">Character Generator</h2>
                     
                     {/* Desktop buttons - hidden on mobile */}
                     <div className="hidden md:flex gap-2">
@@ -4709,7 +4709,7 @@ if (modelsResult.models.length > 0) {
                           setGeneratorSessions(prev => [...prev, newSession]);
                           setCurrentGeneratorSession(newSession);
                         }}
-                        className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                        className="flex items-center gap-2 px-4 py-2 bg-ember text-ink rounded-lg hover:bg-ember-soft transition-colors text-sm"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -4721,9 +4721,9 @@ if (modelsResult.models.length > 0) {
                     {/* Mobile hamburger menu button */}
                     <button
                       onClick={() => setShowMobileMenu(!showMobileMenu)}
-                      className="md:hidden p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                      className="md:hidden p-2 hover:bg-ink-hover rounded-lg transition-colors"
                     >
-                      <svg className="w-6 h-6 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-6 h-6 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         {showMobileMenu ? (
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         ) : (
@@ -4735,7 +4735,7 @@ if (modelsResult.models.length > 0) {
                   
                   {/* Mobile menu dropdown for generator */}
                   {showMobileMenu && view === "generator" && (
-                    <div className="md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2">
+                    <div className="md:hidden bg-ink-raised border border-line rounded-xl p-3 space-y-2">
                       <button
                         onClick={() => {
                           const newSession: GeneratorConversation = {
@@ -4749,7 +4749,7 @@ if (modelsResult.models.length > 0) {
                           setCurrentGeneratorSession(newSession);
                           setShowMobileMenu(false);
                         }}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-ember text-ink rounded-lg hover:bg-ember-soft transition-colors"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -4761,13 +4761,13 @@ if (modelsResult.models.length > 0) {
 
                   {generatorSessions.length === 0 ? (
                     <div className="text-center py-16">
-                      <div className="w-16 h-16 rounded-2xl bg-zinc-800 flex items-center justify-center mx-auto mb-4">
-                        <svg className="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="w-16 h-16 rounded-2xl bg-ink-hover flex items-center justify-center mx-auto mb-4">
+                        <svg className="w-8 h-8 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                         </svg>
                       </div>
-                      <h3 className="text-xl font-medium text-white mb-2">No generator sessions yet</h3>
-                      <p className="text-zinc-500 mb-6 max-w-md mx-auto">
+                      <h3 className="text-xl font-medium text-parchment mb-2">No generator sessions yet</h3>
+                      <p className="text-parchment-muted mb-6 max-w-md mx-auto">
                         Create a new session to start generating characters.
                       </p>
                       <button
@@ -4782,7 +4782,7 @@ if (modelsResult.models.length > 0) {
                           setGeneratorSessions(prev => [...prev, newSession]);
                           setCurrentGeneratorSession(newSession);
                         }}
-                        className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                        className="px-6 py-3 bg-ember text-ink rounded-lg hover:bg-ember-soft transition-colors"
                       >
                         Create Your First Session
                       </button>
@@ -4795,11 +4795,11 @@ if (modelsResult.models.length > 0) {
                           return (
                           <div
                             key={session.id}
-                            className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition-colors"
+                            className="bg-ink-raised border border-line rounded-xl p-4 hover:border-line-strong transition-colors"
                           >
                             <div className="flex justify-between items-start mb-3">
-                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                                <span className="text-xl text-white font-semibold">🎭</span>
+                              <div className="w-12 h-12 rounded-xl bg-ink-hover border border-line-strong text-parchment-soft flex items-center justify-center">
+                                <span className="text-xl text-parchment font-semibold">🎭</span>
                               </div>
                               <div className="flex gap-1">
                                 <button
@@ -4809,9 +4809,9 @@ if (modelsResult.models.length > 0) {
                                       setGeneratorSessions(prev => prev.map(s => s.id === session.id ? { ...s, name: newName } : s));
                                     }
                                   }}
-                                  className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                                  className="p-2 hover:bg-ink-hover rounded-lg transition-colors"
                                 >
-                                  <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <svg className="w-4 h-4 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                   </svg>
                                 </button>
@@ -4824,7 +4824,7 @@ if (modelsResult.models.length > 0) {
                                       setCurrentGeneratorSession(null);
                                     }
                                   }}
-                                  className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                                  className="p-2 hover:bg-ink-hover rounded-lg transition-colors"
                                   title="Delete session"
                                 >
                                   <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -4833,14 +4833,14 @@ if (modelsResult.models.length > 0) {
                                 </button>
                               </div>
                             </div>
-                            <h3 className="text-lg font-medium text-white mb-1 truncate">{session.name || `Session ${generatorSessions.indexOf(session) + 1}`}</h3>
-                            <p className="text-sm text-zinc-400 mb-2">{session.messages.length} messages</p>
-                            <p className="text-xs text-zinc-500 mb-4">
+                            <h3 className="text-lg font-medium text-parchment mb-1 truncate">{session.name || `Session ${generatorSessions.indexOf(session) + 1}`}</h3>
+                            <p className="text-sm text-parchment-muted mb-2">{session.messages.length} messages</p>
+                            <p className="text-xs text-parchment-muted mb-4">
                               Created: {new Date(session.createdAt).toLocaleDateString()}
                             </p>
                             <button
                               onClick={() => setCurrentGeneratorSession(session)}
-                              className="w-full py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
+                              className="w-full py-2 bg-ink-hover text-parchment rounded-lg hover:bg-line-strong transition-colors"
                             >
                               Open Session
                             </button>
@@ -4854,10 +4854,10 @@ if (modelsResult.models.length > 0) {
               ) : (
                 <div className="space-y-6">
                   <div className="flex justify-between items-center">
-                    <h2 className="text-lg font-medium text-white">{currentGeneratorSession.name || `Session ${generatorSessions.indexOf(currentGeneratorSession) + 1}`}</h2>
+                    <h2 className="text-lg font-medium text-parchment">{currentGeneratorSession.name || `Session ${generatorSessions.indexOf(currentGeneratorSession) + 1}`}</h2>
                     <button
                       onClick={() => setCurrentGeneratorSession(null)}
-                      className="flex items-center gap-2 px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors text-sm"
+                      className="flex items-center gap-2 px-4 py-2 bg-line-strong text-parchment rounded-lg hover:bg-line-strong transition-colors text-sm"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -4865,14 +4865,14 @@ if (modelsResult.models.length > 0) {
                       Back to Sessions
                     </button>
                   </div>
-                   <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-4 pb-32">
+                   <div className="bg-ink-raised border border-line rounded-2xl p-4 space-y-4 pb-32">
                      {currentGeneratorSession.messages.length === 0 && !generatorStreamingContent ? (
                       <div className="text-center py-8">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mx-auto mb-3">
-                          <span className="text-xl text-white font-semibold">🎭</span>
+                        <div className="w-12 h-12 rounded-xl bg-ink-hover border border-line-strong text-parchment-soft flex items-center justify-center mx-auto mb-3">
+                          <span className="text-xl text-parchment font-semibold">🎭</span>
                         </div>
-                        <h3 className="text-lg font-medium text-white mb-1">Start chatting</h3>
-                        <p className="text-sm text-zinc-400">Describe the character you want to create</p>
+                        <h3 className="text-lg font-medium text-parchment mb-1">Start chatting</h3>
+                        <p className="text-sm text-parchment-muted">Describe the character you want to create</p>
                       </div>
                       ) : (
                         <div className="space-y-4">
@@ -4888,16 +4888,16 @@ if (modelsResult.models.length > 0) {
                                 className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
                               >
                                 {message.role === "assistant" && (
-                                  <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                                    <span className="text-sm text-white font-semibold">🎭</span>
+                                  <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-ink-hover border border-line-strong text-parchment-soft flex items-center justify-center">
+                                    <span className="text-sm text-parchment font-semibold">🎭</span>
                                   </div>
                                 )}
                                 <div className="flex flex-col">
                                   <div
                                     className={`w-full rounded-2xl px-4 py-3 ${
                                       message.role === "user"
-                                        ? "bg-zinc-700 text-white"
-                                        : "bg-zinc-800 text-zinc-100 border border-zinc-700/50"
+                                        ? "bg-line-strong text-parchment"
+                                        : "bg-ink-hover text-parchment border border-line-strong/50"
                                     }`}
                                   >
                                     {isEditing ? (
@@ -4905,27 +4905,27 @@ if (modelsResult.models.length > 0) {
                                         <textarea
                                           value={editingGeneratorMessageContent}
                                           onChange={(e) => setEditingGeneratorMessageContent(e.target.value)}
-                                          className="w-full bg-zinc-900 text-white rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700"
+                                          className="w-full bg-ink-raised text-parchment rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-ember border border-line-strong"
                                           rows={3}
                                           autoFocus
                                         />
                                         <div className="flex gap-2 justify-end">
                                           <button
                                             onClick={handleGeneratorCancelEdit}
-                                            className="px-3 py-1 text-sm bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+                                            className="px-3 py-1 text-sm bg-line-strong text-parchment rounded-lg hover:bg-line-strong transition-colors"
                                           >
                                             Cancel
                                           </button>
                                           <button
                                             onClick={() => handleGeneratorSaveEdit(idx, false)}
-                                            className="px-3 py-1 text-sm bg-zinc-600 text-white rounded-lg hover:bg-zinc-500 transition-colors"
+                                            className="px-3 py-1 text-sm bg-line-strong text-parchment rounded-lg hover:bg-parchment-muted transition-colors"
                                           >
                                             Save
                                           </button>
                                           {message.role === "user" && (
                                             <button
                                               onClick={() => handleGeneratorRetryFromIndex(idx)}
-                                              className="px-3 py-1 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                                              className="px-3 py-1 text-sm bg-ember text-ink rounded-lg hover:bg-ember-soft transition-colors"
                                             >
                                               Save & Retry
                                             </button>
@@ -4939,7 +4939,7 @@ if (modelsResult.models.length > 0) {
                                           <div className="mt-3">
                                             <button
                                               onClick={() => handleSaveCharacterFromGenerator(message.content)}
-                                              className="text-xs bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+                                              className="text-xs bg-ember hover:bg-ember-soft text-ink px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
                                             >
                                               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -4952,7 +4952,7 @@ if (modelsResult.models.length > 0) {
                                           <div className="mt-2 flex justify-end">
                                             <button
                                               onClick={handleGeneratorRetry}
-                                              className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
+                                              className="text-xs text-parchment-muted hover:text-parchment-soft transition-colors flex items-center gap-1"
                                               title="Regenerate response"
                                             >
                                               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -4970,7 +4970,7 @@ if (modelsResult.models.length > 0) {
                                        <div className="flex gap-1">
                                         <button
                                           onClick={() => handleGeneratorStartEdit(idx)}
-                                          className="p-1 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors"
+                                          className="p-1 text-parchment-muted hover:text-parchment-soft hover:bg-ink-hover rounded transition-colors"
                                           title="Edit message"
                                         >
                                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -4980,7 +4980,7 @@ if (modelsResult.models.length > 0) {
                                         {isLastUserMessage && idx < currentGeneratorSession.messages.length - 1 && (
                                           <button
                                             onClick={() => handleGeneratorRetryFromIndex(idx)}
-                                            className="p-1 text-zinc-500 hover:text-purple-400 hover:bg-zinc-800 rounded transition-colors"
+                                            className="p-1 text-parchment-muted hover:text-ember-soft hover:bg-ink-hover rounded transition-colors"
                                             title="Retry from this message"
                                           >
                                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -4990,7 +4990,7 @@ if (modelsResult.models.length > 0) {
                                         )}
                                         <button
                                           onClick={() => handleGeneratorDeleteMessage(idx)}
-                                          className="p-1 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded transition-colors"
+                                          className="p-1 text-parchment-muted hover:text-red-400 hover:bg-ink-hover rounded transition-colors"
                                           title="Delete message"
                                         >
                                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -5006,10 +5006,10 @@ if (modelsResult.models.length > 0) {
                             })}
                          {generatorStreamingContent && (
                            <div className="flex gap-3 justify-start">
-                             <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                               <span className="text-sm text-white font-semibold">🎭</span>
+                             <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-ink-hover border border-line-strong text-parchment-soft flex items-center justify-center">
+                               <span className="text-sm text-parchment font-semibold">🎭</span>
                              </div>
-                             <div className="w-full rounded-2xl px-4 py-3 bg-zinc-800 text-zinc-100 border border-zinc-700/50">
+                             <div className="w-full rounded-2xl px-4 py-3 bg-ink-hover text-parchment border border-line-strong/50">
                                <FormattedText content={generatorStreamingContent} />
                               </div>
                             </div>
@@ -5162,7 +5162,7 @@ if (modelsResult.models.length > 0) {
           {view === "conversations" && selectedPersona && selectedCharacter && (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <h2 className="text-lg font-medium text-white">Conversations</h2>
+                <h2 className="text-lg font-medium text-parchment">Conversations</h2>
                 
                 {/* Desktop button - hidden on mobile */}
                 <div className="hidden md:flex gap-2">
@@ -5176,7 +5176,7 @@ if (modelsResult.models.length > 0) {
                         createConversation();
                       }
                     }}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                    className="flex items-center gap-2 px-4 py-2 bg-ember text-ink rounded-lg hover:bg-ember-soft transition-colors text-sm"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -5188,9 +5188,9 @@ if (modelsResult.models.length > 0) {
                 {/* Mobile hamburger menu button */}
                 <button
                   onClick={() => setShowMobileMenu(!showMobileMenu)}
-                  className="md:hidden p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                  className="md:hidden p-2 hover:bg-ink-hover rounded-lg transition-colors"
                 >
-                  <svg className="w-6 h-6 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     {showMobileMenu ? (
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     ) : (
@@ -5202,13 +5202,13 @@ if (modelsResult.models.length > 0) {
               
               {/* Mobile menu dropdown for conversations */}
               {showMobileMenu && view === "conversations" && (
-                <div className="md:hidden bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2">
+                <div className="md:hidden bg-ink-raised border border-line rounded-xl p-3 space-y-2">
                   <button
                     onClick={() => {
                       setView("personas");
                       setShowMobileMenu(false);
                     }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-ember text-ink rounded-lg hover:bg-ember-soft transition-colors"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -5220,7 +5220,7 @@ if (modelsResult.models.length > 0) {
                       setView("characters");
                       setShowMobileMenu(false);
                     }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-line-strong text-parchment rounded-lg hover:bg-line-strong transition-colors"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -5238,7 +5238,7 @@ if (modelsResult.models.length > 0) {
                       }
                       setShowMobileMenu(false);
                     }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-ember text-ink rounded-lg hover:bg-ember-soft transition-colors"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -5250,13 +5250,13 @@ if (modelsResult.models.length > 0) {
 
               {filteredConversations.length === 0 ? (
                 <div className="text-center py-16">
-                  <div className="w-16 h-16 rounded-2xl bg-zinc-800 flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-16 h-16 rounded-2xl bg-ink-hover flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                     </svg>
                   </div>
-                  <h3 className="text-xl font-medium text-white mb-2">No conversations yet</h3>
-                  <p className="text-zinc-500 mb-6 max-w-md mx-auto">
+                  <h3 className="text-xl font-medium text-parchment mb-2">No conversations yet</h3>
+                  <p className="text-parchment-muted mb-6 max-w-md mx-auto">
                     Start a new conversation between {selectedPersona.name} and {selectedCharacter.name}.
                   </p>
                   <button
@@ -5269,7 +5269,7 @@ if (modelsResult.models.length > 0) {
                         createConversation();
                       }
                     }}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="px-6 py-3 bg-ember text-ink rounded-lg hover:bg-ember-soft transition-colors"
                   >
                     Start Chatting
                   </button>
@@ -5285,11 +5285,11 @@ if (modelsResult.models.length > 0) {
                       return (
                       <div
                         key={conversation.id}
-                        className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-zinc-700 transition-colors"
+                        className="bg-ink-raised border border-line rounded-xl p-4 hover:border-line-strong transition-colors"
                       >
                         <div className="flex justify-between items-start mb-3">
-                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                            <span className="text-xl text-white font-semibold">💬</span>
+                          <div className="w-12 h-12 rounded-xl bg-ink-hover border border-line-strong text-parchment-soft flex items-center justify-center">
+                            <span className="text-xl text-parchment font-semibold">💬</span>
                           </div>
                           <div className="flex gap-1">
                             <button
@@ -5299,15 +5299,15 @@ if (modelsResult.models.length > 0) {
                                   // Name update could be persisted here if desired
                                 }
                               }}
-                              className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                              className="p-2 hover:bg-ink-hover rounded-lg transition-colors"
                             >
-                              <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-4 h-4 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                               </svg>
                             </button>
                             <button
                               onClick={() => deleteConversation(conversation.id)}
-                              className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                              className="p-2 hover:bg-ink-hover rounded-lg transition-colors"
                             >
                               <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -5315,14 +5315,14 @@ if (modelsResult.models.length > 0) {
                             </button>
                           </div>
                         </div>
-                        <h3 className="text-lg font-medium text-white mb-1 truncate">{displayName}</h3>
-                        <p className="text-sm text-zinc-400 mb-2">{conversation.messages.length} messages</p>
-                        <p className="text-xs text-zinc-500 mb-4">
+                        <h3 className="text-lg font-medium text-parchment mb-1 truncate">{displayName}</h3>
+                        <p className="text-sm text-parchment-muted mb-2">{conversation.messages.length} messages</p>
+                        <p className="text-xs text-parchment-muted mb-4">
                           Created: {new Date(conversation.createdAt).toLocaleDateString()}
                         </p>
                         <button
                           onClick={() => continueConversation(conversation)}
-                          className="w-full py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
+                          className="w-full py-2 bg-ink-hover text-parchment rounded-lg hover:bg-line-strong transition-colors"
                         >
                           Open Conversation
                         </button>
@@ -5587,31 +5587,31 @@ if (modelsResult.models.length > 0) {
             />
           )}
           <div
-            className={`fixed inset-0 w-full bg-zinc-900 z-[1000] transform transition-transform duration-200 ease-in-out ${
+            className={`fixed inset-0 w-full bg-ink-raised z-[1000] transform transition-transform duration-200 ease-in-out ${
               showUtilityPanel ? 'translate-x-0' : 'translate-x-full'
             }`}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
-              <h3 className="text-sm font-semibold text-white">Utilities</h3>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-line">
+              <h3 className="text-sm font-semibold text-parchment">Utilities</h3>
               <button
                 onClick={() => setShowUtilityPanel(false)}
-                className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors"
+                className="p-1.5 hover:bg-ink-hover rounded-lg transition-colors"
               >
-                <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-1 px-4 py-2 border-b border-zinc-800">
+            <div className="flex gap-1 px-4 py-2 border-b border-line">
               <button
                 onClick={() => setUtilityPanelTab('tags')}
                 className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
                   utilityPanelTab === 'tags'
-                    ? 'bg-zinc-800 text-white'
-                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50'
+                    ? 'bg-ink-hover text-parchment'
+                    : 'text-parchment-muted hover:text-parchment-soft hover:bg-ink-hover/50'
                 }`}
               >
                 <span className="flex items-center justify-center gap-1.5">
@@ -5625,8 +5625,8 @@ if (modelsResult.models.length > 0) {
                 onClick={() => setUtilityPanelTab('summarization')}
                 className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
                   utilityPanelTab === 'summarization'
-                    ? 'bg-zinc-800 text-white'
-                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50'
+                    ? 'bg-ink-hover text-parchment'
+                    : 'text-parchment-muted hover:text-parchment-soft hover:bg-ink-hover/50'
                 }`}
               >
                 <span className="flex items-center justify-center gap-1.5">
@@ -5640,8 +5640,8 @@ if (modelsResult.models.length > 0) {
                 onClick={() => setUtilityPanelTab('debug')}
                 className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
                   utilityPanelTab === 'debug'
-                    ? 'bg-zinc-800 text-white'
-                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50'
+                    ? 'bg-ink-hover text-parchment'
+                    : 'text-parchment-muted hover:text-parchment-soft hover:bg-ink-hover/50'
                 }`}
               >
                 <span className="flex items-center justify-center gap-1.5">
@@ -5655,8 +5655,8 @@ if (modelsResult.models.length > 0) {
                 onClick={() => setUtilityPanelTab('logs')}
                 className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
                   utilityPanelTab === 'logs'
-                    ? 'bg-zinc-800 text-white'
-                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50'
+                    ? 'bg-ink-hover text-parchment'
+                    : 'text-parchment-muted hover:text-parchment-soft hover:bg-ink-hover/50'
                 }`}
               >
                 <span className="flex items-center justify-center gap-1.5">
@@ -5687,27 +5687,27 @@ if (modelsResult.models.length > 0) {
                     if (allTags.length === 0) {
                       return (
                         <div className="flex flex-col items-center justify-center py-16 text-center">
-                          <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center mb-3">
-                            <svg className="w-6 h-6 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <div className="w-12 h-12 rounded-xl bg-ink-hover flex items-center justify-center mb-3">
+                            <svg className="w-6 h-6 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                             </svg>
                           </div>
-                          <p className="text-sm text-zinc-500">No tags found</p>
-                          <p className="text-xs text-zinc-600 mt-1">Custom tags from AI responses appear here</p>
+                          <p className="text-sm text-parchment-muted">No tags found</p>
+                          <p className="text-xs text-parchment-muted mt-1">Custom tags from AI responses appear here</p>
                         </div>
                       );
                     }
 
                     return allTags.map((tag, idx) => (
-                      <div key={idx} className="bg-zinc-800/50 rounded-lg border border-zinc-700/50 overflow-hidden">
+                      <div key={idx} className="bg-ink-hover/50 rounded-lg border border-line-strong/50 overflow-hidden">
                         <div className="px-3 py-2.5">
                           <div className="flex items-center gap-2 mb-2">
-                            <span className="px-2 py-0.5 bg-purple-900/50 text-purple-300 text-xs rounded-md border border-purple-800/50 font-mono">
+                            <span className="px-2 py-0.5 bg-ember/10 text-ember-soft text-xs rounded-md border border-line-strong/50 font-mono">
                               &lt;{tag.tagName}&gt;
                             </span>
-                            <span className="text-xs text-zinc-600">msg {tag.messageIndex + 1}</span>
+                            <span className="text-xs text-parchment-muted">msg {tag.messageIndex + 1}</span>
                           </div>
-                          <div className="whitespace-pre-wrap text-xs text-zinc-300 leading-relaxed">
+                          <div className="whitespace-pre-wrap text-xs text-parchment-soft leading-relaxed">
                             {tag.content}
                           </div>
                         </div>
@@ -5721,10 +5721,10 @@ if (modelsResult.models.length > 0) {
               {utilityPanelTab === 'summarization' && (
                 <div className="space-y-4">
                   {/* Enable/Disable Toggle */}
-                  <div className="flex items-center justify-between bg-zinc-800/50 p-3 rounded-xl border border-zinc-700/50">
+                  <div className="flex items-center justify-between bg-ink-hover/50 p-3 rounded-xl border border-line-strong/50">
                     <div>
-                      <p className="text-sm font-medium text-white">Summarization</p>
-                      <p className="text-xs text-zinc-500 mt-0.5">Compress context to save tokens</p>
+                      <p className="text-sm font-medium text-parchment">Summarization</p>
+                      <p className="text-xs text-parchment-muted mt-0.5">Compress context to save tokens</p>
                     </div>
                     <button
                       onClick={() => {
@@ -5737,7 +5737,7 @@ if (modelsResult.models.length > 0) {
                         }));
                       }}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        globalSettings.summarization.enabled ? 'bg-blue-600' : 'bg-zinc-700'
+                        globalSettings.summarization.enabled ? 'bg-ember' : 'bg-line-strong'
                       }`}
                     >
                       <span
@@ -5751,12 +5751,12 @@ if (modelsResult.models.length > 0) {
                   {globalSettings.summarization.enabled ? (
                     <>
                       {/* Quick Actions */}
-                      <div className="bg-zinc-800/30 rounded-xl border border-zinc-700/50 p-3">
-                        <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Quick Actions</p>
+                      <div className="bg-ink-hover/30 rounded-xl border border-line-strong/50 p-3">
+                        <p className="text-xs font-semibold text-parchment-muted uppercase tracking-wider mb-3">Quick Actions</p>
                         <button
                           onClick={handleSummarize}
                           disabled={isSummarizing || isLoading || currentConversation.messages.length <= (globalSettings.summarization.recentMessagesCount ?? 10)}
-                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-xs text-white disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-ember hover:bg-ember-soft rounded-lg transition-colors text-xs text-ink disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                         >
                           {isSummarizing ? (
                             <>
@@ -5779,15 +5779,15 @@ if (modelsResult.models.length > 0) {
 
                       {/* Summary Memory */}
                       {currentConversation.summaryMemory && (
-                        <div className="bg-zinc-800/30 rounded-xl border border-zinc-700/50 p-3">
+                        <div className="bg-ink-hover/30 rounded-xl border border-line-strong/50 p-3">
                           <div className="flex items-center justify-between mb-2">
-                            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Summary Memory</p>
-                            <span className="text-xs text-zinc-600">
+                            <p className="text-xs font-semibold text-parchment-muted uppercase tracking-wider">Summary Memory</p>
+                            <span className="text-xs text-parchment-muted">
                               {currentConversation.messages.length} msgs
                             </span>
                           </div>
-                          <div className="bg-zinc-900/50 rounded-lg p-3 max-h-48 overflow-y-auto">
-                            <p className="whitespace-pre-wrap text-xs text-zinc-300 leading-relaxed">
+                          <div className="bg-ink-raised/50 rounded-lg p-3 max-h-48 overflow-y-auto">
+                            <p className="whitespace-pre-wrap text-xs text-parchment-soft leading-relaxed">
                               {currentConversation.summaryMemory}
                             </p>
                           </div>
@@ -5795,12 +5795,12 @@ if (modelsResult.models.length > 0) {
                       )}
 
                       {/* Configuration */}
-                      <div className="bg-zinc-800/30 rounded-xl border border-zinc-700/50 p-3 space-y-3">
-                        <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Settings</p>
+                      <div className="bg-ink-hover/30 rounded-xl border border-line-strong/50 p-3 space-y-3">
+                        <p className="text-xs font-semibold text-parchment-muted uppercase tracking-wider">Settings</p>
 
                         {/* Quality */}
                         <div>
-                          <label className="block text-xs font-medium text-zinc-400 mb-1.5">Quality</label>
+                          <label className="block text-xs font-medium text-parchment-muted mb-1.5">Quality</label>
                           <select
                             value={globalSettings.summarization.quality}
                             onChange={(e) => {
@@ -5812,7 +5812,7 @@ if (modelsResult.models.length > 0) {
                                 }
                               }));
                             }}
-                            className="w-full bg-zinc-900 text-white rounded-lg px-2.5 py-2 text-xs border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="w-full bg-ink-raised text-parchment rounded-lg px-2.5 py-2 text-xs border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                           >
                             <option value="fast">Fast - Compact</option>
                             <option value="balanced">Balanced - Good detail</option>
@@ -5822,7 +5822,7 @@ if (modelsResult.models.length > 0) {
 
                         {/* Trigger */}
                         <div>
-                          <label className="block text-xs font-medium text-zinc-400 mb-1.5">Trigger</label>
+                          <label className="block text-xs font-medium text-parchment-muted mb-1.5">Trigger</label>
                           <select
                             value={globalSettings.summarization.trigger}
                             onChange={(e) => {
@@ -5834,7 +5834,7 @@ if (modelsResult.models.length > 0) {
                                 }
                               }));
                             }}
-                            className="w-full bg-zinc-900 text-white rounded-lg px-2.5 py-2 text-xs border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="w-full bg-ink-raised text-parchment rounded-lg px-2.5 py-2 text-xs border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                           >
                             <option value="manual">Manual only</option>
                             <option value="auto-length">Auto (by length)</option>
@@ -5845,8 +5845,8 @@ if (modelsResult.models.length > 0) {
                         {/* Recent messages to keep */}
                         <div>
                           <div className="flex items-center justify-between mb-1.5">
-                            <label className="text-xs font-medium text-zinc-400">Keep recent messages</label>
-                            <span className="text-xs text-zinc-500">{globalSettings.summarization.recentMessagesCount}</span>
+                            <label className="text-xs font-medium text-parchment-muted">Keep recent messages</label>
+                            <span className="text-xs text-parchment-muted">{globalSettings.summarization.recentMessagesCount}</span>
                           </div>
                           <input
                             type="range"
@@ -5858,14 +5858,14 @@ if (modelsResult.models.length > 0) {
                               ...globalSettings,
                               summarization: { ...globalSettings.summarization, recentMessagesCount: parseInt(e.target.value) }
                             })}
-                            className="w-full accent-blue-600"
+                            className="w-full accent-ember"
                           />
                         </div>
 
                         {/* Summary length */}
                         <div>
                           <div className="flex items-center justify-between mb-1.5">
-                            <label className="text-xs font-medium text-zinc-400">Max summary tokens</label>
+                            <label className="text-xs font-medium text-parchment-muted">Max summary tokens</label>
                             <div className="flex items-center gap-2">
                               <input
                                 type="number"
@@ -5882,7 +5882,7 @@ if (modelsResult.models.length > 0) {
                                     });
                                   }
                                 }}
-                                className="w-20 bg-zinc-900 text-white text-xs rounded px-2 py-1 border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500 text-center"
+                                className="w-20 bg-ink-raised text-parchment text-xs rounded px-2 py-1 border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember text-center"
                               />
                             </div>
                           </div>
@@ -5896,9 +5896,9 @@ if (modelsResult.models.length > 0) {
                               ...globalSettings,
                               summarization: { ...globalSettings.summarization, summaryLength: parseInt(e.target.value) }
                             })}
-                            className="w-full accent-blue-600"
+                            className="w-full accent-ember"
                           />
-                          <div className="flex justify-between text-xs text-zinc-600 mt-1">
+                          <div className="flex justify-between text-xs text-parchment-muted mt-1">
                             <span>200</span>
                             <span>4000</span>
                           </div>
@@ -5909,8 +5909,8 @@ if (modelsResult.models.length > 0) {
                           <>
                             <div>
                               <div className="flex items-center justify-between mb-1.5">
-                                <label className="text-xs font-medium text-zinc-400">Message threshold</label>
-                                <span className="text-xs text-zinc-500">{globalSettings.summarization.messageThreshold}</span>
+                                <label className="text-xs font-medium text-parchment-muted">Message threshold</label>
+                                <span className="text-xs text-parchment-muted">{globalSettings.summarization.messageThreshold}</span>
                               </div>
                               <input
                                 type="range"
@@ -5922,13 +5922,13 @@ if (modelsResult.models.length > 0) {
                                   ...globalSettings,
                                   summarization: { ...globalSettings.summarization, messageThreshold: parseInt(e.target.value) }
                                 })}
-                                className="w-full accent-blue-600"
+                                className="w-full accent-ember"
                               />
                             </div>
                             <div>
                               <div className="flex items-center justify-between mb-1.5">
-                                <label className="text-xs font-medium text-zinc-400">Token threshold</label>
-                                <span className="text-xs text-zinc-500">{globalSettings.summarization.tokenThreshold.toLocaleString()}</span>
+                                <label className="text-xs font-medium text-parchment-muted">Token threshold</label>
+                                <span className="text-xs text-parchment-muted">{globalSettings.summarization.tokenThreshold.toLocaleString()}</span>
                               </div>
                               <input
                                 type="range"
@@ -5940,7 +5940,7 @@ if (modelsResult.models.length > 0) {
                                   ...globalSettings,
                                   summarization: { ...globalSettings.summarization, tokenThreshold: parseInt(e.target.value) }
                                 })}
-                                className="w-full accent-blue-600"
+                                className="w-full accent-ember"
                               />
                             </div>
                           </>
@@ -5950,8 +5950,8 @@ if (modelsResult.models.length > 0) {
                         {globalSettings.summarization.trigger === "periodic" && (
                           <div>
                             <div className="flex items-center justify-between mb-1.5">
-                              <label className="text-xs font-medium text-zinc-400">Summarize every</label>
-                              <span className="text-xs text-zinc-500">{globalSettings.summarization.periodicInterval} msgs</span>
+                              <label className="text-xs font-medium text-parchment-muted">Summarize every</label>
+                              <span className="text-xs text-parchment-muted">{globalSettings.summarization.periodicInterval} msgs</span>
                             </div>
                             <input
                               type="range"
@@ -5963,14 +5963,14 @@ if (modelsResult.models.length > 0) {
                                 ...globalSettings,
                                 summarization: { ...globalSettings.summarization, periodicInterval: parseInt(e.target.value) }
                               })}
-                              className="w-full accent-blue-600"
+                              className="w-full accent-ember"
                             />
                           </div>
                         )}
 
                         {/* Provider */}
                         <div>
-                          <label className="block text-xs font-medium text-zinc-400 mb-1.5">Provider</label>
+                          <label className="block text-xs font-medium text-parchment-muted mb-1.5">Provider</label>
                           <select
                             value={globalSettings.summarization.provider || ''}
                             onChange={(e) => {
@@ -5983,7 +5983,7 @@ if (modelsResult.models.length > 0) {
                                 }
                               }));
                             }}
-                            className="w-full bg-zinc-900 text-white rounded-lg px-2.5 py-2 text-xs border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="w-full bg-ink-raised text-parchment rounded-lg px-2.5 py-2 text-xs border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                           >
                             <option value="">Use global provider</option>
                             {AVAILABLE_PROVIDERS.map(provider => (
@@ -5996,7 +5996,7 @@ if (modelsResult.models.length > 0) {
 
                         {/* Model */}
                         <div>
-                          <label className="block text-xs font-medium text-zinc-400 mb-1.5">Model</label>
+                          <label className="block text-xs font-medium text-parchment-muted mb-1.5">Model</label>
                           <select
                             value={globalSettings.summarization.modelId || ''}
                             onChange={(e) => {
@@ -6008,7 +6008,7 @@ if (modelsResult.models.length > 0) {
                                 }
                               }));
                             }}
-                            className="w-full bg-zinc-900 text-white rounded-lg px-2.5 py-2 text-xs border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="w-full bg-ink-raised text-parchment rounded-lg px-2.5 py-2 text-xs border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                           >
                             <option value="">Use global model</option>
                             {(() => {
@@ -6025,7 +6025,7 @@ if (modelsResult.models.length > 0) {
 
                         {/* Custom Instructions */}
                         <div>
-                          <label className="block text-xs font-medium text-zinc-400 mb-1.5">Custom instructions</label>
+                          <label className="block text-xs font-medium text-parchment-muted mb-1.5">Custom instructions</label>
                           <textarea
                             value={globalSettings.summarization.instructions || ''}
                             onChange={(e) => {
@@ -6038,7 +6038,7 @@ if (modelsResult.models.length > 0) {
                               }));
                             }}
                             placeholder="Optional custom instructions for summarization..."
-                            className="w-full bg-zinc-900 text-white placeholder-zinc-600 rounded-lg px-2.5 py-2 text-xs border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+                            className="w-full bg-ink-raised text-parchment placeholder-parchment-muted rounded-lg px-2.5 py-2 text-xs border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember resize-none"
                             rows={2}
                           />
                         </div>
@@ -6046,13 +6046,13 @@ if (modelsResult.models.length > 0) {
                     </>
                   ) : (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center mb-3">
-                        <svg className="w-6 h-6 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="w-12 h-12 rounded-xl bg-ink-hover flex items-center justify-center mb-3">
+                        <svg className="w-6 h-6 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                       </div>
-                      <p className="text-sm text-zinc-500">Summarization disabled</p>
-                      <p className="text-xs text-zinc-600 mt-1">Toggle on to compress context</p>
+                      <p className="text-sm text-parchment-muted">Summarization disabled</p>
+                      <p className="text-xs text-parchment-muted mt-1">Toggle on to compress context</p>
                     </div>
                   )}
                 </div>
@@ -6062,11 +6062,11 @@ if (modelsResult.models.length > 0) {
               {utilityPanelTab === 'debug' && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">API Payload Preview</p>
+                    <p className="text-xs font-semibold text-parchment-muted uppercase tracking-wider">API Payload Preview</p>
                     {apiDebugPayload && (
                       <button
                         onClick={() => setApiDebugPayload(null)}
-                        className="text-xs text-zinc-500 hover:text-zinc-300"
+                        className="text-xs text-parchment-muted hover:text-parchment-soft"
                       >
                         Clear
                       </button>
@@ -6075,22 +6075,22 @@ if (modelsResult.models.length > 0) {
                   
                   {!apiDebugPayload ? (
                     <div className="flex flex-col items-center justify-center py-16 text-center">
-                      <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center mb-3">
-                        <svg className="w-6 h-6 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="w-12 h-12 rounded-xl bg-ink-hover flex items-center justify-center mb-3">
+                        <svg className="w-6 h-6 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                         </svg>
                       </div>
-                      <p className="text-sm text-zinc-500">No debug data</p>
-                      <p className="text-xs text-zinc-600 mt-1">Send a message to see the API payload</p>
+                      <p className="text-sm text-parchment-muted">No debug data</p>
+                      <p className="text-xs text-parchment-muted mt-1">Send a message to see the API payload</p>
                     </div>
                   ) : (
                     <div className="relative">
-                      <pre className="bg-zinc-950 text-zinc-300 text-xs p-3 rounded-lg border border-zinc-700 overflow-x-auto max-h-96 whitespace-pre-wrap">
+                      <pre className="bg-ink text-parchment-soft text-xs p-3 rounded-lg border border-line-strong overflow-x-auto max-h-96 whitespace-pre-wrap">
                         {apiDebugPayload}
                       </pre>
                       <button
                         onClick={() => navigator.clipboard.writeText(apiDebugPayload || '')}
-                        className="absolute top-2 right-2 px-2 py-1 bg-zinc-800 text-zinc-400 text-xs rounded hover:bg-zinc-700 transition-colors"
+                        className="absolute top-2 right-2 px-2 py-1 bg-ink-hover text-parchment-muted text-xs rounded hover:bg-line-strong transition-colors"
                       >
                         Copy
                       </button>
@@ -6103,14 +6103,14 @@ if (modelsResult.models.length > 0) {
               {utilityPanelTab === 'logs' && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Debug Logs</p>
+                    <p className="text-xs font-semibold text-parchment-muted uppercase tracking-wider">Debug Logs</p>
                     <div className="flex gap-2">
                       <button
                         onClick={() => {
                           const text = exportLogs();
                           navigator.clipboard.writeText(text);
                         }}
-                        className="text-xs text-zinc-500 hover:text-zinc-300"
+                        className="text-xs text-parchment-muted hover:text-parchment-soft"
                       >
                         Copy
                       </button>
@@ -6128,13 +6128,13 @@ if (modelsResult.models.length > 0) {
                   
                   {debugLogs.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-center">
-                      <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center mb-3">
-                        <svg className="w-6 h-6 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="w-12 h-12 rounded-xl bg-ink-hover flex items-center justify-center mb-3">
+                        <svg className="w-6 h-6 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                       </div>
-                      <p className="text-sm text-zinc-500">No logs yet</p>
-                      <p className="text-xs text-zinc-600 mt-1">Logs are saved automatically when errors occur</p>
+                      <p className="text-sm text-parchment-muted">No logs yet</p>
+                      <p className="text-xs text-parchment-muted mt-1">Logs are saved automatically when errors occur</p>
                     </div>
                   ) : (
                     <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -6146,7 +6146,7 @@ if (modelsResult.models.length > 0) {
                               ? 'bg-red-950/30 border-red-900/50'
                               : log.level === 'warn'
                               ? 'bg-yellow-950/30 border-yellow-900/50'
-                              : 'bg-zinc-800/50 border-zinc-700/50'
+                              : 'bg-ink-hover/50 border-line-strong/50'
                           }`}
                         >
                           <div className="flex items-center gap-2 mb-1">
@@ -6155,15 +6155,15 @@ if (modelsResult.models.length > 0) {
                                 ? 'text-red-400'
                                 : log.level === 'warn'
                                 ? 'text-yellow-400'
-                                : 'text-zinc-400'
+                                : 'text-parchment-muted'
                             }`}>
                               {log.level.toUpperCase()}
                             </span>
-                            <span className="text-xs text-zinc-600">
+                            <span className="text-xs text-parchment-muted">
                               {new Date(log.timestamp).toLocaleTimeString()}
                             </span>
                           </div>
-                          <div className="text-xs text-zinc-300 whitespace-pre-wrap break-words leading-relaxed">
+                          <div className="text-xs text-parchment-soft whitespace-pre-wrap break-words leading-relaxed">
                             {log.args.join('\n')}
                           </div>
                         </div>
@@ -6177,14 +6177,14 @@ if (modelsResult.models.length > 0) {
               {utilityPanelTab === 'logs' && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Debug Logs</p>
+                    <p className="text-xs font-semibold text-parchment-muted uppercase tracking-wider">Debug Logs</p>
                     <div className="flex gap-2">
                       <button
                         onClick={() => {
                           const text = exportLogs();
                           navigator.clipboard.writeText(text);
                         }}
-                        className="text-xs text-zinc-500 hover:text-zinc-300"
+                        className="text-xs text-parchment-muted hover:text-parchment-soft"
                       >
                         Copy
                       </button>
@@ -6202,13 +6202,13 @@ if (modelsResult.models.length > 0) {
                   
                   {debugLogs.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-center">
-                      <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center mb-3">
-                        <svg className="w-6 h-6 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="w-12 h-12 rounded-xl bg-ink-hover flex items-center justify-center mb-3">
+                        <svg className="w-6 h-6 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                       </div>
-                      <p className="text-sm text-zinc-500">No logs yet</p>
-                      <p className="text-xs text-zinc-600 mt-1">Logs are saved automatically when errors occur</p>
+                      <p className="text-sm text-parchment-muted">No logs yet</p>
+                      <p className="text-xs text-parchment-muted mt-1">Logs are saved automatically when errors occur</p>
                     </div>
                   ) : (
                     <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -6220,7 +6220,7 @@ if (modelsResult.models.length > 0) {
                               ? 'bg-red-950/30 border-red-900/50'
                               : log.level === 'warn'
                               ? 'bg-yellow-950/30 border-yellow-900/50'
-                              : 'bg-zinc-800/50 border-zinc-700/50'
+                              : 'bg-ink-hover/50 border-line-strong/50'
                           }`}
                         >
                           <div className="flex items-center gap-2 mb-1">
@@ -6229,15 +6229,15 @@ if (modelsResult.models.length > 0) {
                                 ? 'text-red-400'
                                 : log.level === 'warn'
                                 ? 'text-yellow-400'
-                                : 'text-zinc-400'
+                                : 'text-parchment-muted'
                             }`}>
                               {log.level.toUpperCase()}
                             </span>
-                            <span className="text-xs text-zinc-600">
+                            <span className="text-xs text-parchment-muted">
                               {new Date(log.timestamp).toLocaleTimeString()}
                             </span>
                           </div>
-                          <div className="text-xs text-zinc-300 whitespace-pre-wrap break-words leading-relaxed">
+                          <div className="text-xs text-parchment-soft whitespace-pre-wrap break-words leading-relaxed">
                             {log.args.join('\n')}
                           </div>
                         </div>
@@ -6468,25 +6468,25 @@ if (modelsResult.models.length > 0) {
 
       {showPersonaModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-md relative">
+          <div className="bg-ink-raised border border-line rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-md relative">
             <button
               onClick={() => {
                 setShowPersonaModal(false);
                 setEditingPersona(null);
               }}
-              className="absolute top-4 right-4 p-1 hover:bg-zinc-800 rounded-lg transition-colors"
+              className="absolute top-4 right-4 p-1 hover:bg-ink-hover rounded-lg transition-colors"
             >
-              <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <h2 className="text-xl font-semibold text-white mb-4">
+            <h2 className="text-xl font-semibold text-parchment mb-4">
               {editingPersona ? "Edit Persona" : "Create New Persona"}
             </h2>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-1">
+                <label className="block text-sm font-medium text-parchment-muted mb-1">
                   Your Name
                 </label>
                 <input
@@ -6494,12 +6494,12 @@ if (modelsResult.models.length > 0) {
                   value={personaName}
                   onChange={(e) => setPersonaName(e.target.value)}
                   placeholder="e.g., Alex the Adventurer"
-                  className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700"
+                  className="w-full bg-ink-hover text-parchment placeholder-parchment-muted rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-ember border border-line-strong"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-1">
+                <label className="block text-sm font-medium text-parchment-muted mb-1">
                   Description / Personality
                 </label>
                 <textarea
@@ -6507,7 +6507,7 @@ if (modelsResult.models.length > 0) {
                   onChange={(e) => setPersonaDescription(e.target.value)}
                   placeholder="Describe who you are, your personality, background, etc..."
                   rows={4}
-                  className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
+                  className="w-full bg-ink-hover text-parchment placeholder-parchment-muted rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-ember border border-line-strong resize-none"
                 />
               </div>
             </div>
@@ -6520,14 +6520,14 @@ if (modelsResult.models.length > 0) {
                   setPersonaName("");
                   setPersonaDescription("");
                 }}
-                className="flex-1 py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
+                className="flex-1 py-2 bg-ink-hover text-parchment rounded-lg hover:bg-line-strong transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={editingPersona ? updatePersona : createPersona}
                 disabled={!personaName.trim() || !personaDescription.trim()}
-                className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex-1 py-2 bg-ember text-ink rounded-lg hover:bg-ember-soft disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {editingPersona ? "Save Changes" : "Create Persona"}
               </button>
@@ -6539,7 +6539,7 @@ if (modelsResult.models.length > 0) {
       {/* Character Modal */}
       {showCharacterModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-lg md:max-w-xl max-h-[90vh] overflow-y-auto relative">
+          <div className="bg-ink-raised border border-line rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-lg md:max-w-xl max-h-[90vh] overflow-y-auto relative">
             <button
               onClick={() => {
                 setShowCharacterModal(false);
@@ -6554,19 +6554,19 @@ if (modelsResult.models.length > 0) {
                 setCharacterAvatar("");
                 setCharacterAlternateGreetings([]);
               }}
-              className="absolute top-4 right-4 p-1 hover:bg-zinc-800 rounded-lg transition-colors"
+              className="absolute top-4 right-4 p-1 hover:bg-ink-hover rounded-lg transition-colors"
             >
-              <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <h2 className="text-xl font-semibold text-white mb-4">
+            <h2 className="text-xl font-semibold text-parchment mb-4">
               {editingCharacter ? "Edit Character" : "Create New Character"}
             </h2>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-1">
+                <label className="block text-sm font-medium text-parchment-muted mb-1">
                   Character Name <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -6574,12 +6574,12 @@ if (modelsResult.models.length > 0) {
                   value={characterName}
                   onChange={(e) => setCharacterName(e.target.value)}
                   placeholder="e.g., Sherlock Holmes"
-                  className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700"
+                  className="w-full bg-ink-hover text-parchment placeholder-parchment-muted rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-ember border border-line-strong"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-1">
+                <label className="block text-sm font-medium text-parchment-muted mb-1">
                   Description / Personality <span className="text-red-400">*</span>
                 </label>
                 <textarea
@@ -6587,12 +6587,12 @@ if (modelsResult.models.length > 0) {
                   onChange={(e) => setCharacterDescription(e.target.value)}
                   placeholder="Describe the character's personality, background, and how they should behave..."
                   rows={3}
-                  className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none"
+                  className="w-full bg-ink-hover text-parchment placeholder-parchment-muted rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-ember border border-line-strong resize-none"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-1">
+                <label className="block text-sm font-medium text-parchment-muted mb-1">
                   First Message <span className="text-red-400">*</span>
                 </label>
                 <textarea
@@ -6600,13 +6600,13 @@ if (modelsResult.models.length > 0) {
                   onChange={(e) => setCharacterFirstMessage(e.target.value)}
                   placeholder="What does the character say when you first meet them?"
                   rows={3}
-                  className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none"
+                  className="w-full bg-ink-hover text-parchment placeholder-parchment-muted rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-ember border border-line-strong resize-none"
                 />
               </div>
 
               {/* Avatar Upload */}
               <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-1">
+                <label className="block text-sm font-medium text-parchment-muted mb-1">
                   Avatar Image (Optional)
                 </label>
                 <div className="flex items-center gap-4">
@@ -6615,19 +6615,19 @@ if (modelsResult.models.length > 0) {
                       <img 
                         src={characterAvatar} 
                         alt="Character avatar" 
-                        className="w-16 h-16 rounded-xl object-cover border-2 border-purple-500"
+                        className="w-16 h-16 rounded-xl object-cover border-2 border-ember"
                       />
                       <button
                         onClick={() => setCharacterAvatar("")}
-                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-colors"
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-parchment hover:bg-red-600 transition-colors"
                         title="Remove avatar"
                       >
                         ×
                       </button>
                     </div>
                   ) : (
-                    <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                      <span className="text-2xl text-white font-semibold">
+                    <div className="w-16 h-16 rounded-xl bg-ink-hover border border-line-strong text-parchment-soft flex items-center justify-center">
+                      <span className="text-2xl text-parchment font-semibold">
                         {characterName ? characterName.charAt(0).toUpperCase() : "?"}
                       </span>
                     </div>
@@ -6652,7 +6652,7 @@ if (modelsResult.models.length > 0) {
                     <div className="flex flex-wrap gap-2">
                       <label
                         htmlFor="avatar-upload"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors cursor-pointer text-sm"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-line-strong text-parchment rounded-lg hover:bg-line-strong transition-colors cursor-pointer text-sm"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -6663,7 +6663,7 @@ if (modelsResult.models.length > 0) {
                         type="button"
                         onClick={generateCharacterImage}
                         disabled={!characterDescription.trim() || isGeneratingImage || !providerSupportsImageGeneration(activeProvider)}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-ember text-ink rounded-lg hover:bg-ember-soft transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         title={!providerSupportsImageGeneration(activeProvider) ? "Current provider does not support image generation. Switch to Puter.js, Google AI Studio, or Vertex AI." : !characterDescription.trim() ? "Enter a character description first" : "Generate avatar image from description"}
                       >
                         {isGeneratingImage ? (
@@ -6683,7 +6683,7 @@ if (modelsResult.models.length > 0) {
                         )}
                       </button>
                     </div>
-                    <p className="text-xs text-zinc-500 mt-1">PNG, JPG, GIF up to 5MB</p>
+                    <p className="text-xs text-parchment-muted mt-1">PNG, JPG, GIF up to 5MB</p>
                     {imageGenerationError && (
                       <p className="text-xs text-red-400 mt-1">{imageGenerationError}</p>
                     )}
@@ -6692,11 +6692,11 @@ if (modelsResult.models.length > 0) {
               </div>
 
               {/* Alternate Greetings Section */}
-              <div className="border-t border-zinc-700 pt-4 mt-4">
-                <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
+              <div className="border-t border-line-strong pt-4 mt-4">
+                <h3 className="text-sm font-medium text-parchment-soft mb-3 flex items-center gap-2">
                   <span>💬</span> Alternate Greetings (Optional)
                 </h3>
-                <p className="text-xs text-zinc-500 mb-3">
+                <p className="text-xs text-parchment-muted mb-3">
                   Add alternative first messages. Users can choose which greeting to start the roleplay with.
                 </p>
                 
@@ -6712,14 +6712,14 @@ if (modelsResult.models.length > 0) {
                         }}
                         placeholder="Alternative greeting message..."
                         rows={2}
-                        className="flex-1 bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none text-sm"
+                        className="flex-1 bg-ink-hover text-parchment placeholder-parchment-muted rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ember border border-line-strong resize-none text-sm"
                       />
                       <button
                         onClick={() => {
                           const newGreetings = characterAlternateGreetings.filter((_, i) => i !== idx);
                           setCharacterAlternateGreetings(newGreetings);
                         }}
-                        className="p-2 text-red-400 hover:text-red-300 hover:bg-zinc-800 rounded-lg transition-colors"
+                        className="p-2 text-red-400 hover:text-red-300 hover:bg-ink-hover rounded-lg transition-colors"
                         title="Remove greeting"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -6731,7 +6731,7 @@ if (modelsResult.models.length > 0) {
                   
                   <button
                     onClick={() => setCharacterAlternateGreetings([...characterAlternateGreetings, ""])}
-                    className="text-sm text-purple-400 hover:text-purple-300 flex items-center gap-1"
+                    className="text-sm text-ember-soft hover:text-ember-soft flex items-center gap-1"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -6742,14 +6742,14 @@ if (modelsResult.models.length > 0) {
               </div>
 
               {/* Advanced Instructions Section */}
-              <div className="border-t border-zinc-700 pt-4 mt-4">
-                <h3 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
+              <div className="border-t border-line-strong pt-4 mt-4">
+                <h3 className="text-sm font-medium text-parchment-soft mb-3 flex items-center gap-2">
                   <span>⚙️</span> Advanced Instructions (Optional)
                 </h3>
                 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-zinc-400 mb-1">
+                    <label className="block text-sm font-medium text-parchment-muted mb-1">
                       Scenario
                     </label>
                     <textarea
@@ -6757,12 +6757,12 @@ if (modelsResult.models.length > 0) {
                       onChange={(e) => setCharacterScenario(e.target.value)}
                       placeholder="The setting or situation where the roleplay takes place..."
                       rows={2}
-                      className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none text-sm"
+                      className="w-full bg-ink-hover text-parchment placeholder-parchment-muted rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-ember border border-line-strong resize-none text-sm"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-zinc-400 mb-1">
+                    <label className="block text-sm font-medium text-parchment-muted mb-1">
                       System Prompt Override
                     </label>
                     <textarea
@@ -6770,13 +6770,13 @@ if (modelsResult.models.length > 0) {
                       onChange={(e) => setCharacterSystemPrompt(e.target.value)}
                       placeholder="Custom system prompt that replaces the default. Use {{char}} for character name..."
                       rows={2}
-                      className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none text-sm font-mono"
+                      className="w-full bg-ink-hover text-parchment placeholder-parchment-muted rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-ember border border-line-strong resize-none text-sm font-mono"
                     />
-                    <p className="text-xs text-zinc-500 mt-1">Replaces the default &quot;You are [name]...&quot; prompt</p>
+                    <p className="text-xs text-parchment-muted mt-1">Replaces the default &quot;You are [name]...&quot; prompt</p>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-zinc-400 mb-1">
+                    <label className="block text-sm font-medium text-parchment-muted mb-1">
                       Post-History Instructions
                     </label>
                     <textarea
@@ -6784,12 +6784,12 @@ if (modelsResult.models.length > 0) {
                       onChange={(e) => setCharacterPostHistoryInstructions(e.target.value)}
                       placeholder="Additional instructions applied after the chat history..."
                       rows={2}
-                      className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none text-sm"
+                      className="w-full bg-ink-hover text-parchment placeholder-parchment-muted rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-ember border border-line-strong resize-none text-sm"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-zinc-400 mb-1">
+                    <label className="block text-sm font-medium text-parchment-muted mb-1">
                       Example Messages
                     </label>
                     <textarea
@@ -6797,9 +6797,9 @@ if (modelsResult.models.length > 0) {
                       onChange={(e) => setCharacterMesExample(e.target.value)}
                       placeholder="{{char}}: Example dialogue showing how the character speaks...&#10;{{user}}: Example response...&#10;{{char}}: Another example..."
                       rows={3}
-                      className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none text-sm font-mono"
+                      className="w-full bg-ink-hover text-parchment placeholder-parchment-muted rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-ember border border-line-strong resize-none text-sm font-mono"
                     />
-                    <p className="text-xs text-zinc-500 mt-1">Use {`{{char}}`}, {`{{user}}`}, {`{{scenario}}`}, {`{{date}}`}, {`{{time}}`}, {`{{model}}`}, {`{{max_tokens}}`}, {`{{temperature}}`} placeholders</p>
+                    <p className="text-xs text-parchment-muted mt-1">Use {`{{char}}`}, {`{{user}}`}, {`{{scenario}}`}, {`{{date}}`}, {`{{time}}`}, {`{{model}}`}, {`{{max_tokens}}`}, {`{{temperature}}`} placeholders</p>
                   </div>
                 </div>
               </div>
@@ -6820,14 +6820,14 @@ if (modelsResult.models.length > 0) {
                   setCharacterAvatar("");
                   setCharacterAlternateGreetings([]);
                 }}
-                className="flex-1 py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
+                className="flex-1 py-2 bg-ink-hover text-parchment rounded-lg hover:bg-line-strong transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={editingCharacter ? updateCharacter : createCharacter}
                 disabled={!characterName.trim() || !characterDescription.trim() || !characterFirstMessage.trim()}
-                className="flex-1 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex-1 py-2 bg-ember text-ink rounded-lg hover:bg-ember-soft disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {editingCharacter ? "Save Changes" : "Create Character"}
               </button>
@@ -6839,10 +6839,10 @@ if (modelsResult.models.length > 0) {
       {/* Greeting Selection Modal */}
       {showGreetingSelection && pendingConversationCharacter && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-sm sm:max-w-lg max-h-[80vh] overflow-y-auto">
+          <div className="bg-ink-raised border border-line-strong rounded-2xl w-full max-w-sm sm:max-w-lg max-h-[80vh] overflow-y-auto">
             <div className="p-4 sm:p-6">
-              <h2 className="text-xl font-semibold text-white mb-2">Start a New Chat</h2>
-              <p className="text-zinc-400 text-sm mb-6">
+              <h2 className="text-xl font-semibold text-parchment mb-2">Start a New Chat</h2>
+              <p className="text-parchment-muted text-sm mb-6">
                 {pendingConversationCharacter.name} has multiple greetings. Choose how to start:
               </p>
               
@@ -6857,7 +6857,7 @@ if (modelsResult.models.length > 0) {
                     setShowGreetingSelection(false);
                     setPendingConversationCharacter(null);
                   }}
-                  className="w-full text-left p-4 bg-zinc-800 border border-zinc-700 rounded-xl hover:border-green-500 transition-colors group mb-4"
+                  className="w-full text-left p-4 bg-ink-hover border border-line-strong rounded-xl hover:border-green-500 transition-colors group mb-4"
                 >
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-green-400 group-hover:text-green-300">Continue from where we left off</span>
@@ -6865,7 +6865,7 @@ if (modelsResult.models.length > 0) {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
                     </svg>
                   </div>
-                  <p className="text-zinc-400 text-sm">Continue your most recent conversation with {pendingConversationCharacter.name}</p>
+                  <p className="text-parchment-muted text-sm">Continue your most recent conversation with {pendingConversationCharacter.name}</p>
                 </button>
               )}
               
@@ -6873,12 +6873,12 @@ if (modelsResult.models.length > 0) {
                 {/* Default first message */}
                 <button
                   onClick={() => createConversation(pendingConversationCharacter.firstMessage)}
-                  className="w-full text-left p-4 bg-zinc-800 border border-zinc-700 rounded-xl hover:border-purple-500 transition-colors group"
+                  className="w-full text-left p-4 bg-ink-hover border border-line-strong rounded-xl hover:border-ember transition-colors group"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-purple-400 group-hover:text-purple-300">Start with Default</span>
+                    <span className="text-sm font-medium text-ember-soft group-hover:text-ember-soft">Start with Default</span>
                   </div>
-                  <p className="text-zinc-300 italic line-clamp-2">&ldquo;{pendingConversationCharacter.firstMessage}&rdquo;</p>
+                  <p className="text-parchment-soft italic line-clamp-2">&ldquo;{pendingConversationCharacter.firstMessage}&rdquo;</p>
                 </button>
                 
                 {/* Alternate greetings */}
@@ -6886,12 +6886,12 @@ if (modelsResult.models.length > 0) {
                   <button
                     key={idx}
                     onClick={() => createConversation(greeting)}
-                    className="w-full text-left p-4 bg-zinc-800 border border-zinc-700 rounded-xl hover:border-purple-500 transition-colors group"
+                    className="w-full text-left p-4 bg-ink-hover border border-line-strong rounded-xl hover:border-ember transition-colors group"
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-amber-400 group-hover:text-amber-300">Alternative {idx + 1}</span>
                     </div>
-                    <p className="text-zinc-300 italic line-clamp-2">&ldquo;{greeting}&rdquo;</p>
+                    <p className="text-parchment-soft italic line-clamp-2">&ldquo;{greeting}&rdquo;</p>
                   </button>
                 ))}
               </div>
@@ -6903,7 +6903,7 @@ if (modelsResult.models.length > 0) {
                     setPendingConversationCharacter(null);
                     setView("characters");
                   }}
-                  className="flex-1 py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
+                  className="flex-1 py-2 bg-ink-hover text-parchment rounded-lg hover:bg-line-strong transition-colors"
                 >
                   Cancel
                 </button>
@@ -6916,12 +6916,12 @@ if (modelsResult.models.length > 0) {
       {/* Character Card Modal - View/Edit Character */}
       {showCharacterCardModal && selectedCharacter && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-lg md:max-w-xl max-h-[90vh] overflow-y-auto relative">
+          <div className="bg-ink-raised border border-line rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-lg md:max-w-xl max-h-[90vh] overflow-y-auto relative">
             <button
               onClick={() => setShowCharacterCardModal(false)}
-              className="absolute top-4 right-4 p-1 hover:bg-zinc-800 rounded-lg transition-colors"
+              className="absolute top-4 right-4 p-1 hover:bg-ink-hover rounded-lg transition-colors"
             >
-              <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -6931,21 +6931,21 @@ if (modelsResult.models.length > 0) {
                 <img 
                   src={selectedCharacter.avatar} 
                   alt={selectedCharacter.name}
-                  className="w-16 h-16 rounded-xl object-cover border-2 border-purple-500"
+                  className="w-16 h-16 rounded-xl object-cover border-2 border-ember"
                 />
               ) : (
-                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                  <span className="text-2xl text-white font-semibold">
+                <div className="w-16 h-16 rounded-xl bg-ink-hover border border-line-strong text-parchment-soft flex items-center justify-center">
+                  <span className="text-2xl text-parchment font-semibold">
                     {selectedCharacter.name.charAt(0).toUpperCase()}
                   </span>
                 </div>
               )}
               <div>
-                <h2 className="text-xl font-semibold text-white">{selectedCharacter.name}</h2>
+                <h2 className="text-xl font-semibold text-parchment">{selectedCharacter.name}</h2>
                 {selectedCharacter.tags && selectedCharacter.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1">
                     {selectedCharacter.tags.slice(0, 3).map((tag, idx) => (
-                      <span key={idx} className="px-2 py-0.5 bg-zinc-800 text-zinc-400 rounded text-xs">
+                      <span key={idx} className="px-2 py-0.5 bg-ink-hover text-parchment-muted rounded text-xs">
                         {tag}
                       </span>
                     ))}
@@ -6956,30 +6956,30 @@ if (modelsResult.models.length > 0) {
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-1">Description</label>
-                <div className="bg-zinc-800 text-zinc-200 rounded-lg px-4 py-3 text-sm whitespace-pre-wrap">
+                <label className="block text-sm font-medium text-parchment-muted mb-1">Description</label>
+                <div className="bg-ink-hover text-parchment rounded-lg px-4 py-3 text-sm whitespace-pre-wrap">
                   {selectedCharacter.description || "No description"}
                 </div>
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-1">Scenario</label>
-                <div className="bg-zinc-800 text-zinc-200 rounded-lg px-4 py-3 text-sm whitespace-pre-wrap">
+                <label className="block text-sm font-medium text-parchment-muted mb-1">Scenario</label>
+                <div className="bg-ink-hover text-parchment rounded-lg px-4 py-3 text-sm whitespace-pre-wrap">
                   {selectedCharacter.scenario || "No scenario"}
                 </div>
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-1">First Message</label>
-                <div className="bg-zinc-800 text-zinc-200 rounded-lg px-4 py-3 text-sm whitespace-pre-wrap">
+                <label className="block text-sm font-medium text-parchment-muted mb-1">First Message</label>
+                <div className="bg-ink-hover text-parchment rounded-lg px-4 py-3 text-sm whitespace-pre-wrap">
                   {selectedCharacter.firstMessage}
                 </div>
               </div>
               
               {selectedCharacter.systemPrompt && (
                 <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-1">System Prompt</label>
-                  <div className="bg-zinc-800 text-zinc-200 rounded-lg px-4 py-3 text-sm whitespace-pre-wrap max-h-32 overflow-y-auto">
+                  <label className="block text-sm font-medium text-parchment-muted mb-1">System Prompt</label>
+                  <div className="bg-ink-hover text-parchment rounded-lg px-4 py-3 text-sm whitespace-pre-wrap max-h-32 overflow-y-auto">
                     {selectedCharacter.systemPrompt}
                   </div>
                 </div>
@@ -6987,8 +6987,8 @@ if (modelsResult.models.length > 0) {
               
               {selectedCharacter.postHistoryInstructions && (
                 <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-1">Post-History Instructions</label>
-                  <div className="bg-zinc-800 text-zinc-200 rounded-lg px-4 py-3 text-sm whitespace-pre-wrap max-h-32 overflow-y-auto">
+                  <label className="block text-sm font-medium text-parchment-muted mb-1">Post-History Instructions</label>
+                  <div className="bg-ink-hover text-parchment rounded-lg px-4 py-3 text-sm whitespace-pre-wrap max-h-32 overflow-y-auto">
                     {selectedCharacter.postHistoryInstructions}
                   </div>
                 </div>
@@ -6996,8 +6996,8 @@ if (modelsResult.models.length > 0) {
               
               {selectedCharacter.mesExample && (
                 <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-1">Example Dialogue</label>
-                  <div className="bg-zinc-800 text-zinc-200 rounded-lg px-4 py-3 text-sm whitespace-pre-wrap max-h-32 overflow-y-auto">
+                  <label className="block text-sm font-medium text-parchment-muted mb-1">Example Dialogue</label>
+                  <div className="bg-ink-hover text-parchment rounded-lg px-4 py-3 text-sm whitespace-pre-wrap max-h-32 overflow-y-auto">
                     {selectedCharacter.mesExample}
                   </div>
                 </div>
@@ -7005,10 +7005,10 @@ if (modelsResult.models.length > 0) {
               
               {selectedCharacter.alternateGreetings && selectedCharacter.alternateGreetings.length > 0 && (
                 <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-1">Alternate Greetings ({selectedCharacter.alternateGreetings.length})</label>
+                  <label className="block text-sm font-medium text-parchment-muted mb-1">Alternate Greetings ({selectedCharacter.alternateGreetings.length})</label>
                   <div className="space-y-2">
                     {selectedCharacter.alternateGreetings.map((greeting, idx) => (
-                      <div key={idx} className="bg-zinc-800 text-zinc-200 rounded-lg px-4 py-2 text-sm">
+                      <div key={idx} className="bg-ink-hover text-parchment rounded-lg px-4 py-2 text-sm">
                         {greeting}
                       </div>
                     ))}
@@ -7018,29 +7018,29 @@ if (modelsResult.models.length > 0) {
               
               {selectedCharacter.characterBook && selectedCharacter.characterBook.entries && selectedCharacter.characterBook.entries.length > 0 && (
                 <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-1">Character Book ({selectedCharacter.characterBook.entries.length} entries)</label>
+                  <label className="block text-sm font-medium text-parchment-muted mb-1">Character Book ({selectedCharacter.characterBook.entries.length} entries)</label>
                   <div className="space-y-2">
                     {selectedCharacter.characterBook.entries.slice(0, 5).map((entry, idx) => (
-                      <div key={idx} className="bg-zinc-800 text-zinc-200 rounded-lg px-4 py-2 text-sm">
+                      <div key={idx} className="bg-ink-hover text-parchment rounded-lg px-4 py-2 text-sm">
                         <div className="flex flex-wrap gap-1 mb-1">
                           {entry.keys.map((key, keyIdx) => (
-                            <span key={keyIdx} className="px-1.5 py-0.5 bg-purple-900/50 text-purple-300 rounded text-xs">
+                            <span key={keyIdx} className="px-1.5 py-0.5 bg-ember/10 text-ember-soft rounded text-xs">
                               {key}
                             </span>
                           ))}
                         </div>
-                        <p className="text-zinc-400 text-xs line-clamp-2">{entry.content}</p>
+                        <p className="text-parchment-muted text-xs line-clamp-2">{entry.content}</p>
                       </div>
                     ))}
                     {selectedCharacter.characterBook.entries.length > 5 && (
-                      <p className="text-xs text-zinc-500">+{selectedCharacter.characterBook.entries.length - 5} more entries</p>
+                      <p className="text-xs text-parchment-muted">+{selectedCharacter.characterBook.entries.length - 5} more entries</p>
                     )}
                   </div>
                 </div>
               )}
             </div>
             
-            <div className="flex gap-3 mt-6 pt-4 border-t border-zinc-800">
+            <div className="flex gap-3 mt-6 pt-4 border-t border-line">
               <button
                 onClick={() => {
                   setShowCharacterCardModal(false);
@@ -7056,13 +7056,13 @@ if (modelsResult.models.length > 0) {
                   setCharacterAlternateGreetings(selectedCharacter.alternateGreetings || []);
                   setShowCharacterModal(true);
                 }}
-                className="flex-1 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                className="flex-1 py-2 bg-ember text-ink rounded-lg hover:bg-ember-soft transition-colors"
               >
                 Edit Character
               </button>
               <button
                 onClick={() => setShowCharacterCardModal(false)}
-                className="flex-1 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors"
+                className="flex-1 py-2 bg-line-strong text-parchment rounded-lg hover:bg-line-strong transition-colors"
               >
                 Close
               </button>
@@ -7140,32 +7140,32 @@ if (modelsResult.models.length > 0) {
         {/* Instruction Modal with Tabbed Navigation */}
        {showInstructionModal && (
          <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+           <div className="bg-ink-raised border border-line rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
              {/* Modal Header */}
-             <div className="flex items-center justify-between p-4 border-b border-zinc-800">
+             <div className="flex items-center justify-between p-4 border-b border-line">
                <div>
-                 <h2 className="text-lg font-semibold text-white">Instructions</h2>
-                  <p className="text-sm text-zinc-500">Exclusive to each mode - Chat</p>
+                 <h2 className="text-lg font-semibold text-parchment">Instructions</h2>
+                  <p className="text-sm text-parchment-muted">Exclusive to each mode - Chat</p>
                </div>
                <button
                  onClick={() => setShowInstructionModal(false)}
-                 className="p-2 hover:bg-zinc-800 rounded transition-colors"
+                 className="p-2 hover:bg-ink-hover rounded transition-colors"
                >
-                 <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <svg className="w-5 h-5 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                  </svg>
                </button>
              </div>
 
               {/* Tabbed Navigation */}
-              <div className="flex-shrink-0 border-b border-zinc-800">
+              <div className="flex-shrink-0 border-b border-line">
                 <div className="flex gap-0">
                   <button
                     onClick={() => setActiveInstructionTab('chat')}
                     className={`px-6 py-3 text-sm font-medium transition-all ${
                       activeInstructionTab === 'chat'
-                        ? 'text-blue-400 border-b-2 border-blue-500'
-                        : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                        ? 'text-ember border-b-2 border-ember'
+                        : 'text-parchment-muted hover:text-parchment hover:bg-ink-hover'
                     }`}
                   >
                     Chat
@@ -7174,8 +7174,8 @@ if (modelsResult.models.length > 0) {
                     onClick={() => setActiveInstructionTab('generator')}
                     className={`px-6 py-3 text-sm font-medium transition-all ${
                       activeInstructionTab === 'generator'
-                        ? 'text-blue-400 border-b-2 border-blue-500'
-                        : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                        ? 'text-ember border-b-2 border-ember'
+                        : 'text-parchment-muted hover:text-parchment hover:bg-ink-hover'
                     }`}
                   >
                     Generator
@@ -7192,7 +7192,7 @@ if (modelsResult.models.length > 0) {
                 <div className="pb-32 space-y-6">
                     {/* Formatting Prompt */}
                     <div>
-                      <label className="block text-sm font-medium text-zinc-300 mb-2">
+                      <label className="block text-sm font-medium text-parchment-soft mb-2">
                         Formatting Prompt
                       </label>
                       <textarea
@@ -7203,9 +7203,9 @@ if (modelsResult.models.length > 0) {
                         })}
                         placeholder="Instructions for how the AI should format responses (actions, dialogue, thoughts...)"
                         rows={4}
-                        className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
+                        className="w-full bg-ink-hover text-parchment placeholder-parchment-muted rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-ember border border-line-strong resize-none"
                       />
-                      <p className="text-xs text-zinc-500 mt-1">
+                      <p className="text-xs text-parchment-muted mt-1">
                         Sent before context to guide response formatting (actions, speech, thoughts)
                       </p>
                     </div>
@@ -7213,7 +7213,7 @@ if (modelsResult.models.length > 0) {
                     {/* Jailbreak Instructions */}
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <label className="block text-sm font-medium text-zinc-300">
+                        <label className="block text-sm font-medium text-parchment-soft">
                           Jailbreak Instructions
                         </label>
                         <button
@@ -7223,7 +7223,7 @@ if (modelsResult.models.length > 0) {
                             enableJailbreak: !globalInstructions.enableJailbreak
                           })}
                           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                            globalInstructions.enableJailbreak ? "bg-amber-600" : "bg-zinc-700"
+                            globalInstructions.enableJailbreak ? "bg-amber-600" : "bg-line-strong"
                           }`}
                         >
                           <span
@@ -7242,7 +7242,7 @@ if (modelsResult.models.length > 0) {
                           })}
                           placeholder="Jailbreak instructions to bypass content restrictions..."
                           rows={3}
-                          className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500 border border-zinc-700 resize-none"
+                          className="w-full bg-ink-hover text-parchment placeholder-parchment-muted rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500 border border-line-strong resize-none"
                         />
                       )}
                       <p className="text-xs text-amber-500/70 mt-1">
@@ -7252,7 +7252,7 @@ if (modelsResult.models.length > 0) {
 
                     {/* Continue Instruction */}
                     <div>
-                      <label className="block text-sm font-medium text-zinc-300 mb-2">
+                      <label className="block text-sm font-medium text-parchment-soft mb-2">
                         Continue Instruction
                       </label>
                       <textarea
@@ -7263,16 +7263,16 @@ if (modelsResult.models.length > 0) {
                         })}
                         placeholder="Continue your previous response..."
                         rows={2}
-                        className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
+                        className="w-full bg-ink-hover text-parchment placeholder-parchment-muted rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-ember border border-line-strong resize-none"
                       />
-                      <p className="text-xs text-zinc-500 mt-1">
+                      <p className="text-xs text-parchment-muted mt-1">
                         Used when clicking continue button to complete incomplete responses
                       </p>
                     </div>
 
                     {/* Image Generation Instructions */}
                     <div>
-                      <label className="block text-sm font-medium text-zinc-300 mb-2">
+                      <label className="block text-sm font-medium text-parchment-soft mb-2">
                         Image Generation Instructions
                       </label>
                       <textarea
@@ -7283,18 +7283,18 @@ if (modelsResult.models.length > 0) {
                         })}
                         placeholder="Instructions for generating character images..."
                         rows={3}
-                        className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-zinc-700 resize-none"
+                        className="w-full bg-ink-hover text-parchment placeholder-parchment-muted rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-ember border border-line-strong resize-none"
                       />
-                      <p className="text-xs text-zinc-500 mt-1">
+                      <p className="text-xs text-parchment-muted mt-1">
                         Used when generating character avatar images. Describe the style, quality, and composition you want.
                       </p>
                     </div>
 
 {/* Instruction List Section (SillyTavern-style) */}
-                    <div className="pt-4 border-t border-zinc-700">
+                    <div className="pt-4 border-t border-line-strong">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
                          <div className="flex items-center gap-2">
-                           <label className="block text-sm font-medium text-zinc-300">
+                           <label className="block text-sm font-medium text-parchment-soft">
                              Instruction List
                            </label>
                             
@@ -7322,7 +7322,7 @@ if (modelsResult.models.length > 0) {
                                  }
                                }
                              }}
-                             className="bg-zinc-800 text-white text-xs rounded px-2 py-1 border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                             className="bg-ink-hover text-parchment text-xs rounded px-2 py-1 border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                            >
                              <option value="">Select a preset...</option>
                              {instructionPresets.map(preset => (
@@ -7352,7 +7352,7 @@ if (modelsResult.models.length > 0) {
                                  setInstructionPresets(prev => [...prev, newPreset]);
                                }
                              }}
-                             className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition-colors"
+                             className="text-xs bg-green-600 text-parchment px-2 py-1 rounded hover:bg-green-700 transition-colors"
                            >
                              Save
                            </button>
@@ -7374,7 +7374,7 @@ if (modelsResult.models.length > 0) {
                                    }
                                  }
                                }}
-                               className="text-xs bg-amber-600 text-white px-2 py-1 rounded hover:bg-amber-700 transition-colors"
+                               className="text-xs bg-amber-600 text-parchment px-2 py-1 rounded hover:bg-amber-700 transition-colors"
                              >
                                Rename
                              </button>
@@ -7390,7 +7390,7 @@ if (modelsResult.models.length > 0) {
                                     setSelectedPresetId("");
                                   }
                                 }}
-                                className="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition-colors"
+                                className="text-xs bg-red-600 text-parchment px-2 py-1 rounded hover:bg-red-700 transition-colors"
                               >
                                 Delete
                               </button>
@@ -7414,12 +7414,12 @@ if (modelsResult.models.length > 0) {
                               instructions: [...(globalInstructions.instructions || []), newInstruction],
                             });
                           }}
-                          className="text-sm bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 transition-colors"
+                          className="text-sm bg-ember text-ink px-3 py-1.5 rounded hover:bg-ember-soft transition-colors"
                         >
                           + Add Instruction
                         </button>
 
-                        <p className="text-xs text-zinc-500 mb-4">
+                        <p className="text-xs text-parchment-muted mb-4">
                           Manage multiple instructions with custom roles and positions (SillyTavern-style)
                         </p>
 
@@ -7430,8 +7430,8 @@ if (modelsResult.models.length > 0) {
                              key={instruction.id}
                              className={`p-3 rounded-lg border ${
                                instruction.enabled
-                                 ? "bg-zinc-800/50 border-zinc-700"
-                                 : "bg-zinc-900/50 border-zinc-800 opacity-60"
+                                 ? "bg-ink-hover/50 border-line-strong"
+                                 : "bg-ink-raised/50 border-line opacity-60"
                              }`}
                            >
                              {/* Instruction Header */}
@@ -7453,7 +7453,7 @@ if (modelsResult.models.length > 0) {
                                       });
                                     }}
                                     disabled={index === 0}
-                                    className={`p-0.5 ${index === 0 ? 'text-zinc-600' : 'text-zinc-400 hover:text-white'} transition-colors`}
+                                    className={`p-0.5 ${index === 0 ? 'text-parchment-muted' : 'text-parchment-muted hover:text-parchment'} transition-colors`}
                                   >
                                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
@@ -7473,7 +7473,7 @@ if (modelsResult.models.length > 0) {
                                       });
                                     }}
                                     disabled={index === (globalInstructions.instructions || []).length - 1}
-                                    className={`p-0.5 ${index === (globalInstructions.instructions || []).length - 1 ? 'text-zinc-600' : 'text-zinc-400 hover:text-white'} transition-colors`}
+                                    className={`p-0.5 ${index === (globalInstructions.instructions || []).length - 1 ? 'text-parchment-muted' : 'text-parchment-muted hover:text-parchment'} transition-colors`}
                                   >
                                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -7493,7 +7493,7 @@ if (modelsResult.models.length > 0) {
                                       instructions: newList,
                                     });
                                   }}
-                                  className="bg-transparent text-white text-sm font-medium border-none focus:outline-none focus:ring-0 w-32"
+                                  className="bg-transparent text-parchment text-sm font-medium border-none focus:outline-none focus:ring-0 w-32"
                                   placeholder="Instruction name"
                                 />
                               </div>
@@ -7511,7 +7511,7 @@ if (modelsResult.models.length > 0) {
                                     });
                                   }}
                                   className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                                    instruction.enabled ? "bg-green-600" : "bg-zinc-700"
+                                    instruction.enabled ? "bg-green-600" : "bg-line-strong"
                                   }`}
                                 >
                                   <span
@@ -7535,7 +7535,7 @@ if (modelsResult.models.length > 0) {
                                       });
                                     }
                                   }}
-                                  className="text-zinc-500 hover:text-red-400 transition-colors p-1"
+                                  className="text-parchment-muted hover:text-red-400 transition-colors p-1"
                                 >
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -7548,7 +7548,7 @@ if (modelsResult.models.length > 0) {
                             <div className="flex gap-2 mb-2">
                               {/* Role Dropdown */}
                               <div className="flex-1">
-                                <label className="block text-xs text-zinc-500 mb-1">Role</label>
+                                <label className="block text-xs text-parchment-muted mb-1">Role</label>
                                 <select
                                   value={instruction.role}
                                   onChange={(e) => {
@@ -7559,7 +7559,7 @@ if (modelsResult.models.length > 0) {
                                       instructions: newList,
                                     });
                                   }}
-                                  className="w-full bg-zinc-900 text-white text-xs rounded px-2 py-1 border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  className="w-full bg-ink-raised text-parchment text-xs rounded px-2 py-1 border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                                 >
                                   <option value="system">System</option>
                                   <option value="user">User</option>
@@ -7569,7 +7569,7 @@ if (modelsResult.models.length > 0) {
 
                               {/* Position Dropdown */}
                               <div className="flex-1">
-                                <label className="block text-xs text-zinc-500 mb-1">Position</label>
+                                <label className="block text-xs text-parchment-muted mb-1">Position</label>
                                 <select
                                   value={instruction.position}
                                   onChange={(e) => {
@@ -7580,7 +7580,7 @@ if (modelsResult.models.length > 0) {
                                       instructions: newList,
                                     });
                                   }}
-                                  className="w-full bg-zinc-900 text-white text-xs rounded px-2 py-1 border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  className="w-full bg-ink-raised text-parchment text-xs rounded px-2 py-1 border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                                 >
                                   <option value="before_context">Before Context</option>
                                   <option value="after_context">After Context</option>
@@ -7591,7 +7591,7 @@ if (modelsResult.models.length > 0) {
                               {/* Inline Index Input - only shown for inline_with_message */}
                               {instruction.position === "inline_with_message" && (
                                 <div className="flex-1">
-                                  <label className="block text-xs text-zinc-500 mb-1">Index</label>
+                                  <label className="block text-xs text-parchment-muted mb-1">Index</label>
                                   <input
                                     type="number"
                                     min="0"
@@ -7604,10 +7604,10 @@ if (modelsResult.models.length > 0) {
                                         instructions: newList,
                                       });
                                     }}
-                                    className="w-full bg-zinc-900 text-white text-xs rounded px-2 py-1 border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    className="w-full bg-ink-raised text-parchment text-xs rounded px-2 py-1 border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                                     placeholder="0"
                                   />
-                                  <p className="text-xs text-zinc-600 mt-1">
+                                  <p className="text-xs text-parchment-muted mt-1">
                                     0 = after last user msg, 1 = before, etc.
                                   </p>
                                 </div>
@@ -7627,14 +7627,14 @@ if (modelsResult.models.length > 0) {
                               }}
                               placeholder="Enter instruction content..."
                               rows={3}
-                              className="w-full bg-zinc-900 text-white placeholder-zinc-500 rounded px-3 py-2 text-sm border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+                              className="w-full bg-ink-raised text-parchment placeholder-parchment-muted rounded px-3 py-2 text-sm border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember resize-none"
                             />
                           </div>
                         ))}
 
 {/* Empty State */}
                          {(!globalInstructions.instructions || globalInstructions.instructions.length === 0) && (
-                           <div className="text-center py-4 text-zinc-500 text-sm">
+                           <div className="text-center py-4 text-parchment-muted text-sm">
                              No instructions yet. Click &quot;Add Instruction&quot; to create one.
                            </div>
                          )}
@@ -7647,7 +7647,7 @@ if (modelsResult.models.length > 0) {
                   {activeInstructionTab === 'generator' && (
                     <div className="space-y-6">
                       <div>
-                        <label className="block text-sm font-medium text-zinc-300 mb-2">
+                        <label className="block text-sm font-medium text-parchment-soft mb-2">
                           Generator Default Instructions
                         </label>
                         <textarea
@@ -7658,9 +7658,9 @@ if (modelsResult.models.length > 0) {
                           })}
                           placeholder="Default instructions used by the character generator..."
                           rows={10}
-                          className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 border border-zinc-700 resize-none"
+                          className="w-full bg-ink-hover text-parchment placeholder-parchment-muted rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-ember border border-line-strong resize-none"
                         />
-                        <p className="text-xs text-zinc-500 mt-1">
+                        <p className="text-xs text-parchment-muted mt-1">
                           Shared across all generator sessions. Used as the system prompt when creating characters.
                         </p>
                       </div>
@@ -7670,19 +7670,19 @@ if (modelsResult.models.length > 0) {
                </div>
 
               {/* Modal Footer */}
-              <div className="flex-shrink-0 p-4 border-t border-zinc-800 flex gap-3">
+              <div className="flex-shrink-0 p-4 border-t border-line flex gap-3">
                 <button
                   onClick={() => {
                     // Apply all instruction changes
                     setShowInstructionModal(false);
                   }}
-                  className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  className="flex-1 py-2 bg-ember text-ink rounded-lg hover:bg-ember-soft transition-colors font-medium"
                 >
                   Save All
                 </button>
                 <button
                   onClick={() => setShowInstructionModal(false)}
-                  className="flex-1 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors font-medium"
+                  className="flex-1 py-2 bg-line-strong text-parchment rounded-lg hover:bg-line-strong transition-colors font-medium"
                 >
                   Cancel
                 </button>
@@ -7694,31 +7694,31 @@ if (modelsResult.models.length > 0) {
        {/* Utilities Modal */}
        {showUtilitiesModal && (
          <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+           <div className="bg-ink-raised border border-line rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
              {/* Modal Header */}
-             <div className="flex items-center justify-between p-4 border-b border-zinc-800">
+             <div className="flex items-center justify-between p-4 border-b border-line">
                <div>
-                 <h2 className="text-lg font-semibold text-white">Utilities</h2>
-                 <p className="text-sm text-zinc-500">Tags, summarize, debug, logs</p>
+                 <h2 className="text-lg font-semibold text-parchment">Utilities</h2>
+                 <p className="text-sm text-parchment-muted">Tags, summarize, debug, logs</p>
                </div>
                <button
                  onClick={() => setShowUtilitiesModal(false)}
-                 className="p-2 hover:bg-zinc-800 rounded transition-colors"
+                 className="p-2 hover:bg-ink-hover rounded transition-colors"
                >
-                 <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <svg className="w-5 h-5 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                  </svg>
                </button>
              </div>
 
              {/* Tabs */}
-             <div className="flex gap-1 px-4 py-2 border-b border-zinc-800">
+             <div className="flex gap-1 px-4 py-2 border-b border-line">
                <button
                  onClick={() => setUtilityPanelTab('tags')}
                  className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
                    utilityPanelTab === 'tags'
-                     ? 'bg-zinc-800 text-white'
-                     : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50'
+                     ? 'bg-ink-hover text-parchment'
+                     : 'text-parchment-muted hover:text-parchment-soft hover:bg-ink-hover/50'
                  }`}
                >
                  <span className="flex items-center justify-center gap-1.5">
@@ -7732,8 +7732,8 @@ if (modelsResult.models.length > 0) {
                  onClick={() => setUtilityPanelTab('summarization')}
                  className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
                    utilityPanelTab === 'summarization'
-                     ? 'bg-zinc-800 text-white'
-                     : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50'
+                     ? 'bg-ink-hover text-parchment'
+                     : 'text-parchment-muted hover:text-parchment-soft hover:bg-ink-hover/50'
                  }`}
                >
                  <span className="flex items-center justify-center gap-1.5">
@@ -7747,8 +7747,8 @@ if (modelsResult.models.length > 0) {
                  onClick={() => setUtilityPanelTab('debug')}
                  className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
                    utilityPanelTab === 'debug'
-                     ? 'bg-zinc-800 text-white'
-                     : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50'
+                     ? 'bg-ink-hover text-parchment'
+                     : 'text-parchment-muted hover:text-parchment-soft hover:bg-ink-hover/50'
                  }`}
                >
                  <span className="flex items-center justify-center gap-1.5">
@@ -7763,8 +7763,8 @@ if (modelsResult.models.length > 0) {
                   onClick={() => setUtilityPanelTab('logs')}
                   className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
                     utilityPanelTab === 'logs'
-                      ? 'bg-zinc-800 text-white'
-                      : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50'
+                      ? 'bg-ink-hover text-parchment'
+                      : 'text-parchment-muted hover:text-parchment-soft hover:bg-ink-hover/50'
                   }`}
                 >
                   <span className="flex items-center justify-center gap-1.5">
@@ -7795,27 +7795,27 @@ if (modelsResult.models.length > 0) {
                      if (allTags.length === 0) {
                        return (
                          <div className="flex flex-col items-center justify-center py-16 text-center">
-                           <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center mb-3">
-                             <svg className="w-6 h-6 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <div className="w-12 h-12 rounded-xl bg-ink-hover flex items-center justify-center mb-3">
+                             <svg className="w-6 h-6 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                              </svg>
                            </div>
-                           <p className="text-sm text-zinc-500">No tags found</p>
-                           <p className="text-xs text-zinc-600 mt-1">Custom tags from AI responses appear here</p>
+                           <p className="text-sm text-parchment-muted">No tags found</p>
+                           <p className="text-xs text-parchment-muted mt-1">Custom tags from AI responses appear here</p>
                          </div>
                        );
                      }
 
                      return allTags.map((tag, idx) => (
-                       <div key={idx} className="bg-zinc-800/50 rounded-lg border border-zinc-700/50 overflow-hidden">
+                       <div key={idx} className="bg-ink-hover/50 rounded-lg border border-line-strong/50 overflow-hidden">
                          <div className="px-3 py-2.5">
                            <div className="flex items-center gap-2 mb-2">
-                             <span className="px-2 py-0.5 bg-purple-900/50 text-purple-300 text-xs rounded-md border border-purple-800/50 font-mono">
+                             <span className="px-2 py-0.5 bg-ember/10 text-ember-soft text-xs rounded-md border border-line-strong/50 font-mono">
                                &lt;{tag.tagName}&gt;
                              </span>
-                             <span className="text-xs text-zinc-600">msg {tag.messageIndex + 1}</span>
+                             <span className="text-xs text-parchment-muted">msg {tag.messageIndex + 1}</span>
                            </div>
-                           <div className="whitespace-pre-wrap text-xs text-zinc-300 leading-relaxed">
+                           <div className="whitespace-pre-wrap text-xs text-parchment-soft leading-relaxed">
                              {tag.content}
                            </div>
                          </div>
@@ -7829,10 +7829,10 @@ if (modelsResult.models.length > 0) {
                {utilityPanelTab === 'summarization' && (
                  <div className="space-y-4">
                    {/* Enable/Disable Toggle */}
-                   <div className="flex items-center justify-between bg-zinc-800/50 p-3 rounded-xl border border-zinc-700/50">
+                   <div className="flex items-center justify-between bg-ink-hover/50 p-3 rounded-xl border border-line-strong/50">
                      <div>
-                       <p className="text-sm font-medium text-white">Summarization</p>
-                       <p className="text-xs text-zinc-500 mt-0.5">Compress context to save tokens</p>
+                       <p className="text-sm font-medium text-parchment">Summarization</p>
+                       <p className="text-xs text-parchment-muted mt-0.5">Compress context to save tokens</p>
                      </div>
                      <button
                        onClick={() => {
@@ -7845,7 +7845,7 @@ if (modelsResult.models.length > 0) {
                          }));
                        }}
                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                         globalSettings.summarization.enabled ? 'bg-blue-600' : 'bg-zinc-700'
+                         globalSettings.summarization.enabled ? 'bg-ember' : 'bg-line-strong'
                        }`}
                      >
                        <span
@@ -7859,12 +7859,12 @@ if (modelsResult.models.length > 0) {
                    {globalSettings.summarization.enabled ? (
                      <>
                        {/* Quick Actions */}
-                       <div className="bg-zinc-800/30 rounded-xl border border-zinc-700/50 p-3">
-                         <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Quick Actions</p>
+                       <div className="bg-ink-hover/30 rounded-xl border border-line-strong/50 p-3">
+                         <p className="text-xs font-semibold text-parchment-muted uppercase tracking-wider mb-3">Quick Actions</p>
                          <button
                            onClick={handleSummarize}
                            disabled={isSummarizing || isLoading || (currentConversation?.messages?.length || 0) <= (globalSettings.summarization.recentMessagesCount ?? 10)}
-                           className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-xs text-white disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                           className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-ember hover:bg-ember-soft rounded-lg transition-colors text-xs text-ink disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                          >
                            {isSummarizing ? (
                              <>
@@ -7887,15 +7887,15 @@ if (modelsResult.models.length > 0) {
 
                        {/* Summary Memory */}
                        {currentConversation?.summaryMemory && (
-                         <div className="bg-zinc-800/30 rounded-xl border border-zinc-700/50 p-3">
+                         <div className="bg-ink-hover/30 rounded-xl border border-line-strong/50 p-3">
                            <div className="flex items-center justify-between mb-2">
-                             <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Summary Memory</p>
-                             <span className="text-xs text-zinc-600">
+                             <p className="text-xs font-semibold text-parchment-muted uppercase tracking-wider">Summary Memory</p>
+                             <span className="text-xs text-parchment-muted">
                                {(currentConversation?.messages?.length || 0)} msgs
                              </span>
                            </div>
-                           <div className="bg-zinc-900/50 rounded-lg p-3 max-h-48 overflow-y-auto">
-                             <p className="whitespace-pre-wrap text-xs text-zinc-300 leading-relaxed">
+                           <div className="bg-ink-raised/50 rounded-lg p-3 max-h-48 overflow-y-auto">
+                             <p className="whitespace-pre-wrap text-xs text-parchment-soft leading-relaxed">
                                {currentConversation.summaryMemory}
                              </p>
                            </div>
@@ -7903,12 +7903,12 @@ if (modelsResult.models.length > 0) {
                        )}
 
                        {/* Configuration */}
-                       <div className="bg-zinc-800/30 rounded-xl border border-zinc-700/50 p-3 space-y-3">
-                         <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Settings</p>
+                       <div className="bg-ink-hover/30 rounded-xl border border-line-strong/50 p-3 space-y-3">
+                         <p className="text-xs font-semibold text-parchment-muted uppercase tracking-wider">Settings</p>
 
                          {/* Quality */}
                          <div>
-                           <label className="block text-xs font-medium text-zinc-400 mb-1.5">Quality</label>
+                           <label className="block text-xs font-medium text-parchment-muted mb-1.5">Quality</label>
                            <select
                              value={globalSettings.summarization.quality}
                              onChange={(e) => {
@@ -7920,7 +7920,7 @@ if (modelsResult.models.length > 0) {
                                  }
                                }));
                              }}
-                             className="w-full bg-zinc-900 text-white rounded-lg px-2.5 py-2 text-xs border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                             className="w-full bg-ink-raised text-parchment rounded-lg px-2.5 py-2 text-xs border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                            >
                              <option value="fast">Fast - Compact</option>
                              <option value="balanced">Balanced - Good detail</option>
@@ -7930,7 +7930,7 @@ if (modelsResult.models.length > 0) {
 
                          {/* Trigger */}
                          <div>
-                           <label className="block text-xs font-medium text-zinc-400 mb-1.5">Trigger</label>
+                           <label className="block text-xs font-medium text-parchment-muted mb-1.5">Trigger</label>
                            <select
                              value={globalSettings.summarization.trigger}
                              onChange={(e) => {
@@ -7942,7 +7942,7 @@ if (modelsResult.models.length > 0) {
                                  }
                                }));
                              }}
-                             className="w-full bg-zinc-900 text-white rounded-lg px-2.5 py-2 text-xs border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                             className="w-full bg-ink-raised text-parchment rounded-lg px-2.5 py-2 text-xs border border-line-strong focus:outline-none focus:ring-1 focus:ring-ember"
                            >
                              <option value="manual">Manual only</option>
                              <option value="auto-length">Auto (by length)</option>
@@ -7953,13 +7953,13 @@ if (modelsResult.models.length > 0) {
                      </>
                    ) : (
                      <div className="flex flex-col items-center justify-center py-12 text-center">
-                       <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center mb-3">
-                         <svg className="w-6 h-6 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <div className="w-12 h-12 rounded-xl bg-ink-hover flex items-center justify-center mb-3">
+                         <svg className="w-6 h-6 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                          </svg>
                        </div>
-                       <p className="text-sm text-zinc-500">Summarization disabled</p>
-                       <p className="text-xs text-zinc-600 mt-1">Toggle on to compress context</p>
+                       <p className="text-sm text-parchment-muted">Summarization disabled</p>
+                       <p className="text-xs text-parchment-muted mt-1">Toggle on to compress context</p>
                      </div>
                    )}
                  </div>
@@ -7969,11 +7969,11 @@ if (modelsResult.models.length > 0) {
                {utilityPanelTab === 'debug' && (
                  <div className="space-y-3">
                    <div className="flex items-center justify-between">
-                     <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">API Payload Preview</p>
+                     <p className="text-xs font-semibold text-parchment-muted uppercase tracking-wider">API Payload Preview</p>
                      {apiDebugPayload && (
                        <button
                          onClick={() => setApiDebugPayload(null)}
-                         className="text-xs text-zinc-500 hover:text-zinc-300"
+                         className="text-xs text-parchment-muted hover:text-parchment-soft"
                        >
                          Clear
                        </button>
@@ -7982,17 +7982,17 @@ if (modelsResult.models.length > 0) {
 
                    {!apiDebugPayload ? (
                      <div className="flex flex-col items-center justify-center py-16 text-center">
-                       <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center mb-3">
-                         <svg className="w-6 h-6 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <div className="w-12 h-12 rounded-xl bg-ink-hover flex items-center justify-center mb-3">
+                         <svg className="w-6 h-6 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                          </svg>
                        </div>
-                       <p className="text-sm text-zinc-500">No debug data</p>
-                       <p className="text-xs text-zinc-600 mt-1">Send a message to see the API payload</p>
+                       <p className="text-sm text-parchment-muted">No debug data</p>
+                       <p className="text-xs text-parchment-muted mt-1">Send a message to see the API payload</p>
                      </div>
                    ) : (
-                     <div className="bg-zinc-900 rounded-lg border border-zinc-700 p-4 max-h-96 overflow-y-auto">
-                       <pre className="text-xs text-zinc-300 whitespace-pre-wrap break-words">
+                     <div className="bg-ink-raised rounded-lg border border-line-strong p-4 max-h-96 overflow-y-auto">
+                       <pre className="text-xs text-parchment-soft whitespace-pre-wrap break-words">
                          {apiDebugPayload}
                        </pre>
                      </div>
@@ -8002,10 +8002,10 @@ if (modelsResult.models.length > 0) {
              </div>
 
              {/* Modal Footer */}
-             <div className="p-4 border-t border-zinc-800 flex justify-end">
+             <div className="p-4 border-t border-line flex justify-end">
                <button
                  onClick={() => setShowUtilitiesModal(false)}
-                 className="px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors font-medium"
+                 className="px-4 py-2 bg-line-strong text-parchment rounded-lg hover:bg-line-strong transition-colors font-medium"
                >
                  Close
                </button>
@@ -8017,12 +8017,12 @@ if (modelsResult.models.length > 0) {
        {/* Conversation History Modal */}
       {showConversationHistory && viewingConversation && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm sm:max-w-2xl md:max-w-3xl max-h-[90vh] flex flex-col">
+          <div className="bg-ink-raised border border-line rounded-2xl w-full max-w-sm sm:max-w-2xl md:max-w-3xl max-h-[90vh] flex flex-col">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-4 border-b border-zinc-800">
+            <div className="flex items-center justify-between p-4 border-b border-line">
               <div>
-                <h2 className="text-lg font-semibold text-white">Conversation History</h2>
-                <p className="text-sm text-zinc-500">
+                <h2 className="text-lg font-semibold text-parchment">Conversation History</h2>
+                <p className="text-sm text-parchment-muted">
                   {viewingConversation.messages.length} messages 
                   Updated {new Date(viewingConversation.updatedAt).toLocaleDateString()}
                 </p>
@@ -8032,9 +8032,9 @@ if (modelsResult.models.length > 0) {
                   setShowConversationHistory(false);
                   setViewingConversation(null);
                 }}
-                className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                className="p-2 hover:bg-ink-hover rounded-lg transition-colors"
               >
-                <svg className="w-6 h-6 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-6 h-6 text-parchment-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -8050,8 +8050,8 @@ if (modelsResult.models.length > 0) {
                     className={`flex gap-4 ${message.role === "user" ? "justify-end" : "justify-start"}`}
                   >
                     {message.role === "assistant" && (
-                      <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                        <span className="text-sm text-white font-semibold">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-ink-hover border border-line-strong text-parchment-soft flex items-center justify-center">
+                        <span className="text-sm text-parchment font-semibold">
                           {selectedCharacter?.name.charAt(0).toUpperCase() || "A"}
                         </span>
                       </div>
@@ -8060,8 +8060,8 @@ if (modelsResult.models.length > 0) {
                       <div
                         className={`rounded-2xl px-4 py-3 ${
                           message.role === "user"
-                            ? "bg-zinc-700 text-white"
-                            : "bg-zinc-800 text-zinc-100"
+                            ? "bg-line-strong text-parchment"
+                            : "bg-ink-hover text-parchment"
                         }`}
                       >
                         <div className="whitespace-pre-wrap text-sm">
@@ -8069,13 +8069,13 @@ if (modelsResult.models.length > 0) {
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 mt-1">
-                        <p className="text-xs text-zinc-500">
+                        <p className="text-xs text-parchment-muted">
                           {message.role === "user" ? (selectedPersona?.name || "You") : (selectedCharacter?.name || "AI")}
                         </p>
                         {message.role === "assistant" && (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <button className="text-zinc-500 hover:text-zinc-300 transition-colors">
+                              <button className="text-parchment-muted hover:text-parchment-soft transition-colors">
                                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 16v-4" />
@@ -8085,15 +8085,15 @@ if (modelsResult.models.length > 0) {
                             </TooltipTrigger>
                             <TooltipContent side="top" className="text-xs">
                               <p className="font-medium">Model: {message.modelName || globalSettings.modelId || "Unknown"}</p>
-                              <p className="text-zinc-400">Provider: {providerRegistry.get(activeProvider)?.name || activeProvider}</p>
+                              <p className="text-parchment-muted">Provider: {providerRegistry.get(activeProvider)?.name || activeProvider}</p>
                             </TooltipContent>
                           </Tooltip>
                         )}
                       </div>
                     </div>
                     {message.role === "user" && (
-                      <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-                        <span className="text-sm text-white font-semibold">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-ink-hover border border-line-strong text-parchment-soft flex items-center justify-center">
+                        <span className="text-sm text-parchment font-semibold">
                           {selectedPersona?.name.charAt(0).toUpperCase() || "Y"}
                         </span>
                       </div>
@@ -8103,14 +8103,14 @@ if (modelsResult.models.length > 0) {
             </div>
             
             {/* Modal Footer */}
-            <div className="p-4 border-t border-zinc-800 flex gap-3">
+            <div className="p-4 border-t border-line flex gap-3">
               <button
                 onClick={() => {
                   continueConversation(viewingConversation);
                   setShowConversationHistory(false);
                   setViewingConversation(null);
                 }}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex-1 px-4 py-2 bg-ember text-ink rounded-lg hover:bg-ember-soft transition-colors"
               >
                 Continue Conversation
               </button>
@@ -8119,7 +8119,7 @@ if (modelsResult.models.length > 0) {
                   setShowConversationHistory(false);
                   setViewingConversation(null);
                 }}
-                className="px-4 py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
+                className="px-4 py-2 bg-ink-hover text-parchment rounded-lg hover:bg-line-strong transition-colors"
               >
                 Close
               </button>
