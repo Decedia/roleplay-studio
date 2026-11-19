@@ -136,7 +136,11 @@ export const buildCharacterSystemPrompt = (
   if (globalInstructions?.instructions && globalInstructions.instructions.length > 0) {
     const enabledInstructions = globalInstructions.instructions.filter(inst => inst.enabled);
     
-    for (const instruction of enabledInstructions) {
+    for (const enabledInstruction of enabledInstructions) {
+      const instruction = {
+        ...enabledInstruction,
+        content: replaceMacrosSimple(enabledInstruction.content, personaName, character.name),
+      };
       if (instruction.position === "before_context") {
         formattingSections.push(instruction.content);
       } else {
@@ -310,7 +314,7 @@ export const buildFullSystemPrompt = (
     for (const instruction of sortedInstructions) {
       const msg: Message = {
         role: instruction.role,
-        content: instruction.content,
+        content: replaceMacrosSimple(instruction.content, personaName, character.name),
       };
 
       if (instruction.position === "before_context") {
