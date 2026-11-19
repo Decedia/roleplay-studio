@@ -3811,6 +3811,119 @@ if (modelsResult.models.length > 0) {
     }, 100);
   };
 
+  // Recent chats across every persona and character, newest first (sidebar + home)
+  const [chatSearch, setChatSearch] = useState("");
+  const [showPersonaMenu, setShowPersonaMenu] = useState(false);
+  const recentChats = useMemo(() => {
+    const q = chatSearch.trim().toLowerCase();
+    return [...conversations]
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .map((conversation) => {
+        const character = characters.find((c) => c.id === conversation.characterId);
+        const persona = personas.find((p) => p.id === conversation.personaId);
+        if (!character || !persona) return null;
+        const last = [...conversation.messages].reverse().find((m) => !m.isContinue && m.role !== "system");
+        const preview = last
+          ? removeThinkTags(last.content)
+              .replace(/\{\{user\}\}/gi, persona.name)
+              .replace(/\{\{char\}\}/gi, character.name)
+              .replace(/^\[Narration:\s*/i, "")
+              .replace(/[*_\[\]]/g, "")
+              .replace(/\s+/g, " ")
+              .trim()
+          : "";
+        return { conversation, character, persona, preview };
+      })
+      .filter((row): row is NonNullable<typeof row> => row !== null)
+      .filter((row) => !q || row.character.name.toLowerCase().includes(q) || row.persona.name.toLowerCase().includes(q) || row.preview.toLowerCase().includes(q))
+      .slice(0, 50);
+  }, [conversations, characters, personas, chatSearch]);
+
+  const openChat = (conversation: Conversation) => {
+    const character = characters.find((c) => c.id === conversation.characterId);
+    const persona = personas.find((p) => p.id === conversation.personaId);
+    if (!character || !persona) return;
+    setSelectedPersona(persona);
+    setSelectedCharacter(character);
+    setCurrentConversation(conversation);
+    setVisibleMessageCount(20);
+    setView("chat");
+  };
+
+  /** New chat: reuse the persona you played last, then pick a character. */
+  const startNewChat = () => {
+    const lastPersonaId = recentChats[0]?.persona.id;
+    const persona =
+      selectedPersona ??
+      personas.find((p) => p.id === lastPersonaId) ??
+      personas[0];
+    setCurrentConversation(null);
+    setSelectedCharacter(null);
+    if (!persona) {
+      setView("personas");
+      return;
+    }
+    setSelectedPersona(persona);
+    setView("characters");
+  };
+
+  /** Change who you play in the open chat. Saved on the conversation. */
+  const switchPersona = (persona: Persona) => {
+    setShowPersonaMenu(false);
+    if (!currentConversation || persona.id === currentConversation.personaId) return;
+    const updated = { ...currentConversation, personaId: persona.id, updatedAt: Date.now() };
+    setSelectedPersona(persona);
+    setCurrentConversation(updated);
+    setConversations((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+  };
+
+  const formatChatTime = (ts: number) => {
+    const d = new Date(ts);
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) {
+      return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    }
+    const days = Math.floor((now.getTime() - ts) / 86400000);
+    if (days < 7) return d.toLocaleDateString([], { weekday: "short" });
+    return d.toLocaleDateString([], { month: "short", day: "numeric" });
+  };
+
+  const renderChatRow = (row: (typeof recentChats)[number], compact: boolean) => {
+    const active = view === "chat" && currentConversation?.id === row.conversation.id;
+    return (
+      <button
+        key={row.conversation.id}
+        onClick={() => openChat(row.conversation)}
+        className={`w-full flex items-center gap-3 text-left transition-colors ${
+          compact ? "px-2 py-2 rounded-xl" : "px-2 py-3 border-b border-line"
+        } ${active ? "bg-ink-hover" : "hover:bg-ink-hover"}`}
+      >
+        {row.character.avatar ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={row.character.avatar}
+            alt=""
+            className={`${compact ? "w-9 h-9" : "w-12 h-12"} rounded-full object-cover flex-shrink-0`}
+          />
+        ) : (
+          <span
+            className={`${compact ? "w-9 h-9 text-sm" : "w-12 h-12 text-lg"} rounded-full bg-ink-hover border border-line-strong text-parchment-soft font-story flex items-center justify-center flex-shrink-0`}
+          >
+            {row.character.name.charAt(0).toUpperCase()}
+          </span>
+        )}
+        <span className="min-w-0 flex-1">
+          <span className="flex items-baseline justify-between gap-2">
+            <span className={`${compact ? "text-sm" : "text-[15px]"} font-medium text-parchment truncate`}>{row.character.name}</span>
+            <span className="text-[11px] text-parchment-muted flex-shrink-0">{formatChatTime(row.conversation.updatedAt)}</span>
+          </span>
+          <span className={`block ${compact ? "text-xs" : "text-[13px]"} text-parchment-muted truncate`}>{row.preview || "No messages yet"}</span>
+          {!compact && <span className="block text-[11px] text-parchment-muted mt-0.5">as {row.persona.name}</span>}
+        </span>
+      </button>
+    );
+  };
+
   // Get conversations for selected persona and character
   const filteredConversations = conversations.filter(
     (c) => c.personaId === selectedPersona?.id && c.characterId === selectedCharacter?.id
@@ -3859,8 +3972,83 @@ if (modelsResult.models.length > 0) {
 
   return (
     <div className={ui.layout.main}>
+      {/* Left rail: recent chats + library (desktop) */}
+      <aside className="hidden lg:flex flex-col fixed left-0 top-0 bottom-0 w-[264px] z-[55] bg-ink-raised border-r border-line">
+        <div className="flex items-center gap-2.5 px-4 h-[72px] flex-shrink-0">
+          <button onClick={() => setView("home")} className="flex items-center gap-2.5 min-w-0 flex-1 text-left" aria-label="Home">
+            <span className="w-8 h-8 rounded-lg bg-ember text-ink font-story font-semibold flex items-center justify-center flex-shrink-0">R</span>
+            <span className="font-story text-[17px] font-semibold text-parchment truncate">Roleplay Studio</span>
+          </button>
+        </div>
+        <div className="px-3 flex flex-col gap-2">
+          <button
+            onClick={startNewChat}
+            className="h-11 rounded-xl border border-line-strong text-sm font-medium text-parchment hover:bg-ink-hover transition-colors flex items-center justify-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" d="M12 5v14M5 12h14" /></svg>
+            New chat
+          </button>
+          <label className="flex items-center gap-2 h-10 px-3 rounded-xl bg-ink text-parchment-muted border border-line focus-within:border-line-strong">
+            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path strokeLinecap="round" d="m20 20-3.5-3.5" /></svg>
+            <input
+              value={chatSearch}
+              onChange={(e) => setChatSearch(e.target.value)}
+              placeholder="Search chats"
+              aria-label="Search chats"
+              className="flex-1 min-w-0 bg-transparent text-sm text-parchment placeholder-parchment-muted focus:outline-none focus-visible:outline-none"
+            />
+          </label>
+        </div>
+        <div className="mt-4 px-5 text-[11px] font-semibold uppercase tracking-[0.08em] text-parchment-muted">Recent</div>
+        <nav className="flex-1 overflow-y-auto px-3 py-2 flex flex-col gap-0.5" aria-label="Recent chats">
+          {recentChats.length === 0 ? (
+            <p className="px-2 py-3 text-xs text-parchment-muted">{chatSearch ? "No chats match." : "No chats yet. Start one with New chat."}</p>
+          ) : (
+            recentChats.map((row) => renderChatRow(row, true))
+          )}
+        </nav>
+        <div className="border-t border-line p-3 grid grid-cols-2 gap-1.5">
+          {[
+            { label: "Characters", onClick: startNewChat },
+            { label: "Personas", onClick: () => setView("personas") },
+            { label: "Generator", onClick: () => setView("generator") },
+            { label: "Models", onClick: () => setShowModelsModal(true) },
+          ].map((item) => (
+            <button
+              key={item.label}
+              onClick={item.onClick}
+              className="h-10 rounded-lg text-[13px] text-parchment-soft hover:text-parchment hover:bg-ink-hover transition-colors"
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </aside>
+
+      {/* Bottom tabs (phone) on list screens */}
+      {(view === "home" || view === "personas" || view === "characters" || view === "conversations") && (
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 h-16 bg-ink-raised border-t border-line grid grid-cols-4" aria-label="Main">
+          {[
+            { label: "Chats", active: view === "home", onClick: () => setView("home"), icon: <path strokeLinecap="round" strokeLinejoin="round" d="M4 5h16v11H8l-4 4z" /> },
+            { label: "New chat", active: view === "characters" || view === "conversations", onClick: startNewChat, icon: <path strokeLinecap="round" d="M12 5v14M5 12h14" /> },
+            { label: "Personas", active: view === "personas", onClick: () => setView("personas"), icon: <><circle cx="12" cy="8" r="4" /><path strokeLinecap="round" d="M4 21a8 8 0 0 1 16 0" /></> },
+            { label: "Generator", active: false, onClick: () => setView("generator"), icon: <path strokeLinejoin="round" d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z" /> },
+          ].map((tab) => (
+            <button
+              key={tab.label}
+              onClick={tab.onClick}
+              aria-current={tab.active ? "page" : undefined}
+              className={`flex flex-col items-center justify-center gap-1 text-[11px] ${tab.active ? "text-ember font-semibold" : "text-parchment-muted"}`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">{tab.icon}</svg>
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      )}
+
       {/* Header - Fixed on top for all views on mobile */}
-      <header className={`flex-shrink-0 z-50 fixed top-0 left-0 right-0 bg-ink/90 backdrop-blur-xl border-b border-line`}>
+      <header className={`flex-shrink-0 z-50 fixed top-0 left-0 lg:left-[264px] right-0 bg-ink/90 backdrop-blur-xl border-b border-line`}>
         <div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 overflow-hidden">
@@ -3884,7 +4072,7 @@ if (modelsResult.models.length > 0) {
                     </svg>
                   </button>
               )}
-              <div className="w-8 sm:w-10 h-8 sm:h-10 rounded-lg sm:rounded-xl bg-ember text-ink flex items-center justify-center flex-shrink-0">
+              <div className="w-8 sm:w-10 h-8 sm:h-10 rounded-lg sm:rounded-xl bg-ember text-ink flex lg:hidden items-center justify-center flex-shrink-0">
                 <svg
                   className="w-5 sm:w-6 h-5 sm:h-6 text-ink"
                   fill="none"
@@ -3908,7 +4096,7 @@ if (modelsResult.models.length > 0) {
                     : view === "conversations" && selectedPersona && selectedCharacter
                     ? `${selectedPersona.name} × ${selectedCharacter.name}`
                     : view === "characters" && selectedPersona
-                    ? `${selectedPersona.name} - Select Character"`
+                    ? "Pick a character"
                     : "Roleplay Studio"}
                 </h1>
                 <p className="text-sm text-parchment-muted truncate">
@@ -3917,7 +4105,7 @@ if (modelsResult.models.length > 0) {
                     : view === "personas"
                     ? "Roleplay with AI"
                     : view === "characters"
-                    ? "Select AI character"
+                    ? `as ${selectedPersona?.name ?? "you"}`
                     : view === "conversations"
                     ? "Select or start a conversation"
                     : view === "generator"
@@ -4083,7 +4271,7 @@ if (modelsResult.models.length > 0) {
 
       {/* Undo Toast */}
       {showUndoToast && deletedItem && (
-        <div className="fixed bottom-32 left-0 right-0 z-[1000] px-4 py-3">
+        <div className="fixed bottom-32 left-0 lg:left-[264px] right-0 z-[1000] px-4 py-3">
           <div className="max-w-4xl mx-auto">
             <div className="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white shadow-xl backdrop-blur-sm flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -4110,68 +4298,56 @@ if (modelsResult.models.length > 0) {
       {/* Main Content - Add top padding for fixed header */}
       <div ref={scrollContainerRef} className={ui.layout.content}>
         <div className={ui.layout.contentContainer}>
-          {/* Home View - Landing page with 4 big buttons */}
           {view === "home" && (
-            <div className="space-y-6">
-              <div className="text-center py-8">
-                <h2 className="text-2xl font-bold text-white mb-2">Welcome to Roleplay Studio</h2>
-                <p className="text-zinc-400">Choose what you want to do</p>
+            <div className="flex flex-col gap-8">
+              <div className="lg:hidden flex flex-col">
+                <h2 className="font-story text-2xl font-semibold text-parchment mb-2">Chats</h2>
+                {recentChats.length === 0 ? (
+                  <p className="text-sm text-parchment-muted py-4">No chats yet.</p>
+                ) : (
+                  recentChats.slice(0, 20).map((row) => renderChatRow(row, false))
+                )}
               </div>
-              
-              {/* Continue Last Conversation - shown when there's a valid session */}
-              {lastSessionRef.current && lastSessionRef.current.view !== "home" && (
+
+              <div className="hidden lg:block pt-6">
+                <h2 className="font-story text-3xl font-semibold text-parchment">
+                  {recentChats[0] ? `Welcome back${recentChats[0].persona ? `, ${recentChats[0].persona.name}` : ""}` : "Welcome to Roleplay Studio"}
+                </h2>
+                <p className="mt-1 text-parchment-muted">Pick a chat on the left, or start something new.</p>
+              </div>
+
+              {recentChats[0] && (
                 <button
-                  onClick={continueLastSession}
-                  className="w-full flex items-center gap-4 p-6 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-2xl hover:from-emerald-700 hover:to-teal-700 transition-all transform hover:scale-[1.02] shadow-lg"
+                  onClick={() => openChat(recentChats[0].conversation)}
+                  className="hidden lg:flex w-full items-center gap-4 p-5 rounded-2xl border border-line bg-ink-raised hover:border-line-strong transition-colors text-left"
                 >
-                  <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
-                    <span className="text-3xl">↩️</span>
-                  </div>
-                  <div className="text-left">
-                    <h3 className="text-xl font-bold">Continue Last Session</h3>
-                    <p className="text-emerald-100 text-sm">Resume where you left off</p>
-                  </div>
-                  <svg className="w-6 h-6 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
+                  <span className="w-12 h-12 rounded-full bg-ink-hover border border-line-strong text-parchment-soft font-story text-lg flex items-center justify-center flex-shrink-0">
+                    {recentChats[0].character.name.charAt(0).toUpperCase()}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-ember">Continue</span>
+                    <span className="block font-story text-lg text-parchment">{recentChats[0].character.name}</span>
+                    <span className="block text-sm text-parchment-muted truncate">{recentChats[0].preview}</span>
+                  </span>
+                  <span className="text-parchment-muted" aria-hidden="true">›</span>
                 </button>
               )}
-              
-              <div className="grid gap-4">
-                {/* Roleplay with AI - Main feature */}
+
+              <div className="grid gap-3 sm:grid-cols-2">
                 <button
-                  onClick={() => setView("personas")}
-                  className="w-full flex items-center gap-4 p-6 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-2xl hover:from-blue-700 hover:to-cyan-700 transition-all transform hover:scale-[1.02] shadow-lg"
+                  onClick={startNewChat}
+                  className="flex flex-col gap-1 p-5 rounded-2xl border border-line bg-ink-raised hover:border-line-strong transition-colors text-left"
                 >
-                  <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
-                    <span className="text-3xl">💬</span>
-                  </div>
-                  <div className="text-left">
-                    <h3 className="text-xl font-bold">Roleplay with AI</h3>
-                    <p className="text-blue-100 text-sm">Chat with AI characters using custom personas</p>
-                  </div>
-                  <svg className="w-6 h-6 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
+                  <span className="font-story text-lg text-parchment">New chat</span>
+                  <span className="text-sm text-parchment-muted">Pick a character and start a story.</span>
                 </button>
-                
-                {/* Character Generator */}
                 <button
                   onClick={() => setView("generator")}
-                  className="w-full flex items-center gap-4 p-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-[1.02] shadow-lg"
+                  className="flex flex-col gap-1 p-5 rounded-2xl border border-line bg-ink-raised hover:border-line-strong transition-colors text-left"
                 >
-                  <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
-                    <span className="text-3xl">🎭</span>
-                  </div>
-                  <div className="text-left">
-                    <h3 className="text-xl font-bold">Character Generator</h3>
-                    <p className="text-purple-100 text-sm">Create detailed AI characters</p>
-                  </div>
-                  <svg className="w-6 h-6 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
+                  <span className="font-story text-lg text-parchment">Character Generator</span>
+                  <span className="text-sm text-parchment-muted">Describe an idea, get a full character.</span>
                 </button>
-                
               </div>
             </div>
           )}
@@ -6080,7 +6256,7 @@ if (modelsResult.models.length > 0) {
       {view === "chat" && currentConversation && showScrollToBottom && (
         <button
           onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })}
-          className="fixed bottom-40 sm:bottom-44 left-1/2 xl:left-[calc(50%-160px)] -translate-x-1/2 z-[60] flex items-center gap-2 px-4 py-2 bg-ink-hover border border-line-strong text-parchment rounded-full shadow-lg hover:bg-line-strong transition-all"
+          className="fixed bottom-40 sm:bottom-44 left-1/2 lg:left-[calc(50%+132px)] xl:left-[calc(50%-28px)] -translate-x-1/2 z-[60] flex items-center gap-2 px-4 py-2 bg-ink-hover border border-line-strong text-parchment rounded-full shadow-lg hover:bg-line-strong transition-all"
           title="Scroll to bottom"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -6167,13 +6343,47 @@ if (modelsResult.models.length > 0) {
       })()}
 
       {view === "chat" && currentConversation && (
-        <div className="fixed bottom-0 left-0 right-0 xl:right-[320px] border-t border-line bg-ink/95 backdrop-blur-xl z-50">
+        <div className="fixed bottom-0 left-0 lg:left-[264px] right-0 xl:right-[320px] border-t border-line bg-ink/95 backdrop-blur-xl z-50">
           <div className="max-w-[680px] mx-auto px-3 sm:px-4 pt-3 pb-3 sm:pb-4">
             <form onSubmit={handleSubmit} className="rounded-2xl border border-line-strong focus-within:border-ember/60 bg-ink-raised px-3 pt-2.5 pb-2 flex flex-col gap-2">
               <div className="flex items-center gap-1.5" role="group" aria-label="Message type">
-                <span className="hidden sm:inline text-xs text-parchment-muted mr-1.5">
-                  Your turn{selectedPersona ? `, ${selectedPersona.name}` : ""}
-                </span>
+                <div className="relative mr-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowPersonaMenu((v) => !v)}
+                    aria-expanded={showPersonaMenu}
+                    aria-haspopup="menu"
+                    className="h-8 pl-1 pr-2.5 rounded-full flex items-center gap-1.5 text-xs text-parchment hover:bg-ink-hover transition-colors"
+                    title="Change who you play"
+                  >
+                    <span className="w-6 h-6 rounded-full bg-speaker-user/20 text-speaker-user font-semibold flex items-center justify-center">
+                      {selectedPersona?.name.charAt(0).toUpperCase()}
+                    </span>
+                    <span className="max-w-[90px] truncate">as {selectedPersona?.name}</span>
+                    <svg className="w-3 h-3 text-parchment-muted" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" d="m6 9 6 6 6-6" /></svg>
+                  </button>
+                  {showPersonaMenu && (
+                    <>
+                      <button type="button" className="fixed inset-0 z-10 cursor-default" aria-label="Close" onClick={() => setShowPersonaMenu(false)} />
+                      <div role="menu" className="absolute bottom-full left-0 mb-2 z-20 w-56 max-h-64 overflow-y-auto rounded-xl border border-line-strong bg-ink-raised shadow-xl py-1">
+                        <div className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-parchment-muted">Play as</div>
+                        {personas.map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            role="menuitemradio"
+                            aria-checked={p.id === selectedPersona?.id}
+                            onClick={() => switchPersona(p)}
+                            className={`w-full px-3 py-2.5 text-left text-sm flex items-center justify-between gap-2 hover:bg-ink-hover ${p.id === selectedPersona?.id ? "text-ember" : "text-parchment"}`}
+                          >
+                            <span className="truncate">{p.name}</span>
+                            {p.id === selectedPersona?.id && <span aria-hidden="true">✓</span>}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
                 {INPUT_MODES.map((mode) => (
                   <button
                     key={mode.id}
