@@ -1941,6 +1941,38 @@ if (modelsResult.models.length > 0) {
          }
        }
        
+        // NVIDIA NIM: its model list changes often and listing works without a key, so
+        // check the key and the chosen model with a real request before saying "Connected".
+        if (providerType === "nvidia-nim") {
+          const test = await testProviderConnection(providerType, profileConfig);
+          if (!test.success) {
+            throw new Error(test.message);
+          }
+          // The saved model was missing or removed by NVIDIA: switch to the model that worked
+          if (test.model && test.model !== activeProfile?.selectedModel) {
+            const testedModel = test.model;
+            const caps = (providerModels[providerType] || []).find(m => m.id === testedModel);
+            if (activeProfile) {
+              setProviderConfigs(prev => ({
+                ...prev,
+                [providerType]: {
+                  ...prev[providerType],
+                  profiles: prev[providerType].profiles.map(p =>
+                    p.id === activeProfile.id ? { ...p, selectedModel: testedModel } : p
+                  )
+                }
+              }));
+            }
+            setGlobalSettings(prev => ({
+              ...prev,
+              modelId: testedModel,
+              maxTokens: caps?.max_tokens || 4000,
+              maxContextTokens: caps?.context || 128000
+            }));
+          }
+          addToast(test.message, 'success');
+        }
+
         // Mark as connected
         setConnectionStatus(prev => ({
           ...prev,

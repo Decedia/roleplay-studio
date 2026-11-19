@@ -302,6 +302,8 @@ export type StreamCallback = (chunk: { content?: string; thinking?: string; done
 export interface TestConnectionResult {
   success: boolean;
   message: string;
+  // Model the test called, when the provider picks one (NVIDIA NIM)
+  model?: string;
 }
 
 export interface ConnectionStatus {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isNimChatModel } from "@/lib/nim-models";
 import { extractErrorMessage } from "@/lib/errorUtils";
 
 // Models API route - fetches available models from different providers
@@ -42,8 +43,11 @@ export async function GET(request: NextRequest) {
 
         const data = await response.json();
         
-        // Transform NVIDIA NIM models to our format
-        const models = (data.data || []).map((model: { id: string }) => ({
+        // Keep only text chat models (the list also has embedding, vision, speech and safety models)
+        const models = (data.data || [])
+          .filter((model: { id: string }) => isNimChatModel(model.id))
+          .sort((a: { id: string }, b: { id: string }) => a.id.localeCompare(b.id))
+          .map((model: { id: string }) => ({
           id: model.id,
           provider: "nvidia-nim",
           name: model.id,

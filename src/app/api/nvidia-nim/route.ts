@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { extractErrorMessage } from "@/lib/errorUtils";
 import { abortControllerStore } from "@/lib/abortControllerStore";
 
-const NVIDIA_NIM_TIMEOUT = 90000;
+// Vercel stops a function after 10 s by default on Hobby without Fluid compute,
+// which cuts off slow NIM models. 60 s is allowed on every Vercel plan.
+export const maxDuration = 60;
+
+// Wait for NVIDIA's first response for at most 55 s, so we answer before Vercel's limit
+const NVIDIA_NIM_TIMEOUT = 55000;
 
 async function fetchWithTimeout(
   url: string,

@@ -17,6 +17,7 @@ import {
 } from "./types";
 
 import { extractErrorMessage } from "./errorUtils";
+import { pickNimTestModel } from "./nim-models";
 
 let requestIdCounter = 0;
 function generateRequestId() {
@@ -2186,6 +2187,56 @@ export const testStepFunConnection = async (
   }
 };
 
+// NVIDIA NIM connection test. NVIDIA adds and removes models often, so this never
+// uses a hardcoded model id: it reads the live list, then sends a tiny request to the
+// user's model (or a small available chat model if theirs is gone). The list endpoint
+// works without a key, so the chat request is what checks the API key.
+export const testNvidiaNimConnection = async (
+  config: ProviderConfig
+): Promise<TestConnectionResult> => {
+  if (!config.apiKey) {
+    return { success: false, message: "API key is required." };
+  }
+  try {
+    const list = await fetchNvidiaNimModels(config);
+    if (list.error) {
+      return { success: false, message: `Could not load NVIDIA models: ${list.error}` };
+    }
+    const testModel = pickNimTestModel(list.models.map((m) => m.id), config.selectedModel);
+    if (!testModel) {
+      return { success: false, message: "NVIDIA returned no chat models to test with." };
+    }
+
+    const response = await fetch("/api/nvidia-nim", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        endpoint: "chat/completions",
+        apiKey: config.apiKey,
+        payload: {
+          model: testModel,
+          messages: [{ role: "user", content: "Hi" }],
+          max_tokens: 5,
+        },
+      }),
+    });
+
+    if (response.status === 200 || response.status === 202) {
+      const note = config.selectedModel && config.selectedModel !== testModel
+        ? ` Your saved model "${config.selectedModel}" is no longer offered by NVIDIA, so "${testModel}" was selected instead.`
+        : "";
+      return { success: true, message: `NVIDIA NIM connected (tested with ${testModel}).${note}`, model: testModel };
+    }
+    if (response.status === 401 || response.status === 403) {
+      return { success: false, message: "NVIDIA rejected the API key. Check it at build.nvidia.com." };
+    }
+    const errorData = await response.json().catch(() => ({}));
+    return { success: false, message: `${testModel}: ${extractErrorMessage(errorData.error) || `HTTP ${response.status}`}` };
+  } catch (error) {
+    return { success: false, message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}` };
+  }
+};
+
 // Custom OpenAI-compatible API chat implementation - uses server-side proxy to avoid CORS
 export const chatWithCustomOpenAI: ChatFunction = async (
   messages,
@@ -2915,11 +2966,10 @@ providerRegistry.register({
   requiresApiKey: true,
   supportsProfiles: false,
   supportsModelFetch: true,
-  defaultModel: "moonshotai/kimi-k2-thinking",
   models: AVAILABLE_PROVIDERS.find((p) => p.id === "nvidia-nim")?.models || [],
   chat: chatWithNvidiaNIM,
   stream: streamWithNvidiaNIM,
-  connectionTest: testProviderConnection.bind(null, "nvidia-nim"),
+  connectionTest: testNvidiaNimConnection,
   modelFetch: fetchNvidiaNimModels,
 });
 
