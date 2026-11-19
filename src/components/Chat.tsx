@@ -834,9 +834,7 @@ export default function Chat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const chatRequestIdRef = useRef<string | null>(null);
   const generatorAbortControllerRef = useRef<AbortController | null>(null);
-  const generatorRequestIdRef = useRef<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   // Generator state
@@ -959,7 +957,6 @@ export default function Chat() {
     setIsGeneratorLoading(true);
     setGeneratorStreamingContent("");
     generatorAbortControllerRef.current = new AbortController();
-    generatorRequestIdRef.current = `generator_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
     try {
       const currentConfig = providerConfigs[activeProvider];
@@ -994,7 +991,6 @@ export default function Chat() {
           thinkingLevel: globalSettings.thinkingLevel,
           thinkingBudget: globalSettings.thinkingBudget,
           abortController: generatorAbortControllerRef.current ?? undefined,
-          requestId: generatorRequestIdRef.current ?? undefined,
         },
         (chunk) => {
           if (chunk.error) {
@@ -1022,7 +1018,6 @@ export default function Chat() {
       setGeneratorStreamingContent("");
     } finally {
       generatorAbortControllerRef.current = null;
-      generatorRequestIdRef.current = null;
     }
   };
 
@@ -2506,7 +2501,6 @@ if (modelsResult.models.length > 0) {
     setStreamingContent("");
     setStreamingThinking("");
     abortControllerRef.current = new AbortController();
-    chatRequestIdRef.current = `chat_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
     try {
       // Get current provider config
@@ -2681,7 +2675,6 @@ if (modelsResult.models.length > 0) {
       setIsLoading(false);
       setIsSending(false);
       abortControllerRef.current = null;
-      chatRequestIdRef.current = null;
       playNotificationSound();
       inputRef.current?.focus();
       // Check if auto-summarization should trigger
@@ -2980,7 +2973,6 @@ if (modelsResult.models.length > 0) {
     setStreamingContent("");
     setStreamingThinking("");
     abortControllerRef.current = new AbortController();
-    chatRequestIdRef.current = `chat_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     
     if (!addAlternative) {
       // Update conversation to show only messages up to last user message
@@ -3076,7 +3068,6 @@ if (modelsResult.models.length > 0) {
             thinkingLevel: globalSettings.thinkingLevel,
             thinkingBudget: globalSettings.thinkingBudget,
             abortController: abortControllerRef.current ?? undefined,
-            requestId: chatRequestIdRef.current ?? undefined,
           },
           (chunk) => {
             if (chunk.error) {
@@ -3156,7 +3147,6 @@ if (modelsResult.models.length > 0) {
             thinkingLevel: globalSettings.thinkingLevel,
             thinkingBudget: globalSettings.thinkingBudget,
             abortController: abortControllerRef.current ?? undefined,
-            requestId: chatRequestIdRef.current ?? undefined,
           }
         );
         
@@ -3208,7 +3198,6 @@ if (modelsResult.models.length > 0) {
     } finally {
       setIsLoading(false);
       abortControllerRef.current = null;
-      chatRequestIdRef.current = null;
       playNotificationSound();
       inputRef.current?.focus();
     }
@@ -3246,7 +3235,6 @@ if (modelsResult.models.length > 0) {
     setStreamingContent("");
     setStreamingThinking("");
     abortControllerRef.current = new AbortController();
-    chatRequestIdRef.current = `chat_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     
     // Update conversation with the continue message
     updateConversationMessages(messagesWithContinue);
@@ -3337,7 +3325,6 @@ if (modelsResult.models.length > 0) {
             thinkingLevel: globalSettings.thinkingLevel,
             thinkingBudget: globalSettings.thinkingBudget,
             abortController: abortControllerRef.current ?? undefined,
-            requestId: chatRequestIdRef.current ?? undefined,
           },
           (chunk) => {
             if (chunk.error) {
@@ -3404,7 +3391,6 @@ if (modelsResult.models.length > 0) {
             thinkingLevel: globalSettings.thinkingLevel,
             thinkingBudget: globalSettings.thinkingBudget,
             abortController: abortControllerRef.current ?? undefined,
-            requestId: chatRequestIdRef.current ?? undefined,
           }
         );
         
@@ -3449,7 +3435,6 @@ if (modelsResult.models.length > 0) {
     } finally {
       setIsLoading(false);
       abortControllerRef.current = null;
-      chatRequestIdRef.current = null;
       playNotificationSound();
       inputRef.current?.focus();
     }
@@ -3662,7 +3647,6 @@ if (modelsResult.models.length > 0) {
             thinkingLevel: globalSettings.thinkingLevel,
             thinkingBudget: globalSettings.thinkingBudget,
             abortController: abortControllerRef.current ?? undefined,
-            requestId: chatRequestIdRef.current ?? undefined,
           },
             (chunk) => {
               if (chunk.error) {
@@ -3709,7 +3693,6 @@ if (modelsResult.models.length > 0) {
             thinkingLevel: globalSettings.thinkingLevel,
             thinkingBudget: globalSettings.thinkingBudget,
             abortController: abortControllerRef.current ?? undefined,
-            requestId: chatRequestIdRef.current ?? undefined,
           }
         );
         
@@ -5052,7 +5035,6 @@ if (modelsResult.models.length > 0) {
                          setGeneratorStreamingContent("");
                          setIsGeneratorLoading(true);
                          generatorAbortControllerRef.current = new AbortController();
-                         generatorRequestIdRef.current = `generator_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
                        
                        try {
                          // Get provider config
@@ -5100,7 +5082,6 @@ if (modelsResult.models.length > 0) {
                              thinkingLevel: globalSettings.thinkingLevel,
                              thinkingBudget: globalSettings.thinkingBudget,
                              abortController: generatorAbortControllerRef.current ?? undefined,
-                             requestId: generatorRequestIdRef.current ?? undefined,
                            },
                            (chunk) => {
                              if (chunk.error) {
@@ -5130,7 +5111,6 @@ if (modelsResult.models.length > 0) {
                          setGeneratorStreamingContent("");
                        } finally {
                          generatorAbortControllerRef.current = null;
-                         generatorRequestIdRef.current = null;
                        }
                     }}
                      placeholder="Describe the character you want to create..."
@@ -5139,18 +5119,9 @@ if (modelsResult.models.length > 0) {
                      accentColor="purple"
                      onCancel={isGeneratorLoading ? () => {
                        generatorAbortControllerRef.current?.abort();
-                       const requestId = generatorRequestIdRef.current;
-                       if (requestId) {
-                         fetch("/api/cancel", {
-                           method: "POST",
-                           headers: { "Content-Type": "application/json" },
-                           body: JSON.stringify({ requestId }),
-                         }).catch(() => {});
-                       }
                        setIsGeneratorLoading(false);
                        setGeneratorStreamingContent("");
                        generatorAbortControllerRef.current = null;
-                       generatorRequestIdRef.current = null;
                      } : undefined}
                    />
                 </div>
@@ -6424,15 +6395,7 @@ if (modelsResult.models.length > 0) {
                   <button
                     type="button"
                     onClick={() => {
-                      const requestId = chatRequestIdRef.current;
                       abortControllerRef.current?.abort();
-                      if (requestId) {
-                        fetch("/api/cancel", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ requestId }),
-                        }).catch(() => {});
-                      }
                       setIsLoading(false);
                       setIsSending(false);
                       setStreamingContent("");

@@ -1,53 +1,29 @@
-import { NextRequest, NextResponse } from "next/server";
-import { extractErrorMessage } from "@/lib/errorUtils";
-import { abortControllerStore } from "@/lib/abortControllerStore";
+import { NextRequest } from "next/server";
+import { checkPublicBaseUrl, jsonError, proxyUpstream, readJsonBody } from "@/lib/server/proxy";
+
+// Only for Ollama servers on a public URL. Ollama on the user's own computer
+// (localhost) is called straight from the browser, because the website's
+// server can't reach it.
+const PATHS: Record<string, "GET" | "POST"> = {
+  "chat/completions": "POST",
+  models: "GET",
+};
 
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { endpoint, apiKey, payload, requestId } = body;
+  const body = await readJsonBody<{ baseUrl?: unknown; path?: unknown; apiKey?: unknown; payload?: unknown; stream?: unknown }>(request);
+  if (!body) return jsonError("Request body must be JSON", 400);
+  const { baseUrl, path, apiKey, payload, stream } = body;
 
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "Ollama API key is required" },
-        { status: 400 }
-      );
-    }
+  const base = checkPublicBaseUrl(baseUrl);
+  if ("error" in base) return jsonError(base.error, 400);
+  if (typeof path !== "string" || !(path in PATHS)) return jsonError("Invalid Ollama path", 400);
+  const method = PATHS[path];
 
-    const controller = new AbortController();
-    if (requestId && typeof requestId === "string") {
-      abortControllerStore.set(requestId, controller);
-    }
-
-    try {
-      const response = await fetch(`/api/ollama${endpoint}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return NextResponse.json(
-          { error: data.error || `HTTP ${response.status}` },
-          { status: response.status }
-        );
-      }
-
-      return NextResponse.json(data);
-    } finally {
-      if (requestId && typeof requestId === "string") {
-        abortControllerStore.delete(requestId);
-      }
-    }
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unknown error occurred" },
-      { status: 500 }
-    );
-  }
+  return proxyUpstream(request, {
+    url: `${base.url}/${path}`,
+    method,
+    headers: typeof apiKey === "string" && apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
+    body: method === "POST" ? payload ?? {} : undefined,
+    stream: stream === true,
+  });
 }

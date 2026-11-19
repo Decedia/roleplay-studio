@@ -1,164 +1,40 @@
-import { NextRequest, NextResponse } from "next/server";
-import { extractErrorMessage } from "@/lib/errorUtils";
-import { abortControllerStore } from "@/lib/abortControllerStore";
+import { NextRequest } from "next/server";
+import { isSafeEndpoint, jsonError, proxyUpstream, readJsonBody } from "@/lib/server/proxy";
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { endpoint, apiKey, payload, location = "global", projectId, requestId } = body;
+// Region and project go into the Google host and path, so both are checked.
+const LOCATION = /^(global|[a-z]+-[a-z]+\d+)$/;
+const PROJECT_ID = /^[a-z][a-z0-9-]{4,61}[a-z0-9]$/;
 
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "API key is required" },
-        { status: 400 }
-      );
-    }
+async function handle(request: NextRequest, stream: boolean) {
+  const body = await readJsonBody<{ endpoint?: unknown; apiKey?: unknown; payload?: unknown; location?: unknown; projectId?: unknown }>(request);
+  if (!body) return jsonError("Request body must be JSON", 400);
+  const { endpoint, apiKey, payload } = body;
+  const location = typeof body.location === "string" && body.location ? body.location : "global";
+  const projectId = body.projectId;
 
-    if (!projectId) {
-      return NextResponse.json(
-        { error: "Project ID is required for Vertex AI. Please enter your Google Cloud project ID in the provider settings." },
-        { status: 400 }
-      );
-    }
-
-    const controller = new AbortController();
-    if (requestId && typeof requestId === "string") {
-      abortControllerStore.set(requestId, controller);
-    }
-
-    const vertexEndpoint = location === "global"
-      ? `https://aiplatform.googleapis.com/v1/projects/${projectId}/locations/global/publishers/google/models/${endpoint}`
-      : `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${endpoint}`;
-
-    try {
-      const response = await fetch(vertexEndpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey,
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return NextResponse.json(
-          { error: extractErrorMessage(data.error) || `HTTP ${response.status}` },
-          { status: response.status }
-        );
-      }
-
-      return NextResponse.json(data);
-    } finally {
-      if (requestId && typeof requestId === "string") {
-        abortControllerStore.delete(requestId);
-      }
-    }
-  } catch (error) {
-    console.error("Vertex AI proxy error:", error);
-    return NextResponse.json(
-      { error: extractErrorMessage(error) },
-      { status: 500 }
-    );
+  if (typeof apiKey !== "string" || !apiKey) return jsonError("API key is required", 400);
+  if (typeof projectId !== "string" || !projectId) {
+    return jsonError("Project ID is required for Vertex AI. Please enter your Google Cloud project ID in the provider settings.", 400);
   }
+  if (!PROJECT_ID.test(projectId)) return jsonError("Project ID doesn't look like a Google Cloud project ID", 400);
+  if (!LOCATION.test(location)) return jsonError("Unknown Vertex AI location", 400);
+  if (!isSafeEndpoint(endpoint)) return jsonError("Invalid endpoint", 400);
+
+  const host = location === "global" ? "aiplatform.googleapis.com" : `${location}-aiplatform.googleapis.com`;
+  return proxyUpstream(request, {
+    url: `https://${host}/v1/projects/${projectId}/locations/${location}/publishers/google/models/${endpoint}`,
+    headers: { "x-goog-api-key": apiKey },
+    body: payload ?? {},
+    stream,
+  });
 }
 
+/** Non-streaming generateContent. */
+export async function POST(request: NextRequest) {
+  return handle(request, false);
+}
+
+/** Streaming streamGenerateContent (the client uses PATCH for this). */
 export async function PATCH(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { endpoint, apiKey, payload, location = "global", projectId, requestId } = body;
-
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "API key is required" },
-        { status: 400 }
-      );
-    }
-
-    if (!projectId) {
-      return NextResponse.json(
-        { error: "Project ID is required for Vertex AI. Please enter your Google Cloud project ID in the provider settings." },
-        { status: 400 }
-      );
-    }
-
-    const controller = new AbortController();
-    if (requestId && typeof requestId === "string") {
-      abortControllerStore.set(requestId, controller);
-    }
-
-    const vertexEndpoint = location === "global"
-      ? `https://aiplatform.googleapis.com/v1/projects/${projectId}/locations/global/publishers/google/models/${endpoint}`
-      : `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${endpoint}`;
-
-    try {
-      const response = await fetch(vertexEndpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey,
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        return NextResponse.json(
-          { error: extractErrorMessage(errorData.error) || `HTTP ${response.status}` },
-          { status: response.status }
-        );
-      }
-
-      const encoder = new TextEncoder();
-      const decoder = new TextDecoder();
-
-      const reader = response.body?.getReader();
-      if (!reader) {
-        return NextResponse.json(
-          { error: "Failed to get response stream" },
-          { status: 500 }
-        );
-      }
-
-      const stream = new ReadableStream({
-        async start(controller) {
-          try {
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) {
-                controller.close();
-                break;
-              }
-
-              const chunk = decoder.decode(value, { stream: true });
-              controller.enqueue(encoder.encode(chunk));
-            }
-          } catch (error) {
-            controller.error(error);
-          }
-        },
-      });
-
-      return new Response(stream, {
-        headers: {
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
-          "Connection": "keep-alive",
-        },
-      });
-    } finally {
-      if (requestId && typeof requestId === "string") {
-        abortControllerStore.delete(requestId);
-      }
-    }
-  } catch (error) {
-    console.error("Vertex AI streaming proxy error:", error);
-    return NextResponse.json(
-      { error: extractErrorMessage(error) },
-      { status: 500 }
-    );
-  }
+  return handle(request, true);
 }

@@ -36,7 +36,6 @@ export interface ProviderDefinition {
       thinkingLevel?: ThinkingLevel;
       thinkingBudget?: ThinkingBudget;
       abortController?: AbortController;
-      requestId?: string;
     }
   ) => Promise<ChatResponse>;
   stream: (
@@ -52,7 +51,6 @@ export interface ProviderDefinition {
       thinkingLevel?: ThinkingLevel;
       thinkingBudget?: ThinkingBudget;
       abortController?: AbortController;
-      requestId?: string;
     },
     onChunk: StreamCallback
   ) => Promise<void>;
