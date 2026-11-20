@@ -17,6 +17,7 @@ const STORY_CLASSES: Partial<Record<TextSegment["type"], string>> = {
   bold: "font-semibold text-parchment",
   ooc: "font-sans text-sm text-ember bg-ember/10 px-1.5 py-0.5 rounded",
   narration: "text-parchment-soft",
+  sfx: "font-sans font-semibold tracking-wide text-ember",
 };
 
 function StoryText({ segments }: { segments: TextSegment[] }) {
