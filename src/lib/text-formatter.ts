@@ -2,6 +2,7 @@
 // Parses common roleplay text conventions and applies styling
 
 export type TextSegmentType = 
+  | "sfx"           // [SFX: BANG!] - sound effect
   | "action"        // *action* or _action_ - italic
   | "dialogue"      // "speech" - quoted text
   | "thought"       // (thought) or ((thought)) - inner thoughts
@@ -42,6 +43,8 @@ export function parseRoleplayText(text: string): TextSegment[] {
     { regex: /^<(\w+)>([\s\S]*?)<\/\1>/, type: "collapsible" as TextSegmentType },
     // Multi-line code block with ``` (must come before inline code)
     { regex: /^```(\w*)\n?([\s\S]*?)```/, type: "codeblock" as TextSegmentType },
+    // Sound effect [SFX: BANG!]
+    { regex: /^\[SFX:\s*([^\]\n]+?)\s*\]/i, type: "sfx" as TextSegmentType },
     // OOC (must come before thought)
     { regex: /^\(\(([^\)]+)\)\)/, type: "ooc" as TextSegmentType },
     // Bold with ** or __
@@ -84,7 +87,7 @@ export function parseRoleplayText(text: string): TextSegment[] {
     // If no pattern matched, consume text until next special character or end
     if (!matched) {
       // Find the next special character (including < for tags)
-      const nextSpecial = remaining.search(/[\*_\""\(\(`<]/);
+      const nextSpecial = remaining.search(/[\*_\""\(\(`<\[]/);
       
       if (nextSpecial === -1) {
         // No more special characters, rest is narration
@@ -146,6 +149,9 @@ export function getSegmentClasses(type: TextSegmentType): string {
   const baseClasses = "inline";
   
   switch (type) {
+    case "sfx":
+      // Sound effects stand out like comic lettering
+      return `${baseClasses} font-semibold tracking-wide text-ember`;
     case "action":
       // Slightly yellow for actions - warm and distinct
       return `${baseClasses} italic text-amber-200`;

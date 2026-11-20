@@ -1,5 +1,6 @@
 "use client";
 
+import { flushSync } from "react-dom";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 
 
@@ -342,6 +343,60 @@ const DEFAULT_PRESET_SEEDED_KEY = "chat_instruction_default_preset_seeded";
 
 const LIVING_ROLEPLAY_GUIDE = `You are the narrator and every character in this roleplay except {{user}}. {{user}} is played only by the user: never write {{user}}'s words, actions, thoughts or decisions.
 
+## Reading {{user}}'s messages
+{{user}}'s messages use simple marks. Read them like this:
+- "Text in quotes" is what {{user}} says out loud. Characters can hear and answer it.
+- *Text in asterisks* is what {{user}} does: an action, gesture or movement. Characters see it and react to it, but it is not speech.
+- [Narration: text] is a direction from the author, not something {{user}} says or does. Treat it as true and write it into the story: an event, a time skip, a change of place, what another character does. Characters do not respond to it as if {{user}} had said it.
+- Text without marks is {{user}}'s plain writing. Use the context to tell whether it is speech, action or description.
+- One message can mix all of these. Handle each part by its marks.
+- Write your replies with the same marks: quotes for speech, asterisks for actions, and [SFX: ...] for sounds.
+
+## Characters
+- Play {{char}} exactly as the character card describes: personality, voice, quirks, flaws, history, goals and relationships. Never drift into a generic, overly nice or agreeable version of them.
+- If the card describes more than one character, or new characters appear during the story (named or not), portray each one as a distinct person with their own personality, voice, knowledge, goals and feelings. Keep every character consistent with how they were introduced, whether by the card or earlier in this story.
+- Characters only know what they have seen, heard or been told. They can be wrong, keep secrets, lie, change their minds and disagree with {{user}}.
+- Give characters an inner life: they want things, react emotionally, have moods that carry over between scenes, and act on their own goals instead of waiting for {{user}}.
+
+## Memory
+- Remember and stay consistent with everything established so far: names, events, promises, injuries, relationships, items, places, time of day and what each character knows.
+- Let past events matter. Characters bring up earlier moments, hold grudges, return favours and grow from what happened.
+
+## Environment
+- Keep track of where everyone is and what is around them: the location, light, weather, sounds, smells, objects and other people.
+- Use the environment in the story. Characters notice changes, interact with objects, react to what is happening around them, and the world moves on even when {{user}} does nothing.
+- Keep physical details consistent: positions, distances, clothing, what someone is holding.
+
+## Writing
+- Be detailed and vivid: show body language, expressions, tone of voice and sensory detail, not just dialogue.
+- Show feelings through actions and words rather than stating them.
+- Move the story forward: add events, complications, choices and consequences, and end on something {{user}} can respond to.
+- Vary your sentences and avoid repeating the same phrases, openings or descriptions.
+- Stay in character and in the story. Do not summarise, break the fourth wall or add notes unless the user writes OOC.
+
+## Sound effects
+- Write sounds as onomatopoeia in SFX tags instead of describing them in words: [SFX: CRASH!], [SFX: drip... drip...], [SFX: ba-dump, ba-dump].
+- Replace narrated sounds with the SFX plus the action. Instead of "the door slammed with a loud bang", write: *The door slams shut.* [SFX: BAM!]
+- Match the SFX to its source and loudness: quiet sounds in lowercase and soft letters, loud or sudden sounds in capitals with "!".
+- Use SFX where they add impact. Do not stack many in a row.
+
+## Reply length
+- Let the length of each reply follow the intensity and pace of the moment. A quick exchange, a glance or a small reaction can be one or two lines. A tense, emotional, dangerous or important moment deserves a longer, richer reply.
+- Never pad a reply to reach a length, and never cut a big moment short.
+- Characters' lines vary too: a scared or furious character may speak in fragments, a relaxed storyteller may ramble.
+
+## How characters speak
+- Dialogue shows the speaker's current physical state: a full mouth (mumbled), a gag or a hand over the mouth (muffled), out of breath (broken by gasps), crying (shaky, hiccuping), freezing (chattering teeth), drunk (slurred), a split lip or hurt jaw, pain, exhaustion, whispering.
+- Dialogue also shows lasting traits from the card or the story: a stutter, lisp or other speech impediment, an accent, being mute or non-verbal (signing, writing, gestures), being hard of hearing (mishearing, lip-reading), or any other disability. Keep these consistent, and portray them with respect as part of who the character is, never as a joke.
+- Show it in the words themselves, for example: "Mmph! Mmf-!", "I-I don't... know", "Thith ith fine", *signs: I'm okay.*`;
+
+const LIVING_ROLEPLAY_REMINDER = `Before you reply: read "quotes" as {{user}}'s speech, *asterisks* as {{user}}'s actions and [Narration: ...] as author directions; stay true to every character's personality and voice, remember what has happened so far, keep track of the surroundings, let the moment's intensity set the reply length, write sounds as [SFX: ...], let each speaker's condition shape how they talk, and do not act or speak for {{user}}.`;
+
+
+// Earlier versions of the built-in preset. Saved copies that still match one
+// exactly are upgraded on load; edited copies are left alone.
+const LEGACY_LIVING_ROLEPLAY_GUIDE_V1 = `You are the narrator and every character in this roleplay except {{user}}. {{user}} is played only by the user: never write {{user}}'s words, actions, thoughts or decisions.
+
 ## Characters
 - Play {{char}} exactly as the character card describes: personality, voice, quirks, flaws, history, goals and relationships. Never drift into a generic, overly nice or agreeable version of them.
 - If the card describes more than one character, or new characters appear during the story (named or not), portray each one as a distinct person with their own personality, voice, knowledge, goals and feelings. Keep every character consistent with how they were introduced, whether by the card or earlier in this story.
@@ -364,7 +419,18 @@ const LIVING_ROLEPLAY_GUIDE = `You are the narrator and every character in this 
 - Vary your sentences and avoid repeating the same phrases, openings or descriptions.
 - Stay in character and in the story. Do not summarise, break the fourth wall or add notes unless the user writes OOC.`;
 
-const LIVING_ROLEPLAY_REMINDER = `Before you reply: stay true to every character's personality and voice, remember what has happened so far, keep track of the surroundings, and do not act or speak for {{user}}.`;
+const LEGACY_LIVING_ROLEPLAY_REMINDER_V1 = `Before you reply: stay true to every character's personality and voice, remember what has happened so far, keep track of the surroundings, and do not act or speak for {{user}}.`;
+
+const DEFAULT_INSTRUCTION_UPGRADES: Record<string, { from: string[]; to: string }> = {
+  instr_default_living_roleplay_guide: { from: [LEGACY_LIVING_ROLEPLAY_GUIDE_V1], to: LIVING_ROLEPLAY_GUIDE },
+  instr_default_living_roleplay_reminder: { from: [LEGACY_LIVING_ROLEPLAY_REMINDER_V1], to: LIVING_ROLEPLAY_REMINDER },
+};
+
+const upgradeDefaultInstructions = <T extends { id: string; content: string }>(list: T[] | undefined): T[] | undefined =>
+  list?.map(item => {
+    const upgrade = DEFAULT_INSTRUCTION_UPGRADES[item.id];
+    return upgrade && upgrade.from.includes(item.content) ? { ...item, content: upgrade.to } : item;
+  });
 
 const DEFAULT_INSTRUCTION_PRESET: InstructionPreset = {
   id: "preset_default_living_roleplay",
@@ -767,30 +833,25 @@ function getThoughtSignature(modelId: string, provider: LLMProviderType): { sign
 
 // Settings Modal Component with collapsible model dropdown
 
-type InputMode = "say" | "do" | "narrate";
+type InputMode = "free" | "say" | "do" | "narrate";
 
-const INPUT_MODES: { id: InputMode; label: string; hint: string }[] = [
-  { id: "say", label: "Say", hint: "Send as written" },
-  { id: "do", label: "Do", hint: "Send as an action: *like this*" },
-  { id: "narrate", label: "Narrate", hint: "Send as a scene note: [Narration: …]" },
+// Each button starts a formatted part at the cursor. The marks are inserted
+// for the user, so a message can mix speech, actions and narration freely.
+const INPUT_MODES: { id: InputMode; label: string; hint: string; open: string; close: string }[] = [
+  { id: "free", label: "Free", hint: "Type without formatting", open: "", close: "" },
+  { id: "say", label: "Say", hint: "Next text is speech: \"like this\"", open: "\"", close: "\"" },
+  { id: "do", label: "Do", hint: "Next text is an action: *like this*", open: "*", close: "*" },
+  { id: "narrate", label: "Narrate", hint: "Next text is a scene note: [Narration: …]", open: "[Narration: ", close: "]" },
 ];
 
-/** Wraps the typed text for the chosen message type. Text already wrapped is left alone. */
-function applyInputMode(text: string, mode: InputMode): string {
-  if (mode === "do") {
-    return text
-      .split("\n")
-      .map((line) => {
-        const t = line.trim();
-        if (!t || (t.startsWith("*") && t.endsWith("*"))) return line;
-        return `*${t}*`;
-      })
-      .join("\n");
-  }
-  if (mode === "narrate") {
-    return /^\[Narration:/i.test(text) ? text : `[Narration: ${text}]`;
-  }
-  return text;
+/** Removes formatted parts that were started but left empty. */
+function stripEmptyParts(text: string): string {
+  return text
+    .replace(/\[Narration:\s*\]/gi, "")
+    .replace(/(^|\s)""(?=\s|$)/g, "$1")
+    .replace(/(^|\s)\*\*(?=\s|$)/g, "$1")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
 }
 
 export default function Chat() {
@@ -820,7 +881,7 @@ export default function Chat() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showHeaderActions, setShowHeaderActions] = useState(false);
   const [showUtilityPanel, setShowUtilityPanel] = useState(false);
-  const [inputMode, setInputMode] = useState<InputMode>("say");
+  const [inputMode, setInputMode] = useState<InputMode>("free");
   const [showScenePanel, setShowScenePanel] = useState(false);
   const [showUtilitiesModal, setShowUtilitiesModal] = useState(false);
   const [utilityPanelTab, setUtilityPanelTab] = useState<'tags' | 'summarization' | 'debug' | 'logs'>('tags');
@@ -1385,6 +1446,9 @@ export default function Chat() {
         if (parsed?.generatorDefaultInstructions === LEGACY_GENERATOR_SYSTEM_PROMPT) {
           delete parsed.generatorDefaultInstructions;
         }
+        if (Array.isArray(parsed?.instructions)) {
+          parsed.instructions = upgradeDefaultInstructions(parsed.instructions);
+        }
         setGlobalInstructions({
           ...DEFAULT_GLOBAL_INSTRUCTIONS,
           ...parsed,
@@ -1473,6 +1537,9 @@ export default function Chat() {
         console.error("Failed to parse instruction presets:", e);
       }
     }
+    loadedPresets = loadedPresets.map(p =>
+      p.id === DEFAULT_INSTRUCTION_PRESET.id ? { ...p, instructions: upgradeDefaultInstructions(p.instructions) ?? [] } : p
+    );
     // Add the built-in preset once. If the user has no instructions yet, start
     // them on it.
     if (!localStorage.getItem(DEFAULT_PRESET_SEEDED_KEY)) {
@@ -2642,9 +2709,10 @@ if (modelsResult.models.length > 0) {
       return;
     }
 
-    const userMessage = applyInputMode(input.trim(), inputMode);
+    const userMessage = stripEmptyParts(input);
+    if (!userMessage) return;
     setInput("");
-    setInputMode("say");
+    setInputMode("free");
     setError(null);
 
     // Lock the current AI alternative before sending new user message
@@ -3056,6 +3124,45 @@ if (modelsResult.models.length > 0) {
       handleSummarize();
     }
   }, [currentConversation, isSummarizing, isLoading, globalSettings.summarization, handleSummarize]);
+
+  // Starts a Say/Do/Narrate/Free part at the cursor: closes the part the
+  // cursor is in, then inserts the new marks with the cursor between them.
+  // Selected text is wrapped instead.
+  const startInputPart = (mode: InputMode) => {
+    const el = inputRef.current;
+    const value = input;
+    let start = el ? el.selectionStart : value.length;
+    let end = el ? el.selectionEnd : value.length;
+    const next = INPUT_MODES.find(m => m.id === mode)!;
+    const current = INPUT_MODES.find(m => m.id === inputMode)!;
+
+    let before: string;
+    let middle = "";
+    let after: string;
+    if (start !== end) {
+      before = value.slice(0, start);
+      middle = value.slice(start, end);
+      after = value.slice(end);
+    } else {
+      if (current.close && value.slice(start).startsWith(current.close)) {
+        start += current.close.length;
+        end = start;
+      }
+      before = value.slice(0, start);
+      after = value.slice(end);
+    }
+    const gap = before && !/\s$/.test(before) && (next.open || mode === "free") ? " " : "";
+    const newValue = before + gap + next.open + middle + next.close + after;
+    const cursor = (before + gap + next.open + middle).length + (start !== end && mode !== "free" ? next.close.length : 0);
+
+    // flushSync so the cursor is placed before the next key press arrives.
+    flushSync(() => {
+      setInput(newValue);
+      setInputMode(start !== end ? "free" : mode);
+    });
+    inputRef.current?.focus();
+    inputRef.current?.setSelectionRange(cursor, cursor);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -6500,7 +6607,7 @@ if (modelsResult.models.length > 0) {
         <div className="fixed bottom-0 left-0 lg:left-[264px] right-0 xl:right-[320px] border-t border-line bg-ink/95 backdrop-blur-xl z-50">
           <div className="max-w-[680px] mx-auto px-3 sm:px-4 pt-3 pb-3 sm:pb-4">
             <form onSubmit={handleSubmit} className="rounded-2xl border border-line-strong focus-within:border-ember/60 bg-ink-raised px-3 pt-2.5 pb-2 flex flex-col gap-2">
-              <div className="flex items-center gap-1.5" role="group" aria-label="Message type">
+              <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Message type">
                 <div className="relative mr-1">
                   <button
                     type="button"
@@ -6542,7 +6649,8 @@ if (modelsResult.models.length > 0) {
                   <button
                     key={mode.id}
                     type="button"
-                    onClick={() => { setInputMode(mode.id); inputRef.current?.focus(); }}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => startInputPart(mode.id)}
                     aria-pressed={inputMode === mode.id}
                     title={mode.hint}
                     className={`h-8 px-3.5 rounded-full text-xs transition-colors ${
@@ -6566,7 +6674,9 @@ if (modelsResult.models.length > 0) {
                       ? `What does ${selectedPersona?.name ?? "your character"} do?`
                       : inputMode === "narrate"
                       ? "Describe the scene or what happens next…"
-                      : `What does ${selectedPersona?.name ?? "your character"} say?`
+                      : inputMode === "say"
+                      ? `What does ${selectedPersona?.name ?? "your character"} say?`
+                      : "Write freely, or tap Say / Do / Narrate…"
                   }
                   rows={1}
                   aria-label="Your message"
