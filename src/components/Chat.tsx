@@ -1,5 +1,6 @@
 "use client";
 
+import { flushSync } from "react-dom";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 
 
@@ -823,30 +824,25 @@ function getThoughtSignature(modelId: string, provider: LLMProviderType): { sign
 
 // Settings Modal Component with collapsible model dropdown
 
-type InputMode = "say" | "do" | "narrate";
+type InputMode = "free" | "say" | "do" | "narrate";
 
-const INPUT_MODES: { id: InputMode; label: string; hint: string }[] = [
-  { id: "say", label: "Say", hint: "Send as written" },
-  { id: "do", label: "Do", hint: "Send as an action: *like this*" },
-  { id: "narrate", label: "Narrate", hint: "Send as a scene note: [Narration: …]" },
+// Each button starts a formatted part at the cursor. The marks are inserted
+// for the user, so a message can mix speech, actions and narration freely.
+const INPUT_MODES: { id: InputMode; label: string; hint: string; open: string; close: string }[] = [
+  { id: "free", label: "Free", hint: "Type without formatting", open: "", close: "" },
+  { id: "say", label: "Say", hint: "Next text is speech: \"like this\"", open: "\"", close: "\"" },
+  { id: "do", label: "Do", hint: "Next text is an action: *like this*", open: "*", close: "*" },
+  { id: "narrate", label: "Narrate", hint: "Next text is a scene note: [Narration: …]", open: "[Narration: ", close: "]" },
 ];
 
-/** Wraps the typed text for the chosen message type. Text already wrapped is left alone. */
-function applyInputMode(text: string, mode: InputMode): string {
-  if (mode === "do") {
-    return text
-      .split("\n")
-      .map((line) => {
-        const t = line.trim();
-        if (!t || (t.startsWith("*") && t.endsWith("*"))) return line;
-        return `*${t}*`;
-      })
-      .join("\n");
-  }
-  if (mode === "narrate") {
-    return /^\[Narration:/i.test(text) ? text : `[Narration: ${text}]`;
-  }
-  return text;
+/** Removes formatted parts that were started but left empty. */
+function stripEmptyParts(text: string): string {
+  return text
+    .replace(/\[Narration:\s*\]/gi, "")
+    .replace(/(^|\s)""(?=\s|$)/g, "$1")
+    .replace(/(^|\s)\*\*(?=\s|$)/g, "$1")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
 }
 
 export default function Chat() {
@@ -876,7 +872,7 @@ export default function Chat() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showHeaderActions, setShowHeaderActions] = useState(false);
   const [showUtilityPanel, setShowUtilityPanel] = useState(false);
-  const [inputMode, setInputMode] = useState<InputMode>("say");
+  const [inputMode, setInputMode] = useState<InputMode>("free");
   const [showScenePanel, setShowScenePanel] = useState(false);
   const [showUtilitiesModal, setShowUtilitiesModal] = useState(false);
   const [utilityPanelTab, setUtilityPanelTab] = useState<'tags' | 'summarization' | 'debug' | 'logs'>('tags');
@@ -2704,9 +2700,10 @@ if (modelsResult.models.length > 0) {
       return;
     }
 
-    const userMessage = applyInputMode(input.trim(), inputMode);
+    const userMessage = stripEmptyParts(input);
+    if (!userMessage) return;
     setInput("");
-    setInputMode("say");
+    setInputMode("free");
     setError(null);
 
     // Lock the current AI alternative before sending new user message
@@ -3118,6 +3115,45 @@ if (modelsResult.models.length > 0) {
       handleSummarize();
     }
   }, [currentConversation, isSummarizing, isLoading, globalSettings.summarization, handleSummarize]);
+
+  // Starts a Say/Do/Narrate/Free part at the cursor: closes the part the
+  // cursor is in, then inserts the new marks with the cursor between them.
+  // Selected text is wrapped instead.
+  const startInputPart = (mode: InputMode) => {
+    const el = inputRef.current;
+    const value = input;
+    let start = el ? el.selectionStart : value.length;
+    let end = el ? el.selectionEnd : value.length;
+    const next = INPUT_MODES.find(m => m.id === mode)!;
+    const current = INPUT_MODES.find(m => m.id === inputMode)!;
+
+    let before: string;
+    let middle = "";
+    let after: string;
+    if (start !== end) {
+      before = value.slice(0, start);
+      middle = value.slice(start, end);
+      after = value.slice(end);
+    } else {
+      if (current.close && value.slice(start).startsWith(current.close)) {
+        start += current.close.length;
+        end = start;
+      }
+      before = value.slice(0, start);
+      after = value.slice(end);
+    }
+    const gap = before && !/\s$/.test(before) && (next.open || mode === "free") ? " " : "";
+    const newValue = before + gap + next.open + middle + next.close + after;
+    const cursor = (before + gap + next.open + middle).length + (start !== end && mode !== "free" ? next.close.length : 0);
+
+    // flushSync so the cursor is placed before the next key press arrives.
+    flushSync(() => {
+      setInput(newValue);
+      setInputMode(start !== end ? "free" : mode);
+    });
+    inputRef.current?.focus();
+    inputRef.current?.setSelectionRange(cursor, cursor);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -6562,7 +6598,7 @@ if (modelsResult.models.length > 0) {
         <div className="fixed bottom-0 left-0 lg:left-[264px] right-0 xl:right-[320px] border-t border-line bg-ink/95 backdrop-blur-xl z-50">
           <div className="max-w-[680px] mx-auto px-3 sm:px-4 pt-3 pb-3 sm:pb-4">
             <form onSubmit={handleSubmit} className="rounded-2xl border border-line-strong focus-within:border-ember/60 bg-ink-raised px-3 pt-2.5 pb-2 flex flex-col gap-2">
-              <div className="flex items-center gap-1.5" role="group" aria-label="Message type">
+              <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Message type">
                 <div className="relative mr-1">
                   <button
                     type="button"
@@ -6604,7 +6640,8 @@ if (modelsResult.models.length > 0) {
                   <button
                     key={mode.id}
                     type="button"
-                    onClick={() => { setInputMode(mode.id); inputRef.current?.focus(); }}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => startInputPart(mode.id)}
                     aria-pressed={inputMode === mode.id}
                     title={mode.hint}
                     className={`h-8 px-3.5 rounded-full text-xs transition-colors ${
@@ -6628,7 +6665,9 @@ if (modelsResult.models.length > 0) {
                       ? `What does ${selectedPersona?.name ?? "your character"} do?`
                       : inputMode === "narrate"
                       ? "Describe the scene or what happens next…"
-                      : `What does ${selectedPersona?.name ?? "your character"} say?`
+                      : inputMode === "say"
+                      ? `What does ${selectedPersona?.name ?? "your character"} say?`
+                      : "Write freely, or tap Say / Do / Narrate…"
                   }
                   rows={1}
                   aria-label="Your message"
