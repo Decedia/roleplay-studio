@@ -262,6 +262,8 @@ interface GlobalInstructions {
 interface AutoExportSettings {
   enabled: boolean;
   intervalMinutes: number;
+  /** Backups leave API keys out unless the user turns this on. */
+  includeKeys?: boolean;
 }
 
 // Default jailbreak instruction
@@ -804,7 +806,25 @@ const truncateMessagesToContext = (messages: Message[], maxContextTokens: number
 const DEFAULT_AUTO_EXPORT: AutoExportSettings = {
   enabled: false,
   intervalMinutes: 5,
+  includeKeys: false,
 };
+
+// Secret fields removed from backups unless "Include API keys" is on.
+const SECRET_PROFILE_FIELDS = ["apiKey", "serviceAccountJson", "accessToken"] as const;
+
+function withoutKeys(configs: Record<LLMProviderType, ProviderConfig>): Record<LLMProviderType, ProviderConfig> {
+  const out = {} as Record<LLMProviderType, ProviderConfig>;
+  for (const [type, config] of Object.entries(configs) as [LLMProviderType, ProviderConfig][]) {
+    const profiles = (config.profiles || []).map(profile => {
+      const copy = { ...profile };
+      for (const field of SECRET_PROFILE_FIELDS) delete copy[field];
+      return copy;
+    });
+    const { apiKey: _apiKey, serviceAccountJson: _sa, ...rest } = config;
+    out[type] = { ...rest, profiles } as ProviderConfig;
+  }
+  return out;
+}
 
 // Helper functions for think tags
 function extractThinkContent(content: string): string | null {
@@ -2041,7 +2061,7 @@ export default function Chat() {
       conversations,
       globalSettings,
       globalInstructions,
-      providerConfigs,
+      providerConfigs: autoExport.includeKeys ? providerConfigs : withoutKeys(providerConfigs),
       activeProvider,
     };
 
@@ -2095,16 +2115,26 @@ export default function Chat() {
         setGlobalInstructions(prev => ({ ...prev, ...json.globalInstructions }));
       }
 
-      // Import provider configs (but don't overwrite API keys for security)
+      // Import provider configs. Backups usually have no keys, so a profile
+      // keeps the key this browser already has for the same profile.
       if (json.providerConfigs) {
         setProviderConfigs(prev => {
           const merged = { ...prev };
           for (const key of Object.keys(json.providerConfigs) as LLMProviderType[]) {
-            // Preserve existing API keys
-            const existingApiKey = prev[key]?.apiKey;
+            const imported = json.providerConfigs[key] as ProviderConfig;
+            const existing = prev[key];
+            const profiles = (imported.profiles || []).map(profile => {
+              const current = existing?.profiles?.find(p => p.id === profile.id);
+              const filled = { ...profile };
+              for (const field of SECRET_PROFILE_FIELDS) {
+                if (!filled[field] && current?.[field]) filled[field] = current[field];
+              }
+              return filled;
+            });
             merged[key] = {
-              ...json.providerConfigs[key],
-              apiKey: existingApiKey || json.providerConfigs[key].apiKey,
+              ...imported,
+              profiles,
+              apiKey: imported.apiKey || existing?.apiKey,
             };
           }
           return merged;

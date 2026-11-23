@@ -110,6 +110,7 @@ interface GlobalInstructions {
 interface AutoExportSettings {
   enabled: boolean;
   intervalMinutes: number;
+  includeKeys?: boolean;
 }
 
 export function SettingsModal({
@@ -1639,6 +1640,20 @@ export function SettingsModal({
               </button>
             </div>
             
+            <div className="mt-3 flex items-start gap-3">
+              <ToggleSwitch
+                id="backupIncludeKeys"
+                checked={Boolean(autoExport.includeKeys)}
+                onCheckedChange={(checked) => setAutoExport(prev => ({ ...prev, includeKeys: checked }))}
+              />
+              <label htmlFor="backupIncludeKeys" className="text-sm text-parchment cursor-pointer">
+                Include API keys
+                <span className="block text-xs text-parchment-muted">
+                  Off: backups are safe to share, and restoring keeps the keys already in this browser. Turn on only to move to a new device, and keep that file private.
+                </span>
+              </label>
+            </div>
+
             {/* Auto-export settings */}
             <div className="mt-4 p-3 bg-ink-hover rounded-lg">
               <div className="flex items-center gap-3 mb-3">
