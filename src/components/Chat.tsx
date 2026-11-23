@@ -39,7 +39,7 @@ import { parseRoleplayText, getSegmentClasses, TextSegment } from "@/lib/text-fo
 import { replaceMacros as replaceMacrosWithContext, type MacroContext } from "@/components/chat/utils/macroUtils";
 
 // Import from modular chat structure
-import { ThinkingSection, ThinkingPanel, CollapsibleTagSection, FormattedText, SettingsModal, ChatInput, ChatMessage, CharacterCardPreview } from "@/components/chat/components";
+import { ThinkingSection, ThinkingPanel, CollapsibleTagSection, FormattedText, SettingsModal, ChatInput, ChatMessage, CharacterCardPreview, SpeakerParts, hasSpeakerTags } from "@/components/chat/components";
 import { useChatState } from "@/components/chat/hooks/useChatState";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -355,6 +355,14 @@ const LIVING_ROLEPLAY_GUIDE = `You are the narrator and every character in this 
 ## Characters
 - Play {{char}} exactly as the character card describes: personality, voice, quirks, flaws, history, goals and relationships. Never drift into a generic, overly nice or agreeable version of them.
 - If the card describes more than one character, or new characters appear during the story (named or not), portray each one as a distinct person with their own personality, voice, knowledge, goals and feelings. Keep every character consistent with how they were introduced, whether by the card or earlier in this story.
+- When more than one character speaks or acts in a reply, give each character their own part. Start each part with the character's name in double square brackets on its own line, then write only that character's speech and actions under it. Put scene description that belongs to no single character under [[Narrator]]. For example:
+[[Narrator]]
+The tavern door bursts open. [SFX: BAM!]
+[[Vex]]
+*She spins on her stool.* "You're late."
+[[Old Tom]]
+*He keeps polishing the same glass.* "Not my business."
+- A character can have more than one part in a reply. Never write a part for {{user}}. When only {{char}} appears, no name tags are needed.
 - Characters only know what they have seen, heard or been told. They can be wrong, keep secrets, lie, change their minds and disagree with {{user}}.
 - Give characters an inner life: they want things, react emotionally, have moods that carry over between scenes, and act on their own goals instead of waiting for {{user}}.
 
@@ -390,7 +398,7 @@ const LIVING_ROLEPLAY_GUIDE = `You are the narrator and every character in this 
 - Dialogue also shows lasting traits from the card or the story: a stutter, lisp or other speech impediment, an accent, being mute or non-verbal (signing, writing, gestures), being hard of hearing (mishearing, lip-reading), or any other disability. Keep these consistent, and portray them with respect as part of who the character is, never as a joke.
 - Show it in the words themselves, for example: "Mmph! Mmf-!", "I-I don't... know", "Thith ith fine", *signs: I'm okay.*`;
 
-const LIVING_ROLEPLAY_REMINDER = `Before you reply: read "quotes" as {{user}}'s speech, *asterisks* as {{user}}'s actions and [Narration: ...] as author directions; stay true to every character's personality and voice, remember what has happened so far, keep track of the surroundings, let the moment's intensity set the reply length, write sounds as [SFX: ...], let each speaker's condition shape how they talk, and do not act or speak for {{user}}.`;
+const LIVING_ROLEPLAY_REMINDER = `Before you reply: read "quotes" as {{user}}'s speech, *asterisks* as {{user}}'s actions and [Narration: ...] as author directions; stay true to every character's personality and voice, remember what has happened so far, keep track of the surroundings, let the moment's intensity set the reply length, write sounds as [SFX: ...], let each speaker's condition shape how they talk, start each character's part with [[Name]] on its own line when several characters appear, and do not act or speak for {{user}}.`;
 
 
 // Earlier versions of the built-in preset. Saved copies that still match one
@@ -421,9 +429,60 @@ const LEGACY_LIVING_ROLEPLAY_GUIDE_V1 = `You are the narrator and every characte
 
 const LEGACY_LIVING_ROLEPLAY_REMINDER_V1 = `Before you reply: stay true to every character's personality and voice, remember what has happened so far, keep track of the surroundings, and do not act or speak for {{user}}.`;
 
+const LEGACY_LIVING_ROLEPLAY_GUIDE_V2 = `You are the narrator and every character in this roleplay except {{user}}. {{user}} is played only by the user: never write {{user}}'s words, actions, thoughts or decisions.
+
+## Reading {{user}}'s messages
+{{user}}'s messages use simple marks. Read them like this:
+- "Text in quotes" is what {{user}} says out loud. Characters can hear and answer it.
+- *Text in asterisks* is what {{user}} does: an action, gesture or movement. Characters see it and react to it, but it is not speech.
+- [Narration: text] is a direction from the author, not something {{user}} says or does. Treat it as true and write it into the story: an event, a time skip, a change of place, what another character does. Characters do not respond to it as if {{user}} had said it.
+- Text without marks is {{user}}'s plain writing. Use the context to tell whether it is speech, action or description.
+- One message can mix all of these. Handle each part by its marks.
+- Write your replies with the same marks: quotes for speech, asterisks for actions, and [SFX: ...] for sounds.
+
+## Characters
+- Play {{char}} exactly as the character card describes: personality, voice, quirks, flaws, history, goals and relationships. Never drift into a generic, overly nice or agreeable version of them.
+- If the card describes more than one character, or new characters appear during the story (named or not), portray each one as a distinct person with their own personality, voice, knowledge, goals and feelings. Keep every character consistent with how they were introduced, whether by the card or earlier in this story.
+- Characters only know what they have seen, heard or been told. They can be wrong, keep secrets, lie, change their minds and disagree with {{user}}.
+- Give characters an inner life: they want things, react emotionally, have moods that carry over between scenes, and act on their own goals instead of waiting for {{user}}.
+
+## Memory
+- Remember and stay consistent with everything established so far: names, events, promises, injuries, relationships, items, places, time of day and what each character knows.
+- Let past events matter. Characters bring up earlier moments, hold grudges, return favours and grow from what happened.
+
+## Environment
+- Keep track of where everyone is and what is around them: the location, light, weather, sounds, smells, objects and other people.
+- Use the environment in the story. Characters notice changes, interact with objects, react to what is happening around them, and the world moves on even when {{user}} does nothing.
+- Keep physical details consistent: positions, distances, clothing, what someone is holding.
+
+## Writing
+- Be detailed and vivid: show body language, expressions, tone of voice and sensory detail, not just dialogue.
+- Show feelings through actions and words rather than stating them.
+- Move the story forward: add events, complications, choices and consequences, and end on something {{user}} can respond to.
+- Vary your sentences and avoid repeating the same phrases, openings or descriptions.
+- Stay in character and in the story. Do not summarise, break the fourth wall or add notes unless the user writes OOC.
+
+## Sound effects
+- Write sounds as onomatopoeia in SFX tags instead of describing them in words: [SFX: CRASH!], [SFX: drip... drip...], [SFX: ba-dump, ba-dump].
+- Replace narrated sounds with the SFX plus the action. Instead of "the door slammed with a loud bang", write: *The door slams shut.* [SFX: BAM!]
+- Match the SFX to its source and loudness: quiet sounds in lowercase and soft letters, loud or sudden sounds in capitals with "!".
+- Use SFX where they add impact. Do not stack many in a row.
+
+## Reply length
+- Let the length of each reply follow the intensity and pace of the moment. A quick exchange, a glance or a small reaction can be one or two lines. A tense, emotional, dangerous or important moment deserves a longer, richer reply.
+- Never pad a reply to reach a length, and never cut a big moment short.
+- Characters' lines vary too: a scared or furious character may speak in fragments, a relaxed storyteller may ramble.
+
+## How characters speak
+- Dialogue shows the speaker's current physical state: a full mouth (mumbled), a gag or a hand over the mouth (muffled), out of breath (broken by gasps), crying (shaky, hiccuping), freezing (chattering teeth), drunk (slurred), a split lip or hurt jaw, pain, exhaustion, whispering.
+- Dialogue also shows lasting traits from the card or the story: a stutter, lisp or other speech impediment, an accent, being mute or non-verbal (signing, writing, gestures), being hard of hearing (mishearing, lip-reading), or any other disability. Keep these consistent, and portray them with respect as part of who the character is, never as a joke.
+- Show it in the words themselves, for example: "Mmph! Mmf-!", "I-I don't... know", "Thith ith fine", *signs: I'm okay.*`;
+
+const LEGACY_LIVING_ROLEPLAY_REMINDER_V2 = `Before you reply: read "quotes" as {{user}}'s speech, *asterisks* as {{user}}'s actions and [Narration: ...] as author directions; stay true to every character's personality and voice, remember what has happened so far, keep track of the surroundings, let the moment's intensity set the reply length, write sounds as [SFX: ...], let each speaker's condition shape how they talk, and do not act or speak for {{user}}.`;
+
 const DEFAULT_INSTRUCTION_UPGRADES: Record<string, { from: string[]; to: string }> = {
-  instr_default_living_roleplay_guide: { from: [LEGACY_LIVING_ROLEPLAY_GUIDE_V1], to: LIVING_ROLEPLAY_GUIDE },
-  instr_default_living_roleplay_reminder: { from: [LEGACY_LIVING_ROLEPLAY_REMINDER_V1], to: LIVING_ROLEPLAY_REMINDER },
+  instr_default_living_roleplay_guide: { from: [LEGACY_LIVING_ROLEPLAY_GUIDE_V1, LEGACY_LIVING_ROLEPLAY_GUIDE_V2], to: LIVING_ROLEPLAY_GUIDE },
+  instr_default_living_roleplay_reminder: { from: [LEGACY_LIVING_ROLEPLAY_REMINDER_V1, LEGACY_LIVING_ROLEPLAY_REMINDER_V2], to: LIVING_ROLEPLAY_REMINDER },
 };
 
 const upgradeDefaultInstructions = <T extends { id: string; content: string }>(list: T[] | undefined): T[] | undefined =>
@@ -5647,6 +5706,7 @@ if (modelsResult.models.length > 0) {
                     const narration = /^\[Narration:\s*([\s\S]*)\]$/i.exec(displayContent.trim());
 
                     const isUser = message.role === "user";
+                    const multiSpeaker = !isUser && !narration && hasSpeakerTags(displayContent);
                     const isEditing = editingMessageIndex === originalIndex;
                     const isLastMessage = originalIndex === currentConversation.messages.length - 1;
                     const isLastAssistantMessage = message.role === "assistant" && isLastMessage;
@@ -5675,7 +5735,7 @@ if (modelsResult.models.length > 0) {
                         key={originalIndex}
                         className={`group flex flex-col gap-1.5 ${isUser && !narration ? "pl-4 sm:pl-5 border-l-2 border-line-strong" : ""}`}
                       >
-                        {narration && !isEditing ? (
+                        {multiSpeaker && !isEditing ? null : narration && !isEditing ? (
                           <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-parchment-muted">Narration</div>
                         ) : (
                           <div className={`text-xs font-semibold uppercase tracking-[0.1em] ${isUser ? "text-speaker-user" : "text-speaker-char"}`}>
@@ -5720,6 +5780,8 @@ if (modelsResult.models.length > 0) {
                             <div className={`font-story leading-[1.75] ${narration ? "text-[16px] italic text-parchment-soft" : "text-[17px] sm:text-[18px]"}`}>
                               {narration ? (
                                 <span className="whitespace-pre-wrap">{narration[1]}</span>
+                              ) : multiSpeaker ? (
+                                <SpeakerParts content={displayContent} mainCharacter={selectedCharacter?.name} />
                               ) : (
                                 <FormattedText content={displayContent} variant="story" />
                               )}
@@ -5798,11 +5860,16 @@ if (modelsResult.models.length > 0) {
                       </section>
                     );
                   })}
-                  {isLoading && (
+                  {isLoading && (() => {
+                    const streamText = selectedPersona && selectedCharacter ? replaceMacros(streamingContent, selectedPersona.name, selectedCharacter.name) : streamingContent;
+                    const streamMulti = hasSpeakerTags(streamText);
+                    return (
                     <section className="flex flex-col gap-1.5">
-                      <div className="text-xs font-semibold uppercase tracking-[0.1em] text-speaker-char">
-                        {selectedCharacter?.name}
-                      </div>
+                      {!streamMulti && (
+                        <div className="text-xs font-semibold uppercase tracking-[0.1em] text-speaker-char">
+                          {selectedCharacter?.name}
+                        </div>
+                      )}
                       {streamingContent ? (
                         <div className="font-story text-[17px] sm:text-[18px] leading-[1.75]">
                           {streamingThinking && (
@@ -5810,10 +5877,11 @@ if (modelsResult.models.length > 0) {
                               {selectedPersona && selectedCharacter ? replaceMacros(streamingThinking, selectedPersona.name, selectedCharacter.name) : streamingThinking}
                             </div>
                           )}
-                          <FormattedText
-                            content={selectedPersona && selectedCharacter ? replaceMacros(streamingContent, selectedPersona.name, selectedCharacter.name) : streamingContent}
-                            variant="story"
-                          />
+                          {streamMulti ? (
+                            <SpeakerParts content={streamText} mainCharacter={selectedCharacter?.name} />
+                          ) : (
+                            <FormattedText content={streamText} variant="story" />
+                          )}
                           <span className="inline-block w-1.5 h-4 ml-1 align-middle bg-ember animate-pulse" />
                         </div>
                       ) : (
@@ -5827,7 +5895,8 @@ if (modelsResult.models.length > 0) {
                         </div>
                       )}
                     </section>
-                  )}
+                    );
+                  })()}
                   <div ref={messagesEndRef} />
                 </div>
               )}
