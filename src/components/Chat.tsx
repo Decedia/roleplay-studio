@@ -262,6 +262,8 @@ interface GlobalInstructions {
 interface AutoExportSettings {
   enabled: boolean;
   intervalMinutes: number;
+  /** Backups leave API keys out unless the user turns this on. */
+  includeKeys?: boolean;
 }
 
 // Default jailbreak instruction
@@ -273,6 +275,24 @@ const DEFAULT_JAILBREAK_INSTRUCTION = `[Roleplay Rules]
 5. Maintain the character's personality and voice consistently.`;
 
 // Default continue instruction for incomplete responses
+/** A finished AI reply, before it is saved as a message. */
+interface AiReply {
+  text: string;
+  thinking?: string;
+  signature?: string;
+  modelName?: string;
+}
+
+/** Turns a reply into a chat message, keeping thinking in <think> tags. */
+function replyMessage(reply: AiReply): Message {
+  return {
+    role: "assistant",
+    content: reply.thinking ? `<think>${reply.thinking}</think>\n\n${reply.text}` : reply.text,
+    signature: reply.signature,
+    modelName: reply.modelName,
+  };
+}
+
 /** Shown when a model answers with no text instead of saving a blank reply. */
 const EMPTY_REPLY_ERROR =
   "The model sent back an empty reply. This often means the provider's safety filter blocked it. Try Rewrite, or change your last message.";
@@ -804,7 +824,25 @@ const truncateMessagesToContext = (messages: Message[], maxContextTokens: number
 const DEFAULT_AUTO_EXPORT: AutoExportSettings = {
   enabled: false,
   intervalMinutes: 5,
+  includeKeys: false,
 };
+
+// Secret fields removed from backups unless "Include API keys" is on.
+const SECRET_PROFILE_FIELDS = ["apiKey", "serviceAccountJson", "accessToken"] as const;
+
+function withoutKeys(configs: Record<LLMProviderType, ProviderConfig>): Record<LLMProviderType, ProviderConfig> {
+  const out = {} as Record<LLMProviderType, ProviderConfig>;
+  for (const [type, config] of Object.entries(configs) as [LLMProviderType, ProviderConfig][]) {
+    const profiles = (config.profiles || []).map(profile => {
+      const copy = { ...profile };
+      for (const field of SECRET_PROFILE_FIELDS) delete copy[field];
+      return copy;
+    });
+    const { apiKey: _apiKey, serviceAccountJson: _sa, ...rest } = config;
+    out[type] = { ...rest, profiles } as ProviderConfig;
+  }
+  return out;
+}
 
 // Helper functions for think tags
 function extractThinkContent(content: string): string | null {
@@ -1693,21 +1731,23 @@ export default function Chat() {
         try {
           let configs = JSON.parse(stored) as Record<LLMProviderType, ProviderConfig>;
           
-          // Migration: Convert old single-config format to new profiles system
-          // Check if configs have the new profiles structure
-          const needsMigration = Object.values(configs).some(
-            config => !Array.isArray(config.profiles) || config.profiles.length === 0
-          );
+          // Migration: configs saved before profiles existed have no
+          // `profiles` array; turn their single key into a profile. Configs
+          // that already have a profiles list (even an empty one) are left
+          // alone, or every saved profile would be replaced on each load.
+          const needsMigration = Object.values(configs).some(config => !Array.isArray(config.profiles));
           
           if (needsMigration) {
-            console.log("Migrating provider configs to new profiles system");
             configs = Object.keys(configs).reduce((acc, key) => {
               const providerType = key as LLMProviderType;
               const oldConfig = configs[providerType];
-              
-              // Create a default profile from old single-config values
+              if (Array.isArray(oldConfig.profiles)) {
+                acc[providerType] = oldConfig;
+                return acc;
+              }
+              const hasCredentials = Boolean(oldConfig.apiKey || oldConfig.projectId || oldConfig.serviceAccountJson);
               const defaultProfile: ProviderProfile = {
-                id: `default-${Date.now()}`,
+                id: `default-${providerType}-${Date.now()}`,
                 name: "Default Profile",
                 apiKey: oldConfig.apiKey,
                 projectId: oldConfig.projectId,
@@ -1717,20 +1757,16 @@ export default function Chat() {
                 selectedModel: oldConfig.selectedModel,
                 createdAt: Date.now()
               };
-              
               acc[providerType] = {
                 ...oldConfig,
-                profiles: [defaultProfile],
-                activeProfileId: defaultProfile.id,
+                profiles: hasCredentials ? [defaultProfile] : [],
+                activeProfileId: hasCredentials ? defaultProfile.id : null,
                 isEnabled: oldConfig.isEnabled
               };
-              
               return acc;
             }, {} as Record<LLMProviderType, ProviderConfig>);
             
-            // Save migrated configs
             safeLocalStorageSetItem(PROVIDER_CONFIGS_KEY, JSON.stringify(configs));
-            console.log("Migration completed successfully");
           }
           
           // Ensure all providers exist in loaded configs
@@ -2041,7 +2077,7 @@ export default function Chat() {
       conversations,
       globalSettings,
       globalInstructions,
-      providerConfigs,
+      providerConfigs: autoExport.includeKeys ? providerConfigs : withoutKeys(providerConfigs),
       activeProvider,
     };
 
@@ -2095,16 +2131,26 @@ export default function Chat() {
         setGlobalInstructions(prev => ({ ...prev, ...json.globalInstructions }));
       }
 
-      // Import provider configs (but don't overwrite API keys for security)
+      // Import provider configs. Backups usually have no keys, so a profile
+      // keeps the key this browser already has for the same profile.
       if (json.providerConfigs) {
         setProviderConfigs(prev => {
           const merged = { ...prev };
           for (const key of Object.keys(json.providerConfigs) as LLMProviderType[]) {
-            // Preserve existing API keys
-            const existingApiKey = prev[key]?.apiKey;
+            const imported = json.providerConfigs[key] as ProviderConfig;
+            const existing = prev[key];
+            const profiles = (imported.profiles || []).map(profile => {
+              const current = existing?.profiles?.find(p => p.id === profile.id);
+              const filled = { ...profile };
+              for (const field of SECRET_PROFILE_FIELDS) {
+                if (!filled[field] && current?.[field]) filled[field] = current[field];
+              }
+              return filled;
+            });
             merged[key] = {
-              ...json.providerConfigs[key],
-              apiKey: existingApiKey || json.providerConfigs[key].apiKey,
+              ...imported,
+              profiles,
+              apiKey: imported.apiKey || existing?.apiKey,
             };
           }
           return merged;
@@ -2626,6 +2672,133 @@ if (modelsResult.models.length > 0) {
 
 
 
+  /**
+   * The one path every chat request takes (send, Rewrite, new alternative,
+   * Continue, edit and resend). It builds the prompt from `history`, streams
+   * or waits for the reply, and calls `save` with the finished reply. Errors,
+   * empty replies and Stop are handled here, so every button behaves the same.
+   */
+  const requestReply = async (
+    history: Message[],
+    save: (reply: AiReply) => void,
+  ): Promise<void> => {
+    if (!currentConversation || !selectedPersona || !selectedCharacter) return;
+
+    setError(null);
+    setIsLoading(true);
+    setStreamingContent("");
+    setStreamingThinking("");
+    abortControllerRef.current = new AbortController();
+
+    const finish = (content: string | undefined, thinking: string | undefined) => {
+      setStreamingContent("");
+      setStreamingThinking("");
+      if (!content?.trim()) {
+        if (!wasStopped()) setError(EMPTY_REPLY_ERROR);
+        return;
+      }
+      const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
+      save({
+        text: formatResponse(content),
+        thinking: thinking || undefined,
+        signature: thoughtSig?.signature,
+        modelName: thoughtSig?.modelName,
+      });
+    };
+
+    try {
+      const currentConfig = providerConfigs[activeProvider];
+      const activeProfile = currentConfig.profiles.find(p => p.id === currentConfig.activeProfileId);
+      const profileConfig = {
+        ...currentConfig,
+        apiKey: activeProfile?.apiKey || "",
+        projectId: activeProfile?.projectId || "",
+        serviceAccountJson: activeProfile?.serviceAccountJson,
+        vertexMode: activeProfile?.vertexMode,
+        vertexLocation: activeProfile?.vertexLocation,
+        selectedModel: globalSettings.modelId || activeProfile?.selectedModel,
+      };
+
+      // System prompt with lorebook and summary memory
+      const { systemPrompt, characterContext, beforeContextInstructions, afterContextInstructions, inlineInstructions } = buildFullSystemPrompt(
+        selectedCharacter,
+        selectedPersona.name,
+        selectedPersona.description,
+        history,
+        globalInstructions,
+        currentConversation.summaryMemory
+      );
+
+      // With a summary, only messages after the summarized part are sent.
+      const lastSummarizedIdx = currentConversation.lastSummarizedIndex ?? 0;
+      const hasValidSummary = Boolean(currentConversation.summaryMemory?.trim()) && lastSummarizedIdx > 0;
+      const messagesForApi = hasValidSummary ? history.slice(lastSummarizedIdx) : history;
+
+      const truncatedMessages = truncateMessagesToContext(
+        messagesForApi,
+        globalSettings.maxContextTokens,
+        estimateTokens(systemPrompt)
+      );
+
+      // [character context] -> [before instructions] -> [chat with inline instructions] -> [after instructions]
+      const messagesWithInstructions = [
+        characterContext,
+        ...beforeContextInstructions,
+        ...injectInlineInstructions(truncatedMessages, inlineInstructions),
+        ...afterContextInstructions,
+      ];
+
+      const options = {
+        temperature: globalSettings.temperature,
+        maxTokens: globalSettings.maxTokens,
+        topP: globalSettings.topP,
+        topK: globalSettings.topK,
+        systemPrompt: "", // messagesWithInstructions already holds the system message
+        enableThinking: globalSettings.enableThinking,
+        thinkingLevel: globalSettings.thinkingLevel,
+        thinkingBudget: globalSettings.thinkingBudget,
+        abortController: abortControllerRef.current ?? undefined,
+      };
+
+      captureDebugPayload(
+        profileConfig.selectedModel || globalSettings.modelId,
+        characterContext.content,
+        beforeContextInstructions,
+        afterContextInstructions,
+        truncatedMessages,
+        options
+      );
+
+      if (globalSettings.enableStreaming) {
+        await streamChatMessage(messagesWithInstructions, profileConfig, options, (chunk) => {
+          if (chunk.error) {
+            if (!wasStopped()) setError(extractErrorMessage(chunk.error));
+            return;
+          }
+          if (chunk.content !== undefined) setStreamingContent(chunk.content);
+          if (chunk.thinking !== undefined) setStreamingThinking(chunk.thinking);
+          if (chunk.done) finish(chunk.content, chunk.thinking);
+        });
+      } else {
+        const response = await sendChatMessage(messagesWithInstructions, profileConfig, options);
+        if (response.error) {
+          if (!wasStopped()) setError(extractErrorMessage(response.error));
+        } else {
+          finish(response.content, response.thinking);
+        }
+      }
+    } catch (err) {
+      console.error("Chat request error:", err);
+      if (!wasStopped()) setError(extractErrorMessage(err));
+    } finally {
+      setIsLoading(false);
+      setIsSending(false);
+      abortControllerRef.current = null;
+      playNotificationSound();
+      inputRef.current?.focus();
+    }
+  };
+
   // Chat functions
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2654,210 +2827,18 @@ if (modelsResult.models.length > 0) {
     if (!userMessage) return;
     setInput("");
     setInputMode("free");
-    setError(null);
 
     // Lock the current AI alternative before sending new user message
     const baseMessages = lockSelectedAlternative() ?? currentConversation.messages;
-
-    // Add user message to conversation
-    const updatedMessages: Message[] = [
-      ...baseMessages,
-      { role: "user", content: userMessage },
-    ];
-
+    const updatedMessages: Message[] = [...baseMessages, { role: "user", content: userMessage }];
     updateConversationMessages(updatedMessages);
-    setIsLoading(true);
     setIsSending(true);
-    setStreamingContent("");
-    setStreamingThinking("");
-    abortControllerRef.current = new AbortController();
+    // Auto summary is checked once the reply is saved (see effect below).
+    autoSummarizePendingRef.current = true;
 
-    try {
-      // Get current provider config
-      const currentConfig = providerConfigs[activeProvider];
-      const activeProfile = currentConfig.profiles.find(p => p.id === currentConfig.activeProfileId);
-      
-      // Build config from active profile
-      const profileConfig = {
-        ...currentConfig,
-        apiKey: activeProfile?.apiKey || "",
-        projectId: activeProfile?.projectId || "",
-        serviceAccountJson: activeProfile?.serviceAccountJson,
-        vertexMode: activeProfile?.vertexMode,
-        vertexLocation: activeProfile?.vertexLocation,
-        selectedModel: globalSettings.modelId || activeProfile?.selectedModel
-      };
-      
-      // Build system prompt with lorebook support and summary memory
-      const { systemPrompt, characterContext, beforeContextInstructions, afterContextInstructions, inlineInstructions } = buildFullSystemPrompt(
-        selectedCharacter,
-        selectedPersona.name,
-        selectedPersona.description,
-        updatedMessages,
-        globalInstructions,
-        currentConversation.summaryMemory
-      );
-
-      // When summary exists, only send messages after lastSummarizedIndex to API
-      const lastSummarizedIdx = currentConversation.lastSummarizedIndex ?? 0;
-      const hasValidSummary = currentConversation.summaryMemory 
-        && currentConversation.summaryMemory.trim().length > 0 
-        && lastSummarizedIdx > 0;
-      
-      const messagesForApi = hasValidSummary
-        ? updatedMessages.slice(lastSummarizedIdx)
-        : updatedMessages;
-
-      // Estimate system prompt tokens and truncate messages if needed
-      const systemPromptTokens = estimateTokens(systemPrompt);
-      const truncatedMessages = truncateMessagesToContext(
-        messagesForApi,
-        globalSettings.maxContextTokens,
-        systemPromptTokens
-       );
-
-       // Inject inline instructions into the conversation
-       const messagesWithInline = injectInlineInstructions(truncatedMessages, inlineInstructions);
-
-       // Combine messages with correct position: [character context] -> [before instructions] -> [conversation with inline] -> [after instructions]
-       const messagesWithInstructions = [
-         characterContext,
-         ...beforeContextInstructions,
-         ...messagesWithInline,
-         ...afterContextInstructions
-       ];
-
-       // Capture debug payload for utility panel (sendMessage)
-      captureDebugPayload(
-        profileConfig.selectedModel || globalSettings.modelId,
-        characterContext.content,
-        beforeContextInstructions,
-        afterContextInstructions,
-        truncatedMessages,
-        {
-          temperature: globalSettings.temperature,
-          maxTokens: globalSettings.maxTokens,
-          topP: globalSettings.topP,
-          topK: globalSettings.topK,
-          enableThinking: globalSettings.enableThinking,
-          thinkingLevel: globalSettings.thinkingLevel,
-          thinkingBudget: globalSettings.thinkingBudget,
-        }
-      );
-
-      // Use streaming or non-streaming based on settings
-      if (globalSettings.enableStreaming) {
-        // Streaming mode for real-time responses
-        await streamChatMessage(
-          messagesWithInstructions,
-          profileConfig,
-          {
-            temperature: globalSettings.temperature,
-            maxTokens: globalSettings.maxTokens,
-            topP: globalSettings.topP,
-            topK: globalSettings.topK,
-            systemPrompt: "", // instructionMessages already includes system message
-            enableThinking: globalSettings.enableThinking,
-            thinkingLevel: globalSettings.thinkingLevel,
-            thinkingBudget: globalSettings.thinkingBudget,
-            abortController: abortControllerRef.current ?? undefined,
-          },
-          (chunk) => {
-            if (chunk.error) {
-              if (!wasStopped()) setError(extractErrorMessage(chunk.error));
-              return;
-            }
-            
-            if (chunk.content !== undefined) {
-              setStreamingContent(chunk.content);
-            }
-            
-            if (chunk.thinking !== undefined) {
-              setStreamingThinking(chunk.thinking);
-            }
-            
-            if (chunk.done) {
-              if (!chunk.content?.trim()) {
-                if (!wasStopped()) setError(EMPTY_REPLY_ERROR);
-                setStreamingContent("");
-                setStreamingThinking("");
-                return;
-              }
-              const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
-              // Format the response content
-              const formattedContent = formatResponse(chunk.content || "");
-              // Wrap thinking in <think> tags if present
-              const contentWithThinking = chunk.thinking
-                ? `<think>${chunk.thinking}</think>\n\n${formattedContent}`
-                : formattedContent;
-              const finalMessages: Message[] = [
-                ...updatedMessages,
-                {
-                  role: "assistant",
-                  content: contentWithThinking,
-                  signature: thoughtSig?.signature,
-                  modelName: thoughtSig?.modelName,
-                },
-              ];
-              updateConversationMessages(finalMessages);
-              setStreamingContent("");
-              setStreamingThinking("");
-              setIsLoading(false); // Also reset isLoading to properly hide cancel button
-            }
-          }
-        );
-      } else {
-        // Non-streaming mode for stable responses
-        const response = await sendChatMessage(
-          messagesWithInstructions,
-          profileConfig,
-          {
-            temperature: globalSettings.temperature,
-            maxTokens: globalSettings.maxTokens,
-            topP: globalSettings.topP,
-            topK: globalSettings.topK,
-            systemPrompt: "", // instructionMessages already includes system message
-            enableThinking: globalSettings.enableThinking,
-            thinkingLevel: globalSettings.thinkingLevel,
-            thinkingBudget: globalSettings.thinkingBudget,
-            abortController: abortControllerRef.current ?? undefined,
-          }
-        );
-        
-        if (response.error || !response.content?.trim()) {
-          if (!wasStopped()) setError(response.error ? extractErrorMessage(response.error) : EMPTY_REPLY_ERROR);
-        } else {
-          const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
-          // Format the response content
-          const formattedContent = formatResponse(response.content || "");
-          // Wrap thinking in <think> tags if present
-          const contentWithThinking = response.thinking
-            ? `<think>${response.thinking}</think>\n\n${formattedContent}`
-            : formattedContent;
-          const finalMessages: Message[] = [
-            ...updatedMessages,
-            {
-              role: "assistant",
-              content: contentWithThinking,
-              signature: thoughtSig?.signature,
-              modelName: thoughtSig?.modelName,
-            },
-          ];
-          updateConversationMessages(finalMessages);
-        }
-      }
-    } catch (err) {
-      console.error("Chat error:", err);
-      if (!wasStopped()) setError(extractErrorMessage(err));
-    } finally {
-      setIsLoading(false);
-      setIsSending(false);
-      abortControllerRef.current = null;
-      playNotificationSound();
-      inputRef.current?.focus();
-      // Auto summary runs once the reply is saved (see effect below).
-      autoSummarizePendingRef.current = true;
-    }
+    await requestReply(updatedMessages, (reply) => {
+      updateConversationMessages([...updatedMessages, replyMessage(reply)]);
+    });
   };
 
   // Saves messages to the chat that was open when the request started, even
@@ -3146,266 +3127,40 @@ if (modelsResult.models.length > 0) {
   const handleRetry = async (addAlternative: boolean = false) => {
     if (isLoading || !currentConversation || !selectedPersona || !selectedCharacter) return;
     
-    // Find the last user message
-    const lastUserMessageIndex = currentConversation.messages.findLastIndex(m => m.role === "user");
+    const messages = currentConversation.messages;
+    const lastUserMessageIndex = messages.findLastIndex(m => m.role === "user");
     if (lastUserMessageIndex === -1) return;
-    
-    const lastUserMessage = currentConversation.messages[lastUserMessageIndex];
-    
-    let messagesBeforeRetry: Message[];
-    
+
     if (addAlternative) {
-      // Keep all messages including existing AI responses to preserve alternatives
-      messagesBeforeRetry = [...currentConversation.messages];
-    } else {
-      // Remove all messages after the last user message (including any failed AI response)
-      messagesBeforeRetry = currentConversation.messages.slice(0, lastUserMessageIndex + 1);
+      // Keep the current reply and add the new one as another alternative.
+      // The request must not see the reply it is an alternative to.
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg?.role !== "assistant") return;
+      await requestReply(messages.slice(0, -1), (reply) => {
+        const existingAlternatives = lastMsg.alternatives && lastMsg.alternatives.length > 0
+          ? lastMsg.alternatives
+          : [lastMsg.content];
+        const content = replyMessage(reply).content;
+        const newAlternatives = [...existingAlternatives, content];
+        const newIndex = newAlternatives.length - 1;
+        updateConversationMessages([
+          ...messages.slice(0, -1),
+          { ...lastMsg, content, alternatives: newAlternatives, selectedAlternativeIndex: newIndex },
+        ]);
+        setSelectedAlternativeIndex(newIndex);
+        setCanSelectAlternatives(true);
+      });
+      return;
     }
-    
-    setError(null);
-    setIsLoading(true);
-    setStreamingContent("");
-    setStreamingThinking("");
-    abortControllerRef.current = new AbortController();
-    
-    if (!addAlternative) {
-      // Update conversation to show only messages up to last user message
-      updateConversationMessages(messagesBeforeRetry);
-    }
 
-    try {
-      // Get current provider config
-      const currentConfig = providerConfigs[activeProvider];
-      const activeProfile = currentConfig.profiles.find(p => p.id === currentConfig.activeProfileId);
-      
-      // Build config from active profile
-      const profileConfig = {
-        ...currentConfig,
-        apiKey: activeProfile?.apiKey || "",
-        projectId: activeProfile?.projectId || "",
-        serviceAccountJson: activeProfile?.serviceAccountJson,
-        vertexMode: activeProfile?.vertexMode,
-        vertexLocation: activeProfile?.vertexLocation,
-        selectedModel: globalSettings.modelId || activeProfile?.selectedModel
-      };
-      
-      // A new alternative must not see the reply it is an alternative to.
-      const requestMessages = addAlternative && messagesBeforeRetry[messagesBeforeRetry.length - 1]?.role === "assistant"
-        ? messagesBeforeRetry.slice(0, -1)
-        : messagesBeforeRetry;
-
-      // Build system prompt with lorebook support and summary memory
-      const { systemPrompt, characterContext, beforeContextInstructions, afterContextInstructions, inlineInstructions } = buildFullSystemPrompt(
-        selectedCharacter,
-        selectedPersona.name,
-        selectedPersona.description,
-        requestMessages,
-        globalInstructions,
-        currentConversation.summaryMemory
-      );
-
-      // When summary exists, only send messages after lastSummarizedIndex to API
-      const lastSummarizedIdx = currentConversation.lastSummarizedIndex ?? 0;
-      const hasValidSummary = currentConversation.summaryMemory 
-        && currentConversation.summaryMemory.trim().length > 0 
-        && lastSummarizedIdx > 0;
-      
-      const messagesForApi = hasValidSummary
-        ? requestMessages.slice(lastSummarizedIdx)
-        : requestMessages;
-
-      // Estimate system prompt tokens and truncate messages if needed
-      const systemPromptTokens = estimateTokens(systemPrompt);
-      const truncatedMessages = truncateMessagesToContext(
-        messagesForApi,
-        globalSettings.maxContextTokens,
-        systemPromptTokens
-       );
-
-        // Inject inline instructions into the conversation
-        const messagesWithInline = injectInlineInstructions(truncatedMessages, inlineInstructions);
-
-        // Combine messages with correct position: [character context] -> [before instructions] -> [conversation with inline] -> [after instructions]
-        const messagesWithInstructions = [
-          characterContext,
-          ...beforeContextInstructions,
-          ...messagesWithInline,
-          ...afterContextInstructions
-        ];
-
-        // Capture debug payload for utility panel (handleRetry)
-      captureDebugPayload(
-        profileConfig.selectedModel || globalSettings.modelId,
-        characterContext.content,
-        beforeContextInstructions,
-        afterContextInstructions,
-        truncatedMessages,
-        {
-          temperature: globalSettings.temperature,
-          maxTokens: globalSettings.maxTokens,
-          topP: globalSettings.topP,
-          topK: globalSettings.topK,
-          enableThinking: globalSettings.enableThinking,
-          thinkingLevel: globalSettings.thinkingLevel,
-          thinkingBudget: globalSettings.thinkingBudget,
-        }
-      );
-
-      // Use streaming or non-streaming based on settings
-      if (globalSettings.enableStreaming) {
-        // Streaming mode for real-time responses
-        await streamChatMessage(
-          messagesWithInstructions,
-          profileConfig,
-          {
-            temperature: globalSettings.temperature,
-            maxTokens: globalSettings.maxTokens,
-            topP: globalSettings.topP,
-            topK: globalSettings.topK,
-            systemPrompt: "", // instructionMessages already includes system message
-            enableThinking: globalSettings.enableThinking,
-            thinkingLevel: globalSettings.thinkingLevel,
-            thinkingBudget: globalSettings.thinkingBudget,
-            abortController: abortControllerRef.current ?? undefined,
-          },
-          (chunk) => {
-            if (chunk.error) {
-              if (!wasStopped()) setError(extractErrorMessage(chunk.error));
-              return;
-            }
-            
-            if (chunk.content !== undefined) {
-              setStreamingContent(chunk.content);
-            }
-            
-            if (chunk.thinking !== undefined) {
-              setStreamingThinking(chunk.thinking);
-            }
-            
-            if (chunk.done) {
-              if (!chunk.content?.trim()) {
-                if (!wasStopped()) setError(EMPTY_REPLY_ERROR);
-                setStreamingContent("");
-                setStreamingThinking("");
-                return;
-              }
-              const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
-              // Format the response content
-              const formattedContent = formatResponse(chunk.content || "");
-              // Wrap thinking in <think> tags if present
-              const contentWithThinking = chunk.thinking
-                ? `<think>${chunk.thinking}</think>\n\n${formattedContent}`
-                : formattedContent;
-              
-              if (addAlternative) {
-                // Add new response to alternatives array
-                const lastMsg = messagesBeforeRetry[messagesBeforeRetry.length - 1];
-                if (lastMsg.role === "assistant") {
-                  const existingAlternatives = lastMsg.alternatives && lastMsg.alternatives.length > 0
-                    ? lastMsg.alternatives
-                    : [lastMsg.content];
-                  const newAlternatives = [...existingAlternatives, contentWithThinking];
-                  const newIndex = newAlternatives.length - 1;
-                  const updatedMessage: Message = {
-                    ...lastMsg,
-                    content: contentWithThinking,
-                    alternatives: newAlternatives,
-                    selectedAlternativeIndex: newIndex,
-                  };
-                  const updatedMessages = [...messagesBeforeRetry];
-                  updatedMessages[updatedMessages.length - 1] = updatedMessage;
-                  updateConversationMessages(updatedMessages);
-                  setSelectedAlternativeIndex(newIndex);
-                  setCanSelectAlternatives(true);
-                }
-              } else {
-                const finalMessages: Message[] = [
-                  ...messagesBeforeRetry,
-                  {
-                    role: "assistant",
-                    content: contentWithThinking,
-                    signature: thoughtSig?.signature,
-                    modelName: thoughtSig?.modelName,
-                  },
-                ];
-                updateConversationMessages(finalMessages);
-                setCanSelectAlternatives(true);
-                setSelectedAlternativeIndex(0);
-              }
-              setStreamingContent("");
-              setStreamingThinking("");
-            }
-          }
-        );
-      } else {
-        // Non-streaming mode for stable responses
-        const response = await sendChatMessage(
-          messagesWithInstructions,
-          profileConfig,
-          {
-            temperature: globalSettings.temperature,
-            maxTokens: globalSettings.maxTokens,
-            topP: globalSettings.topP,
-            topK: globalSettings.topK,
-            systemPrompt: "", // instructionMessages already includes system message
-            enableThinking: globalSettings.enableThinking,
-            thinkingLevel: globalSettings.thinkingLevel,
-            thinkingBudget: globalSettings.thinkingBudget,
-            abortController: abortControllerRef.current ?? undefined,
-          }
-        );
-        
-        if (response.error || !response.content?.trim()) {
-          if (!wasStopped()) setError(response.error ? extractErrorMessage(response.error) : EMPTY_REPLY_ERROR);
-        } else {
-          // Format the response content
-          const formattedContent = formatResponse(response.content || "");
-          // Wrap thinking in <think> tags if present
-          const contentWithThinking = response.thinking
-            ? `<think>${response.thinking}</think>\n\n${formattedContent}`
-            : formattedContent;
-          
-          if (addAlternative) {
-            // Add new response to alternatives array
-            const lastMsg = messagesBeforeRetry[messagesBeforeRetry.length - 1];
-            if (lastMsg.role === "assistant") {
-              const existingAlternatives = lastMsg.alternatives && lastMsg.alternatives.length > 0
-                ? lastMsg.alternatives
-                : [lastMsg.content];
-              const newAlternatives = [...existingAlternatives, contentWithThinking];
-              const newIndex = newAlternatives.length - 1;
-              const updatedMessage: Message = {
-                ...lastMsg,
-                content: contentWithThinking,
-                alternatives: newAlternatives,
-                selectedAlternativeIndex: newIndex,
-              };
-              const updatedMessages = [...messagesBeforeRetry];
-              updatedMessages[updatedMessages.length - 1] = updatedMessage;
-              updateConversationMessages(updatedMessages);
-              setSelectedAlternativeIndex(newIndex);
-              setCanSelectAlternatives(true);
-            }
-          } else {
-            const finalMessages: Message[] = [
-              ...messagesBeforeRetry,
-              { role: "assistant", content: contentWithThinking },
-            ];
-            updateConversationMessages(finalMessages);
-            setCanSelectAlternatives(true);
-            setSelectedAlternativeIndex(0);
-          }
-        }
-      }
-    } catch (err) {
-      console.error("Retry error:", err);
-      if (!wasStopped()) setError(extractErrorMessage(err));
-    } finally {
-      setIsLoading(false);
-      abortControllerRef.current = null;
-      playNotificationSound();
-      inputRef.current?.focus();
-    }
+    // Replace everything after the last user message (including a failed reply)
+    const messagesBeforeRetry = messages.slice(0, lastUserMessageIndex + 1);
+    updateConversationMessages(messagesBeforeRetry);
+    await requestReply(messagesBeforeRetry, (reply) => {
+      updateConversationMessages([...messagesBeforeRetry, replyMessage(reply)]);
+      setCanSelectAlternatives(true);
+      setSelectedAlternativeIndex(0);
+    });
   };
   
   // Generate a new alternative AI response (adds to alternatives array instead of replacing)
@@ -3422,232 +3177,27 @@ if (modelsResult.models.length > 0) {
   const handleContinue = async () => {
     if (isLoading || !currentConversation || !selectedPersona || !selectedCharacter) return;
     
-    // Find the last assistant message
-    const lastAssistantMessageIndex = currentConversation.messages.findLastIndex(m => m.role === "assistant");
-    if (lastAssistantMessageIndex === -1) return;
-    
-    // Get the continue instruction
-    const continueInstruction = globalInstructions.continueInstruction || DEFAULT_CONTINUE_INSTRUCTION;
-    
-    // Add a user message with the continue instruction (marked as isContinue to hide in UI)
-    const messagesWithContinue = [
-      ...currentConversation.messages,
-      { role: "user" as const, content: continueInstruction, isContinue: true }
-    ];
-    
-    setError(null);
-    setIsLoading(true);
-    setStreamingContent("");
-    setStreamingThinking("");
-    abortControllerRef.current = new AbortController();
+    const messages = currentConversation.messages;
+    const lastAssistantIdx = messages.findLastIndex(m => m.role === "assistant");
+    if (lastAssistantIdx === -1) return;
     
     // The continue instruction is only sent, never saved to the chat.
+    const continueInstruction = globalInstructions.continueInstruction || DEFAULT_CONTINUE_INSTRUCTION;
+    const history = [...messages, { role: "user" as const, content: continueInstruction, isContinue: true }];
 
-    try {
-      // Get current provider config
-      const currentConfig = providerConfigs[activeProvider];
-      
-      const activeProfile = currentConfig.profiles.find(p => p.id === currentConfig.activeProfileId);
-      
-      // Build config from active profile
-      const profileConfig = {
-        ...currentConfig,
-        apiKey: activeProfile?.apiKey || "",
-        projectId: activeProfile?.projectId || "",
-        serviceAccountJson: activeProfile?.serviceAccountJson,
-        vertexMode: activeProfile?.vertexMode,
-        vertexLocation: activeProfile?.vertexLocation,
-        selectedModel: globalSettings.modelId || activeProfile?.selectedModel
+    await requestReply(history, (reply) => {
+      // Append to the last reply, keeping its thinking in front.
+      const existing = messages[lastAssistantIdx];
+      const existingThinking = extractThinkContent(existing.content) || "";
+      const combinedThinking = existingThinking + (reply.thinking || "");
+      const text = removeThinkTags(existing.content) + reply.text;
+      const updated = [...messages];
+      updated[lastAssistantIdx] = {
+        ...existing,
+        content: combinedThinking ? `<think>${combinedThinking}</think>\n\n${text}` : text,
       };
-      // Build system prompt with lorebook support and summary memory
-      const { systemPrompt, characterContext, beforeContextInstructions, afterContextInstructions, inlineInstructions } = buildFullSystemPrompt(
-        selectedCharacter,
-        selectedPersona.name,
-        selectedPersona.description,
-        messagesWithContinue,
-        globalInstructions,
-        currentConversation.summaryMemory
-      );
-
-      // When summary exists, only send messages after lastSummarizedIndex to API
-      const lastSummarizedIdx = currentConversation.lastSummarizedIndex ?? 0;
-      const hasValidSummary = currentConversation.summaryMemory 
-        && currentConversation.summaryMemory.trim().length > 0 
-        && lastSummarizedIdx > 0;
-      
-      const messagesForApi = hasValidSummary
-        ? messagesWithContinue.slice(lastSummarizedIdx)
-        : messagesWithContinue;
-
-      // Estimate system prompt tokens and truncate messages if needed
-      const systemPromptTokens = estimateTokens(systemPrompt);
-      const truncatedMessages = truncateMessagesToContext(
-        messagesForApi,
-        globalSettings.maxContextTokens,
-        systemPromptTokens
-      );
-
-      // Combine messages with correct position: [character context] -> [before instructions] -> [conversation with inline] -> [after instructions]
-      const messagesWithInstructions = [
-        characterContext, 
-        ...beforeContextInstructions, 
-        ...injectInlineInstructions(truncatedMessages, inlineInstructions), 
-        ...afterContextInstructions
-      ];
-
-      // Capture debug payload for utility panel (handleContinue)
-      captureDebugPayload(
-        profileConfig.selectedModel || globalSettings.modelId,
-        characterContext.content,
-        beforeContextInstructions,
-        afterContextInstructions,
-        truncatedMessages,
-        {
-          temperature: globalSettings.temperature,
-          maxTokens: globalSettings.maxTokens,
-          topP: globalSettings.topP,
-          topK: globalSettings.topK,
-          enableThinking: globalSettings.enableThinking,
-          thinkingLevel: globalSettings.thinkingLevel,
-          thinkingBudget: globalSettings.thinkingBudget,
-        }
-      );
-
-      // Use streaming or non-streaming based on settings
-      if (globalSettings.enableStreaming) {
-        // Streaming mode for real-time responses
-        await streamChatMessage(
-          messagesWithInstructions,
-          profileConfig,
-          {
-            temperature: globalSettings.temperature,
-            maxTokens: globalSettings.maxTokens,
-            topP: globalSettings.topP,
-            topK: globalSettings.topK,
-            systemPrompt: "", // instructionMessages already includes system message
-            enableThinking: globalSettings.enableThinking,
-            thinkingLevel: globalSettings.thinkingLevel,
-            thinkingBudget: globalSettings.thinkingBudget,
-            abortController: abortControllerRef.current ?? undefined,
-          },
-          (chunk) => {
-            if (chunk.error) {
-              if (!wasStopped()) setError(extractErrorMessage(chunk.error));
-              return;
-            }
-            
-            if (chunk.content !== undefined) {
-              setStreamingContent(chunk.content);
-            }
-            
-            if (chunk.thinking !== undefined) {
-              setStreamingThinking(chunk.thinking);
-            }
-            
-            if (chunk.done) {
-              if (!chunk.content?.trim()) {
-                if (!wasStopped()) setError(EMPTY_REPLY_ERROR);
-                setStreamingContent("");
-                setStreamingThinking("");
-                return;
-              }
-              // Append to existing assistant message instead of creating new one
-              const existingMessages = [...currentConversation.messages];
-              const lastAssistantIdx = existingMessages.findLastIndex(m => m.role === 'assistant');
-              if (lastAssistantIdx !== -1) {
-                // Get existing content and remove old think tags for re-assembly
-                const existingContent = existingMessages[lastAssistantIdx].content;
-                const existingThinking = extractThinkContent(existingContent) || '';
-                const contentWithoutThink = removeThinkTags(existingContent);
-                
-                // Format and combine thinking and append content
-                const formattedNewContent = formatResponse(chunk.content || '');
-                const combinedThinking = existingThinking + (chunk.thinking || '');
-                const newContent = combinedThinking
-                  ? `<think>${combinedThinking}</think>\n\n${contentWithoutThink}${formattedNewContent}`
-                  : contentWithoutThink + formattedNewContent;
-                
-                // Append to existing message
-                existingMessages[lastAssistantIdx] = {
-                  ...existingMessages[lastAssistantIdx],
-                  content: newContent
-                };
-              } else {
-                // Fallback: add new message if no existing assistant message
-                const formattedContent = formatResponse(chunk.content || '');
-                const contentWithThinking = chunk.thinking
-                  ? `<think>${chunk.thinking}</think>\n\n${formattedContent}`
-                  : formattedContent;
-                existingMessages.push({ role: 'assistant', content: contentWithThinking });
-              }
-              updateConversationMessages(existingMessages);
-              setStreamingContent("");
-              setStreamingThinking("");
-            }
-          }
-        );
-      } else {
-        // Non-streaming mode for stable responses
-        const response = await sendChatMessage(
-          messagesWithInstructions,
-          profileConfig,
-          {
-            temperature: globalSettings.temperature,
-            maxTokens: globalSettings.maxTokens,
-            topP: globalSettings.topP,
-            topK: globalSettings.topK,
-            systemPrompt: "", // instructionMessages already includes system message
-            enableThinking: globalSettings.enableThinking,
-            thinkingLevel: globalSettings.thinkingLevel,
-            thinkingBudget: globalSettings.thinkingBudget,
-            abortController: abortControllerRef.current ?? undefined,
-          }
-        );
-        
-        if (response.error || !response.content?.trim()) {
-          if (!wasStopped()) setError(response.error ? extractErrorMessage(response.error) : EMPTY_REPLY_ERROR);
-        } else {
-          // Append to existing assistant message instead of creating new one
-          const existingMessages = [...currentConversation.messages];
-          const lastAssistantIdx = existingMessages.findLastIndex(m => m.role === 'assistant');
-          if (lastAssistantIdx !== -1) {
-            // Get existing content and remove old think tags for re-assembly
-            const existingContent = existingMessages[lastAssistantIdx].content;
-            const existingThinking = extractThinkContent(existingContent) || '';
-            const contentWithoutThink = removeThinkTags(existingContent);
-            
-            // Format and combine thinking and append content
-            const formattedNewContent = formatResponse(response.content || '');
-            const combinedThinking = existingThinking + (response.thinking || '');
-            const newContent = combinedThinking
-              ? `<think>${combinedThinking}</think>\n\n${contentWithoutThink}${formattedNewContent}`
-              : contentWithoutThink + formattedNewContent;
-            
-            // Append to existing message
-            existingMessages[lastAssistantIdx] = {
-              ...existingMessages[lastAssistantIdx],
-              content: newContent
-            };
-          } else {
-            // Fallback: add new message if no existing assistant message
-            const formattedContent = formatResponse(response.content || '');
-            const contentWithThinking = response.thinking
-              ? `<think>${response.thinking}</think>\n\n${formattedContent}`
-              : formattedContent;
-            existingMessages.push({ role: 'assistant', content: contentWithThinking });
-          }
-          updateConversationMessages(existingMessages);
-        }
-      }
-    } catch (err) {
-      console.error("Continue error:", err);
-      if (!wasStopped()) setError(extractErrorMessage(err));
-    } finally {
-      setIsLoading(false);
-      abortControllerRef.current = null;
-      playNotificationSound();
-      inputRef.current?.focus();
-    }
+      updateConversationMessages(updated);
+    });
   };
 
   // Delete a message from the conversation
@@ -3765,191 +3315,18 @@ if (modelsResult.models.length > 0) {
       updatedMessages[index] = { ...message, content: editingMessageContent.trim() };
     }
     
-    // If editing a user message and retry is enabled, regenerate the AI response
+    setEditingMessageIndex(null);
+    setEditingMessageContent("");
+
+    // Editing a user message with retry: drop everything after it and ask again.
     if (message.role === "user" && retry) {
-      // Remove all messages after this one
       const messagesAfterEdit = updatedMessages.slice(0, index + 1);
       updateConversationMessages(messagesAfterEdit);
-      
-      setEditingMessageIndex(null);
-      setEditingMessageContent("");
-      
-      // Regenerate AI response
-      setError(null);
-      setIsLoading(true);
-      setStreamingContent("");
-      setStreamingThinking("");
-      abortControllerRef.current = new AbortController();
-      
-      try {
-        // Get current provider config
-        const currentConfig = providerConfigs[activeProvider];
-        const activeProfile = currentConfig.profiles.find(p => p.id === currentConfig.activeProfileId);
-        
-        // Build config from active profile
-        const profileConfig = {
-          ...currentConfig,
-          apiKey: activeProfile?.apiKey || "",
-          projectId: activeProfile?.projectId || "",
-          serviceAccountJson: activeProfile?.serviceAccountJson,
-          vertexMode: activeProfile?.vertexMode,
-          vertexLocation: activeProfile?.vertexLocation,
-          selectedModel: globalSettings.modelId || activeProfile?.selectedModel
-        };
-        
-        const { systemPrompt, characterContext, beforeContextInstructions, afterContextInstructions, inlineInstructions } = buildFullSystemPrompt(
-          selectedCharacter,
-          selectedPersona.name,
-          selectedPersona.description,
-          messagesAfterEdit,
-          globalInstructions,
-          currentConversation.summaryMemory
-        );
-
-        // When summary exists, only send messages after lastSummarizedIndex to API
-        const lastSummarizedIdx = currentConversation.lastSummarizedIndex ?? 0;
-        const hasValidSummary = currentConversation.summaryMemory 
-          && currentConversation.summaryMemory.trim().length > 0 
-          && lastSummarizedIdx > 0;
-        
-        const messagesForApi = hasValidSummary
-          ? messagesAfterEdit.slice(lastSummarizedIdx)
-          : messagesAfterEdit;
-
-        const systemPromptTokens = estimateTokens(systemPrompt);
-        const truncatedMessages = truncateMessagesToContext(
-          messagesForApi,
-          globalSettings.maxContextTokens,
-          systemPromptTokens
-        );
-
-        // Inject inline instructions into the conversation
-        const messagesWithInline = injectInlineInstructions(truncatedMessages, inlineInstructions);
-
-        // Combine messages with correct position: [character context] -> [before instructions] -> [conversation with inline] -> [after instructions]
-        const messagesWithInstructions = [
-          characterContext,
-          ...beforeContextInstructions,
-          ...messagesWithInline,
-          ...afterContextInstructions
-        ];
-
-      // Capture debug payload for utility panel
-      setApiDebugPayload(JSON.stringify({
-        model: profileConfig.selectedModel,
-        characterContext: characterContext.content,
-        beforeContextInstructions: beforeContextInstructions.map(m => ({ role: m.role, content: m.content.substring(0, 200) + (m.content.length > 200 ? '...[truncated]' : '') })),
-        messages: truncatedMessages.map(m => ({ role: m.role, content: m.content.substring(0, 200) + (m.content.length > 200 ? '...[truncated]' : '') })),
-        afterContextInstructions: afterContextInstructions.map(m => ({ role: m.role, content: m.content.substring(0, 200) + (m.content.length > 200 ? '...[truncated]' : '') })),
-        options: {
-          temperature: globalSettings.temperature,
-          maxTokens: globalSettings.maxTokens,
-          topP: globalSettings.topP,
-          topK: globalSettings.topK,
-          enableThinking: globalSettings.enableThinking,
-        }
-      }, null, 2));
-
-      // Use streaming or non-streaming based on settings
-      if (globalSettings.enableStreaming) {
-        // Streaming mode for real-time responses
-        await streamChatMessage(
-          messagesWithInstructions,
-          profileConfig,
-          {
-            temperature: globalSettings.temperature,
-            maxTokens: globalSettings.maxTokens,
-            topP: globalSettings.topP,
-            topK: globalSettings.topK,
-            systemPrompt: "", // instructionMessages already includes system message
-            enableThinking: globalSettings.enableThinking,
-            thinkingLevel: globalSettings.thinkingLevel,
-            thinkingBudget: globalSettings.thinkingBudget,
-            abortController: abortControllerRef.current ?? undefined,
-          },
-            (chunk) => {
-              if (chunk.error) {
-                if (!wasStopped()) setError(extractErrorMessage(chunk.error));
-                return;
-              }
-
-              if (chunk.content !== undefined) {
-                setStreamingContent(chunk.content);
-              }
-
-              if (chunk.thinking !== undefined) {
-                setStreamingThinking(chunk.thinking);
-              }
-
-              if (chunk.done) {
-                if (!chunk.content?.trim()) {
-                  if (!wasStopped()) setError(EMPTY_REPLY_ERROR);
-                  setStreamingContent("");
-                  setStreamingThinking("");
-                  return;
-                }
-                const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
-                // Wrap thinking in <think> tags if present
-                const contentWithThinking = chunk.thinking
-                  ? `<think>${chunk.thinking}</think>\n\n${chunk.content || ""}`
-                  : (chunk.content || "");
-                const finalMessages: Message[] = [
-                  ...messagesAfterEdit,
-                  { role: "assistant", content: contentWithThinking, signature: thoughtSig?.signature, modelName: thoughtSig?.modelName },
-                ];
-                updateConversationMessages(finalMessages);
-                setStreamingContent("");
-                setStreamingThinking("");
-              }
-            }
-        );
-      } else {
-        // Non-streaming mode for stable responses
-        const response = await sendChatMessage(
-          messagesWithInstructions,
-          profileConfig,
-          {
-            temperature: globalSettings.temperature,
-            maxTokens: globalSettings.maxTokens,
-            topP: globalSettings.topP,
-            topK: globalSettings.topK,
-            systemPrompt: "", // instructionMessages already includes system message
-            enableThinking: globalSettings.enableThinking,
-            thinkingLevel: globalSettings.thinkingLevel,
-            thinkingBudget: globalSettings.thinkingBudget,
-            abortController: abortControllerRef.current ?? undefined,
-          }
-        );
-        
-        if (response.error || !response.content?.trim()) {
-          if (!wasStopped()) setError(response.error ? extractErrorMessage(response.error) : EMPTY_REPLY_ERROR);
-          } else {
-            const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
-            // Wrap thinking in <think> tags if present
-            const contentWithThinking = response.thinking
-              ? `<think>${response.thinking}</think>\n\n${response.content || ""}`
-              : (response.content || "");
-            const finalMessages: Message[] = [
-              ...messagesAfterEdit,
-              { role: "assistant", content: contentWithThinking, signature: thoughtSig?.signature, modelName: thoughtSig?.modelName },
-            ];
-            updateConversationMessages(finalMessages);
-          }
-        }
-      } catch (err) {
-        console.error("Edit regenerate error:", err);
-        if (!wasStopped()) setError(extractErrorMessage(err));
-      } finally {
-        setIsLoading(false);
-        abortControllerRef.current = null;
-        playNotificationSound();
-        inputRef.current?.focus();
-      }
+      await requestReply(messagesAfterEdit, (reply) => {
+        updateConversationMessages([...messagesAfterEdit, replyMessage(reply)]);
+      });
     } else {
-      // Just update the AI message without regenerating
       updateConversationMessages(updatedMessages);
-      setEditingMessageIndex(null);
-      setEditingMessageContent("");
     }
   };
 
@@ -5613,7 +4990,7 @@ if (modelsResult.models.length > 0) {
                                 Save
                               </button>
                               {isUser && (
-                                <button onClick={() => handleRetry()} className="px-3 py-1.5 text-sm rounded-full bg-ember text-ink font-semibold hover:bg-ember-soft transition-colors">
+                                <button onClick={() => handleSaveEdit(originalIndex, true)} disabled={isLoading} className="px-3 py-1.5 text-sm rounded-full bg-ember text-ink font-semibold hover:bg-ember-soft transition-colors">
                                   Save & retry
                                 </button>
                               )}
