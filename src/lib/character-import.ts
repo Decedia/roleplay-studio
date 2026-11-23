@@ -117,88 +117,6 @@ export const exportToSillyTavern = (character: Character): string => {
   return JSON.stringify(card, null, 2);
 };
 
-// Build system prompt from character
-// Follows guideline: [Formatting] [Context] [Main instructions] [Negative constraints at end]
-export const buildCharacterSystemPrompt = (
-  character: Character,
-  personaName: string,
-  personaDescription: string,
-  globalInstructions?: GlobalInstructions
-): string => {
-  const formattingSections: string[] = [];
-  const contextSections: string[] = [];
-  const instructionSections: string[] = [];
-  const constraintSections: string[] = [];
-
-  // === INSTRUCTION LIST (SillyTavern-style) ===
-  
-  // Process instruction list if available
-  if (globalInstructions?.instructions && globalInstructions.instructions.length > 0) {
-    const enabledInstructions = globalInstructions.instructions.filter(inst => inst.enabled);
-    
-    for (const enabledInstruction of enabledInstructions) {
-      const instruction = {
-        ...enabledInstruction,
-        content: replaceMacrosSimple(enabledInstruction.content, personaName, character.name),
-      };
-      if (instruction.position === "before_context") {
-        formattingSections.push(instruction.content);
-      } else {
-        // after_context instructions
-        if (instruction.role === "system") {
-          instructionSections.push(instruction.content);
-        } else if (instruction.role === "user") {
-          constraintSections.push(instruction.content);
-        }
-        // assistant role is not added as it's used differently
-      }
-    }
-  }
-
-  // === CONTEXT AND SOURCE MATERIAL ===
-
-  // Character description
-  if (character.description) {
-    contextSections.push(`[Character Description]\n${character.description}`);
-  }
-  
-  // Scenario
-  if (character.scenario) {
-    contextSections.push(`[Scenario]\n${character.scenario}`);
-  }
-  
-  // User persona info
-  contextSections.push(`[User]\nThe user is roleplaying as ${personaName}.${personaDescription ? ` ${personaDescription}` : ""}`);
-  
-  // Example messages (dialogue examples)
-  if (character.mesExample) {
-    const exampleText = replaceMacrosSimple(character.mesExample, personaName, character.name);
-    contextSections.push(`[Example Dialogue]\n${exampleText}`);
-  }
-  
-  // === MAIN TASK INSTRUCTIONS ===
-  
-  // Main system prompt - use character override or default
-  if (character.systemPrompt) {
-    instructionSections.push(character.systemPrompt);
-  } else {
-    instructionSections.push(`You are ${character.name}.`);
-  }
-  
-  // Post-history instructions from character
-  if (character.postHistoryInstructions) {
-    instructionSections.push(`[Instructions]\n${character.postHistoryInstructions}`);
-  }
-  
-  // === NEGATIVE AND FORMATTING CONSTRAINTS (at the end) ===
-  
-  // Final instruction - core constraint at the very end
-  constraintSections.push("Stay in character at all times. Respond naturally and engage with the roleplay scenario. Do not break character or acknowledge that you are an AI.");
-  
-  // Combine: Formatting -> Context -> Instructions -> Constraints
-  return [...formattingSections, ...contextSections, ...instructionSections, ...constraintSections].join("\n\n");
-};
-
 // Scan messages for lorebook keyword matches
 const scanForLorebookEntries = (
   messages: Message[],
@@ -212,7 +130,8 @@ const scanForLorebookEntries = (
   const messagesToScan = messages.slice(-scanDepth);
   
   // Combine message content for scanning
-  const recentText = replaceMacrosSimple(messagesToScan.map(m => m.content).join(" "), personaName, characterName).toLowerCase();
+  const recentText = replaceMacrosSimple(messagesToScan.map(m => m.content).join(" "), personaName, characterName);
+  const recentTextLower = recentText.toLowerCase();
   
   const matchedContents: string[] = [];
   
@@ -236,7 +155,7 @@ const scanForLorebookEntries = (
     // Check primary keys
     for (const key of keys) {
       const searchKey = entry.caseSensitive ? key : key.toLowerCase();
-      const searchText = entry.caseSensitive ? recentText : recentText.toLowerCase();
+      const searchText = entry.caseSensitive ? recentText : recentTextLower;
       if (searchText.includes(searchKey)) {
         primaryMatch = true;
         break;
@@ -247,7 +166,7 @@ const scanForLorebookEntries = (
     if (primaryMatch && secondaryKeys.length > 0) {
       for (const key of secondaryKeys) {
         const searchKey = entry.caseSensitive ? key : key.toLowerCase();
-        const searchText = entry.caseSensitive ? recentText : recentText.toLowerCase();
+        const searchText = entry.caseSensitive ? recentText : recentTextLower;
         if (searchText.includes(searchKey)) {
           secondaryMatch = true;
           break;
@@ -334,18 +253,21 @@ export const buildFullSystemPrompt = (
 
   // === CONTEXT AND SOURCE MATERIAL ===
 
+  // Character cards use {{char}} and {{user}}; the model must see real names.
+  const fill = (text: string) => replaceMacrosSimple(text, personaName, character.name);
+
   // Character description
   if (character.description) {
-    contextSections.push(`[Character Description]\n${character.description}`);
+    contextSections.push(`[Character Description]\n${fill(character.description)}`);
   }
   
   // Scenario
   if (character.scenario) {
-    contextSections.push(`[Scenario]\n${character.scenario}`);
+    contextSections.push(`[Scenario]\n${fill(character.scenario)}`);
   }
   
   // User persona info
-  contextSections.push(`[User]\nThe user is roleplaying as ${personaName}.${personaDescription ? ` ${personaDescription}` : ""}`);
+  contextSections.push(`[User]\nThe user is roleplaying as ${personaName}.${personaDescription ? ` ${fill(personaDescription)}` : ""}`);
   
   // Example messages (dialogue examples)
   if (character.mesExample) {
@@ -371,14 +293,18 @@ export const buildFullSystemPrompt = (
   
   // Main system prompt - use character override or default
   if (character.systemPrompt) {
-    instructionSections.push(character.systemPrompt);
+    instructionSections.push(fill(character.systemPrompt));
   } else {
     instructionSections.push(`You are ${character.name}.`);
   }
   
-  // Post-history instructions from character
+  // Post-history instructions go after the chat, as the card format intends:
+  // the model reads them last, right before it replies.
   if (character.postHistoryInstructions) {
-    instructionSections.push(`[Instructions]\n${character.postHistoryInstructions}`);
+    afterContextInstructions.push({
+      role: "system",
+      content: `[Instructions]\n${fill(character.postHistoryInstructions)}`,
+    });
   }
   
   // === NEGATIVE AND FORMATTING CONSTRAINTS (at the end) ===
