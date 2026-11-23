@@ -44,6 +44,8 @@ export type { LLMProviderType, ProviderConfig, Message, LLMModel, LLMProvider, V
 
 // Default models for providers
 export const DEFAULT_KOBOLD_HORDE_MODEL = "koboldcpp/L3-8B-Stheno-v3.2";
+/** AI Horde accepts this key for anonymous use (lowest queue priority). */
+export const HORDE_ANONYMOUS_KEY = "0000000000";
 
 // Available providers configuration
 export const AVAILABLE_PROVIDERS: LLMProvider[] = [
@@ -587,6 +589,8 @@ export const chatWithGoogleAIStudio: ChatFunction = async (
 
     const data = await readJson(response);
     const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const blocked = geminiBlockReason(data);
+    if (!content && blocked) return { error: blocked };
 
     return { content };
   } catch (error) {
@@ -700,6 +704,7 @@ export const streamWithGoogleAIStudio = async (
     let fullContent = "";
     let fullThinking = "";
     let buffer = "";
+    let blocked: string | null = null;
 
     while (true) {
       const { done, value } = await reader.read();
@@ -716,6 +721,7 @@ export const streamWithGoogleAIStudio = async (
 
           try {
             const data = JSON.parse(jsonStr);
+            blocked = geminiBlockReason(data) || blocked;
             const parts = data.candidates?.[0]?.content?.parts || [];
             
             for (const part of parts) {
@@ -735,11 +741,29 @@ export const streamWithGoogleAIStudio = async (
       }
     }
 
+    if (!fullContent && blocked) {
+      onChunk({ error: blocked });
+      return;
+    }
     onChunk({ content: fullContent, thinking: fullThinking, done: true });
   } catch (error) {
     onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
   }
 };
+
+/** Explains why Gemini returned no text, or null when it wasn't blocked. */
+function geminiBlockReason(data: {
+  promptFeedback?: { blockReason?: string };
+  candidates?: { finishReason?: string }[];
+}): string | null {
+  const reason = data?.promptFeedback?.blockReason;
+  if (reason) return `Gemini blocked this message (${reason}). Try changing your last message.`;
+  const finish = data?.candidates?.[0]?.finishReason;
+  if (finish && ["SAFETY", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII", "RECITATION"].includes(finish)) {
+    return `Gemini stopped this reply (${finish}). Try Rewrite, or change your last message.`;
+  }
+  return null;
+}
 
 // Google Vertex AI chat implementation - uses server-side proxy to avoid CORS
 export const chatWithVertexAI: ChatFunction = async (
@@ -1539,9 +1563,6 @@ export const chatWithKoboldHorde: ChatFunction = async (
     config,
     options
   ) => {
-    if (!config.apiKey) {
-      return { error: "KoboldAI Horde API key is required" };
-    }
 
     const availableModels = getModelsForProvider("kobold-horde");
     const selectedModel = availableModels.find(m => m.id === (config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL));
@@ -1574,7 +1595,7 @@ export const chatWithKoboldHorde: ChatFunction = async (
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          apiKey: config.apiKey,
+          apiKey: config.apiKey || HORDE_ANONYMOUS_KEY,
           model: config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL,
           prompt,
           params: {
@@ -1639,10 +1660,6 @@ export const streamWithKoboldHorde = async (
    },
    onChunk: StreamCallback
  ) => {
-   if (!config.apiKey) {
-     onChunk({ error: "KoboldAI Horde API key is required" });
-     return;
-   }
 
    const availableModels = getModelsForProvider("kobold-horde");
    const selectedModel = availableModels.find(m => m.id === (config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL));
@@ -1674,7 +1691,7 @@ export const streamWithKoboldHorde = async (
          "Content-Type": "application/json",
        },
        body: JSON.stringify({
-         apiKey: config.apiKey,
+         apiKey: config.apiKey || HORDE_ANONYMOUS_KEY,
          model: config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL,
          prompt,
          params: {

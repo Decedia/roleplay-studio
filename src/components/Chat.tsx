@@ -14,11 +14,6 @@ import {
   streamChatMessage,
   AVAILABLE_PROVIDERS,
   getModelsForProvider,
-  getDefaultModelForProvider,
-  testProviderConnection,
-  TestConnectionResult,
-  VertexMode,
-  VertexLocation,
   fetchModelsFromProvider,
   FetchedModel,
   DEFAULT_KOBOLD_HORDE_MODEL,
@@ -33,14 +28,12 @@ import {
   type SummarizationConfig,
   type SummarizationResult,
 } from "@/lib/summarization";
-import { readCharacterFile, buildFullSystemPrompt, parseSillyTavernCard } from "@/lib/character-import";
-import { Character as CharacterType, CharacterBook, CharacterBookEntry, ProviderProfile, GeneratorConversation, Instruction, InstructionRole, InstructionPosition, InstructionPreset } from "@/lib/types";
-import { parseRoleplayText, getSegmentClasses, TextSegment } from "@/lib/text-formatter";
+import { readCharacterFile, buildFullSystemPrompt } from "@/lib/character-import";
+import { CharacterBook, ProviderProfile, GeneratorConversation, Instruction, InstructionRole, InstructionPosition, InstructionPreset } from "@/lib/types";
 import { replaceMacros as replaceMacrosWithContext, type MacroContext } from "@/components/chat/utils/macroUtils";
 
 // Import from modular chat structure
-import { ThinkingSection, ThinkingPanel, CollapsibleTagSection, FormattedText, SettingsModal, ChatInput, ChatMessage, CharacterCardPreview, SpeakerParts, hasSpeakerTags } from "@/components/chat/components";
-import { useChatState } from "@/components/chat/hooks/useChatState";
+import { ThinkingSection, FormattedText, SettingsModal, ChatInput, CharacterCardPreview, SpeakerParts, hasSpeakerTags } from "@/components/chat/components";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -48,7 +41,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import * as ui from "@/components/chat/styles";
 
 import { getLogs, clearLogs, exportLogs } from "@/lib/debugLogger";
-import { loadConversations as loadConversationsFromDB, saveConversation as saveConversationToDB, deleteConversation as deleteConversationFromDB, migrateConversationsFromLocalStorage } from "@/lib/conversationStorage";
+import { loadConversations as loadConversationsFromDB, saveConversation as saveConversationToDB, deleteConversation as deleteConversationFromDB, clearConversations, migrateConversationsFromLocalStorage } from "@/lib/conversationStorage";
 import { extractErrorMessage } from "@/lib/errorUtils";
 
 // Default generator system prompt for SillyTavern character creation.
@@ -280,6 +273,10 @@ const DEFAULT_JAILBREAK_INSTRUCTION = `[Roleplay Rules]
 5. Maintain the character's personality and voice consistently.`;
 
 // Default continue instruction for incomplete responses
+/** Shown when a model answers with no text instead of saving a blank reply. */
+const EMPTY_REPLY_ERROR =
+  "The model sent back an empty reply. This often means the provider's safety filter blocked it. Try Rewrite, or change your last message.";
+
 const DEFAULT_CONTINUE_INSTRUCTION = "Continue your previous response from where you left off. Complete the thought naturally without repeating what you already said.";
 
 // Default image generation instructions for character avatars
@@ -1079,9 +1076,6 @@ export default function Chat() {
     setTimeout(() => setError(null), 300);
   };
 
-  const showError = (message: string) => {
-    setError(message);
-  };
   const [streamingContent, setStreamingContent] = useState<string>("");
   const [streamingThinking, setStreamingThinking] = useState<string>("");
   const [visibleMessageCount, setVisibleMessageCount] = useState<number>(20);
@@ -1090,6 +1084,11 @@ export default function Chat() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const generatorAbortControllerRef = useRef<AbortController | null>(null);
+  // True while the request being reported on was stopped by the user, so
+  // the abort isn't shown as an error.
+  const wasStopped = () =>
+    Boolean(abortControllerRef.current?.signal.aborted || generatorAbortControllerRef.current?.signal.aborted);
+  const autoSummarizePendingRef = useRef(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   // Generator state
@@ -1102,40 +1101,22 @@ export default function Chat() {
   const [editingGeneratorMessageIndex, setEditingGeneratorMessageIndex] = useState<number | null>(null);
   const [editingGeneratorMessageContent, setEditingGeneratorMessageContent] = useState<string>("");
 
+  // Chats live in IndexedDB; everything else is in localStorage, which holds
+  // only about 5 MB. When it is full, tell the user instead of silently
+  // losing the change on the next reload.
+  const storageFullWarnedRef = useRef(false);
   function safeLocalStorageSetItem(key: string, value: string) {
     try {
       localStorage.setItem(key, value);
+      storageFullWarnedRef.current = false;
     } catch {
-      if (key === CONVERSATIONS_KEY) {
-        try {
-          const parsed = JSON.parse(value) as Conversation[];
-          const trimmed = parsed.slice(-50);
-          localStorage.setItem(key, JSON.stringify(trimmed));
-          setConversations(trimmed);
-        } catch {
-          try {
-            const parsed = JSON.parse(value) as Conversation[];
-            const trimmed = parsed.slice(-20).map(c => ({
-              ...c,
-              messages: c.messages.slice(-100),
-            }));
-            localStorage.setItem(key, JSON.stringify(trimmed));
-            setConversations(trimmed);
-          } catch {
-            localStorage.removeItem(key);
-          }
-        }
+      if (!storageFullWarnedRef.current) {
+        storageFullWarnedRef.current = true;
+        setError("Browser storage is full, so your latest change could not be saved. Export a backup, then remove large character images or unused characters.");
       }
     }
   }
 
-  function safeLocalStorageRemoveItem(key: string) {
-    try {
-      localStorage.removeItem(key);
-    } catch {
-      // ignore
-    }
-  }
 
   // Generator message helpers
   const handleGeneratorDeleteMessage = (index: number) => {
@@ -1170,7 +1151,7 @@ export default function Chat() {
       setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: messagesAfterEdit, updatedAt: Date.now() } : s));
       setEditingGeneratorMessageIndex(null);
       setEditingGeneratorMessageContent("");
-      await handleGeneratorRetryFromIndex(index);
+      await handleGeneratorRetryFromIndex(index, messagesAfterEdit);
       return;
     }
 
@@ -1181,16 +1162,7 @@ export default function Chat() {
   };
 
   const handleSaveCharacterFromGenerator = (messageContent: string) => {
-    setCharacterName("");
-    setCharacterDescription("");
-    setCharacterFirstMessage("");
-    setCharacterScenario("");
-    setCharacterSystemPrompt("");
-    setCharacterPostHistoryInstructions("");
-    setCharacterMesExample("");
-    setCharacterAvatar("");
-    setCharacterAlternateGreetings([]);
-    setEditingCharacter(null);
+    resetCharacterForm();
 
     const fields = extractCharacterFieldsFromContent(messageContent);
     setCharacterName(fields.name || "New Character");
@@ -1205,9 +1177,11 @@ export default function Chat() {
     setShowCharacterModal(true);
   };
 
-  const handleGeneratorRetryFromIndex = async (userMessageIndex: number) => {
+  // `edited` passes the messages right after an edit, before React has
+  // applied the edit to currentGeneratorSession.
+  const handleGeneratorRetryFromIndex = async (userMessageIndex: number, edited?: GeneratorConversation["messages"]) => {
     if (!currentGeneratorSession || isGeneratorLoading) return;
-    const messages = currentGeneratorSession.messages;
+    const messages = edited ?? currentGeneratorSession.messages;
     const retryMessages = messages.slice(0, userMessageIndex + 1);
     setIsGeneratorLoading(true);
     setGeneratorStreamingContent("");
@@ -1249,7 +1223,7 @@ export default function Chat() {
         },
         (chunk) => {
           if (chunk.error) {
-            setError(extractErrorMessage(chunk.error));
+            if (!wasStopped()) setError(extractErrorMessage(chunk.error));
             setIsGeneratorLoading(false);
             return;
           }
@@ -1257,6 +1231,12 @@ export default function Chat() {
             setGeneratorStreamingContent(chunk.content);
           }
           if (chunk.done) {
+            if (!chunk.content?.trim()) {
+              if (!wasStopped()) setError(EMPTY_REPLY_ERROR);
+              setGeneratorStreamingContent("");
+              setIsGeneratorLoading(false);
+              return;
+            }
             const formattedContent = formatResponse(chunk.content || "");
             const finalMessages = [...retryMessages, { role: "assistant" as const, content: formattedContent }];
             setCurrentGeneratorSession(prev => prev ? { ...prev, messages: finalMessages, updatedAt: Date.now() } : null);
@@ -1268,7 +1248,7 @@ export default function Chat() {
       );
     } catch (err) {
       console.error("Generator retry error:", err);
-      setError(extractErrorMessage(err));
+      if (!wasStopped()) setError(extractErrorMessage(err));
       setIsGeneratorLoading(false);
       setGeneratorStreamingContent("");
     } finally {
@@ -1459,8 +1439,11 @@ export default function Chat() {
   const [deletedItem, setDeletedItem] = useState<{
     type: "persona" | "character" | "conversation";
     item: Persona | Character | Conversation;
+    /** Chats deleted along with a persona or character, restored by Undo. */
+    conversations?: Conversation[];
     timestamp: number;
   } | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showUndoToast, setShowUndoToast] = useState(false);
   
       
@@ -1490,12 +1473,16 @@ export default function Chat() {
 
     (async () => {
       const migrated = await migrateConversationsFromLocalStorage();
-      if (migrated.length > 0) {
-        setConversations(migrated);
-      } else {
-        const dbConversations = await loadConversationsFromDB();
-        setConversations(dbConversations);
+      const loaded = migrated.length > 0 ? migrated : await loadConversationsFromDB();
+      // Older versions saved Continue's hidden instruction into the chat.
+      const cleaned = loaded.map(c =>
+        c.messages.some(m => m.isContinue) ? { ...c, messages: c.messages.filter(m => !m.isContinue) } : c
+      );
+      // Chats read straight from the database don't need saving again.
+      if (migrated.length === 0) {
+        cleaned.forEach((c, i) => { if (c === loaded[i]) savedConversationsRef.current.set(c.id, c); });
       }
+      setConversations(cleaned);
     })();
 
     if (storedInstructions) {
@@ -1671,12 +1658,15 @@ export default function Chat() {
     }
   }, [characters]);
 
-  // Save conversations to IndexedDB
+  // Save conversations to IndexedDB. Only chats that changed are written.
+  const savedConversationsRef = useRef(new Map<string, Conversation>());
   useEffect(() => {
-    if (conversations.length > 0) {
-      conversations.forEach(conversation => {
+    const saved = savedConversationsRef.current;
+    for (const conversation of conversations) {
+      if (saved.get(conversation.id) !== conversation) {
         saveConversationToDB(conversation);
-      });
+        saved.set(conversation.id, conversation);
+      }
     }
   }, [conversations]);
 
@@ -1853,7 +1843,12 @@ export default function Chat() {
     safeLocalStorageSetItem(AUTO_EXPORT_KEY, JSON.stringify(autoExport));
   }, [autoExport]);
   
-  // Auto-export timer
+  // Auto-export timer. The timer calls the latest export function, so each
+  // backup has the data as it is now, not as it was when the timer started.
+  const exportDataRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    exportDataRef.current = handleExportData;
+  });
   useEffect(() => {
     // Clear any existing timer
     if (autoExportTimerRef.current) {
@@ -1866,7 +1861,7 @@ export default function Chat() {
       const intervalMs = autoExport.intervalMinutes * 60 * 1000;
       autoExportTimerRef.current = setInterval(() => {
         console.log(`Auto-exporting data (every ${autoExport.intervalMinutes} minutes)...`);
-        handleExportData();
+        exportDataRef.current();
       }, intervalMs);
     }
     
@@ -1877,7 +1872,6 @@ export default function Chat() {
         autoExportTimerRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoExport.enabled, autoExport.intervalMinutes]);
 
   // Track window focus for notification sound
@@ -1942,40 +1936,49 @@ export default function Chat() {
   const updatePersona = () => {
     if (!editingPersona || !personaName.trim() || !personaDescription.trim()) return;
     
+    const patch = { name: personaName.trim(), description: personaDescription.trim() };
     setPersonas((prev) =>
-      prev.map((p) =>
-        p.id === editingPersona.id
-          ? { ...p, name: personaName.trim(), description: personaDescription.trim() }
-          : p
-      )
+      prev.map((p) => (p.id === editingPersona.id ? { ...p, ...patch } : p))
     );
+    // An open chat uses its own copy of the persona: refresh it too.
+    setSelectedPersona((prev) => (prev?.id === editingPersona.id ? { ...prev, ...patch } : prev));
     setEditingPersona(null);
     setPersonaName("");
     setPersonaDescription("");
     setShowPersonaModal(false);
   };
 
+  // Shows the Undo toast for 5 seconds. A newer delete restarts the timer, so
+  // an older timer can't hide the newer Undo early.
+  const offerUndo = (item: NonNullable<typeof deletedItem>) => {
+    setDeletedItem(item);
+    setShowUndoToast(true);
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    undoTimerRef.current = setTimeout(() => {
+      setShowUndoToast(false);
+      setDeletedItem(null);
+    }, 5000);
+  };
+
+  // Removes chats from the screen and from the browser database, so they
+  // don't come back after a reload.
+  const removeConversations = (toRemove: Conversation[]) => {
+    if (toRemove.length === 0) return;
+    const ids = new Set(toRemove.map(c => c.id));
+    setConversations((prev) => prev.filter((c) => !ids.has(c.id)));
+    toRemove.forEach(c => { void deleteConversationFromDB(c.id); });
+  };
+
   const deletePersona = (id: string) => {
-    // Store for potential undo
     const deleted = personas.find(p => p.id === id);
+    const related = conversations.filter((c) => c.personaId === id);
     if (deleted) {
-      setDeletedItem({
-        type: "persona",
-        item: deleted,
-        timestamp: Date.now()
-      });
-      setShowUndoToast(true);
-      
-      // Clear undo after 5 seconds
-      setTimeout(() => {
-        setShowUndoToast(false);
-        setDeletedItem(null);
-      }, 5000);
+      offerUndo({ type: "persona", item: deleted, conversations: related, timestamp: Date.now() });
     }
     
     setPersonas((prev) => prev.filter((p) => p.id !== id));
     // Also delete related conversations
-    setConversations((prev) => prev.filter((c) => c.personaId !== id));
+    removeConversations(related);
     if (selectedPersona?.id === id) {
       setSelectedPersona(null);
       setView("personas");
@@ -2074,8 +2077,11 @@ export default function Chat() {
         setCharacters(json.characters);
       }
 
-      // Import conversations
+      // Import conversations: the backup replaces every saved chat, so
+      // clear the database first or old chats come back after a reload.
       if (Array.isArray(json.conversations)) {
+        await clearConversations();
+        savedConversationsRef.current.clear();
         setConversations(json.conversations);
       }
 
@@ -2184,24 +2190,30 @@ const handleConnectProvider = async (providerType: LLMProviderType) => {
        const selectedModelId = activeProfile?.selectedModel;
        const selectedModel = models.find(m => m.id === selectedModelId);
        
-       // Update global settings with the provider's selected model and its capabilities
+       // Use the profile's model. Its limits only replace the user's Max
+       // tokens and context when the model actually changes, so reconnecting
+       // (which happens on every page load) keeps the user's own settings.
        if (selectedModelId) {
-         const maxOutput = selectedModel?.max_tokens || 4000;
-         const maxContext = selectedModel?.context || 128000;
-         
-         setGlobalSettings(prev => ({
-           ...prev,
-           modelId: selectedModelId,
-           maxTokens: maxOutput,
-           maxContextTokens: maxContext
-         }));
+         setGlobalSettings(prev => prev.modelId === selectedModelId
+           ? prev
+           : {
+               ...prev,
+               modelId: selectedModelId,
+               maxTokens: selectedModel?.max_tokens || prev.maxTokens,
+               maxContextTokens: selectedModel?.context || prev.maxContextTokens,
+             });
        }
        
 // Fetch models for providers that support dynamic model fetching
-          if ((providerType === "google-ai-studio" || providerType === "google-vertex" || providerType === "open-router" || providerType === "groq" || providerType === "nvidia-nim" || providerType === "kobold-horde" || providerType === "custom-openai" || providerType === "stepfun") && models.length === 0 && (activeProfile?.apiKey || providerType === "kobold-horde")) {
+          // Fetching the model list also checks the key, so a wrong key
+          // shows an error instead of "Connected".
+          if ((providerType === "google-ai-studio" || providerType === "google-vertex" || providerType === "open-router" || providerType === "groq" || providerType === "nvidia-nim" || providerType === "kobold-horde" || providerType === "custom-openai" || providerType === "stepfun") && (activeProfile?.apiKey || providerType === "kobold-horde")) {
           setModelsFetching(prev => ({ ...prev, [providerType]: true }));
           const modelsResult = await fetchModelsFromProvider(providerType, profileConfig);
           setModelsFetching(prev => ({ ...prev, [providerType]: false }));
+          if (modelsResult.error) {
+            throw new Error(extractErrorMessage(modelsResult.error));
+          }
          
 if (modelsResult.models.length > 0) {
             // Sort models based on provider type
@@ -2239,13 +2251,11 @@ if (modelsResult.models.length > 0) {
               }));
              
              // Also update global settings with the model's capabilities
-             const maxOutput = firstModel.max_tokens || 4000;
-             const maxContext = firstModel.context || 128000;
              setGlobalSettings(prev => ({
                ...prev,
                modelId: firstModel.id,
-               maxTokens: maxOutput,
-               maxContextTokens: maxContext
+               maxTokens: firstModel.max_tokens || prev.maxTokens,
+               maxContextTokens: firstModel.context || prev.maxContextTokens
              }));
            }
          }
@@ -2273,24 +2283,20 @@ if (modelsResult.models.length > 0) {
       }
    };
 
-  const handleDisconnectProvider = (providerType: LLMProviderType) => {
-    // Reset connection status for this provider
-    setConnectionStatus(prev => ({
-      ...prev,
-      [providerType]: {
-        status: "disconnected",
-        message: undefined
-      }
-    }));
-    
-    // If this was the active provider, clear the active provider
-    if (activeProvider === providerType) {
-      // Clear the model selection
-      setGlobalSettings(prev => ({
-        ...prev,
-        modelId: ""
-      }));
-    }
+
+  // Clears every field of the character form, so a new character never
+  // inherits greetings, avatar or prompts from the last one opened.
+  const resetCharacterForm = () => {
+    setEditingCharacter(null);
+    setCharacterName("");
+    setCharacterDescription("");
+    setCharacterFirstMessage("");
+    setCharacterAvatar("");
+    setCharacterScenario("");
+    setCharacterSystemPrompt("");
+    setCharacterPostHistoryInstructions("");
+    setCharacterMesExample("");
+    setCharacterAlternateGreetings([]);
   };
 
   // Character functions
@@ -2313,51 +2319,31 @@ if (modelsResult.models.length > 0) {
     };
     
     setCharacters((prev) => [...prev, newCharacter]);
-    // Reset all form fields
-    setCharacterName("");
-    setCharacterDescription("");
-    setCharacterFirstMessage("");
-    setCharacterAvatar("");
-    setCharacterScenario("");
-    setCharacterSystemPrompt("");
-    setCharacterPostHistoryInstructions("");
-    setCharacterMesExample("");
-    setCharacterAvatar("");
+    resetCharacterForm();
     setShowCharacterModal(false);
   };
 
   const updateCharacter = () => {
     if (!editingCharacter || !characterName.trim() || !characterDescription.trim() || !characterFirstMessage.trim()) return;
     
-    setCharacters((prev) =>
-      prev.map((c) =>
-        c.id === editingCharacter.id
-          ? { 
-              ...c, 
-              name: characterName.trim(), 
-              description: characterDescription.trim(),
-              firstMessage: characterFirstMessage.trim(),
-              avatar: characterAvatar || undefined,
-              // Instruction fields
-              scenario: characterScenario.trim() || undefined,
-              systemPrompt: characterSystemPrompt.trim() || undefined,
-              postHistoryInstructions: characterPostHistoryInstructions.trim() || undefined,
-              mesExample: characterMesExample.trim() || undefined,
-              alternateGreetings: characterAlternateGreetings.length > 0 ? characterAlternateGreetings : undefined,
-            }
-          : c
-      )
-    );
-    setEditingCharacter(null);
-    // Reset all form fields
-    setCharacterName("");
-    setCharacterDescription("");
-    setCharacterFirstMessage("");
-    setCharacterScenario("");
-    setCharacterSystemPrompt("");
-    setCharacterPostHistoryInstructions("");
-    setCharacterMesExample("");
-    setCharacterAvatar("");
+    const updated: Character = {
+      ...editingCharacter,
+      ...(characters.find(c => c.id === editingCharacter.id) ?? {}),
+      name: characterName.trim(),
+      description: characterDescription.trim(),
+      firstMessage: characterFirstMessage.trim(),
+      avatar: characterAvatar || undefined,
+      // Instruction fields
+      scenario: characterScenario.trim() || undefined,
+      systemPrompt: characterSystemPrompt.trim() || undefined,
+      postHistoryInstructions: characterPostHistoryInstructions.trim() || undefined,
+      mesExample: characterMesExample.trim() || undefined,
+      alternateGreetings: characterAlternateGreetings.length > 0 ? characterAlternateGreetings : undefined,
+    };
+    setCharacters((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+    // An open chat uses its own copy of the character: refresh it too.
+    setSelectedCharacter((prev) => (prev?.id === updated.id ? updated : prev));
+    resetCharacterForm();
     setShowCharacterModal(false);
   };
 
@@ -2483,26 +2469,15 @@ if (modelsResult.models.length > 0) {
   };
 
   const deleteCharacter = (id: string) => {
-    // Store for potential undo
     const deleted = characters.find(c => c.id === id);
+    const related = conversations.filter((c) => c.characterId === id);
     if (deleted) {
-      setDeletedItem({
-        type: "character",
-        item: deleted,
-        timestamp: Date.now()
-      });
-      setShowUndoToast(true);
-      
-      // Clear undo after 5 seconds
-      setTimeout(() => {
-        setShowUndoToast(false);
-        setDeletedItem(null);
-      }, 5000);
+      offerUndo({ type: "character", item: deleted, conversations: related, timestamp: Date.now() });
     }
     
     setCharacters((prev) => prev.filter((c) => c.id !== id));
     // Also delete related conversations
-    setConversations((prev) => prev.filter((c) => c.characterId !== id));
+    removeConversations(related);
     if (selectedCharacter?.id === id) {
       setSelectedCharacter(null);
       setView("characters");
@@ -2555,87 +2530,7 @@ if (modelsResult.models.length > 0) {
   
   // Import generated character to the character list
   
-  // Extract instructions from code blocks
-  const extractInstructions = (content: string): string[] => {
-    const regex = /```instructions\n([\s\S]*?)```/g;
-    const matches: string[] = [];
-    let match;
-    while ((match = regex.exec(content)) !== null) {
-      matches.push(match[1].trim());
-    }
-    return matches;
-  };
   
-  // Apply instructions to the currently active instruction tab or selected preset
-  const applyInstructions = (instructions: string) => {
-    // Prompt user for instruction name
-    const name = prompt("Enter instruction name:");
-    if (!name) return;
-    
-    // Prompt user for role selection
-    const roleInput = prompt("Role: 1=System, 2=User, 3=Assistant");
-    let role: "system" | "user" | "assistant" = "system";
-    if (roleInput === "2") role = "user";
-    else if (roleInput === "3") role = "assistant";
-    
-    // Prompt user for position selection
-    const positionInput = prompt("Position: 1=Before Context, 2=After Context");
-    let position: "before_context" | "after_context" = "after_context";
-    if (positionInput === "1") position = "before_context";
-    
-    // Create new instruction
-    const newInstruction: Instruction = {
-      id: `instruction_${Date.now()}`,
-      name: name.trim(),
-      content: instructions,
-      role,
-      position,
-      enabled: true,
-      order: 0, // Will be set correctly below based on target
-    };
-    
-    // If a preset is selected, update the preset's instructions (global behavior)
-    if (selectedPresetId) {
-      setInstructionPresets(prev => prev.map(preset => {
-        if (preset.id === selectedPresetId) {
-          const updatedInstructions = [...preset.instructions, newInstruction];
-          // Update order indices
-          updatedInstructions.forEach((instr, index) => {
-            instr.order = index;
-          });
-          return {
-            ...preset,
-            instructions: updatedInstructions,
-            updatedAt: Date.now(),
-          };
-        }
-        return preset;
-      }));
-      
-      // Also update the global instruction list for immediate visibility
-      setGlobalInstructions(prev => {
-        const updatedInstructions = [...(prev.instructions || []), newInstruction];
-        // Update order indices
-        updatedInstructions.forEach((instr, index) => {
-          instr.order = index;
-        });
-        return {
-          ...prev,
-          instructions: updatedInstructions,
-        };
-      });
-    } else {
-      // No preset selected, add to the currently active instruction tab
-      switch (activeInstructionTab) {
-        case 'chat':
-          setChatInstructions(prev => {
-            const updated = (prev ? prev + '\n\n' : '') + instructions;
-            return updated;
-          });
-          break;
-      }
-    }
-  };
    
    
    
@@ -2695,17 +2590,7 @@ if (modelsResult.models.length > 0) {
   const deleteConversation = async (id: string) => {
     const deleted = conversations.find(c => c.id === id);
     if (deleted) {
-      setDeletedItem({
-        type: "conversation",
-        item: deleted,
-        timestamp: Date.now()
-      });
-      setShowUndoToast(true);
-      
-      setTimeout(() => {
-        setShowUndoToast(false);
-        setDeletedItem(null);
-      }, 5000);
+      offerUndo({ type: "conversation", item: deleted, timestamp: Date.now() });
     }
     
     setConversations((prev) => prev.filter((c) => c.id !== id));
@@ -2730,19 +2615,16 @@ if (modelsResult.models.length > 0) {
     } else if (deletedItem.type === "conversation") {
       setConversations(prev => [...prev, deletedItem.item as Conversation]);
     }
+    if (deletedItem.conversations?.length) {
+      setConversations(prev => [...prev, ...deletedItem.conversations!]);
+    }
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
     
     setShowUndoToast(false);
     setDeletedItem(null);
   };
 
-  const openSettings = () => {
-    setShowSettingsModal(true);
-  };
 
-  const saveSettings = () => {
-    // Settings are saved automatically via useEffect
-    setShowSettingsModal(false);
-  };
 
   // Chat functions
   const handleSubmit = async (e: React.FormEvent) => {
@@ -2775,11 +2657,11 @@ if (modelsResult.models.length > 0) {
     setError(null);
 
     // Lock the current AI alternative before sending new user message
-    lockSelectedAlternative();
+    const baseMessages = lockSelectedAlternative() ?? currentConversation.messages;
 
     // Add user message to conversation
     const updatedMessages: Message[] = [
-      ...currentConversation.messages,
+      ...baseMessages,
       { role: "user", content: userMessage },
     ];
 
@@ -2878,10 +2760,11 @@ if (modelsResult.models.length > 0) {
             enableThinking: globalSettings.enableThinking,
             thinkingLevel: globalSettings.thinkingLevel,
             thinkingBudget: globalSettings.thinkingBudget,
+            abortController: abortControllerRef.current ?? undefined,
           },
           (chunk) => {
             if (chunk.error) {
-              setError(extractErrorMessage(chunk.error));
+              if (!wasStopped()) setError(extractErrorMessage(chunk.error));
               return;
             }
             
@@ -2894,6 +2777,12 @@ if (modelsResult.models.length > 0) {
             }
             
             if (chunk.done) {
+              if (!chunk.content?.trim()) {
+                if (!wasStopped()) setError(EMPTY_REPLY_ERROR);
+                setStreamingContent("");
+                setStreamingThinking("");
+                return;
+              }
               const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
               // Format the response content
               const formattedContent = formatResponse(chunk.content || "");
@@ -2931,11 +2820,12 @@ if (modelsResult.models.length > 0) {
             enableThinking: globalSettings.enableThinking,
             thinkingLevel: globalSettings.thinkingLevel,
             thinkingBudget: globalSettings.thinkingBudget,
+            abortController: abortControllerRef.current ?? undefined,
           }
         );
         
-        if (response.error) {
-          setError(extractErrorMessage(response.error));
+        if (response.error || !response.content?.trim()) {
+          if (!wasStopped()) setError(response.error ? extractErrorMessage(response.error) : EMPTY_REPLY_ERROR);
         } else {
           const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
           // Format the response content
@@ -2958,35 +2848,36 @@ if (modelsResult.models.length > 0) {
       }
     } catch (err) {
       console.error("Chat error:", err);
-      setError(extractErrorMessage(err));
+      if (!wasStopped()) setError(extractErrorMessage(err));
     } finally {
       setIsLoading(false);
       setIsSending(false);
       abortControllerRef.current = null;
       playNotificationSound();
       inputRef.current?.focus();
-      // Check if auto-summarization should trigger
-      setTimeout(() => checkAndAutoSummarize(), 500);
+      // Auto summary runs once the reply is saved (see effect below).
+      autoSummarizePendingRef.current = true;
     }
   };
 
-    const updateConversationMessages = (messages: Message[]) => {
+  // Saves messages to the chat that was open when the request started, even
+  // if the user has since switched to another chat.
+  const updateConversationMessages = (messages: Message[]) => {
     if (!currentConversation) return;
-    
-    const updated = {
-      ...currentConversation,
-      messages,
-      updatedAt: Date.now(),
-    };
-    
-    setCurrentConversation(updated);
-    setConversations((prev) =>
-      prev.map((c) => (c.id === currentConversation.id ? updated : c))
-    );
+    const id = currentConversation.id;
+    const updatedAt = Date.now();
+    // If the chat was cut back past the summarized part (edit and resend of
+    // an early message), the summary describes messages that are gone.
+    const apply = (c: Conversation): Conversation =>
+      (c.lastSummarizedIndex ?? 0) > messages.length
+        ? { ...c, messages, updatedAt, summaryMemory: undefined, lastSummarizedIndex: 0 }
+        : { ...c, messages, updatedAt };
+    setCurrentConversation((prev) => (prev && prev.id === id ? apply(prev) : prev));
+    setConversations((prev) => prev.map((c) => (c.id === id ? apply(c) : c)));
   };
   
   // Lock the currently selected alternative as the main content
-  const lockSelectedAlternative = () => {
+  const lockSelectedAlternative = (): Message[] | undefined => {
     if (!currentConversation || !canSelectAlternatives) return;
     
     const messages = currentConversation.messages;
@@ -3008,34 +2899,9 @@ if (modelsResult.models.length > 0) {
     updateConversationMessages(updatedMessages);
     setCanSelectAlternatives(false);
     setSelectedAlternativeIndex(0);
+    return updatedMessages;
   };
   
-  // Unlock alternatives on the last AI message (restore from locked state)
-  const unlockAlternatives = () => {
-    if (!currentConversation) return;
-    
-    const messages = currentConversation.messages;
-    if (messages.length === 0) return;
-    
-    const lastMessage = messages[messages.length - 1];
-    if (lastMessage.role !== "assistant") return;
-    
-    // If the message has alternatives stored, restore them
-    if (lastMessage.alternatives && lastMessage.alternatives.length > 0) {
-      const unlockedMessage: Message = {
-        ...lastMessage,
-        content: lastMessage.alternatives[lastMessage.selectedAlternativeIndex ?? 0] ?? lastMessage.content,
-        selectedAlternativeIndex: lastMessage.selectedAlternativeIndex ?? 0,
-      };
-      
-      const updatedMessages = [...messages];
-      updatedMessages[updatedMessages.length - 1] = unlockedMessage;
-      updateConversationMessages(updatedMessages);
-      setSelectedAlternativeIndex(lastMessage.selectedAlternativeIndex ?? 0);
-    }
-    
-    setCanSelectAlternatives(true);
-  };
 
   // Helper function to capture debug payload for utility panel
   const captureDebugPayload = (
@@ -3142,21 +3008,14 @@ if (modelsResult.models.length > 0) {
 
       const newIdx = getNewSummarizedIndex(msgs, recentCount);
 
-      const updated = {
-        ...currentConversation,
-        messages: msgs,
-        summaryMemory: result.summary,
-        lastSummarizedIndex: newIdx,
-        updatedAt: Date.now(),
-      };
-
-      setCurrentConversation(updated);
-      setConversations((prev) =>
-        prev.map((c) => (c.id === currentConversation.id ? updated : c))
-      );
+      // Only the summary fields change, so messages sent meanwhile are kept.
+      const id = currentConversation.id;
+      const patch = { summaryMemory: result.summary, lastSummarizedIndex: newIdx, updatedAt: Date.now() };
+      setCurrentConversation((prev) => (prev && prev.id === id ? { ...prev, ...patch } : prev));
+      setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
     } catch (err) {
       console.error("Summarization error:", err);
-      setError(extractErrorMessage(err));
+      if (!wasStopped()) setError(extractErrorMessage(err));
     } finally {
       setIsSummarizing(false);
     }
@@ -3183,6 +3042,14 @@ if (modelsResult.models.length > 0) {
       handleSummarize();
     }
   }, [currentConversation, isSummarizing, isLoading, globalSettings.summarization, handleSummarize]);
+
+  // Check for auto summary after a reply has been saved, using the chat as it
+  // is now rather than as it was when the message was sent.
+  useEffect(() => {
+    if (isLoading || !autoSummarizePendingRef.current) return;
+    autoSummarizePendingRef.current = false;
+    checkAndAutoSummarize();
+  }, [isLoading, checkAndAutoSummarize]);
 
   // Starts a Say/Do/Narrate/Free part at the cursor: closes the part the
   // cursor is in, then inserts the new marks with the cursor between them.
@@ -3322,12 +3189,17 @@ if (modelsResult.models.length > 0) {
         selectedModel: globalSettings.modelId || activeProfile?.selectedModel
       };
       
+      // A new alternative must not see the reply it is an alternative to.
+      const requestMessages = addAlternative && messagesBeforeRetry[messagesBeforeRetry.length - 1]?.role === "assistant"
+        ? messagesBeforeRetry.slice(0, -1)
+        : messagesBeforeRetry;
+
       // Build system prompt with lorebook support and summary memory
       const { systemPrompt, characterContext, beforeContextInstructions, afterContextInstructions, inlineInstructions } = buildFullSystemPrompt(
         selectedCharacter,
         selectedPersona.name,
         selectedPersona.description,
-        messagesBeforeRetry,
+        requestMessages,
         globalInstructions,
         currentConversation.summaryMemory
       );
@@ -3339,8 +3211,8 @@ if (modelsResult.models.length > 0) {
         && lastSummarizedIdx > 0;
       
       const messagesForApi = hasValidSummary
-        ? messagesBeforeRetry.slice(lastSummarizedIdx)
-        : messagesBeforeRetry;
+        ? requestMessages.slice(lastSummarizedIdx)
+        : requestMessages;
 
       // Estimate system prompt tokens and truncate messages if needed
       const systemPromptTokens = estimateTokens(systemPrompt);
@@ -3398,7 +3270,7 @@ if (modelsResult.models.length > 0) {
           },
           (chunk) => {
             if (chunk.error) {
-              setError(extractErrorMessage(chunk.error));
+              if (!wasStopped()) setError(extractErrorMessage(chunk.error));
               return;
             }
             
@@ -3411,6 +3283,12 @@ if (modelsResult.models.length > 0) {
             }
             
             if (chunk.done) {
+              if (!chunk.content?.trim()) {
+                if (!wasStopped()) setError(EMPTY_REPLY_ERROR);
+                setStreamingContent("");
+                setStreamingThinking("");
+                return;
+              }
               const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
               // Format the response content
               const formattedContent = formatResponse(chunk.content || "");
@@ -3477,8 +3355,8 @@ if (modelsResult.models.length > 0) {
           }
         );
         
-        if (response.error) {
-          setError(extractErrorMessage(response.error));
+        if (response.error || !response.content?.trim()) {
+          if (!wasStopped()) setError(response.error ? extractErrorMessage(response.error) : EMPTY_REPLY_ERROR);
         } else {
           // Format the response content
           const formattedContent = formatResponse(response.content || "");
@@ -3521,7 +3399,7 @@ if (modelsResult.models.length > 0) {
       }
     } catch (err) {
       console.error("Retry error:", err);
-      setError(extractErrorMessage(err));
+      if (!wasStopped()) setError(extractErrorMessage(err));
     } finally {
       setIsLoading(false);
       abortControllerRef.current = null;
@@ -3563,8 +3441,7 @@ if (modelsResult.models.length > 0) {
     setStreamingThinking("");
     abortControllerRef.current = new AbortController();
     
-    // Update conversation with the continue message
-    updateConversationMessages(messagesWithContinue);
+    // The continue instruction is only sent, never saved to the chat.
 
     try {
       // Get current provider config
@@ -3610,11 +3487,11 @@ if (modelsResult.models.length > 0) {
         systemPromptTokens
       );
 
-      // Combine messages with correct position: [character context] -> [before instructions] -> [conversation] -> [after instructions]
+      // Combine messages with correct position: [character context] -> [before instructions] -> [conversation with inline] -> [after instructions]
       const messagesWithInstructions = [
         characterContext, 
         ...beforeContextInstructions, 
-        ...truncatedMessages, 
+        ...injectInlineInstructions(truncatedMessages, inlineInstructions), 
         ...afterContextInstructions
       ];
 
@@ -3655,7 +3532,7 @@ if (modelsResult.models.length > 0) {
           },
           (chunk) => {
             if (chunk.error) {
-              setError(extractErrorMessage(chunk.error));
+              if (!wasStopped()) setError(extractErrorMessage(chunk.error));
               return;
             }
             
@@ -3668,8 +3545,14 @@ if (modelsResult.models.length > 0) {
             }
             
             if (chunk.done) {
+              if (!chunk.content?.trim()) {
+                if (!wasStopped()) setError(EMPTY_REPLY_ERROR);
+                setStreamingContent("");
+                setStreamingThinking("");
+                return;
+              }
               // Append to existing assistant message instead of creating new one
-              const existingMessages = [...messagesWithContinue];
+              const existingMessages = [...currentConversation.messages];
               const lastAssistantIdx = existingMessages.findLastIndex(m => m.role === 'assistant');
               if (lastAssistantIdx !== -1) {
                 // Get existing content and remove old think tags for re-assembly
@@ -3721,11 +3604,11 @@ if (modelsResult.models.length > 0) {
           }
         );
         
-        if (response.error) {
-          setError(extractErrorMessage(response.error));
+        if (response.error || !response.content?.trim()) {
+          if (!wasStopped()) setError(response.error ? extractErrorMessage(response.error) : EMPTY_REPLY_ERROR);
         } else {
           // Append to existing assistant message instead of creating new one
-          const existingMessages = [...messagesWithContinue];
+          const existingMessages = [...currentConversation.messages];
           const lastAssistantIdx = existingMessages.findLastIndex(m => m.role === 'assistant');
           if (lastAssistantIdx !== -1) {
             // Get existing content and remove old think tags for re-assembly
@@ -3758,7 +3641,7 @@ if (modelsResult.models.length > 0) {
       }
     } catch (err) {
       console.error("Continue error:", err);
-      setError(extractErrorMessage(err));
+      if (!wasStopped()) setError(extractErrorMessage(err));
     } finally {
       setIsLoading(false);
       abortControllerRef.current = null;
@@ -3800,6 +3683,14 @@ if (modelsResult.models.length > 0) {
     
     updateConversationMessages(updatedMessages);
     setShowMessageMenu(null);
+    // Deleting a message inside the summarized part shifts the rest down by one.
+    if (index < (currentConversation.lastSummarizedIndex ?? 0)) {
+      const id = currentConversation.id;
+      const shift = (c: Conversation): Conversation =>
+        c.id === id ? { ...c, lastSummarizedIndex: Math.max(0, (c.lastSummarizedIndex ?? 0) - 1) } : c;
+      setCurrentConversation((prev) => (prev ? shift(prev) : prev));
+      setConversations((prev) => prev.map(shift));
+    }
     
     // If we deleted the last user message, unlock alternatives on the new last message
     if (wasLastMessage && deletedMessage?.role === "user" && updatedMessages.length > 0) {
@@ -3888,6 +3779,7 @@ if (modelsResult.models.length > 0) {
       setIsLoading(true);
       setStreamingContent("");
       setStreamingThinking("");
+      abortControllerRef.current = new AbortController();
       
       try {
         // Get current provider config
@@ -3977,7 +3869,7 @@ if (modelsResult.models.length > 0) {
           },
             (chunk) => {
               if (chunk.error) {
-                setError(extractErrorMessage(chunk.error));
+                if (!wasStopped()) setError(extractErrorMessage(chunk.error));
                 return;
               }
 
@@ -3990,6 +3882,12 @@ if (modelsResult.models.length > 0) {
               }
 
               if (chunk.done) {
+                if (!chunk.content?.trim()) {
+                  if (!wasStopped()) setError(EMPTY_REPLY_ERROR);
+                  setStreamingContent("");
+                  setStreamingThinking("");
+                  return;
+                }
                 const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
                 // Wrap thinking in <think> tags if present
                 const contentWithThinking = chunk.thinking
@@ -4023,8 +3921,8 @@ if (modelsResult.models.length > 0) {
           }
         );
         
-        if (response.error) {
-          setError(extractErrorMessage(response.error));
+        if (response.error || !response.content?.trim()) {
+          if (!wasStopped()) setError(response.error ? extractErrorMessage(response.error) : EMPTY_REPLY_ERROR);
           } else {
             const thoughtSig = getThoughtSignature(globalSettings.modelId, activeProvider);
             // Wrap thinking in <think> tags if present
@@ -4040,9 +3938,10 @@ if (modelsResult.models.length > 0) {
         }
       } catch (err) {
         console.error("Edit regenerate error:", err);
-        setError(extractErrorMessage(err));
+        if (!wasStopped()) setError(extractErrorMessage(err));
       } finally {
         setIsLoading(false);
+        abortControllerRef.current = null;
         playNotificationSound();
         inputRef.current?.focus();
       }
@@ -4074,52 +3973,6 @@ if (modelsResult.models.length > 0) {
     }
   };
 
-  // Continue last session - restores the previous view and conversation
-  const continueLastSession = () => {
-    const lastSession = lastSessionRef.current;
-    if (!lastSession) return;
-    
-    // Mark as restored to prevent saving during restore
-    hasRestoredSession.current = true;
-    
-    // Restore based on the saved view
-    if (lastSession.view === "chat" && lastSession.personaId && lastSession.characterId && lastSession.conversationId) {
-      // Find the persona
-      const persona = personas.find(p => p.id === lastSession.personaId);
-      const character = characters.find(c => c.id === lastSession.characterId);
-      const conversation = conversations.find(c => c.id === lastSession.conversationId);
-      
-      if (persona && character && conversation) {
-        setSelectedPersona(persona);
-        setSelectedCharacter(character);
-        setCurrentConversation(conversation);
-        setView("chat");
-      } else {
-        // If any not found, go to personas
-        setView("personas");
-      }
-    } else if (lastSession.view === "characters" && lastSession.personaId) {
-      const persona = personas.find(p => p.id === lastSession.personaId);
-      
-      if (persona) {
-        setSelectedPersona(persona);
-        setView("characters");
-      } else {
-        setView("personas");
-      }
-    } else if (lastSession.view === "personas") {
-      setView("personas");
-    } else if (lastSession.view === "generator") {
-      setView("generator");
-    } else {
-      setView("home");
-    }
-    
-    // Reset the flag after a short delay
-    setTimeout(() => {
-      hasRestoredSession.current = false;
-    }, 100);
-  };
 
   // Recent chats across every persona and character, newest first (sidebar + home)
   const [chatSearch, setChatSearch] = useState("");
@@ -4777,10 +4630,7 @@ if (modelsResult.models.length > 0) {
                   </button>
                   <button
                     onClick={() => {
-                      setEditingCharacter(null);
-                      setCharacterName("");
-                      setCharacterDescription("");
-                      setCharacterFirstMessage("");
+                      resetCharacterForm();
                       setShowCharacterModal(true);
                     }}
                     className="flex items-center gap-2 px-4 py-2 bg-ember text-ink rounded-lg hover:bg-ember-soft transition-colors text-sm"
@@ -4825,6 +4675,7 @@ if (modelsResult.models.length > 0) {
 
                     <button
                       onClick={() => {
+                        resetCharacterForm();
                         setShowCharacterModal(true);
                         setShowMobileMenu(false);
                       }}
@@ -4857,10 +4708,7 @@ if (modelsResult.models.length > 0) {
                   </button>
                   <button
                     onClick={() => {
-                      setEditingCharacter(null);
-                      setCharacterName("");
-                      setCharacterDescription("");
-                      setCharacterFirstMessage("");
+                      resetCharacterForm();
                       setShowCharacterModal(true);
                       setShowMobileMenu(false);
                     }}
@@ -4917,7 +4765,7 @@ if (modelsResult.models.length > 0) {
                     Create an AI character to chat with. This is who the AI will roleplay as.
                   </p>
                   <button
-                    onClick={() => setShowCharacterModal(true)}
+                    onClick={() => { resetCharacterForm(); setShowCharacterModal(true); }}
                     className="px-6 py-3 bg-ember text-ink rounded-lg hover:bg-ember-soft transition-colors"
                   >
                     Create Your First Character
@@ -5434,7 +5282,7 @@ if (modelsResult.models.length > 0) {
                            },
                            (chunk) => {
                              if (chunk.error) {
-                               setError(extractErrorMessage(chunk.error));
+                               if (!wasStopped()) setError(extractErrorMessage(chunk.error));
                                setIsGeneratorLoading(false);
                                return;
                              }
@@ -5444,6 +5292,12 @@ if (modelsResult.models.length > 0) {
                              }
                              
                               if (chunk.done) {
+                                if (!chunk.content?.trim()) {
+                                  if (!wasStopped()) setError(EMPTY_REPLY_ERROR);
+                                  setGeneratorStreamingContent("");
+                                  setIsGeneratorLoading(false);
+                                  return;
+                                }
                                 const finalMessages = [...newMessages, { role: "assistant" as const, content: chunk.content || "" }];
                                setCurrentGeneratorSession(prev => prev ? { ...prev, messages: finalMessages, updatedAt: Date.now() } : null);
                                setGeneratorSessions(prev => prev.map(s => s.id === currentGeneratorSession.id ? { ...s, messages: finalMessages, updatedAt: Date.now() } : s));
@@ -5455,7 +5309,7 @@ if (modelsResult.models.length > 0) {
                          );
                        } catch (err) {
                          console.error("Generator error:", err);
-                         setError(extractErrorMessage(err));
+                         if (!wasStopped()) setError(extractErrorMessage(err));
                          setIsGeneratorLoading(false);
                          setGeneratorStreamingContent("");
                        } finally {
@@ -5470,7 +5324,6 @@ if (modelsResult.models.length > 0) {
                        generatorAbortControllerRef.current?.abort();
                        setIsGeneratorLoading(false);
                        setGeneratorStreamingContent("");
-                       generatorAbortControllerRef.current = null;
                      } : undefined}
                    />
                 </div>
@@ -6755,8 +6608,12 @@ if (modelsResult.models.length > 0) {
                 />
                 {isLoading ? (
                   <button
+                    key="stop"
                     type="button"
-                    onClick={() => {
+                    onClick={(e) => {
+                      // React swaps this button for the Send button during the
+                      // click; without this the click would also send.
+                      e.preventDefault();
                       abortControllerRef.current?.abort();
                       setIsLoading(false);
                       setIsSending(false);
@@ -6771,6 +6628,7 @@ if (modelsResult.models.length > 0) {
                   </button>
                 ) : (
                   <button
+                    key="send"
                     type="submit"
                     className="flex-shrink-0 w-11 h-11 flex items-center justify-center bg-ember text-ink rounded-xl hover:bg-ember-soft transition-colors"
                     title={input.trim() ? "Send" : "Empty: new reply or resend last"}
@@ -6868,16 +6726,7 @@ if (modelsResult.models.length > 0) {
             <button
               onClick={() => {
                 setShowCharacterModal(false);
-                setEditingCharacter(null);
-                setCharacterName("");
-                setCharacterDescription("");
-                setCharacterFirstMessage("");
-                setCharacterScenario("");
-                setCharacterSystemPrompt("");
-                setCharacterPostHistoryInstructions("");
-                setCharacterMesExample("");
-                setCharacterAvatar("");
-                setCharacterAlternateGreetings([]);
+                resetCharacterForm();
               }}
               className="absolute top-4 right-4 p-1 hover:bg-ink-hover rounded-lg transition-colors"
             >
@@ -7133,17 +6982,8 @@ if (modelsResult.models.length > 0) {
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => {
-                  setShowCharacterModal(false);
-                  setEditingCharacter(null);
-                  setCharacterName("");
-                  setCharacterDescription("");
-                  setCharacterFirstMessage("");
-                  setCharacterScenario("");
-                  setCharacterSystemPrompt("");
-                  setCharacterPostHistoryInstructions("");
-                  setCharacterMesExample("");
-                  setCharacterAvatar("");
-                  setCharacterAlternateGreetings([]);
+                    setShowCharacterModal(false);
+                  resetCharacterForm();
                 }}
                 className="flex-1 py-2 bg-ink-hover text-parchment rounded-lg hover:bg-line-strong transition-colors"
               >

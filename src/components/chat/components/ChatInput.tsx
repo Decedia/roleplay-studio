@@ -86,8 +86,13 @@ export function ChatInput({
             </div>
             {isLoading && onCancel ? (
               <Button
+                key="stop"
                 type="button"
-                onClick={onCancel}
+                onClick={(e) => {
+                  // Stops the click from also sending once this becomes Send.
+                  e.preventDefault();
+                  onCancel();
+                }}
                 size="icon"
                 className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg transition-all shadow-lg bg-red-600 hover:bg-red-700"
                 title="Cancel"
@@ -96,6 +101,7 @@ export function ChatInput({
               </Button>
             ) : (
               <Button
+                key="send"
                 type="submit"
                 disabled={disabled || isLoading}
                 size="icon"
