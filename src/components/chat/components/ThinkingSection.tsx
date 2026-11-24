@@ -14,11 +14,12 @@ export function ThinkingSection({ content, signature, modelName }: ThinkingSecti
   return (
     <div className="mb-3">
       <button
+        type="button"
         onClick={() => setIsExpanded(!isExpanded)}
         className="flex items-center gap-2 text-sm text-parchment-muted hover:text-parchment-soft transition-colors flex-wrap max-w-full"
       >
         <span className="text-base">💭</span>
-        <span>Thinking...</span>
+        <span>{isExpanded ? "Hide thinking" : "Show thinking"}</span>
         {signature && (
           <span className="px-2 py-0.5 bg-ember/10 text-ember text-xs rounded-full border border-ember/40 whitespace-nowrap">
             {signature}

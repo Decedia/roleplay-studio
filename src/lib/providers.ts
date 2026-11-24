@@ -525,27 +525,8 @@ export const chatWithGoogleAIStudio: ChatFunction = async (
       topK: options.topK,
     };
 
-    if (options.enableThinking && config.selectedModel) {
-      const modelId = config.selectedModel.toLowerCase();
-      if (modelId.includes("gemini-2.5")) {
-        const budgetMap: Record<string, number> = {
-          NONE: 0,
-          LOW: 1024,
-          MEDIUM: 4096,
-          HIGH: 8192
-        };
-        const budget = budgetMap[options.thinkingBudget || "LOW"];
-        if (budget > 0) {
-          generationConfig.thinkingConfig = {
-            thinkingBudget: budget
-          };
-        }
-      } else {
-        generationConfig.thinkingConfig = {
-          thinkingLevel: options.thinkingLevel || "HIGH"
-        };
-      }
-    }
+    const thinkingConfig = geminiThinkingConfig(config.selectedModel, options);
+    if (thinkingConfig) generationConfig.thinkingConfig = thinkingConfig;
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${config.selectedModel}:generateContent`,
@@ -572,11 +553,11 @@ export const chatWithGoogleAIStudio: ChatFunction = async (
     }
 
     const data = await readJson(response);
-    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const { text: content, thinking } = splitGeminiParts(data.candidates?.[0]?.content?.parts);
     const blocked = geminiBlockReason(data);
     if (!content && blocked) return { error: blocked };
 
-    return { content };
+    return { content, thinking: thinking || undefined };
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Unknown error occurred",
@@ -631,29 +612,8 @@ export const streamWithGoogleAIStudio = async (
     };
 
     // Add thinking config for models that support it (Gemini 2.0+)
-    if (options.enableThinking && config.selectedModel) {
-      const modelId = config.selectedModel.toLowerCase();
-      if (modelId.includes("gemini-2.5")) {
-        // Gemini 2.5 models use thinkingBudget (tokens)
-        const budgetMap: Record<string, number> = {
-          NONE: 0,
-          LOW: 1024,
-          MEDIUM: 4096,
-          HIGH: 8192
-        };
-        const budget = budgetMap[options.thinkingBudget || "LOW"];
-        if (budget > 0) {
-          generationConfig.thinkingConfig = {
-            thinkingBudget: budget
-          };
-        }
-      } else {
-        // Legacy thinking config for Gemini 2.0 and earlier
-        generationConfig.thinkingConfig = {
-          thinkingLevel: options.thinkingLevel || "HIGH"
-        };
-      }
-    }
+    const thinkingConfig = geminiThinkingConfig(config.selectedModel, options);
+    if (thinkingConfig) generationConfig.thinkingConfig = thinkingConfig;
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${config.selectedModel}:streamGenerateContent?alt=sse`,
@@ -708,15 +668,14 @@ export const streamWithGoogleAIStudio = async (
             blocked = geminiBlockReason(data) || blocked;
             const parts = data.candidates?.[0]?.content?.parts || [];
             
-            for (const part of parts) {
-              if (part.text) {
-                fullContent += part.text;
-                onChunk({ content: fullContent });
-              }
-              if (part.thought) {
-                fullThinking += part.thought;
-                onChunk({ thinking: fullThinking });
-              }
+            const { text, thinking } = splitGeminiParts(parts);
+            if (thinking) {
+              fullThinking += thinking;
+              onChunk({ thinking: fullThinking });
+            }
+            if (text) {
+              fullContent += text;
+              onChunk({ content: fullContent });
             }
           } catch {
             // Skip invalid JSON
@@ -734,6 +693,58 @@ export const streamWithGoogleAIStudio = async (
     onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
   }
 };
+
+const THINKING_BUDGETS: Record<ThinkingBudget, number> = { NONE: 0, LOW: 1024, MEDIUM: 4096, HIGH: 8192 };
+
+/**
+ * Builds Gemini's thinkingConfig for a model, or null when the model doesn't think.
+ * Gemini 2.5 takes a token budget; Gemini 3 and later take a level.
+ * With thinking off we ask for the least thinking the model allows, because
+ * sending nothing lets 2.5 Flash and Gemini 3 think at their default.
+ */
+export function geminiThinkingConfig(
+  model: string | undefined,
+  options: { enableThinking?: boolean; thinkingLevel?: ThinkingLevel; thinkingBudget?: ThinkingBudget }
+): Record<string, unknown> | null {
+  const id = (model || "").toLowerCase();
+  const version = id.match(/gemini-(\d+)(?:\.(\d+))?/);
+  if (!version) return null;
+  const major = Number(version[1]);
+  const minor = Number(version[2] || 0);
+  const isPro = id.includes("-pro");
+  const on = !!options.enableThinking;
+
+  if (major === 2 && minor === 5) {
+    const budget = on ? THINKING_BUDGETS[options.thinkingBudget || "LOW"] : 0;
+    if (budget === 0) {
+      // 2.5 Pro can't stop thinking, so leave it at its default.
+      return isPro ? null : { thinkingBudget: 0 };
+    }
+    return { thinkingBudget: budget, includeThoughts: true };
+  }
+
+  if (major >= 3) {
+    if (!on) return { thinkingLevel: isPro ? "low" : "minimal" };
+    const level = (options.thinkingLevel || "HIGH").toLowerCase();
+    // Pro models only offer low and high.
+    const thinkingLevel = isPro && level === "medium" ? "high" : level;
+    return { thinkingLevel, includeThoughts: true };
+  }
+
+  return null;
+}
+
+/** Splits Gemini reply parts into reply text and thinking (thought parts carry thought: true). */
+export function splitGeminiParts(parts: { text?: string; thought?: boolean }[] | undefined): { text: string; thinking: string } {
+  let text = "";
+  let thinking = "";
+  for (const part of parts || []) {
+    if (!part.text) continue;
+    if (part.thought) thinking += part.text;
+    else text += part.text;
+  }
+  return { text, thinking };
+}
 
 /** Explains why Gemini returned no text, or null when it wasn't blocked. */
 function geminiBlockReason(data: {
@@ -787,27 +798,8 @@ export const chatWithVertexAI: ChatFunction = async (
       topK: options.topK,
     };
 
-    if (options.enableThinking && config.selectedModel) {
-      const modelId = config.selectedModel.toLowerCase();
-      if (modelId.includes("gemini-2.5")) {
-        const budgetMap: Record<string, number> = {
-          NONE: 0,
-          LOW: 1024,
-          MEDIUM: 4096,
-          HIGH: 8192
-        };
-        const budget = budgetMap[options.thinkingBudget || "LOW"];
-        if (budget > 0) {
-          generationConfig.thinkingConfig = {
-            thinkingBudget: budget
-          };
-        }
-      } else {
-        generationConfig.thinkingConfig = {
-          thinkingLevel: options.thinkingLevel || "HIGH"
-        };
-      }
-    }
+    const thinkingConfig = geminiThinkingConfig(config.selectedModel, options);
+    if (thinkingConfig) generationConfig.thinkingConfig = thinkingConfig;
 
     const response = await fetch("/api/vertex-ai", {
       method: "POST",
@@ -836,9 +828,9 @@ export const chatWithVertexAI: ChatFunction = async (
       };
     }
 
-    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const { text: content, thinking } = splitGeminiParts(data.candidates?.[0]?.content?.parts);
 
-    return { content };
+    return { content, thinking: thinking || undefined };
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Unknown error occurred",
@@ -1441,27 +1433,8 @@ export const streamWithVertexAI = async (
       topK: options.topK,
     };
 
-    if (options.enableThinking && config.selectedModel) {
-      const modelId = config.selectedModel.toLowerCase();
-      if (modelId.includes("gemini-2.5")) {
-        const budgetMap: Record<string, number> = {
-          NONE: 0,
-          LOW: 1024,
-          MEDIUM: 4096,
-          HIGH: 8192
-        };
-        const budget = budgetMap[options.thinkingBudget || "LOW"];
-        if (budget > 0) {
-          generationConfig.thinkingConfig = {
-            thinkingBudget: budget
-          };
-        }
-      } else {
-        generationConfig.thinkingConfig = {
-          thinkingLevel: options.thinkingLevel || "HIGH"
-        };
-      }
-    }
+    const thinkingConfig = geminiThinkingConfig(config.selectedModel, options);
+    if (thinkingConfig) generationConfig.thinkingConfig = thinkingConfig;
 
     const response = await fetch("/api/vertex-ai", {
       method: "PATCH",
@@ -1517,15 +1490,14 @@ export const streamWithVertexAI = async (
               const data = JSON.parse(jsonStr);
               const parts = data.candidates?.[0]?.content?.parts || [];
               
-              for (const part of parts) {
-                if (part.text) {
-                  fullContent += part.text;
-                  onChunk({ content: fullContent });
-                }
-                if (part.thought) {
-                  fullThinking += part.thought;
-                  onChunk({ thinking: fullThinking });
-                }
+              const { text, thinking } = splitGeminiParts(parts);
+              if (thinking) {
+                fullThinking += thinking;
+                onChunk({ thinking: fullThinking });
+              }
+              if (text) {
+                fullContent += text;
+                onChunk({ content: fullContent });
               }
             } catch {
               // Skip invalid JSON
