@@ -1,5 +1,6 @@
 // LLM Provider implementations
 
+import { fetchHordeWorkers, hordeModelsFromWorkers, runHordeJob } from "./horde";
 import {
   LLMProviderType,
   LLMProvider,
@@ -724,7 +725,8 @@ export function geminiThinkingConfig(
   }
 
   if (major >= 3) {
-    if (!on) return { thinkingLevel: isPro ? "low" : "minimal" };
+    // Gemini 4 can't stop thinking and rejects "minimal"; Pro models also lack it.
+    if (!on) return { thinkingLevel: isPro || major >= 4 ? "low" : "minimal" };
     const level = (options.thinkingLevel || "HIGH").toLowerCase();
     // Pro models only offer low and high.
     const thinkingLevel = isPro && level === "medium" ? "high" : level;
@@ -1513,190 +1515,81 @@ export const streamWithVertexAI = async (
   }
 };
 
-// KoboldAI Horde chat implementation - uses server-side proxy to avoid CORS
-export const chatWithKoboldHorde: ChatFunction = async (
-    messages,
-    config,
-    options
-  ) => {
-
-    const availableModels = getModelsForProvider("kobold-horde");
-    const selectedModel = availableModels.find(m => m.id === (config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL));
-    const maxContextLength = selectedModel?.contextWindow || 8192;
-
-    try {
-      const systemMessages = messages.filter(m => m.role === "system");
-      const nonSystemMessages = messages.filter(m => m.role !== "system");
-
-      let prompt = "";
-
-      const systemContent = systemMessages.map(m => m.content).join("\n\n");
-      if (systemContent || options.systemPrompt) {
-        prompt += (systemContent || options.systemPrompt) + "\n\n";
-      }
-
-      for (const message of nonSystemMessages) {
-        if (message.role === "user") {
-          prompt += `User: ${message.content}\n\n`;
-        } else if (message.role === "assistant") {
-          prompt += `Assistant: ${message.content}\n\n`;
-        }
-      }
-
-      prompt += "Assistant: ";
-
-      const response = await fetch("/api/kobold-horde", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          apiKey: config.apiKey || HORDE_ANONYMOUS_KEY,
-          model: config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL,
-          prompt,
-          params: {
-            temperature: options.temperature,
-            top_p: options.topP,
-            top_k: options.topK,
-            typical: 1,
-            frmtadsnsp: false,
-            frmtrmblln: false,
-            frmtrmspch: false,
-            frmttriminc: false,
-            rep_pen: 1.1,
-            rep_pen_range: 4096,
-            rep_pen_slope: 10,
-            singleline: false,
-            smoothing_factor: 0,
-            dynatemp_range: 0,
-            dynatemp_exponent: 1,
-            n: 1,
-            max_context_length: maxContextLength,
-            max_length: options.maxTokens,
-            min_p: 0,
-            use_default_badwordsids: true,
-            sampler_order: [0],
-            stop_sequence: [],
-          },
-        }),
-        signal: options.abortController?.signal,
-      });
-
-      const data = await readJson(response);
-
-      if (!response.ok || data.error) {
-        return {
-          error: data.error || `HTTP ${response.status}`,
-        };
-      }
-
-      return { content: data.content || "" };
-    } catch (error) {
-      return {
-        error: error instanceof Error ? error.message : "Unknown error occurred",
-      };
-    }
+/** Sampler settings sent with every Horde job; length and context are chosen per job. */
+function hordeParams(options: { temperature: number; topP: number; topK: number }) {
+  return {
+    temperature: options.temperature,
+    top_p: options.topP,
+    top_k: options.topK,
+    typical: 1,
+    rep_pen: 1.1,
+    rep_pen_range: 4096,
+    rep_pen_slope: 10,
+    singleline: false,
+    min_p: 0,
+    use_default_badwordsids: true,
+    stop_sequence: ["\nUser:"],
   };
+}
 
-// KoboldAI Horde streaming implementation - falls back to async+status polling
-// because the /v2/generate/text/stream endpoint is no longer available.
+// AI Horde chat implementation - jobs are queued, so the browser polls (src/lib/horde.ts)
+export const chatWithKoboldHorde: ChatFunction = async (messages, config, options) => {
+  try {
+    const content = await runHordeJob({
+      apiKey: config.apiKey || HORDE_ANONYMOUS_KEY,
+      model: config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL,
+      messages,
+      systemPrompt: options.systemPrompt,
+      maxTokens: options.maxTokens,
+      params: hordeParams(options),
+      signal: options.abortController?.signal,
+    });
+    return { content: cleanHordeReply(content) };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Unknown error occurred" };
+  }
+};
+
+// AI Horde has no token streaming: the queue status is shown while waiting, then the whole reply arrives.
 export const streamWithKoboldHorde = async (
-   messages: Message[],
-   config: ProviderConfig,
-   options: {
-     temperature: number;
-     maxTokens: number;
-     topP: number;
-     topK: number;
-     systemPrompt?: string;
-     enableThinking?: boolean;
-     thinkingLevel?: ThinkingLevel;
-     thinkingBudget?: ThinkingBudget;
-     abortController?: AbortController;
-   },
-   onChunk: StreamCallback
- ) => {
+  messages: Message[],
+  config: ProviderConfig,
+  options: {
+    temperature: number;
+    maxTokens: number;
+    topP: number;
+    topK: number;
+    systemPrompt?: string;
+    enableThinking?: boolean;
+    thinkingLevel?: ThinkingLevel;
+    thinkingBudget?: ThinkingBudget;
+    abortController?: AbortController;
+  },
+  onChunk: StreamCallback
+) => {
+  try {
+    const content = await runHordeJob({
+      apiKey: config.apiKey || HORDE_ANONYMOUS_KEY,
+      model: config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL,
+      messages,
+      systemPrompt: options.systemPrompt,
+      maxTokens: options.maxTokens,
+      params: hordeParams(options),
+      signal: options.abortController?.signal,
+      onWaiting: (status) => onChunk({ status }),
+    });
+    onChunk({ status: "" });
+    onChunk({ content: cleanHordeReply(content), done: true });
+  } catch (error) {
+    onChunk({ status: "" });
+    onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
+  }
+};
 
-   const availableModels = getModelsForProvider("kobold-horde");
-   const selectedModel = availableModels.find(m => m.id === (config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL));
-   const maxContextLength = selectedModel?.contextWindow || 8192;
-
-   try {
-     const systemMessages = messages.filter(m => m.role === "system");
-     const nonSystemMessages = messages.filter(m => m.role !== "system");
-
-     let prompt = "";
-     const systemContent = systemMessages.map(m => m.content).join("\n\n");
-     if (systemContent || options.systemPrompt) {
-       prompt += (systemContent || options.systemPrompt || "") + "\n\n";
-     }
-
-     for (const message of nonSystemMessages) {
-       if (message.role === "user") {
-         prompt += `User: ${message.content}\n\n`;
-       } else if (message.role === "assistant") {
-         prompt += `Assistant: ${message.content}\n\n`;
-       }
-     }
-
-     prompt += "Assistant: ";
-
-     const response = await fetch("/api/kobold-horde", {
-       method: "POST",
-       headers: {
-         "Content-Type": "application/json",
-       },
-       body: JSON.stringify({
-         apiKey: config.apiKey || HORDE_ANONYMOUS_KEY,
-         model: config.selectedModel || DEFAULT_KOBOLD_HORDE_MODEL,
-         prompt,
-         params: {
-           temperature: options.temperature,
-           top_p: options.topP,
-           top_k: options.topK,
-           typical: 1,
-           frmtadsnsp: false,
-           frmtrmblln: false,
-           frmtrmspch: false,
-           frmttriminc: false,
-           rep_pen: 1.1,
-           rep_pen_range: 4096,
-           rep_pen_slope: 10,
-           singleline: false,
-           smoothing_factor: 0,
-           dynatemp_range: 0,
-           dynatemp_exponent: 1,
-           n: 1,
-           max_context_length: maxContextLength,
-           max_length: options.maxTokens,
-           min_p: 0,
-           use_default_badwordsids: true,
-           sampler_order: [0],
-           stop_sequence: [],
-         },
-       }),
-       signal: options.abortController?.signal,
-     });
-
-     if (!response.ok) {
-       const errorData = await readJson(response);
-       onChunk({ error: extractErrorMessage(errorData.error) });
-       return;
-     }
-
-     const data = await readJson(response);
-     const content = data.content || "";
-     const done = data.done ?? true;
-
-     if (content) {
-       onChunk({ content, done });
-     } else if (data.error) {
-       onChunk({ error: data.error });
-     }
-   } catch (error) {
-     onChunk({ error: error instanceof Error ? error.message : "Unknown error occurred" });
-   }
- };
+/** Cuts the reply where the model starts writing the user's next turn. */
+function cleanHordeReply(text: string): string {
+  return text.split(/\n(?:User|Assistant):/)[0].trim();
+}
 
 // Cohere chat implementation - uses OpenAI-compatible API via server proxy
 export const chatWithCohere: ChatFunction = async (
@@ -2776,25 +2669,14 @@ const fetchOpenRouterModels = async (config: ProviderConfig): Promise<{ models: 
   }
 };
 
-const fetchKoboldHordeModels = async (config: ProviderConfig): Promise<{ models: FetchedModel[]; error?: string }> => {
+const fetchKoboldHordeModels = async (_config: ProviderConfig): Promise<{ models: FetchedModel[]; error?: string }> => {
   try {
-    const response = await fetch("https://aihorde.net/api/v2/status/models?type=text");
-    const data = await readJson(response);
-    if (!response.ok || data.error) {
-      return { models: [], error: `HTTP ${response.status}` };
-    }
-    const models: FetchedModel[] = data
-      .filter((model: any) => model.count > 0)
-      .map((model: any) => ({
-        id: model.name,
-        provider: "kobold-horde",
-        name: model.name,
-        workerCount: model.count,
-        performance: model.performance,
-      }));
+    // Built from online workers so each model carries the real limits on offer.
+    const models = hordeModelsFromWorkers(await fetchHordeWorkers(true));
+    if (models.length === 0) return { models: [], error: "No AI Horde text workers are online right now" };
     return { models };
   } catch (error) {
-    return { models: getModelsForProvider("kobold-horde") };
+    return { models: [], error: error instanceof Error ? error.message : "Couldn't load AI Horde workers" };
   }
 };
 

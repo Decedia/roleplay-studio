@@ -1116,6 +1116,8 @@ export default function Chat() {
 
   const [streamingContent, setStreamingContent] = useState<string>("");
   const [streamingThinking, setStreamingThinking] = useState<string>("");
+  // Provider wait message, e.g. AI Horde queue position.
+  const [streamStatus, setStreamStatus] = useState<string>("");
   const [visibleMessageCount, setVisibleMessageCount] = useState<number>(20);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -2693,11 +2695,13 @@ if (modelsResult.models.length > 0) {
     setIsLoading(true);
     setStreamingContent("");
     setStreamingThinking("");
+    setStreamStatus("");
     abortControllerRef.current = new AbortController();
 
     const finish = (content: string | undefined, thinking: string | undefined) => {
       setStreamingContent("");
       setStreamingThinking("");
+      setStreamStatus("");
       if (!content?.trim()) {
         if (!wasStopped()) setError(EMPTY_REPLY_ERROR);
         return;
@@ -2782,6 +2786,7 @@ if (modelsResult.models.length > 0) {
           }
           if (chunk.content !== undefined) setStreamingContent(chunk.content);
           if (chunk.thinking !== undefined) setStreamingThinking(chunk.thinking);
+          if (chunk.status !== undefined) setStreamStatus(chunk.status);
           if (chunk.done) finish(chunk.content, chunk.thinking);
         });
       } else {
@@ -5121,7 +5126,7 @@ if (modelsResult.models.length > 0) {
                         </div>
                       ) : (
                         <div className="flex items-center gap-2 text-sm italic text-parchment-muted font-story">
-                          {streamingThinking ? "thinking" : "writing"}
+                          {streamStatus || (streamingThinking ? "thinking" : "writing")}
                           <span className="flex gap-1">
                             <span className="w-1.5 h-1.5 bg-parchment-muted rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
                             <span className="w-1.5 h-1.5 bg-parchment-muted rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />

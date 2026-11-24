@@ -1,134 +1,51 @@
-import { NextRequest, NextResponse } from "next/server";
-import { extractErrorMessage } from "@/lib/errorUtils";
+import { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import { jsonError, readJsonBody, readUpstreamError } from "@/lib/server/proxy";
+
+/**
+ * AI Horde text API, one short call per request. The browser does the
+ * waiting (see src/lib/horde.ts), because Horde jobs can queue for longer
+ * than a serverless function may run.
+ *
+ * Actions: "workers" (online text workers), "submit" (start a job),
+ * "status" (poll a job), "cancel" (leave the queue).
+ */
+
+const BASE_URL = "https://aihorde.net/api/v2";
+// Horde asks clients to identify themselves: name:version:contact.
+const CLIENT_AGENT = "roleplay-studio:1.0:unknown";
+const JOB_ID = /^[a-zA-Z0-9-]{8,64}$/;
 
 export async function POST(request: NextRequest) {
+  const body = await readJsonBody<{ action?: unknown; apiKey?: unknown; id?: unknown; payload?: unknown }>(request);
+  if (!body) return jsonError("Request body must be JSON", 400);
+  const { action } = body;
+  const apiKey = typeof body.apiKey === "string" && body.apiKey ? body.apiKey : "0000000000";
+  const headers: Record<string, string> = { "Client-Agent": CLIENT_AGENT, apikey: apiKey };
+
+  let url: string;
+  let init: RequestInit;
+  if (action === "workers") {
+    url = `${BASE_URL}/workers?type=text`;
+    init = { headers: { "Client-Agent": CLIENT_AGENT } };
+  } else if (action === "submit") {
+    if (!body.payload || typeof body.payload !== "object") return jsonError("Missing job payload", 400);
+    url = `${BASE_URL}/generate/text/async`;
+    init = { method: "POST", headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify(body.payload) };
+  } else if (action === "status" || action === "cancel") {
+    if (typeof body.id !== "string" || !JOB_ID.test(body.id)) return jsonError("Invalid job id", 400);
+    url = `${BASE_URL}/generate/text/status/${body.id}`;
+    init = { method: action === "cancel" ? "DELETE" : "GET", headers };
+  } else {
+    return jsonError("Unknown action", 400);
+  }
+
   try {
-    const body = await request.json();
-    const { apiKey, model, prompt, params, stream } = body;
-
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "KoboldAI Horde API key is required" },
-        { status: 400 }
-      );
-    }
-
-    if (!prompt) {
-      return NextResponse.json(
-        { error: "Prompt is required" },
-        { status: 400 }
-      );
-    }
-
-    // Aborted when the browser disconnects (Stop button).
-    const signal = request.signal;
-
-    const baseUrl = "https://aihorde.net/api";
-
-    const submitResponse = await fetch(`${baseUrl}/v2/generate/text/async`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: apiKey,
-      },
-      body: JSON.stringify({
-        prompt,
-        params: {
-          ...params,
-          max_context_length: params?.max_context_length || 8192,
-        },
-        models: model ? [model] : undefined,
-        disable_badwords: true,
-      }),
-      signal,
-    });
-
-    if (!submitResponse.ok) {
-      const errorData = await submitResponse.json().catch(() => ({}));
-      return NextResponse.json(
-        { error: extractErrorMessage(errorData) || `HTTP ${submitResponse.status}` },
-        { status: submitResponse.status }
-      );
-    }
-
-    const submitData = await submitResponse.json();
-    const requestIdFromHorde = submitData.id;
-
-    if (!requestIdFromHorde) {
-      return NextResponse.json(
-        { error: "Failed to get request ID from Horde API" },
-        { status: 500 }
-      );
-    }
-
-    const maxPolls = 60;
-    const pollInterval = 2000;
-
-    for (let pollCount = 0; pollCount < maxPolls; pollCount++) {
-      if (signal.aborted) {
-        // Free our place in the Horde queue.
-        await fetch(`${baseUrl}/v2/generate/text/status/${requestIdFromHorde}`, {
-          method: "DELETE",
-          headers: { apikey: apiKey },
-        }).catch(() => {});
-        return NextResponse.json(
-          { error: "Generation cancelled" },
-          { status: 499 }
-        );
-      }
-
-      await new Promise(resolve => setTimeout(resolve, pollInterval));
-
-      try {
-        const statusResponse = await fetch(
-          `${baseUrl}/v2/generate/text/status/${requestIdFromHorde}`,
-          {
-            headers: { apikey: apiKey },
-          }
-        );
-
-        if (!statusResponse.ok) continue;
-
-        const statusData = await statusResponse.json();
-
-        if (statusData.faulted) {
-          return NextResponse.json(
-            { error: "Generation failed" },
-            { status: 500 }
-          );
-        }
-
-        if (statusData.done) {
-          const generations = statusData.generations || [];
-          if (generations.length > 0) {
-            const content = generations[0].text || "";
-
-            if (stream) {
-              return NextResponse.json({ content, done: true });
-            } else {
-              return NextResponse.json({ content });
-            }
-          } else {
-            return NextResponse.json(
-              { error: "No generations returned" },
-              { status: 500 }
-            );
-          }
-        }
-      } catch {
-        continue;
-      }
-    }
-
-    return NextResponse.json(
-      { error: "Generation timed out" },
-      { status: 408 }
-    );
+    const response = await fetch(url, { ...init, signal: AbortSignal.any([request.signal, AbortSignal.timeout(30_000)]) });
+    if (!response.ok) return jsonError(await readUpstreamError(response), response.status);
+    return NextResponse.json(await response.json());
   } catch (error) {
-    console.error("KoboldAI Horde API error:", error);
-    return NextResponse.json(
-      { error: extractErrorMessage(error) },
-      { status: 500 }
-    );
+    if (request.signal.aborted) return jsonError("Cancelled", 499);
+    return jsonError(error instanceof Error ? error.message : "AI Horde request failed", 502);
   }
 }
