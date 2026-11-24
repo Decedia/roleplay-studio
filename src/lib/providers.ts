@@ -724,7 +724,8 @@ export function geminiThinkingConfig(
   }
 
   if (major >= 3) {
-    if (!on) return { thinkingLevel: isPro ? "low" : "minimal" };
+    // Gemini 4 can't stop thinking and rejects "minimal"; Pro models also lack it.
+    if (!on) return { thinkingLevel: isPro || major >= 4 ? "low" : "minimal" };
     const level = (options.thinkingLevel || "HIGH").toLowerCase();
     // Pro models only offer low and high.
     const thinkingLevel = isPro && level === "medium" ? "high" : level;
