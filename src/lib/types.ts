@@ -298,7 +298,8 @@ export interface ChatResponse {
 }
 
 // Streaming callback type for provider responses
-export type StreamCallback = (chunk: { content?: string; thinking?: string; done?: boolean; error?: string }) => void;
+/** status: a short wait message shown instead of "writing", e.g. a queue position. */
+export type StreamCallback = (chunk: { content?: string; thinking?: string; status?: string; done?: boolean; error?: string }) => void;
 
 // Provider connection test result interface
 export interface TestConnectionResult {
