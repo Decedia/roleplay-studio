@@ -1477,7 +1477,7 @@ export function SettingsModal({
                     onCheckedChange={(checked) => setGlobalSettings({ ...globalSettings, enableThinking: checked })}
                   />
                   <p className="text-xs text-parchment-muted mt-1">
-                    Show AI reasoning process (Gemini models only)
+                    Show the model&apos;s thinking (Gemini 2.5 and 3+). Off asks for the least thinking the model allows; 2.5 Pro always thinks.
                   </p>
                 </div>
 
@@ -1570,13 +1570,13 @@ export function SettingsModal({
                     onChange={(e) => setGlobalSettings({ ...globalSettings, thinkingBudget: e.target.value as "NONE" | "LOW" | "MEDIUM" | "HIGH" })}
                     className="w-full bg-ink-hover text-parchment rounded-lg px-4 py-2 border border-line-strong focus:outline-none focus:ring-2 focus:ring-ember"
                   >
-                    <option value="NONE">None - No thinking budget</option>
+                    <option value="NONE">None - Turn thinking off (2.5 Pro still thinks)</option>
                     <option value="LOW">Low - Minimal thinking (fastest)</option>
                     <option value="MEDIUM">Medium - Balanced thinking</option>
                     <option value="HIGH">High - Maximum thinking (slowest)</option>
                   </select>
                   <p className="text-xs text-parchment-muted mt-1">
-                    Controls the thinking budget for Gemini 2.5 models (affects response quality and speed)
+                    Controls the thinking budget for Gemini 2.5 models. Thinking counts toward Max Tokens, so keep that high enough.
                   </p>
                 </>
               ) : (
@@ -1590,11 +1590,11 @@ export function SettingsModal({
                     className="w-full bg-ink-hover text-parchment rounded-lg px-4 py-2 border border-line-strong focus:outline-none focus:ring-2 focus:ring-ember"
                   >
                     <option value="LOW">Low - Quick responses with minimal thinking</option>
-                    <option value="MEDIUM">Medium - Balanced thinking and speed</option>
+                    <option value="MEDIUM">Medium - Balanced (Pro models use High)</option>
                     <option value="HIGH">High - Deep thinking for complex responses</option>
                   </select>
                   <p className="text-xs text-parchment-muted mt-1">
-                    Controls how deeply the AI thinks before responding (affects response quality and speed)
+                    Controls how deeply Gemini 3 models think before responding. Thinking counts toward Max Tokens, so keep that high enough.
                   </p>
                 </>
               )}
