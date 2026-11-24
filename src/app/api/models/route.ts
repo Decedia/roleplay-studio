@@ -108,17 +108,18 @@ export async function POST(request: NextRequest) {
           .filter((model: { supportedGenerationMethods?: string[] }) => 
             model.supportedGenerationMethods?.includes("generateContent")
           )
-          .map((model: { name: string; displayName?: string }) => {
+          .map((model: { name: string; displayName?: string; inputTokenLimit?: number; outputTokenLimit?: number; thinking?: boolean }) => {
             const modelId = model.name.replace("models/", "");
             const capabilities = modelCapabilities[modelId] || { context: 128000, max_tokens: 8192, supportsThinking: false };
             
+            // Google reports each model's real limits; the table is only a fallback.
             return {
               id: modelId,
               provider: "google-ai-studio",
               name: model.displayName || modelId,
-              context: capabilities.context,
-              max_tokens: capabilities.max_tokens,
-              supportsThinking: capabilities.supportsThinking,
+              context: model.inputTokenLimit || capabilities.context,
+              max_tokens: model.outputTokenLimit || capabilities.max_tokens,
+              supportsThinking: model.thinking ?? capabilities.supportsThinking,
             };
           });
 
@@ -140,8 +141,6 @@ export async function POST(request: NextRequest) {
             { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", context: 1048576, max_tokens: 65536, supportsThinking: true },
             { id: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash-Lite", context: 1048576, max_tokens: 65536, supportsThinking: false },
             { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", context: 1048576, max_tokens: 8192, supportsThinking: true },
-            { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", context: 2097152, max_tokens: 8192, supportsThinking: false },
-            { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash", context: 1048576, max_tokens: 8192, supportsThinking: false },
           ];
 
           const models = vertexModels.map((model) => ({
@@ -175,8 +174,6 @@ export async function POST(request: NextRequest) {
             { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", context: 1048576, max_tokens: 65536, supportsThinking: true },
             { id: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash-Lite", context: 1048576, max_tokens: 65536, supportsThinking: false },
             { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", context: 1048576, max_tokens: 8192, supportsThinking: true },
-            { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", context: 2097152, max_tokens: 8192, supportsThinking: false },
-            { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash", context: 1048576, max_tokens: 8192, supportsThinking: false },
           ];
 
           const models = vertexModels.map((model) => ({

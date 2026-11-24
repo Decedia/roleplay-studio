@@ -189,6 +189,8 @@ export interface ProviderConfig {
   vertexMode?: VertexMode; // For Vertex AI: express (API key only) or full (project ID + service account)
   vertexLocation?: VertexLocation; // For Vertex AI: server location
   selectedModel?: string;
+  /** Vertex only: an AI Studio key used to fetch the current Gemini model list. Never saved. */
+  aiStudioApiKey?: string;
   // New profile-based storage
   profiles: ProviderProfile[];
   activeProfileId: string | null;

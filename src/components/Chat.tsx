@@ -2210,6 +2210,10 @@ const handleConnectProvider = async (providerType: LLMProviderType) => {
         activeProfile = config.profiles[0] || null;
       }
       
+      // Vertex gets its model list from AI Studio (see fetchGoogleVertexModels).
+      const aiStudio = providerConfigs["google-ai-studio"];
+      const aiStudioProfile = aiStudio?.profiles.find(p => p.id === aiStudio.activeProfileId) ?? aiStudio?.profiles[0];
+
       // Build profile config for API calls
       const profileConfig = {
         ...config,
@@ -2218,7 +2222,8 @@ const handleConnectProvider = async (providerType: LLMProviderType) => {
         serviceAccountJson: activeProfile?.serviceAccountJson,
         vertexMode: activeProfile?.vertexMode,
         vertexLocation: activeProfile?.vertexLocation,
-        selectedModel: activeProfile?.selectedModel
+        selectedModel: activeProfile?.selectedModel,
+        aiStudioApiKey: providerType === "google-vertex" ? aiStudioProfile?.apiKey : undefined,
       };
      
      // Set connecting status
