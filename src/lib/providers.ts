@@ -153,22 +153,6 @@ export const AVAILABLE_PROVIDERS: LLMProvider[] = [
         maxTokens: 8192,
         supportsThinking: true,
       },
-      {
-        id: "gemini-1.5-pro",
-        name: "Gemini 1.5 Pro",
-        provider: "google-vertex",
-        contextWindow: 2097152,
-        maxTokens: 8192,
-        supportsThinking: false,
-      },
-      {
-        id: "gemini-1.5-flash",
-        name: "Gemini 1.5 Flash",
-        provider: "google-vertex",
-        contextWindow: 1048576,
-        maxTokens: 8192,
-        supportsThinking: false,
-      },
     ],
   },
   {
@@ -2726,8 +2710,50 @@ const fetchGoogleAIStudioModels = async (config: ProviderConfig): Promise<{ mode
   }
 };
 
+/** Where the last Vertex model list from AI Studio is kept between visits. */
+const VERTEX_MODELS_CACHE_KEY = "chat_vertex_models_cache";
+
+/** AI Studio models that Vertex doesn't serve for chat: embeddings, speech, image, live, aliases. */
+const NOT_VERTEX_CHAT = /embedding|tts|image|live|native-audio|aqa|robotics|computer-use|-latest$|-exp/;
+
+function readVertexModelCache(): FetchedModel[] | null {
+  try {
+    const raw = localStorage.getItem(VERTEX_MODELS_CACHE_KEY);
+    const parsed = raw ? (JSON.parse(raw) as { models?: FetchedModel[] }) : null;
+    return parsed?.models?.length ? parsed.models : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Vertex can't list models with an API key (Google answers "API keys are not
+ * supported by this API"). So the list comes from AI Studio, which uses the
+ * same Gemini model names: when an AI Studio key is connected, its Gemini chat
+ * models replace the saved list. Otherwise the last saved list is used, and
+ * the built-in list only when nothing was ever fetched.
+ */
 const fetchGoogleVertexModels = async (config: ProviderConfig): Promise<{ models: FetchedModel[]; error?: string }> => {
-  return { models: getModelsForProvider("google-vertex") };
+  if (config.aiStudioApiKey) {
+    try {
+      const response = await postModelsRequest("google-ai-studio", config.aiStudioApiKey);
+      const data = await readJson(response);
+      const models = ((data.models || []) as FetchedModel[])
+        .filter(m => m.id.startsWith("gemini-") && !NOT_VERTEX_CHAT.test(m.id))
+        .map(m => ({ ...m, provider: "google-vertex" }));
+      if (response.ok && models.length > 0) {
+        try {
+          localStorage.setItem(VERTEX_MODELS_CACHE_KEY, JSON.stringify({ models, fetchedAt: Date.now() }));
+        } catch {
+          // Storage full: the list still works for this visit.
+        }
+        return { models };
+      }
+    } catch {
+      // Fall through to the saved or built-in list.
+    }
+  }
+  return { models: readVertexModelCache() ?? getModelsForProvider("google-vertex") };
 };
 
 const fetchNvidiaNimModels = async (config: ProviderConfig): Promise<{ models: FetchedModel[]; error?: string }> => {
@@ -2882,8 +2908,9 @@ providerRegistry.register({
   requiresProjectId: true,
   requiresServiceAccount: true,
   supportsProfiles: false,
-  supportsModelFetch: false,
-  defaultModel: "gemini-2.0-flash",
+  supportsModelFetch: true,
+  modelFetch: fetchGoogleVertexModels,
+  defaultModel: "gemini-2.5-flash",
   models: AVAILABLE_PROVIDERS.find((p) => p.id === "google-vertex")?.models || [],
   chat: chatWithVertexAI,
   stream: streamWithVertexAI,
