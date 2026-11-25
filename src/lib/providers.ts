@@ -2703,10 +2703,11 @@ const fetchCohereModels = async (config: ProviderConfig): Promise<{ models: Fetc
     // Cohere lists models by name (no id field).
     const models: FetchedModel[] = (data.models || [])
       .filter((model: { name?: string }) => model.name && !model.name.includes("embed"))
-      .map((model: { name: string }) => ({
+      .map((model: { name: string; context_length?: number }) => ({
         id: model.name,
         provider: "cohere",
         name: model.name,
+        context: model.context_length,
       }));
     return { models };
   } catch (error) {

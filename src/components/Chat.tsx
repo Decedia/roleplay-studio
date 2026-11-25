@@ -2260,7 +2260,7 @@ const handleConnectProvider = async (providerType: LLMProviderType) => {
 // Fetch models for providers that support dynamic model fetching
           // Fetching the model list also checks the key, so a wrong key
           // shows an error instead of "Connected".
-          if ((providerType === "google-ai-studio" || providerType === "google-vertex" || providerType === "open-router" || providerType === "groq" || providerType === "nvidia-nim" || providerType === "kobold-horde" || providerType === "custom-openai" || providerType === "stepfun") && (activeProfile?.apiKey || providerType === "kobold-horde")) {
+          if ((providerType === "google-ai-studio" || providerType === "google-vertex" || providerType === "open-router" || providerType === "groq" || providerType === "nvidia-nim" || providerType === "kobold-horde" || providerType === "custom-openai" || providerType === "stepfun" || providerType === "cohere") && (activeProfile?.apiKey || providerType === "kobold-horde")) {
           setModelsFetching(prev => ({ ...prev, [providerType]: true }));
           const modelsResult = await fetchModelsFromProvider(providerType, profileConfig);
           setModelsFetching(prev => ({ ...prev, [providerType]: false }));
